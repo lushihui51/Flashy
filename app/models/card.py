@@ -14,12 +14,13 @@ class CardBase(SQLModel):
 class Card(CardBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     last_modified: datetime = Field(
+        default=None,
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
             onupdate=func.now(),
             nullable=False,
-        )
+        ),
     )
 
 

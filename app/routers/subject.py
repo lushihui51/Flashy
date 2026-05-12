@@ -17,8 +17,6 @@ router = APIRouter(prefix="/flashcards", tags=["Flashcards"])
 @router.post("/subject", response_model=SubjectRead, status_code=201)
 def create_subject(db: SessionDep, subject: SubjectCreate):
     created_subject = db_create_subject(db, subject.name)
-    if not created_subject:
-        raise HTTPException(status_code=500, detail="Failed to create subject")
     return created_subject
 
 
@@ -42,8 +40,6 @@ def update_subject(db: SessionDep, id: uuid.UUID, payload: SubjectUpdate):
     updated_subject = db_update_subject(
         db, subject, payload.model_dump(exclude_unset=True)
     )
-    if not updated_subject:
-        raise HTTPException(status_code=500, detail="Failed to update subject")
     return updated_subject
 
 
@@ -52,6 +48,5 @@ def delete_subject(db: SessionDep, id: uuid.UUID):
     subject = db_read_subject(db, id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
-    if not db_delete_subject(db, subject):
-        raise HTTPException(status_code=500, detail="Failed to delete subject")
+    db_delete_subject(db, subject)
     return None

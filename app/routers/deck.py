@@ -16,8 +16,6 @@ def create_deck(db: SessionDep, deck: DeckCreate):
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     created_deck = db_create_deck(db, deck.name, deck.subject_id)
-    if not created_deck:
-        raise HTTPException(status_code=500, detail="Failed to create deck")
     return created_deck
 
 
@@ -41,8 +39,6 @@ def update_deck(db: SessionDep, deck_id: uuid.UUID, payload: DeckUpdate):
             raise HTTPException(status_code=404, detail="Subject not found")
 
     updated_deck = db_update_deck(db, deck, payload.model_dump(exclude_unset=True))
-    if not updated_deck:
-        raise HTTPException(status_code=500, detail="Failed to update deck")
     return updated_deck
 
 
