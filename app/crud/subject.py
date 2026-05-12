@@ -2,7 +2,7 @@ import uuid
 
 from sqlmodel import Session
 
-from app.models.flashcards import Subject
+from app.models.subject import Subject
 
 
 def db_create_subject(db: Session, name: str) -> Subject:

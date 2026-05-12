@@ -50,3 +50,17 @@ def subject_path():
 def existing_subject(client, subject_path):
     response = client.post(subject_path, json={"name": "Test Subject"})
     return response.json()
+
+
+@pytest.fixture()
+def deck_path():
+    return "/decks/deck"
+
+
+@pytest.fixture
+def existing_deck(client, deck_path, existing_subject):
+    response = client.post(
+        deck_path,
+        json={"name": "Test Deck", "subject_id": existing_subject["id"]},
+    )
+    return response.json()

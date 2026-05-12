@@ -2,14 +2,14 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app.crud.flashcards import (
+from app.crud.subject import (
     db_create_subject,
     db_delete_subject,
     db_read_subject,
     db_update_subject,
 )
 from app.database import SessionDep
-from app.models.flashcards import SubjectCreate, SubjectRead, SubjectUpdate
+from app.models.subject import SubjectCreate, SubjectRead, SubjectUpdate
 
 router = APIRouter(prefix="/flashcards", tags=["Flashcards"])
 
@@ -55,13 +55,3 @@ def delete_subject(db: SessionDep, id: uuid.UUID):
     if not db_delete_subject(db, subject):
         raise HTTPException(status_code=500, detail="Failed to delete subject")
     return None
-
-
-@router.post("/deck")
-def create_deck():
-    pass
-
-
-@router.post("/card")
-def create_card():
-    pass
