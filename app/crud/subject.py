@@ -17,7 +17,7 @@ def db_read_subject(db: Session, id: uuid.UUID) -> Subject | None:
     return db.get(Subject, id)
 
 
-def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject | None:
+def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject:
     for key, value in payload.items():
         setattr(subject, key, value)
     db.add(subject)
@@ -26,7 +26,6 @@ def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject |
     return subject
 
 
-def db_delete_subject(db: Session, subject: Subject) -> bool:
+def db_delete_subject(db: Session, subject: Subject) -> None:
     db.delete(subject)
     db.commit()
-    return True

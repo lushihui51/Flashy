@@ -64,3 +64,17 @@ def existing_deck(client, deck_path, existing_subject):
         json={"name": "Test Deck", "subject_id": existing_subject["id"]},
     )
     return response.json()
+
+
+@pytest.fixture()
+def card_path():
+    return "/cards/card"
+
+
+@pytest.fixture
+def existing_card(client, card_path, existing_deck):
+    response = client.post(
+        card_path,
+        json={"deck_id": existing_deck["id"], "fields": {"front": "Q", "back": "A"}},
+    )
+    return response.json()
