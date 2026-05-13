@@ -15,7 +15,7 @@ def create_deck(db: SessionDep, deck: DeckCreate):
     subject = db_read_subject(db, deck.subject_id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
-    created_deck = db_create_deck(db, deck.name, deck.subject_id)
+    created_deck = db_create_deck(db, deck.name, deck.subject_id, deck.deck_schema)
     return created_deck
 
 

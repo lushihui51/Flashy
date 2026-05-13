@@ -1,11 +1,13 @@
 import uuid
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Column, Field, SQLModel
 
 
 class DeckBase(SQLModel):
     subject_id: uuid.UUID = Field(foreign_key="subject.id")
     name: str
+    deck_schema: dict[str, str] = Field(sa_column=Column(JSONB, nullable=False))
 
 
 class Deck(DeckBase, table=True):
@@ -23,3 +25,4 @@ class DeckRead(DeckBase):
 class DeckUpdate(SQLModel):
     subject_id: uuid.UUID | None = None
     name: str | None = None
+    # deck_schema: dict[str, str] | None = None

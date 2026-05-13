@@ -61,7 +61,11 @@ def deck_path():
 def existing_deck(client, deck_path, existing_subject):
     response = client.post(
         deck_path,
-        json={"name": "Test Deck", "subject_id": existing_subject["id"]},
+        json={
+            "name": "Test Deck",
+            "subject_id": existing_subject["id"],
+            "deck_schema": {"front": "str", "back": "str"},
+        },
     )
     return response.json()
 

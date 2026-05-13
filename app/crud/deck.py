@@ -5,8 +5,10 @@ from sqlmodel import Session
 from app.models.deck import Deck
 
 
-def db_create_deck(db: Session, name: str, subject_id: uuid.UUID) -> Deck:
-    new_deck = Deck(name=name, subject_id=subject_id)
+def db_create_deck(
+    db: Session, name: str, subject_id: uuid.UUID, deck_schema: dict[str, str]
+) -> Deck:
+    new_deck = Deck(name=name, subject_id=subject_id, deck_schema=deck_schema)
     db.add(new_deck)
     db.commit()
     db.refresh(new_deck)
