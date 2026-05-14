@@ -60,7 +60,7 @@ def _validate_deck_config_payload(
         raise HTTPException(status_code=400, detail="Invalid dynamic conceal quantity")
 
 
-@router.post("/", response_model=DeckConfigRead, status_code=201)
+@router.post("/deck_config", response_model=DeckConfigRead, status_code=201)
 def create_deck_config(db: SessionDep, deck_config: DeckConfigCreate):
     _validate_deck_config_payload(db, deck_config)
 
@@ -77,7 +77,9 @@ def create_deck_config(db: SessionDep, deck_config: DeckConfigCreate):
     return created_deck_config
 
 
-@router.get("/{deck_config_id}", response_model=DeckConfigRead, status_code=200)
+@router.get(
+    "/deck_config/{deck_config_id}", response_model=DeckConfigRead, status_code=200
+)
 def read_deck_config(db: SessionDep, deck_config_id: uuid.UUID):
     deck_config = db_read_deck_config(db, deck_config_id)
     if not deck_config:
@@ -85,7 +87,9 @@ def read_deck_config(db: SessionDep, deck_config_id: uuid.UUID):
     return deck_config
 
 
-@router.patch("/{deck_config_id}", response_model=DeckConfigRead, status_code=200)
+@router.patch(
+    "/deck_config/{deck_config_id}", response_model=DeckConfigRead, status_code=200
+)
 def update_deck_config(
     db: SessionDep, deck_config_id: uuid.UUID, payload: DeckConfigUpdate
 ):
@@ -101,7 +105,7 @@ def update_deck_config(
     return updated_deck_config
 
 
-@router.delete("/{deck_config_id}", status_code=204)
+@router.delete("/deck_config/{deck_config_id}", status_code=204)
 def delete_deck_config(db: SessionDep, deck_config_id: uuid.UUID):
     deck_config = db_read_deck_config(db, deck_config_id)
     if not deck_config:

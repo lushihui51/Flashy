@@ -106,7 +106,7 @@ def existing_card(client, card_path, existing_deck):
 
 @pytest.fixture
 def deck_config_path():
-    return "/deck_configs"
+    return "/deck_configs/deck_config"
 
 
 @pytest.fixture
