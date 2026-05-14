@@ -49,6 +49,7 @@ def subject_path():
 @pytest.fixture
 def existing_subject(client, subject_path):
     response = client.post(subject_path, json={"name": "Test Subject"})
+    assert response.status_code == 201, response.text
     return response.json()
 
 
@@ -64,9 +65,17 @@ def existing_deck(client, deck_path, existing_subject):
         json={
             "name": "Test Deck",
             "subject_id": existing_subject["id"],
-            "deck_schema": {"front": "str", "back": "str"},
+            "deck_schema": {
+                "front": "str",
+                "back": "str",
+                "top": "str",
+                "bottom": "str",
+                "left": "str",
+                "right": "str",
+            },
         },
     )
+    assert response.status_code == 201, response.text
     return response.json()
 
 
@@ -79,6 +88,42 @@ def card_path():
 def existing_card(client, card_path, existing_deck):
     response = client.post(
         card_path,
-        json={"deck_id": existing_deck["id"], "fields": {"front": "Q", "back": "A"}},
+        json={
+            "deck_id": existing_deck["id"],
+            "fields": {
+                "front": "Front Value",
+                "back": "Back Value",
+                "top": "Top Value",
+                "bottom": "Bottom Value",
+                "left": "Left Value",
+                "right": "Right Value",
+            },
+        },
     )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+@pytest.fixture
+def deck_config_path():
+    return "/deck_configs"
+
+
+@pytest.fixture
+def valid_create_deck_config_payload(existing_deck):
+    return {
+        "deck_id": existing_deck["id"],
+        "static_reveals": ["front"],
+        "dynamic_reveals": ["top", "left"],
+        "static_conceals": ["back"],
+        "dynamic_conceals": ["bottom", "right"],
+        "dynamic_reveal_quantity": [1, 2],
+        "dynamic_conceal_quantity": [1],
+    }
+
+
+@pytest.fixture
+def existing_deck_config(client, deck_config_path, valid_create_deck_config_payload):
+    response = client.post(deck_config_path, json=valid_create_deck_config_payload)
+    assert response.status_code == 201, response.text
     return response.json()
