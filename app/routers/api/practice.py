@@ -3,34 +3,22 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import SessionDep
-from app.database_ops.deck_config import db_read_deck_config
 from app.database_ops.practice_card import (
-    db_create_practice_cards,
     db_read_practice_card,
 )
 from app.database_ops.practice_session import (
-    db_create_practice_session,
     db_read_practice_session,
-)
-from app.database_ops.practice_session_deck_config import (
-    db_create_practice_session_deck_config,
 )
 from app.models.practice_card import PracticeCardRead
 from app.models.practice_session import PracticeSessionCreate, PracticeSessionRead
+from app.services.practice import create_practice_session_from_configs
 
 router = APIRouter(prefix="/practice", tags=["Practice"])
 
 
 @router.post("/", response_model=PracticeSessionRead, status_code=201)
 def create_practice_session(db: SessionDep, payload: PracticeSessionCreate):
-    deck_configs = []
-    for deck_config_id in payload.deck_config_ids:
-        deck_configs.append(db_read_deck_config(db, deck_config_id))
-
-    practice_session = db_create_practice_session(db)
-    for deck_config in deck_configs:
-        db_create_practice_session_deck_config(db, practice_session.id, deck_config.id)
-        db_create_practice_cards(db, deck_config, practice_session.id)
+    practice_session = create_practice_session_from_configs(db, payload.deck_config_ids)
 
     return PracticeSessionRead.model_validate(practice_session)
 

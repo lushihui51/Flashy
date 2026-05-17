@@ -40,27 +40,27 @@ def client(init_db):
 
 @pytest.fixture()
 def subject_path():
-    return "/flashcards/subject"
+    return "/api/flashcards/subject"
 
 
 @pytest.fixture()
 def deck_path():
-    return "/decks/deck"
+    return "/api/decks/deck"
 
 
 @pytest.fixture()
 def card_path():
-    return "/cards/card"
+    return "/api/cards/card"
 
 
 @pytest.fixture
 def deck_config_path():
-    return "/deck_configs/deck_config"
+    return "/api/deck_configs/deck_config"
 
 
 @pytest.fixture
 def practice_path():
-    return "/practice"
+    return "/api/practice"
 
 
 @pytest.fixture
