@@ -2,13 +2,13 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app.crud.subject import (
+from app.database import SessionDep
+from app.database_ops.subject import (
     db_create_subject,
     db_delete_subject,
     db_read_subject,
     db_update_subject,
 )
-from app.database import SessionDep
 from app.models.subject import SubjectCreate, SubjectRead, SubjectUpdate
 
 router = APIRouter(prefix="/flashcards", tags=["Flashcards"])

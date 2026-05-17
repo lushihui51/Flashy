@@ -5,10 +5,12 @@ from typing import List
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from app.models.app_model import AppModel
 
 
-class DeckConfigBase(SQLModel):
+class DeckConfigBase(AppModel):
     deck_id: uuid.UUID = Field(foreign_key="deck.id")
     static_reveals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
     static_conceals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
@@ -34,7 +36,7 @@ class DeckConfigRead(DeckConfigBase):
     id: uuid.UUID
 
 
-class DeckConfigUpdate(SQLModel):
+class DeckConfigUpdate(AppModel):
     deck_id: uuid.UUID | None = None
     static_reveals: List[str] | None = None
     static_conceals: List[str] | None = None

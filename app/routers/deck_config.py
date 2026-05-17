@@ -3,17 +3,17 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session
 
-from app.crud.deck import db_read_deck
-from app.crud.deck_config import (
+from app.database import SessionDep
+from app.database_ops.deck import db_read_deck
+from app.database_ops.deck_config import (
     db_create_deck_config,
     db_delete_deck_config,
     db_read_deck_config,
     db_update_deck_config,
 )
-from app.database import SessionDep
 from app.models.deck_config import DeckConfigCreate, DeckConfigRead, DeckConfigUpdate
 
-router = APIRouter(prefix="/deck_configs")
+router = APIRouter(prefix="/deck_configs", tags=["Deck Configuration"])
 
 
 def _validate_deck_config_payload(

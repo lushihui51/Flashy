@@ -1,19 +1,16 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
 from app.database import get_session
 from app.main import app
 
-engine = create_engine(settings.test_database_url, echo=True)
-TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(settings.test_database_url, echo=False)
 
 
 def override_get_session():
-    with TestSessionLocal() as session:
+    with Session(engine) as session:
         yield session
 
 
@@ -30,8 +27,8 @@ def init_db():
 
 
 @pytest.fixture
-def session(init_db):
-    with TestSessionLocal() as session:
+def db(init_db):
+    with Session(engine) as session:
         yield session
 
 
@@ -46,16 +43,31 @@ def subject_path():
     return "/flashcards/subject"
 
 
+@pytest.fixture()
+def deck_path():
+    return "/decks/deck"
+
+
+@pytest.fixture()
+def card_path():
+    return "/cards/card"
+
+
+@pytest.fixture
+def deck_config_path():
+    return "/deck_configs/deck_config"
+
+
+@pytest.fixture
+def practice_path():
+    return "/practice"
+
+
 @pytest.fixture
 def existing_subject(client, subject_path):
     response = client.post(subject_path, json={"name": "Test Subject"})
     assert response.status_code == 201, response.text
     return response.json()
-
-
-@pytest.fixture()
-def deck_path():
-    return "/decks/deck"
 
 
 @pytest.fixture
@@ -79,11 +91,6 @@ def existing_deck(client, deck_path, existing_subject):
     return response.json()
 
 
-@pytest.fixture()
-def card_path():
-    return "/cards/card"
-
-
 @pytest.fixture
 def existing_card(client, card_path, existing_deck):
     response = client.post(
@@ -105,14 +112,9 @@ def existing_card(client, card_path, existing_deck):
 
 
 @pytest.fixture
-def deck_config_path():
-    return "/deck_configs/deck_config"
-
-
-@pytest.fixture
-def valid_create_deck_config_payload(existing_deck):
+def valid_create_deck_config_payload(existing_card):
     return {
-        "deck_id": existing_deck["id"],
+        "deck_id": existing_card["deck_id"],
         "static_reveals": ["front"],
         "dynamic_reveals": ["top", "left"],
         "static_conceals": ["back"],
@@ -125,5 +127,14 @@ def valid_create_deck_config_payload(existing_deck):
 @pytest.fixture
 def existing_deck_config(client, deck_config_path, valid_create_deck_config_payload):
     response = client.post(deck_config_path, json=valid_create_deck_config_payload)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+@pytest.fixture
+def existing_practice_session(client, practice_path, existing_deck_config):
+    response = client.post(
+        practice_path, json={"deck_config_ids": [existing_deck_config["id"]]}
+    )
     assert response.status_code == 201, response.text
     return response.json()

@@ -2,9 +2,14 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app.crud.deck import db_create_deck, db_delete_deck, db_read_deck, db_update_deck
-from app.crud.subject import db_read_subject
 from app.database import SessionDep
+from app.database_ops.deck import (
+    db_create_deck,
+    db_delete_deck,
+    db_read_deck,
+    db_update_deck,
+)
+from app.database_ops.subject import db_read_subject
 from app.models.deck import DeckCreate, DeckRead, DeckUpdate
 
 router = APIRouter(prefix="/decks", tags=["Decks"])

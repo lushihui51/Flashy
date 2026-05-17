@@ -1,14 +1,11 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
 
-engine = create_engine(settings.database_url, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(settings.database_url, echo=False)
 
 
 def init_db():
@@ -22,7 +19,7 @@ def reset_db():
 
 
 def get_session():
-    with SessionLocal() as session:
+    with Session(engine) as session:
         yield session
 
 
