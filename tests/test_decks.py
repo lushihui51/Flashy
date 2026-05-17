@@ -24,7 +24,14 @@ class TestDeckCRUD:
         assert data["id"] == deck_id
         assert data["name"] == "Test Deck"
         assert data["subject_id"] == existing_deck["subject_id"]
-        assert data["deck_schema"] == {"front": "str", "back": "str"}
+        assert data["deck_schema"] == {
+            "front": "str",
+            "back": "str",
+            "top": "str",
+            "bottom": "str",
+            "left": "str",
+            "right": "str",
+        }
 
     def test_update_deck(self, client, deck_path, existing_subject, existing_deck):
         deck_id = existing_deck["id"]

@@ -5,9 +5,14 @@ from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError, create_model
 from sqlmodel import Session
 
-from app.crud.card import db_create_card, db_delete_card, db_get_card, db_update_card
-from app.crud.deck import db_read_deck
 from app.database import SessionDep
+from app.database_ops.card import (
+    db_create_card,
+    db_delete_card,
+    db_get_card,
+    db_update_card,
+)
+from app.database_ops.deck import db_read_deck
 from app.models.card import CardCreate, CardRead, CardUpdate
 
 router = APIRouter(prefix="/cards", tags=["Cards"])

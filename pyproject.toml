@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
     "fastapi[standard]>=0.110",
     "psycopg2-binary>=2.9.12",
+    "redis[hiredis]>=7.4.0",
     "sqlmodel>=0.0.38",
 ]
 requires-python = ">=3.11"

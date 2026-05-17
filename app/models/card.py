@@ -3,10 +3,12 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, DateTime, Field, SQLModel, func
+from sqlmodel import Column, DateTime, Field, func
+
+from app.models.app_model import AppModel
 
 
-class CardBase(SQLModel):
+class CardBase(AppModel):
     deck_id: uuid.UUID = Field(foreign_key="deck.id")
     fields: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
 
@@ -33,6 +35,6 @@ class CardRead(CardBase):
     last_modified: datetime
 
 
-class CardUpdate(SQLModel):
+class CardUpdate(AppModel):
     deck_id: uuid.UUID | None = None
     fields: dict[str, Any] | None = None
