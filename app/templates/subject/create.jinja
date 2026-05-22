@@ -1,0 +1,12 @@
+{% extends "base.jinja" %}
+
+{% block title %}Create Subject - Flashy{% endblock %}
+
+{% block content %}
+<h1>Create Subject</h1>
+<form method="post" action="/page/subjects/subject/new">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+    <button type="submit">Create</button>
+</form>
+{% endblock %}

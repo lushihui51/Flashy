@@ -8,7 +8,7 @@ from app.models.app_model import AppModel
 
 class DeckBase(AppModel):
     subject_id: uuid.UUID = Field(foreign_key="subject.id")
-    name: str
+    name: str = Field(unique=True, nullable=False)
     deck_schema: dict[str, str] = Field(sa_column=Column(JSONB, nullable=False))
 
 

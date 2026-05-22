@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Flashy{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+
+<body>
+    <nav>
+        <a href="/page">Home</a>
+        <a href="/page/subjects">Subjects</a>
+        <a href="/page/decks/">Decks</a>
+        <a href="/page/deck_configs/">Deck Configs</a>
+        <a href="/page/cards/">Cards</a>
+        <a href="/page/practices">Practices</a>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+
+</html>

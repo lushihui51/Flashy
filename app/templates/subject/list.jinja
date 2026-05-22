@@ -1,0 +1,20 @@
+{% extends "base.jinja" %}
+
+{% block title %}Subjects - Flashy{% endblock %}
+
+{% block content %}
+<h1> Subjects </h1>
+{% if subjects %}
+<ul>
+    {% for subject in subjects %}
+    <li>
+        <a href="/page/subjects/subject/{{ subject.id }}"></a>
+        {{ subject.name }}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No subjects yet. <a href="/page/subjects/subject/new">Create one</a>.</p>
+{% endif %}
+<a href="/page/subjects/subject/new">Create New Subject</a>
+{% endblock %}
