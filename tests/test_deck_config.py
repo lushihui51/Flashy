@@ -49,19 +49,19 @@ class TestDeckConfigCRUD:
         assert res.status_code == 400
         assert res.json()["detail"] == "Unknown deck fields"
 
-    def test_create_deck_config_invalid_dynamic_reveal_quantity(
+    def test_create_deck_config_invalid_dynamic_reveal_quantities(
         self, client, deck_config_path, existing_deck, valid_create_deck_config_payload
     ):
         key = next(iter(existing_deck["deck_schema"]))
         valid_create_deck_config_payload["dynamic_reveals"] = [key]
-        valid_create_deck_config_payload["dynamic_reveal_quantity"] = [2]
+        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
 
         res = client.post(deck_config_path, json=valid_create_deck_config_payload)
 
         assert res.status_code == 400
         assert res.json()["detail"] == "Invalid dynamic reveal quantity"
 
-    def test_create_deck_config_invalid_dynamic_conceal_quantity(
+    def test_create_deck_config_invalid_dynamic_conceal_quantities(
         self, client, deck_config_path, existing_deck, valid_create_deck_config_payload
     ):
         key = next(iter(existing_deck["deck_schema"]))
@@ -69,13 +69,13 @@ class TestDeckConfigCRUD:
             key,
             key,
         ]  # len=2, still valid keys
-        valid_create_deck_config_payload["dynamic_reveal_quantity"] = [
+        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [
             0,
             1,
             2,
         ]  # passes reveal check, triggers conceal check
         valid_create_deck_config_payload["dynamic_conceals"] = [key]
-        valid_create_deck_config_payload["dynamic_conceal_quantity"] = [0]
+        valid_create_deck_config_payload["dynamic_conceal_quantities"] = [0]
 
         res = client.post(deck_config_path, json=valid_create_deck_config_payload)
 
@@ -105,9 +105,9 @@ class TestDeckConfigCRUD:
             "static_reveals": [key],
             "static_conceals": [],
             "dynamic_reveals": [],
-            "dynamic_reveal_quantity": [],
+            "dynamic_reveal_quantities": [],
             "dynamic_conceals": [],
-            "dynamic_conceal_quantity": [],
+            "dynamic_conceal_quantities": [],
         }
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}", json=payload
@@ -190,7 +190,7 @@ class TestDeckConfigCRUD:
         assert res.status_code == 400
         assert res.json()["detail"] == "Unknown deck fields"
 
-    def test_update_deck_config_invalid_dynamic_reveal_quantity(
+    def test_update_deck_config_invalid_dynamic_reveal_quantities(
         self,
         client,
         deck_config_path,
@@ -200,7 +200,7 @@ class TestDeckConfigCRUD:
     ):
         key = next(iter(existing_deck["deck_schema"]))
         valid_create_deck_config_payload["dynamic_reveals"] = [key]
-        valid_create_deck_config_payload["dynamic_reveal_quantity"] = [2]
+        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
 
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}",
@@ -210,7 +210,7 @@ class TestDeckConfigCRUD:
         assert res.status_code == 400
         assert res.json()["detail"] == "Invalid dynamic reveal quantity"
 
-    def test_update_deck_config_invalid_dynamic_conceal_quantity(
+    def test_update_deck_config_invalid_dynamic_conceal_quantities(
         self,
         client,
         deck_config_path,
@@ -220,9 +220,9 @@ class TestDeckConfigCRUD:
     ):
         key = next(iter(existing_deck["deck_schema"]))
         valid_create_deck_config_payload["dynamic_reveals"] = [key, key]
-        valid_create_deck_config_payload["dynamic_reveal_quantity"] = [2]
+        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
         valid_create_deck_config_payload["dynamic_conceals"] = [key]
-        valid_create_deck_config_payload["dynamic_conceal_quantity"] = [0]
+        valid_create_deck_config_payload["dynamic_conceal_quantities"] = [0]
 
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}",

@@ -31,18 +31,18 @@ def db_create_practice_cards(
             static_conceals[key] = card.fields[key]
 
         if (
-            len(deck_config.dynamic_reveal_quantity) > 0
+            len(deck_config.dynamic_reveal_quantities) > 0
             and len(deck_config.dynamic_reveals) > 0
         ):
-            num_revealed = random.choice(deck_config.dynamic_reveal_quantity)
+            num_revealed = random.choice(deck_config.dynamic_reveal_quantities)
             fields_revealed = random.sample(deck_config.dynamic_reveals, num_revealed)
             for key in fields_revealed:
                 dynamic_reveals[key] = card.fields[key]
         if (
-            len(deck_config.dynamic_conceal_quantity) > 0
+            len(deck_config.dynamic_conceal_quantities) > 0
             and len(deck_config.dynamic_conceals) > 0
         ):
-            num_concealed = random.choice(deck_config.dynamic_conceal_quantity)
+            num_concealed = random.choice(deck_config.dynamic_conceal_quantities)
             fields_concealed = random.sample(
                 deck_config.dynamic_conceals, num_concealed
             )

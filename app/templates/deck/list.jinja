@@ -1,0 +1,17 @@
+{% extends "base.jinja" %}
+
+{% block title %}Decks - Flashy{% endblock %}
+
+{% block content %}
+<h1>Decks</h1>
+{% if decks %}
+<ul>
+    {% for deck in decks %}
+    <li><a href="/page/decks/deck/{{ deck.id }}">{{ deck.name }}</a></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No decks yet.</p><a href="/page/decks/deck/new">Create one</a>.
+{% endif %}
+<a href="/page/decks/deck/new">Create New Deck</a>
+{% endblock %}

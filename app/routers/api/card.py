@@ -9,7 +9,7 @@ from app.database import SessionDep
 from app.database_ops.card import (
     db_create_card,
     db_delete_card,
-    db_get_card,
+    db_read_card,
     db_update_card,
 )
 from app.database_ops.deck import db_read_deck
@@ -44,7 +44,7 @@ def create_card(db: SessionDep, card: CardCreate):
 
 @router.get("/card/{card_id}", response_model=CardRead, status_code=200)
 def read_card(db: SessionDep, card_id: uuid.UUID):
-    card = db_get_card(db, card_id)
+    card = db_read_card(db, card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     return card
@@ -52,7 +52,7 @@ def read_card(db: SessionDep, card_id: uuid.UUID):
 
 @router.put("/card/{card_id}", response_model=CardRead, status_code=200)
 def update_card(db: SessionDep, card_id: uuid.UUID, payload: CardUpdate):
-    card = db_get_card(db, card_id)
+    card = db_read_card(db, card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     if payload.fields:
@@ -63,7 +63,7 @@ def update_card(db: SessionDep, card_id: uuid.UUID, payload: CardUpdate):
 
 @router.delete("/card/{card_id}", status_code=204)
 def delete_card(db: SessionDep, card_id: uuid.UUID):
-    card = db_get_card(db, card_id)
+    card = db_read_card(db, card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
 

@@ -1,0 +1,18 @@
+{% extends "base.jinja" %}
+
+{% block title %}Create Deck - Flashy{% endblock %}
+
+{% block content %}
+<h1>Create Deck</h1>
+<form method="post" action="/page/decks/deck/new">
+    <label for="subject_id">Subject:</label>
+    <input type="text" id="subject_id" name="subject_id" required>
+
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="deck_schema">Deck Schema (JSON):</label>
+    <textarea id="deck_schema" name="deck_schema" required></textarea>
+    <button type="submit">Create Deck</button>
+</form>
+{% endblock %}

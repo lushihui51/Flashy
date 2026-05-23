@@ -8,8 +8,7 @@
 <ul>
     {% for subject in subjects %}
     <li>
-        <a href="/page/subjects/subject/{{ subject.id }}"></a>
-        {{ subject.name }}
+        <a href="/page/subjects/subject/{{ subject.id }}">{{ subject.name }}</a>
     </li>
     {% endfor %}
 </ul>

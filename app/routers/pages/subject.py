@@ -1,12 +1,14 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from app.database import SessionDep
 from app.database_ops.subject import (
     db_create_subject,
     db_read_all_subjects,
+    db_read_subject,
 )
 from app.models.subject import SubjectCreate
 from app.templates_config import templates
@@ -29,7 +31,7 @@ def create_subject_form(request: Request):
     return templates.TemplateResponse(request=request, name="subject/create.jinja")
 
 
-@router.post("/subject/new", status_code=200)
+@router.post("/subject/new", status_code=201)
 def create_subject(
     request: Request, db: SessionDep, subject: Annotated[SubjectCreate, Form()]
 ):
@@ -38,4 +40,16 @@ def create_subject(
         request=request,
         name="subject/read.jinja",
         context={"subject": created_subject},
+    )
+
+
+@router.get("/subject/{id}", status_code=200)
+def read_subject(request: Request, db: SessionDep, id: uuid.UUID):
+    subject = db_read_subject(db, id)
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="subject/read.jinja",
+        context={"subject": subject},
     )

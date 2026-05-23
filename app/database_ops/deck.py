@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.deck import Deck
 
@@ -17,6 +17,11 @@ def db_create_deck(
 
 def db_read_deck(db: Session, deck_id: uuid.UUID) -> Deck | None:
     return db.get(Deck, deck_id)
+
+
+def db_read_all_decks(db: Session) -> list[Deck]:
+    decks = db.exec(select(Deck)).all()
+    return list(decks)
 
 
 def db_update_deck(db: Session, deck: Deck, payload: dict) -> Deck:

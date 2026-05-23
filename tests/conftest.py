@@ -119,8 +119,8 @@ def valid_create_deck_config_payload(existing_card):
         "dynamic_reveals": ["top", "left"],
         "static_conceals": ["back"],
         "dynamic_conceals": ["bottom", "right"],
-        "dynamic_reveal_quantity": [1, 2],
-        "dynamic_conceal_quantity": [1],
+        "dynamic_reveal_quantities": [1, 2],
+        "dynamic_conceal_quantities": [1],
     }
 
 

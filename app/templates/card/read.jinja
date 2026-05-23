@@ -1,0 +1,11 @@
+{% extends "base.jinja" %}
+
+{% block title %}Card - Flashy{% endblock %}
+
+{% block content %}
+<h1>Card:</h1>
+<p>Card ID: {{ card.id }}</p>
+<p>Deck ID: {{ card.deck_id }}</p>
+<p>Fields: {{ card.fields }}</p>
+<p>Last Modified: {{ card.last_modified }}</p>
+{% endblock %}
