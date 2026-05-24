@@ -19,6 +19,7 @@ router = APIRouter(prefix="/deck_configs", tags=["Deck Configuration"])
 def _validate_deck_config_payload(
     db: Session, payload: DeckConfigCreate | DeckConfigUpdate
 ):
+    deck = None
     if payload.deck_id:
         deck = db_read_deck(db, payload.deck_id)
         if not deck:
@@ -42,11 +43,15 @@ def _validate_deck_config_payload(
         raise HTTPException(status_code=400, detail="Duplicated deck fields")
 
     if (
-        set(static_reveals)
-        | set(static_conceals)
-        | set(dynamic_reveals)
-        | set(dynamic_conceals)
-    ) - deck.deck_schema.keys():
+        deck
+        and (
+            set(static_reveals)
+            | set(static_conceals)
+            | set(dynamic_reveals)
+            | set(dynamic_conceals)
+        )
+        - deck.deck_schema.keys()
+    ):
         raise HTTPException(status_code=400, detail="Unknown deck fields")
 
     if min(dynamic_reveal_quantities, default=0) < 0 or max(

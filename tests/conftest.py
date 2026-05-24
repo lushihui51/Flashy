@@ -60,7 +60,7 @@ def deck_config_path():
 
 @pytest.fixture
 def practice_path():
-    return "/api/practice"
+    return "/api/practice_sessions/practice_session"
 
 
 @pytest.fixture

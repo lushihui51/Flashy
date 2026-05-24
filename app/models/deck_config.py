@@ -40,7 +40,7 @@ class DeckConfigCreate(DeckConfigBase):
         mode="before",
     )
     @classmethod
-    def parse_string_to_list(cls, v):
+    def parse_empty_form_field(cls, v):
         if v == [""]:
             return []
         return v

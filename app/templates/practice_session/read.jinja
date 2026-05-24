@@ -1,0 +1,10 @@
+{% extends "base.jinja" %}
+
+{% block title %}Practice Sessions{% endblock %}
+
+{% block content %}
+<h1>Practice Session</h1>
+<p>practice_session_id: {{ practice_session.id }}</p>
+<p>current_card_position: {{ practice_session.curr }}</p>
+<a href="/page/practice_sessions/practice_session/{{ practice_session.id }}/practice_card?forward=True">Continue</a>
+{% endblock %}
