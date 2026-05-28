@@ -43,7 +43,12 @@ class DeckConfigCreate(DeckConfigBase):
     def parse_empty_form_field(cls, v):
         if v == [""]:
             return []
-        if isinstance(v, list) and len(v) == 1 and "," in v[0]:
+        if (
+            isinstance(v, list)
+            and len(v) == 1
+            and isinstance(v[0], str)
+            and "," in v[0]
+        ):
             return [part.strip() for part in v[0].split(",") if part.strip()]
         return v
 
