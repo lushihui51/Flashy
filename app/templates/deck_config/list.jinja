@@ -1,0 +1,22 @@
+{% extends "base.jinja" %}
+
+{% block title %}Deck Configurations - Flashy{% endblock %}
+
+{% block content %}
+<h1>Deck Configurations</h1>
+{% if deck_configs %}
+<ul>
+    {% for deck_config in deck_configs %}
+    <a href="/page/deck_configs/deck_config/{{ deck_config.id }}">
+        <li>Static Reveals: {{ deck_config.static_reveals }}, Static Conceals: {{ deck_config.static_conceals }},
+            Dynamic Reveals: {{ deck_config.dynamic_reveals }}, Dynamic Reveal Quantities: {{
+            deck_config.dynamic_reveal_quantities }}, Dynamic Conceals: {{ deck_config.dynamic_conceals }}, Dynamic
+            Conceal Quantities: {{ deck_config.dynamic_conceal_quantities }}</li>
+    </a>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No deck configurations available.</p>
+{% endif %}
+<a href="/page/deck_configs/deck_config/create">Create New Deck Configuration</a>
+{% endblock %}

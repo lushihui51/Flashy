@@ -1,5 +1,7 @@
+import json
 import uuid
 
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field
 
@@ -8,7 +10,7 @@ from app.models.app_model import AppModel
 
 class DeckBase(AppModel):
     subject_id: uuid.UUID = Field(foreign_key="subject.id")
-    name: str
+    name: str = Field(unique=True, nullable=False)
     deck_schema: dict[str, str] = Field(sa_column=Column(JSONB, nullable=False))
 
 
@@ -17,7 +19,15 @@ class Deck(DeckBase, table=True):
 
 
 class DeckCreate(DeckBase):
-    pass
+    @field_validator("deck_schema", mode="before")
+    @classmethod
+    def parse_deck_schema(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("deck_schema must be valid JSON")
+        return v
 
 
 class DeckRead(DeckBase):

@@ -1,0 +1,37 @@
+{% extends "base.jinja" %}
+
+{% block title %}Create Deck Configuration - Flashy{% endblock %}
+
+{% block content %}
+<input id="check_deck_id">
+<button onclick="loadDeck()">Check Deck</button>
+<pre id="check_deck_info"></pre>
+
+<script>
+    async function loadDeck() {
+        const id = document.getElementById('check_deck_id').value;
+        const res = await fetch(`/api/decks/deck/${id}`);
+        const data = await res.json();
+        document.getElementById('check_deck_info').textContent = JSON.stringify(data, null, 2);
+    }
+</script>
+
+<h1>Create Deck Configuration</h1>
+<form method="post" action="/page/deck_configs/deck_config/create">
+    <label for="deck_id">Deck:</label>
+    <input type="text" id="deck_id" name="deck_id">
+    <label for="static_reveals">Static Reveals:</label>
+    <input type="text" id="static_reveals" name="static_reveals">
+    <label for="static_conceals">Static Conceals:</label>
+    <input type="text" id="static_conceals" name="static_conceals">
+    <label for="dynamic_reveals">Dynamic Reveals:</label>
+    <input type="text" id="dynamic_reveals" name="dynamic_reveals">
+    <label for="dynamic_reveal_quantities">Dynamic Reveal Quantity:</label>
+    <input type="text" id="dynamic_reveal_quantities" name="dynamic_reveal_quantities">
+    <label for="dynamic_conceals">Dynamic Conceals:</label>
+    <input type="text" id="dynamic_conceals" name="dynamic_conceals">
+    <label for="dynamic_conceal_quantities">Dynamic Conceal Quantity:</label>
+    <input type="text" id="dynamic_conceal_quantities" name="dynamic_conceal_quantities">
+    <button type="submit">Create Deck Configuration</button>
+</form>
+{% endblock %}

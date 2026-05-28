@@ -1,0 +1,17 @@
+{% extends "base.jinja" %}
+
+{% block title %}Practice Sessions{% endblock %}
+
+{% block content %}
+<h1>Practice Sessions</h1>
+{% if practices %}
+<ul>
+    {% for practice in practices %}
+    <li><a href="/page/practice_sessions/practice_session/{{ practice.id }}">{{ practice.id }}</a></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No practice sessions available.</p>
+{% endif %}
+<a href="/page/practice_sessions/practice_session/create">Create New Practice Session</a>
+{% endblock %}

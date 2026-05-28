@@ -1,0 +1,8 @@
+{% extends "base.jinja" %}
+
+{% block title %}Deck Configuration - Flashy{% endblock %}
+
+{% block content %}
+<h1>Deck Configuration</h1>
+<pre>{{ deck_config | tojson(indent=2) }}</pre>
+{% endblock %}

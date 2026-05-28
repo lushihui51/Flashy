@@ -19,6 +19,7 @@ router = APIRouter(prefix="/deck_configs", tags=["Deck Configuration"])
 def _validate_deck_config_payload(
     db: Session, payload: DeckConfigCreate | DeckConfigUpdate
 ):
+    deck = None
     if payload.deck_id:
         deck = db_read_deck(db, payload.deck_id)
         if not deck:
@@ -26,11 +27,11 @@ def _validate_deck_config_payload(
     static_reveals = payload.static_reveals if payload.static_reveals else []
     static_conceals = payload.static_conceals if payload.static_conceals else []
     dynamic_reveals = payload.dynamic_reveals if payload.dynamic_reveals else []
-    dynamic_reveal_quantity = (
-        payload.dynamic_reveal_quantity if payload.dynamic_reveal_quantity else []
+    dynamic_reveal_quantities = (
+        payload.dynamic_reveal_quantities if payload.dynamic_reveal_quantities else []
     )
-    dynamic_conceal_quantity = (
-        payload.dynamic_conceal_quantity if payload.dynamic_conceal_quantity else []
+    dynamic_conceal_quantities = (
+        payload.dynamic_conceal_quantities if payload.dynamic_conceal_quantities else []
     )
     dynamic_conceals = payload.dynamic_conceals if payload.dynamic_conceals else []
     if (
@@ -42,20 +43,24 @@ def _validate_deck_config_payload(
         raise HTTPException(status_code=400, detail="Duplicated deck fields")
 
     if (
-        set(static_reveals)
-        | set(static_conceals)
-        | set(dynamic_reveals)
-        | set(dynamic_conceals)
-    ) - deck.deck_schema.keys():
+        deck
+        and (
+            set(static_reveals)
+            | set(static_conceals)
+            | set(dynamic_reveals)
+            | set(dynamic_conceals)
+        )
+        - deck.deck_schema.keys()
+    ):
         raise HTTPException(status_code=400, detail="Unknown deck fields")
 
-    if min(dynamic_reveal_quantity, default=0) < 0 or max(
-        dynamic_reveal_quantity, default=0
+    if min(dynamic_reveal_quantities, default=0) < 0 or max(
+        dynamic_reveal_quantities, default=0
     ) > len(dynamic_reveals):
         raise HTTPException(status_code=400, detail="Invalid dynamic reveal quantity")
 
-    if min(dynamic_conceal_quantity, default=0) < 0 or max(
-        dynamic_reveal_quantity, default=0
+    if min(dynamic_conceal_quantities, default=0) < 0 or max(
+        dynamic_reveal_quantities, default=0
     ) > len(dynamic_conceals):
         raise HTTPException(status_code=400, detail="Invalid dynamic conceal quantity")
 
@@ -70,9 +75,9 @@ def create_deck_config(db: SessionDep, deck_config: DeckConfigCreate):
         deck_config.static_reveals,
         deck_config.static_conceals,
         deck_config.dynamic_reveals,
-        deck_config.dynamic_reveal_quantity,
+        deck_config.dynamic_reveal_quantities,
         deck_config.dynamic_conceals,
-        deck_config.dynamic_conceal_quantity,
+        deck_config.dynamic_conceal_quantities,
     )
     return created_deck_config
 

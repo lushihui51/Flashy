@@ -1,0 +1,29 @@
+{% extends "base.jinja" %}
+
+{% block title %}Create Card - Flashy{% endblock %}
+
+{% block content %}
+<input id="check_deck_id">
+<button onclick="loadDeck()">Check Deck</button>
+<pre id="check_deck_info"></pre>
+
+<script>
+    async function loadDeck() {
+        const id = document.getElementById('check_deck_id').value;
+        const res = await fetch(`/api/decks/deck/${id}`);
+        const data = await res.json();
+        document.getElementById('check_deck_info').textContent = JSON.stringify(data, null, 2);
+    }
+</script>
+
+
+<form method="post" action="/page/cards/card/new">
+    <!-- Form fields for card creation -->
+    <label for="deck_id">Deck:</label>
+    <input type="text" id="deck_id" name="deck_id">
+
+    <label for="fields">Fields (JSON):</label>
+    <textarea id="fields" name="fields" required></textarea>
+    <button type="submit">Create Card</button>
+</form>
+{% endblock %}

@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.practice_session import PracticeSession
 
@@ -17,3 +17,8 @@ def db_read_practice_session(
     db: Session, practice_session_id: uuid.UUID
 ) -> PracticeSession | None:
     return db.get(PracticeSession, practice_session_id)
+
+
+def db_read_all_practice_sessions(db: Session) -> list[PracticeSession]:
+    practice_sessions = db.exec(select(PracticeSession)).all()
+    return list(practice_sessions)

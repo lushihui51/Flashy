@@ -1,0 +1,44 @@
+{% extends "base.jinja" %}
+
+{% block title %}Practice Card{% endblock %}
+
+{% block content %}
+<h1>Practice Card</h1>
+<p>card_id: {{ practice_card.card_id }}</p>
+<p>practice_card_id: {{ practice_card.id }}</p>
+<p>practice_session_id: {{ practice_card.practice_session_id }}</p>
+<p>position: {{ practice_card.position }}</p>
+<h2>Revealed:</h2>
+<h3>Static:</h3>
+{% for key, value in practice_card.static_reveals.items() %}
+<p>{{ key }} is {{ value }}</p>
+{% endfor %}
+
+<h3>Dynamic:</h3>
+{% for key, value in practice_card.dynamic_reveals.items() %}
+<p>{{ key }} is {{ value }}</p>
+{% endfor %}
+
+<h2>Concealed:</h2>
+<h3>Static:</h3>
+{% for key, value in practice_card.static_conceals.items() %}
+<p>{{ key }} is
+<details>
+    <summary>Show</summary>{{ value }}
+</details>
+</p>
+{% endfor %}
+
+<h3>Dynamic:</h3>
+{% for key, value in practice_card.dynamic_conceals.items() %}
+<p>{{ key }} is
+<details>
+    <summary>Show</summary>{{ value }}
+</details>
+</p>
+{% endfor %}
+<a href="/page/practice_sessions/practice_session/{{ practice_card.practice_session_id }}/practice_card?forward=True">Next
+    Card</a>
+<a href="/page/practice_sessions/practice_session/{{ practice_card.practice_session_id }}/practice_card?forward=False">Previous
+    Card</a>
+{% endblock %}

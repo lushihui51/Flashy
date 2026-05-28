@@ -1,0 +1,12 @@
+{% extends "base.jinja" %}
+
+{% block title %}Create Practice Session{% endblock %}
+
+{% block content %}
+<h1>Create Practice Session</h1>
+<form action="/page/practice_sessions/practice_session/create" method="post">
+    <label for="deck_config_ids">Deck Configs</label>
+    <input type="text" id="deck_config_ids" name="deck_config_ids" required>
+    <button type="submit">Create</button>
+</form>
+{% endblock %}

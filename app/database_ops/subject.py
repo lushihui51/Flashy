@@ -1,6 +1,7 @@
 import uuid
+from typing import List
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.subject import Subject
 
@@ -29,3 +30,8 @@ def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject:
 def db_delete_subject(db: Session, subject: Subject) -> None:
     db.delete(subject)
     db.commit()
+
+
+def db_read_all_subjects(db: Session) -> List[Subject]:
+    subjects = db.exec(select(Subject)).all()
+    return list(subjects)

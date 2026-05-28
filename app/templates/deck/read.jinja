@@ -1,0 +1,10 @@
+{% extends "base.jinja" %}
+
+{% block title %}Deck - Flashy{% endblock %}
+
+{% block content %}
+<h1>Deck: {{ deck.name }}</h1>
+<p>deck_id: {{ deck.id }}</p>
+<p>subject_id: {{ deck.subject_id }}</p>
+<p>deck_schema: {{ deck.deck_schema }}</p>
+{% endblock %}

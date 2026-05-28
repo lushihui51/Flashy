@@ -1,0 +1,17 @@
+{% extends "base.jinja" %}
+
+{% block title %}Cards - Flashy{% endblock %}
+
+{% block content %}
+<h1>Cards</h1>
+{% if cards %}
+<ul>
+    {% for card in cards %}
+    <li><a href="/page/cards/card/{{ card.id }}">{{ card.fields }}</a></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No cards available.</p>
+{% endif %}
+<a href="/page/cards/card/new">Create New Card</a>
+{% endblock %}

@@ -1,7 +1,9 @@
+import json
 import uuid
 from datetime import datetime
 from typing import Any
 
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, DateTime, Field, func
 
@@ -27,7 +29,15 @@ class Card(CardBase, table=True):
 
 
 class CardCreate(CardBase):
-    pass
+    @field_validator("fields", mode="before")
+    @classmethod
+    def parse_deck_schema(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("fields must be valid JSON")
+        return v
 
 
 class CardRead(CardBase):
