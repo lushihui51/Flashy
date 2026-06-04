@@ -1,5 +1,48 @@
-import { apiClient } from '@/api/client'
-import type { paths, components } from '@/types/api'
+import { client } from "./client";
+import type { components } from "src/api/types";
+import { displayError } from "./client";
 
-type SubjectCreate = components['schemas']['SubjectCreate']
+export const createSubject = async (
+  payload: components["schemas"]["SubjectCreate"],
+) => {
+  const { data, error } = await client.POST("/api/subjects/subject", {
+    body: payload,
+  });
+  if (error) {
+    displayError(error);
+  }
+  return data;
+};
 
+export const readSubject = async (id: string) => {
+  const { data, error } = await client.GET("/api/subjects/subject/{id}", {
+    params: { path: { id: id } },
+  });
+  if (error) {
+    displayError(error);
+  }
+  return data;
+};
+
+export const updateSubject = async (
+  id: string,
+  payload: components["schemas"]["SubjectUpdate"],
+) => {
+  const { data, error } = await client.PATCH("/api/subjects/subject/{id}", {
+    params: { path: { id: id } },
+    body: payload,
+  });
+  if (error) {
+    displayError(error);
+  }
+  return data;
+};
+
+export const deleteSubject = async (id: string) => {
+  const { error } = await client.DELETE("/api/subjects/subject/{id}", {
+    params: { path: { id: id } },
+  });
+  if (error) {
+    displayError(error);
+  }
+};

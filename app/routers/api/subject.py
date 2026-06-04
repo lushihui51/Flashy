@@ -11,7 +11,7 @@ from app.database_ops.subject import (
 )
 from app.models.subject import SubjectCreate, SubjectRead, SubjectUpdate
 
-router = APIRouter(prefix="/flashcards", tags=["Flashcards"])
+router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
 
 @router.post("/subject", response_model=SubjectRead, status_code=201)
