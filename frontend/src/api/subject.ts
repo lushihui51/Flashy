@@ -1,6 +1,5 @@
-import { client } from "./client";
+import { client, displayError } from "src/api/client";
 import type { components } from "src/api/types";
-import { displayError } from "./client";
 
 export const createSubject = async (
   payload: components["schemas"]["SubjectCreate"],

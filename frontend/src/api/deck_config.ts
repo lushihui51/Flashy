@@ -1,4 +1,4 @@
-import { client, displayError } from "./client";
+import { client, displayError } from "src/api/client";
 import type { components } from "src/api/types";
 
 export const createDeckConfig = async (
