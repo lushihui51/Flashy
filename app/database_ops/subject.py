@@ -18,6 +18,11 @@ def db_read_subject(db: Session, id: uuid.UUID) -> Subject | None:
     return db.get(Subject, id)
 
 
+def db_read_subjects(db: Session) -> List[Subject]:
+    subjects = db.exec(select(Subject)).all()
+    return list(subjects)
+
+
 def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject:
     for key, value in payload.items():
         setattr(subject, key, value)
