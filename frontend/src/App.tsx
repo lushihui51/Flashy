@@ -1,5 +1,7 @@
+import Subjects from "src/pages/subjects";
+
 function App() {
-  return <h1>Flashy</h1>
+  return <Subjects />;
 }
 
-export default App
+export default App;

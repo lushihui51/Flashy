@@ -9,6 +9,7 @@ export const createSubject = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -19,6 +20,16 @@ export const readSubject = async (id: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
+  }
+  return data;
+};
+
+export const readSubjects = async () => {
+  const { data, error } = await client.GET("/api/subjects/subjects", {});
+  if (error) {
+    displayError(error);
+    throw error;
   }
   return data;
 };
@@ -33,6 +44,7 @@ export const updateSubject = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -43,5 +55,6 @@ export const deleteSubject = async (id: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
   }
 };

@@ -9,6 +9,7 @@ export const createDeck = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -19,6 +20,7 @@ export const readDeck = async (deckId: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -33,6 +35,7 @@ export const updateDeck = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -43,5 +46,6 @@ export const deleteDeck = async (deckId: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
   }
 };

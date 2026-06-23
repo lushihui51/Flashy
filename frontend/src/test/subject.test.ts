@@ -21,9 +21,9 @@ describe("createSubject", () => {
       }),
     );
 
-    const created = await createSubject({ name: "Biology" }); // adjust to your SubjectCreate shape
+    const created = await createSubject({ name: "Biology" });
 
-    expect(sentBody).toEqual({ name: "Biology" }); // verifies your serialization
+    expect(sentBody).toEqual({ name: "Biology" });
     expect(created).toEqual({ id, name: "Biology" });
   });
 
@@ -41,7 +41,6 @@ describe("createSubject", () => {
       ),
     );
 
-    // exercises the Array branch of displayError -> "body.name: Field required"
     await expect(createSubject({ name: "" })).rejects.toThrow(
       "body.name: Field required",
     );
@@ -71,7 +70,6 @@ describe("readSubject", () => {
       ),
     );
 
-    // exercises the string branch of displayError
     await expect(readSubject(id)).rejects.toThrow("Subject not found");
   });
 });

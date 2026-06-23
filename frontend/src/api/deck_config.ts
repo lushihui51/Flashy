@@ -9,6 +9,7 @@ export const createDeckConfig = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
