@@ -1,7 +1,7 @@
-import Subjects from "src/pages/subjects";
+import SubjectsOverview from "src/pages/SubjectsOverview";
 
 function App() {
-  return <Subjects />;
+  return <SubjectsOverview />;
 }
 
 export default App;

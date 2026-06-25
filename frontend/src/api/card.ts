@@ -9,6 +9,7 @@ export const createCard = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -19,6 +20,7 @@ export const readCard = async (cardId: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -33,6 +35,7 @@ export const updateCard = async (
   });
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -43,5 +46,6 @@ export const deleteCard = async (cardId: string) => {
   });
   if (error) {
     displayError(error);
+    throw error;
   }
 };

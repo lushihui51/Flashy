@@ -12,6 +12,7 @@ export const createPracticeSession = async (
   );
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -25,6 +26,7 @@ export const readPracticeSession = async (practiceSessionId: string) => {
   );
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -44,6 +46,7 @@ export const readPracticeCard = async (
   );
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };

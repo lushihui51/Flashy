@@ -23,6 +23,7 @@ export const readDeckConfig = async (deckConfigId: string) => {
   );
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -40,6 +41,7 @@ export const updateDeckConfig = async (
   );
   if (error) {
     displayError(error);
+    throw error;
   }
   return data;
 };
@@ -53,5 +55,6 @@ export const deleteDeckConfig = async (deckConfigId: string) => {
   );
   if (error) {
     displayError(error);
+    throw error;
   }
 };
