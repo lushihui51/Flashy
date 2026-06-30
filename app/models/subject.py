@@ -19,6 +19,7 @@ class SubjectCreate(SubjectBase):
 
 class SubjectRead(SubjectBase):
     id: uuid.UUID
+    deck_count: int
 
 
 class SubjectUpdate(SQLModel):

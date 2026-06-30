@@ -2126,12 +2126,17 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "deck_count": {
+            "type": "integer",
+            "title": "Deck Count"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "id"
+          "id",
+          "deck_count"
         ],
         "title": "SubjectRead"
       },

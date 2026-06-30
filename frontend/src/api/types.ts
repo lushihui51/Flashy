@@ -754,6 +754,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Deck Count */
+            deck_count: number;
         };
         /** SubjectUpdate */
         SubjectUpdate: {
