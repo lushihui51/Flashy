@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.database import SessionDep, init_db, reset_db
+from app.database import SessionDep, init_db
 from app.routers.api.card import router as api_card_router
 from app.routers.api.deck import router as api_deck_router
 from app.routers.api.deck_config import router as api_deck_config_router
@@ -20,7 +20,7 @@ from app.routers.pages.subject import router as page_subject_router
 async def lifespan(app: FastAPI):
     init_db()
     yield
-    reset_db()
+    # reset_db()
 
 
 app = FastAPI(lifespan=lifespan)

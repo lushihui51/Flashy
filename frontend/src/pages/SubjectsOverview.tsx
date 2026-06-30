@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { readSubjects } from 'src/api/subject';
 import Title from 'src/components/overview/Title';
 import NewButton from 'src/components/overview/NewButton';
-import Recents from 'src/components/overview/Recents';
+import All from 'src/components/overview/All';
 import New from 'src/components/new/New';
 
 export default function SubjectsOverview() {
@@ -19,7 +19,7 @@ export default function SubjectsOverview() {
     <>
       <Title text="Subjects" />
       <NewButton onClick={handleClickNew} />
-      <Recents queryKey={['subjects']} queryFn={readSubjects} />
+      <All queryKey={['subjects']} queryFn={readSubjects} />
       {newOpen && (
         <New
           title="Create New Subject"

@@ -5,6 +5,8 @@ from sqlmodel import Field, SQLModel
 
 class SubjectBase(SQLModel):
     name: str = Field(unique=True)
+    icon: str | None = None
+    description: str | None = None
 
 
 class Subject(SubjectBase, table=True):
@@ -21,3 +23,5 @@ class SubjectRead(SubjectBase):
 
 class SubjectUpdate(SQLModel):
     name: str | None = None
+    icon: str | None = None
+    description: str | None = None

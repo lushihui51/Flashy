@@ -6,8 +6,10 @@ from sqlmodel import Session, select
 from app.models.subject import Subject
 
 
-def db_create_subject(db: Session, name: str) -> Subject:
-    subject = Subject(name=name)
+def db_create_subject(
+    db: Session, name: str, icon: str | None = None, description: str | None = None
+) -> Subject:
+    subject = Subject(name=name, icon=icon, description=description)
     db.add(subject)
     db.commit()
     db.refresh(subject)
