@@ -2,8 +2,8 @@ import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import AppShell from 'src/components/layout/AppShell';
 import DashboardOverview from 'src/pages/DashboardOverview';
 import SubjectsOverview from 'src/pages/SubjectsOverview';
-import PracticesOverview from './pages/PracticesOverview';
-import DecksOverview from './pages/DecksOverview';
+import PracticesOverview from 'src/pages/PracticesOverview';
+import DecksOverview from 'src/pages/DecksOverview';
 
 function App() {
   return (
