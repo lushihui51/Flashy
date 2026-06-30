@@ -40,7 +40,7 @@ def client(init_db):
 
 @pytest.fixture()
 def subject_path():
-    return "/api/flashcards/subject"
+    return "/api/subjects/subject"
 
 
 @pytest.fixture()

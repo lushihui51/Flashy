@@ -8,6 +8,12 @@ from app.routers.api.deck import router as api_deck_router
 from app.routers.api.deck_config import router as api_deck_config_router
 from app.routers.api.practice_session import router as api_practice_session_router
 from app.routers.api.subject import router as api_subject_router
+from app.routers.pages.card import router as page_card_router
+from app.routers.pages.deck import router as page_deck_router
+from app.routers.pages.deck_config import router as page_deck_config_router
+from app.routers.pages.index import router as page_index_router
+from app.routers.pages.practice_session import router as page_practice_session_router
+from app.routers.pages.subject import router as page_subject_router
 
 
 @asynccontextmanager
@@ -24,12 +30,12 @@ app.include_router(api_card_router, prefix="/api")
 app.include_router(api_deck_config_router, prefix="/api")
 app.include_router(api_practice_session_router, prefix="/api")
 
-# app.include_router(page_index_router, prefix="/page")
-# app.include_router(page_subject_router, prefix="/page")
-# app.include_router(page_deck_router, prefix="/page")
-# app.include_router(page_card_router, prefix="/page")
-# app.include_router(page_deck_config_router, prefix="/page")
-# app.include_router(page_practice_session_router, prefix="/page")
+app.include_router(page_index_router, prefix="/page")
+app.include_router(page_subject_router, prefix="/page")
+app.include_router(page_deck_router, prefix="/page")
+app.include_router(page_card_router, prefix="/page")
+app.include_router(page_deck_config_router, prefix="/page")
+app.include_router(page_practice_session_router, prefix="/page")
 
 
 @app.get("/")

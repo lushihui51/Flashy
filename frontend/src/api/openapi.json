@@ -1,0 +1,1462 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/subjects/subject": {
+      "post": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Create Subject",
+        "operationId": "create_subject_api_subjects_subject_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/subjects/subject/{id}": {
+      "get": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Read Subject",
+        "operationId": "read_subject_api_subjects_subject__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Update Subject",
+        "operationId": "update_subject_api_subjects_subject__id__patch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Delete Subject",
+        "operationId": "delete_subject_api_subjects_subject__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/subjects/subjects": {
+      "get": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Read Subjects",
+        "operationId": "read_subjects_api_subjects_subjects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SubjectRead"
+                  },
+                  "type": "array",
+                  "title": "Response Read Subjects Api Subjects Subjects Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/decks/deck": {
+      "post": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Create Deck",
+        "operationId": "create_deck_api_decks_deck_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeckCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/decks/deck/{deck_id}": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Read Deck",
+        "operationId": "read_deck_api_decks_deck__deck_id__get",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Update Deck",
+        "operationId": "update_deck_api_decks_deck__deck_id__put",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeckUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Delete Deck",
+        "operationId": "delete_deck_api_decks_deck__deck_id__delete",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cards/card": {
+      "post": {
+        "tags": [
+          "Cards"
+        ],
+        "summary": "Create Card",
+        "operationId": "create_card_api_cards_card_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cards/card/{card_id}": {
+      "get": {
+        "tags": [
+          "Cards"
+        ],
+        "summary": "Read Card",
+        "operationId": "read_card_api_cards_card__card_id__get",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Cards"
+        ],
+        "summary": "Update Card",
+        "operationId": "update_card_api_cards_card__card_id__put",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cards"
+        ],
+        "summary": "Delete Card",
+        "operationId": "delete_card_api_cards_card__card_id__delete",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deck_configs/deck_config": {
+      "post": {
+        "tags": [
+          "Deck Configuration"
+        ],
+        "summary": "Create Deck Config",
+        "operationId": "create_deck_config_api_deck_configs_deck_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeckConfigCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckConfigRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deck_configs/deck_config/{deck_config_id}": {
+      "get": {
+        "tags": [
+          "Deck Configuration"
+        ],
+        "summary": "Read Deck Config",
+        "operationId": "read_deck_config_api_deck_configs_deck_config__deck_config_id__get",
+        "parameters": [
+          {
+            "name": "deck_config_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Config Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckConfigRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Deck Configuration"
+        ],
+        "summary": "Update Deck Config",
+        "operationId": "update_deck_config_api_deck_configs_deck_config__deck_config_id__patch",
+        "parameters": [
+          {
+            "name": "deck_config_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Config Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeckConfigUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckConfigRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Deck Configuration"
+        ],
+        "summary": "Delete Deck Config",
+        "operationId": "delete_deck_config_api_deck_configs_deck_config__deck_config_id__delete",
+        "parameters": [
+          {
+            "name": "deck_config_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Config Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practice_sessions/practice_session": {
+      "post": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Create Practice Session",
+        "operationId": "create_practice_session_api_practice_sessions_practice_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeSessionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practice_sessions/practice_session/{practice_session_id}": {
+      "get": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Read Practice Session",
+        "operationId": "read_practice_session_api_practice_sessions_practice_session__practice_session_id__get",
+        "parameters": [
+          {
+            "name": "practice_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practice_sessions/practice_session/{practice_session_id}/practice_card": {
+      "get": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Read Practice Card",
+        "operationId": "read_practice_card_api_practice_sessions_practice_session__practice_session_id__practice_card_get",
+        "parameters": [
+          {
+            "name": "practice_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Session Id"
+            }
+          },
+          {
+            "name": "forward",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean",
+              "title": "Forward"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeCardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Read Root",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CardCreate": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "fields"
+        ],
+        "title": "CardCreate"
+      },
+      "CardRead": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fields"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "last_modified": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "fields",
+          "id",
+          "last_modified"
+        ],
+        "title": "CardRead"
+      },
+      "CardUpdate": {
+        "properties": {
+          "deck_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deck Id"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "title": "CardUpdate"
+      },
+      "DeckConfigCreate": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "static_reveals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Static Reveals"
+          },
+          "static_conceals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Static Conceals"
+          },
+          "dynamic_reveals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dynamic Reveals"
+          },
+          "dynamic_reveal_quantities": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dynamic Reveal Quantities"
+          },
+          "dynamic_conceals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dynamic Conceals"
+          },
+          "dynamic_conceal_quantities": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dynamic Conceal Quantities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "static_reveals",
+          "static_conceals",
+          "dynamic_reveals",
+          "dynamic_reveal_quantities",
+          "dynamic_conceals",
+          "dynamic_conceal_quantities"
+        ],
+        "title": "DeckConfigCreate"
+      },
+      "DeckConfigRead": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "static_reveals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Static Reveals"
+          },
+          "static_conceals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Static Conceals"
+          },
+          "dynamic_reveals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dynamic Reveals"
+          },
+          "dynamic_reveal_quantities": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dynamic Reveal Quantities"
+          },
+          "dynamic_conceals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dynamic Conceals"
+          },
+          "dynamic_conceal_quantities": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dynamic Conceal Quantities"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "static_reveals",
+          "static_conceals",
+          "dynamic_reveals",
+          "dynamic_reveal_quantities",
+          "dynamic_conceals",
+          "dynamic_conceal_quantities",
+          "id"
+        ],
+        "title": "DeckConfigRead"
+      },
+      "DeckConfigUpdate": {
+        "properties": {
+          "deck_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deck Id"
+          },
+          "static_reveals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Static Reveals"
+          },
+          "static_conceals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Static Conceals"
+          },
+          "dynamic_reveals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic Reveals"
+          },
+          "dynamic_reveal_quantities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic Reveal Quantities"
+          },
+          "dynamic_conceals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic Conceals"
+          },
+          "dynamic_conceal_quantities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic Conceal Quantities"
+          }
+        },
+        "type": "object",
+        "title": "DeckConfigUpdate"
+      },
+      "DeckCreate": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "deck_schema": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Deck Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "name",
+          "deck_schema"
+        ],
+        "title": "DeckCreate"
+      },
+      "DeckRead": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "deck_schema": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Deck Schema"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "name",
+          "deck_schema",
+          "id"
+        ],
+        "title": "DeckRead"
+      },
+      "DeckUpdate": {
+        "properties": {
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "title": "DeckUpdate"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PracticeCardRead": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Card Id"
+          },
+          "practice_session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Session Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "static_reveals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Static Reveals"
+          },
+          "static_conceals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Static Conceals"
+          },
+          "dynamic_reveals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dynamic Reveals"
+          },
+          "dynamic_conceals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dynamic Conceals"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "practice_session_id",
+          "position",
+          "static_reveals",
+          "static_conceals",
+          "dynamic_reveals",
+          "dynamic_conceals",
+          "id"
+        ],
+        "title": "PracticeCardRead"
+      },
+      "PracticeSessionCreate": {
+        "properties": {
+          "deck_config_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Deck Config Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_config_ids"
+        ],
+        "title": "PracticeSessionCreate"
+      },
+      "PracticeSessionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "curr": {
+            "type": "integer",
+            "title": "Curr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "curr"
+        ],
+        "title": "PracticeSessionRead"
+      },
+      "SubjectCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SubjectCreate"
+      },
+      "SubjectRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "SubjectRead"
+      },
+      "SubjectUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "title": "SubjectUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -6,15 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:api:json": "uv run --directory .. app/scripts/export_openapi.py",
+    "gen:api:typescript": "openapi-typescript src/api/openapi.json -o src/api/types.ts",
+    "gen:api": "npm run gen:api:json && npm run gen:api:typescript"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.100.14",
-    "axios": "^1.16.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-query": "^5.101.0",
+    "lucide-react": "^1.21.0",
+    "openapi-fetch": "^0.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router": "^7.15.1"
+    "react-router": "^7.15.1",
+    "react-router-dom": "^7.18.0",
+    "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -26,8 +34,11 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "msw": "^2.14.6",
+    "openapi-typescript": "^7.13.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.8"
   }
 }

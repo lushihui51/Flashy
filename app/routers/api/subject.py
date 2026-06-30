@@ -7,11 +7,12 @@ from app.database_ops.subject import (
     db_create_subject,
     db_delete_subject,
     db_read_subject,
+    db_read_subjects,
     db_update_subject,
 )
 from app.models.subject import SubjectCreate, SubjectRead, SubjectUpdate
 
-router = APIRouter(prefix="/flashcards", tags=["Flashcards"])
+router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
 
 @router.post("/subject", response_model=SubjectRead, status_code=201)
@@ -29,6 +30,12 @@ def read_subject(
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
+
+
+@router.get("/subjects", response_model=list[SubjectRead], status_code=200)
+def read_subjects(db: SessionDep):
+    subjects = db_read_subjects(db)
+    return subjects
 
 
 @router.patch("/subject/{id}", response_model=SubjectRead, status_code=200)
