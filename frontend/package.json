@@ -14,13 +14,15 @@
     "gen:api": "npm run gen:api:json && npm run gen:api:typescript"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.2",
     "@tanstack/react-query": "^5.101.0",
     "lucide-react": "^1.21.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router": "^7.15.1",
-    "react-router-dom": "^7.18.0"
+    "react-router-dom": "^7.18.0",
+    "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

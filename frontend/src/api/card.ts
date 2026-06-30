@@ -1,10 +1,8 @@
-import { client, displayError } from "src/api/client";
-import type { components } from "src/api/types";
+import { client, displayError } from 'src/api/client';
+import type { components } from 'src/api/types';
 
-export const createCard = async (
-  payload: components["schemas"]["CardCreate"],
-) => {
-  const { data, error } = await client.POST("/api/cards/card", {
+export const createCard = async (payload: components['schemas']['CardCreate']) => {
+  const { data, error } = await client.POST('/api/cards/card', {
     body: payload,
   });
   if (error) {
@@ -15,7 +13,7 @@ export const createCard = async (
 };
 
 export const readCard = async (cardId: string) => {
-  const { data, error } = await client.GET("/api/cards/card/{card_id}", {
+  const { data, error } = await client.GET('/api/cards/card/{card_id}', {
     params: { path: { card_id: cardId } },
   });
   if (error) {
@@ -25,11 +23,8 @@ export const readCard = async (cardId: string) => {
   return data;
 };
 
-export const updateCard = async (
-  cardId: string,
-  payload: components["schemas"]["CardUpdate"],
-) => {
-  const { data, error } = await client.PUT("/api/cards/card/{card_id}", {
+export const updateCard = async (cardId: string, payload: components['schemas']['CardUpdate']) => {
+  const { data, error } = await client.PUT('/api/cards/card/{card_id}', {
     params: { path: { card_id: cardId } },
     body: payload,
   });
@@ -41,7 +36,7 @@ export const updateCard = async (
 };
 
 export const deleteCard = async (cardId: string) => {
-  const { error } = await client.DELETE("/api/cards/card/{card_id}", {
+  const { error } = await client.DELETE('/api/cards/card/{card_id}', {
     params: { path: { card_id: cardId } },
   });
   if (error) {

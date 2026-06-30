@@ -1,39 +1,27 @@
-import { useState } from "react";
-import SideBar from "src/components/layout/SideBar";
-import TopBar from "src/components/layout/TopBar";
+import { useLocation, Outlet } from 'react-router';
+import { navItems } from 'src/navConfig';
+import SideBar from 'src/components/layout/SideBar';
+import TopBar from 'src/components/layout/TopBar';
+import { HEADER_HEIGHT } from 'src/components/layout/constants';
 
 export default function AppShell() {
-  const [topBarTitle, setTopBarTitle] = useState("Dashboard");
-  const dashboardHandleClick = () => {
-    setTopBarTitle("Dashboard");
-  };
-  const subjectsHandleClick = () => {
-    setTopBarTitle("Subjects");
-  };
-  const decksHandleClick = () => {
-    setTopBarTitle("Decks");
-  };
-  const practicesHandleClick = () => {
-    setTopBarTitle("Practices");
-  };
-  const settingsHandleClick = () => {
-    setTopBarTitle("Settings");
-  };
-  const userHandleClick = () => {
-    console.log("User button clicked");
-  };
+  const { pathname } = useLocation();
+  const topBarTitle = navItems.find((item) => item.path === pathname)?.label ?? 'Unknown Page';
   return (
-    <>
-      <TopBar topBarTitle={topBarTitle} />
-      <SideBar
-        dashboardHandleClick={dashboardHandleClick}
-        subjectsHandleClick={subjectsHandleClick}
-        decksHandleClick={decksHandleClick}
-        practicesHandleClick={practicesHandleClick}
-        settingsHandleClick={settingsHandleClick}
-        userHandleClick={userHandleClick}
-        currentPage={topBarTitle}
-      />
-    </>
+    <div className="flex h-screen">
+      <aside className="w-64 shrink-0 bg-sidebar">
+        <SideBar />
+      </aside>
+      <div className="flex-1 flex flex-col bg-main">
+        <header
+          className={`${HEADER_HEIGHT} shrink-0 flex items-center border-b border-gray-500/15`}
+        >
+          <TopBar topBarTitle={topBarTitle} />
+        </header>
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }
