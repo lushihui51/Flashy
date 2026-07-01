@@ -15,5 +15,9 @@ export default function All<T>({
   if (isPending) return <div>Loading...</div>;
   if (isError) return <div>Error: {error.message}</div>;
 
-  return <div>{data?.map(renderItem)}</div>;
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {data?.map(renderItem)}
+    </div>
+  );
 }
