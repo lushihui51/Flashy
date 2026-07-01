@@ -5,7 +5,8 @@ import NewButton from 'src/components/overview/NewButton';
 import All from 'src/components/overview/All';
 import New from 'src/components/new/New';
 import type { components } from 'src/api/types';
-import SubjectCard from 'src/components/subject/SubjectCard';
+import EntityCard from 'src/components/overview/EntityCard';
+import { BookOpen } from 'lucide-react';
 type SubjectRead = components['schemas']['SubjectRead'];
 
 export default function SubjectsOverview() {
@@ -20,7 +21,28 @@ export default function SubjectsOverview() {
   };
 
   const renderItem = (subject: SubjectRead) => {
-    return <SubjectCard key={subject.id} subject={subject} />;
+    return (
+      <EntityCard
+        key={subject.id}
+        icon={subject.icon}
+        fallbackIcon={BookOpen}
+        name={subject.name}
+        description={subject.description}
+        fallbackDescription="An exciting subject"
+        countLabel="decks"
+        count={subject.deck_count}
+        footerLabel="View decks"
+        onClick={() => {
+          console.log(`Clicked on subject ${subject.id}`);
+        }}
+        onEdit={() => {
+          console.log(`Editing subject ${subject.id}`);
+        }}
+        onDelete={() => {
+          console.log(`Deleting subject ${subject.id}`);
+        }}
+      />
+    );
   };
 
   return (
