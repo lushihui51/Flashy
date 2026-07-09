@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { readSubjects } from 'src/api/subject';
-import Title from 'src/components/overview/Title';
 import NewButton from 'src/components/overview/NewButton';
 import All from 'src/components/overview/All';
 import New from 'src/components/new/New';
 import type { components } from 'src/api/types';
 import EntityCard from 'src/components/overview/EntityCard';
 import { BookOpen } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 type SubjectRead = components['schemas']['SubjectRead'];
 
 export default function SubjectsOverview() {
   const [newOpen, setNewOpen] = useState(false);
+  const {
+    data: subjects = [],
+    isPending,
+    isError,
+    error,
+  } = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
+  const numSubjects = subjects.length;
+  const numDecks = subjects.reduce((sum, subject) => sum + subject.deck_count, 0);
 
   const handleClickNew = () => {
     setNewOpen(true);
@@ -46,9 +54,13 @@ export default function SubjectsOverview() {
   };
 
   return (
-    <>
-      <Title text="Subjects" />
-      <NewButton onClick={handleClickNew} />
+    <div>
+      <div className="flex items-center justify-between">
+        <p>
+          {numSubjects} subjects, {numDecks} decks total
+        </p>
+        <NewButton onClick={handleClickNew} />
+      </div>
       <All queryKey={['subjects']} queryFn={readSubjects} renderItem={renderItem} />
       {newOpen && (
         <New
@@ -59,6 +71,6 @@ export default function SubjectsOverview() {
           onClose={handleCloseAndCancel}
         />
       )}
-    </>
+    </div>
   );
 }

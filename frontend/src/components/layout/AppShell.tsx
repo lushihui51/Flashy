@@ -14,7 +14,7 @@ export default function AppShell() {
       </aside>
       <div className="flex-1 flex flex-col bg-main overflow-hidden">
         <header
-          className={`${HEADER_HEIGHT} shrink-0 flex items-center border-b border-gray-500/15`}
+          className={`${HEADER_HEIGHT} shrink-0 flex items-center border-b border-small-text/15`}
         >
           <TopBar topBarTitle={topBarTitle} />
         </header>
