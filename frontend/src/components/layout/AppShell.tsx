@@ -18,7 +18,7 @@ export default function AppShell() {
         >
           <TopBar topBarTitle={topBarTitle} />
         </header>
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-9 overflow-y-auto">
           <Outlet />
         </main>
       </div>
