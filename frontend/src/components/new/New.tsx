@@ -1,49 +1,56 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createSubject } from "src/api/subject";
-import Title from "src/components/new/Title";
-import Caption from "src/components/new/Caption";
-import Name from "src/components/new/Name";
-import Description from "src/components/new/Description";
-import Close from "src/components/new/Close";
-import Cancel from "src/components/new/Cancel";
-import Create from "src/components/new/Create";
-import { useState } from "react";
+import { useState } from 'react';
+
+export type NewField = {
+  displayName: string;
+  mandatory: boolean;
+};
 
 export default function New({
   title,
   caption,
-  label,
+  fields,
+  onSubmit,
   onClose,
+  isSubmitting = false,
+  error = null,
 }: {
   title: string;
   caption: string;
-  label: string;
-  description: string;
+  fields: Record<string, NewField>;
+  onSubmit: (values: Record<string, string>) => void;
   onClose: () => void;
+  isSubmitting?: boolean;
+  error?: Error | null;
 }) {
-  const [name, setName] = useState("");
-  const queryClient = useQueryClient();
-
-  const createSubjectMutation = useMutation({
-    mutationFn: createSubject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjects"] });
-      onClose();
-    },
-  });
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(Object.keys(fields).map((key) => [key, ''])),
+  );
 
   const handleCreate = () => {
-    createSubjectMutation.mutate({ name });
+    onSubmit(values);
   };
   return (
-    <>
-      <Title title={title} />
-      <Caption caption={caption} />
-      <Name label={label} value={name} onChange={setName} />
-      <Description />
-      <Close onClick={() => onClose()} />
-      <Cancel onClick={() => onClose()} />
-      <Create onClick={handleCreate} />
-    </>
+    <div>
+      <h1>{title}</h1>
+      <p>{caption}</p>
+      {Object.entries(fields).map(([key, field]) => (
+        <div key={key}>
+          <label>
+            {field.displayName}
+            {field.mandatory ? ' *' : ''}
+          </label>
+          <input
+            type="text"
+            value={values[key]}
+            onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
+          />
+        </div>
+      ))}
+      <button onClick={handleCreate} disabled={isSubmitting}>
+        {isSubmitting ? 'Creating...' : 'Create'}
+      </button>
+      {error && <p>Error: {error.message}</p>}
+      <button onClick={onClose}>Close</button>
+    </div>
   );
 }
