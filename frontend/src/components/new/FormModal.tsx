@@ -1,13 +1,22 @@
 import { useState } from 'react';
 import Icon from 'src/components/new/Icon';
+import Select from 'src/components/new/Select';
+import KeyValueList from 'src/components/new/KeyValueList';
 
-export type FieldProperties = {
-  displayName: string;
-  mandatory: boolean;
-  type?: 'text' | 'icon';
-};
+export type FieldProperties =
+  | { displayName: string; mandatory: boolean; type?: 'text' }
+  | { displayName: string; mandatory: boolean; type: 'icon' }
+  | {
+      displayName: string;
+      mandatory: boolean;
+      type: 'select';
+      options: { value: string; label: string }[];
+    }
+  | { displayName: string; mandatory: boolean; type: 'keyvalue' };
 
-export default function FormModal<T extends Record<string, string>>({
+type FieldValue = string | Record<string, string>;
+
+export default function FormModal<T extends Record<string, FieldValue>>({
   title,
   caption,
   fields,
@@ -29,13 +38,25 @@ export default function FormModal<T extends Record<string, string>>({
   const [values, setValues] = useState<T>(
     () =>
       Object.fromEntries(
-        Object.keys(fields).map((key) => [key, initialValues?.[key as keyof T] ?? '']),
+        Object.entries<FieldProperties>(fields).map(([key, field]) => [
+          key,
+          initialValues?.[key as keyof T] ?? (field.type === 'keyvalue' ? {} : ''),
+        ]),
       ) as T,
   );
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const missingFields = Object.entries<FieldProperties>(fields)
-    .filter(([key, field]) => field.mandatory && !values[key as keyof T]?.trim())
+    .filter(([key, field]) => {
+      if (!field.mandatory) {
+        return false;
+      }
+      const value = values[key as keyof T];
+      if (field.type === 'keyvalue') {
+        return Object.keys(value as Record<string, string>).length === 0;
+      }
+      return !(value as string)?.trim();
+    })
     .map(([, field]) => field.displayName);
 
   const handleCreate = () => {
@@ -53,29 +74,47 @@ export default function FormModal<T extends Record<string, string>>({
       <div className="bg-white p-6 rounded shadow-md" onClick={(e) => e.stopPropagation()}>
         <h1>{title}</h1>
         <p>{caption}</p>
-        {Object.entries<FieldProperties>(fields).map(([key, field]) => (
-          <div key={key}>
-            {field.type === 'icon' ? (
-              <Icon
-                label={`${field.displayName}${field.mandatory ? '*' : ''}`}
-                value={values[key as keyof T] ?? ''}
-                onChange={(value) => setValues((prev) => ({ ...prev, [key]: value }) as T)}
-              />
-            ) : (
-              <>
-                <label>
-                  {field.displayName}
-                  {field.mandatory ? '*' : ''}
-                </label>
-                <input
-                  type="text"
-                  value={values[key as keyof T] ?? ''}
-                  onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }) as T)}
+        {Object.entries<FieldProperties>(fields).map(([key, field]) => {
+          const label = `${field.displayName}${field.mandatory ? '*' : ''}`;
+          return (
+            <div key={key}>
+              {field.type === 'icon' && (
+                <Icon
+                  label={label}
+                  value={(values[key as keyof T] as string) ?? ''}
+                  onChange={(value) => setValues((prev) => ({ ...prev, [key]: value }) as T)}
                 />
-              </>
-            )}
-          </div>
-        ))}
+              )}
+              {field.type === 'select' && (
+                <Select
+                  label={label}
+                  value={(values[key as keyof T] as string) ?? ''}
+                  options={field.options}
+                  onChange={(value) => setValues((prev) => ({ ...prev, [key]: value }) as T)}
+                />
+              )}
+              {field.type === 'keyvalue' && (
+                <KeyValueList
+                  label={label}
+                  value={(values[key as keyof T] as Record<string, string>) ?? {}}
+                  onChange={(value) => setValues((prev) => ({ ...prev, [key]: value }) as T)}
+                />
+              )}
+              {(!field.type || field.type === 'text') && (
+                <>
+                  <label>{label}</label>
+                  <input
+                    type="text"
+                    value={(values[key as keyof T] as string) ?? ''}
+                    onChange={(e) =>
+                      setValues((prev) => ({ ...prev, [key]: e.target.value }) as T)
+                    }
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
         <button onClick={handleCreate} disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit'}
         </button>

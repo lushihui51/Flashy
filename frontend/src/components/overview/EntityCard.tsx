@@ -53,11 +53,13 @@ export default function EntityCard({
         </div>
       </div>
       <div className="my-2 py-1">
-        <h3 className="text-lg font-bold">{name}</h3>
+        <h3 className="text-lg font-bold line-clamp-1">{name}</h3>
         {description ? (
-          <p className="text-sm text-small-text">{description}</p>
+          <p className="text-sm text-small-text line-clamp-2 min-h-10">{description}</p>
         ) : (
-          <p className="text-sm text-small-text italic">{fallbackDescription}</p>
+          <p className="text-sm text-small-text italic line-clamp-2 min-h-10">
+            {fallbackDescription}
+          </p>
         )}
       </div>
       <button className="absolute inset-0 z-0 cursor-pointer rounded-xl" onClick={onClick} />

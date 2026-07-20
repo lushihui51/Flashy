@@ -23,14 +23,14 @@ export const readDeck = async (deckId: string) => {
   return data;
 };
 
-// export const readDecks = async () => {
-//   const { data, error } = await client.GET('/api/decks/decks', {});
-//   if (error) {
-//     displayError(error);
-//     throw error;
-//   }
-//   return data;
-// };
+export const readDecks = async () => {
+  const { data, error } = await client.GET('/api/decks/decks', {});
+  if (error) {
+    displayError(error);
+    throw error;
+  }
+  return data;
+};
 
 export const updateDeck = async (deckId: string, payload: components['schemas']['DeckUpdate']) => {
   const { data, error } = await client.PUT('/api/decks/deck/{deck_id}', {

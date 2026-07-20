@@ -368,6 +368,31 @@
         }
       }
     },
+    "/api/decks/decks": {
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Read Decks",
+        "operationId": "read_decks_api_decks_decks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeckRead"
+                  },
+                  "type": "array",
+                  "title": "Response Read Decks Api Decks Decks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cards/card": {
       "post": {
         "tags": [
@@ -1915,6 +1940,10 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "card_count": {
+            "type": "integer",
+            "title": "Card Count"
           }
         },
         "type": "object",
@@ -1922,7 +1951,8 @@
           "subject_id",
           "name",
           "deck_schema",
-          "id"
+          "id",
+          "card_count"
         ],
         "title": "DeckRead"
       },

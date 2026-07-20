@@ -32,6 +32,7 @@ class DeckCreate(DeckBase):
 
 class DeckRead(DeckBase):
     id: uuid.UUID
+    card_count: int
 
 
 class DeckUpdate(AppModel):
