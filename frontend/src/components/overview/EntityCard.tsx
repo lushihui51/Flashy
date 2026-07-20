@@ -15,6 +15,7 @@ type EntityCardProps = {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  disableActions?: boolean;
 };
 
 export default function EntityCard({
@@ -29,6 +30,7 @@ export default function EntityCard({
   onClick,
   onEdit,
   onDelete,
+  disableActions = false,
 }: EntityCardProps) {
   return (
     <div className="relative rounded-xl pt-4 px-4 pb-2 bg-accent">
@@ -42,10 +44,10 @@ export default function EntityCard({
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={onEdit} className="z-10 relative">
+          <button onClick={onEdit} disabled={disableActions} className="z-10 relative">
             <SquarePen size={15} className="text-small-text cursor-pointer" />
           </button>
-          <button onClick={onDelete} className="z-10 relative">
+          <button onClick={onDelete} disabled={disableActions} className="z-10 relative">
             <Trash2 size={15} className="text-small-text cursor-pointer" />
           </button>
         </div>

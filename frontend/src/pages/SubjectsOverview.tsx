@@ -1,22 +1,30 @@
 import { useState } from 'react';
-import { readSubjects, createSubject } from 'src/api/subject';
+import { readSubjects, createSubject, deleteSubject, updateSubject } from 'src/api/subject';
 import NewButton from 'src/components/overview/NewButton';
 import All from 'src/components/overview/All';
-import New from 'src/components/new/New';
+import FormModal from 'src/components/new/FormModal';
+import type { FieldProperties } from 'src/components/new/FormModal';
 import type { components } from 'src/api/types';
 import EntityCard from 'src/components/overview/EntityCard';
 import { BookOpen } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 type SubjectRead = components['schemas']['SubjectRead'];
 
-const createInput: Record<string, { displayName: string; mandatory: boolean }> = {
+type SubjectFormValues = {
+  name: string;
+  icon: string;
+  description: string;
+};
+
+const subjectFields: Record<keyof SubjectFormValues, FieldProperties> = {
   name: { displayName: 'Name', mandatory: true },
-  icon: { displayName: 'Icon', mandatory: false },
+  icon: { displayName: 'Icon', mandatory: false, type: 'icon' },
   description: { displayName: 'Description', mandatory: false },
 };
 
 export default function SubjectsOverview() {
   const [newOpen, setNewOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<SubjectRead | null>(null);
   const queryClient = useQueryClient();
   const {
     data: subjects = [],
@@ -26,21 +34,47 @@ export default function SubjectsOverview() {
   } = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   const createSubjectMutation = useMutation({
-    mutationFn: (raw: Record<string, string>) => {
-      for (const [key, field] of Object.entries(createInput)) {
-        if (field.mandatory && !raw[key]?.trim()) {
-          throw new Error(`${field.displayName} is required`);
-        }
+    mutationFn: (values: SubjectFormValues) => {
+      const name = values.name.trim();
+      if (!name) {
+        throw new Error('Name is required');
       }
       return createSubject({
-        name: raw.name?.trim() ?? '',
-        description: raw.description || undefined,
-        icon: raw.icon || undefined,
+        name,
+        description: values.description || undefined,
+        icon: values.icon || undefined,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects'] });
       setNewOpen(false);
+    },
+  });
+
+  const deleteSubjectMutation = useMutation({
+    mutationFn: (subjectId: string) => {
+      return deleteSubject(subjectId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+    },
+  });
+
+  const editSubjectMutation = useMutation({
+    mutationFn: ({ subjectId, values }: { subjectId: string; values: SubjectFormValues }) => {
+      const name = values.name.trim();
+      if (!name) {
+        throw new Error('Name is required');
+      }
+      return updateSubject(subjectId, {
+        name,
+        description: values.description || undefined,
+        icon: values.icon || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      setEditingSubject(null);
     },
   });
 
@@ -54,8 +88,9 @@ export default function SubjectsOverview() {
     setNewOpen(true);
   };
 
-  const handleCloseAndCancel = () => {
+  const handleClose = () => {
     setNewOpen(false);
+    setEditingSubject(null);
   };
 
   const renderItem = (subject: SubjectRead) => {
@@ -74,11 +109,12 @@ export default function SubjectsOverview() {
           console.log(`Clicked on subject ${subject.id}`);
         }}
         onEdit={() => {
-          console.log(`Editing subject ${subject.id}`);
+          setEditingSubject(subject);
         }}
         onDelete={() => {
-          console.log(`Deleting subject ${subject.id}`);
+          deleteSubjectMutation.mutate(subject.id);
         }}
+        disableActions={deleteSubjectMutation.isPending || editSubjectMutation.isPending}
       />
     );
   };
@@ -94,15 +130,38 @@ export default function SubjectsOverview() {
         </div>
       </div>
       <All items={subjects} renderItem={renderItem} />
+      {deleteSubjectMutation.isError && (
+        <p className="text-sm text-red-600">
+          Error deleting subject: {deleteSubjectMutation.error.message}
+        </p>
+      )}
       {newOpen && (
-        <New
+        <FormModal<SubjectFormValues>
           title="Create New Subject"
           caption="Add a new subject to organize your flashcard decks."
-          fields={createInput}
-          onClose={handleCloseAndCancel}
+          fields={subjectFields}
+          handleClose={handleClose}
           isSubmitting={createSubjectMutation.isPending}
           error={createSubjectMutation.error}
-          onSubmit={createSubjectMutation.mutate}
+          onSubmit={(values) => createSubjectMutation.mutate(values)}
+        />
+      )}
+      {editingSubject && (
+        <FormModal<SubjectFormValues>
+          title="Edit Subject"
+          caption="Edit the details of this subject."
+          fields={subjectFields}
+          initialValues={{
+            name: editingSubject.name,
+            icon: editingSubject.icon ?? '',
+            description: editingSubject.description ?? '',
+          }}
+          handleClose={handleClose}
+          isSubmitting={editSubjectMutation.isPending}
+          error={editSubjectMutation.error}
+          onSubmit={(values) =>
+            editSubjectMutation.mutate({ subjectId: editingSubject.id, values })
+          }
         />
       )}
     </div>

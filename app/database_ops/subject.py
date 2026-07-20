@@ -7,10 +7,8 @@ from app.models.deck import Deck
 from app.models.subject import Subject
 
 
-def db_create_subject(
-    db: Session, name: str, icon: str | None = None, description: str | None = None
-) -> Subject:
-    subject = Subject(name=name, icon=icon, description=description)
+def db_create_subject(db: Session, payload: dict) -> Subject:
+    subject = Subject(**payload)
     db.add(subject)
     db.commit()
     db.refresh(subject)

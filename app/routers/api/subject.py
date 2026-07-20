@@ -17,7 +17,7 @@ router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
 @router.post("/subject", response_model=SubjectRead, status_code=201)
 def create_subject(db: SessionDep, subject: SubjectCreate):
-    created_subject = db_create_subject(db, subject.name)
+    created_subject = db_create_subject(db, subject.model_dump())
     return SubjectRead(**created_subject.model_dump(), deck_count=0)
 
 
