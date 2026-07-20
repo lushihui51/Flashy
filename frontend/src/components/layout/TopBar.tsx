@@ -9,7 +9,7 @@ export default function TopBar({ topBarTitle }: { topBarTitle: string }) {
 
   return (
     <div className="px-8 py-6">
-      <p className="text-sm text-gray-500">{formattedDate}</p>
+      <p className="text-sm text-small-text">{formattedDate}</p>
       <h1 className="text-3xl font-bold">{topBarTitle}</h1>
     </div>
   );

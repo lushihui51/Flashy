@@ -1,10 +1,8 @@
-import { client, displayError } from "src/api/client";
-import type { components } from "src/api/types";
+import { client, displayError } from 'src/api/client';
+import type { components } from 'src/api/types';
 
-export const createDeck = async (
-  payload: components["schemas"]["DeckCreate"],
-) => {
-  const { data, error } = await client.POST("/api/decks/deck", {
+export const createDeck = async (payload: components['schemas']['DeckCreate']) => {
+  const { data, error } = await client.POST('/api/decks/deck', {
     body: payload,
   });
   if (error) {
@@ -15,7 +13,7 @@ export const createDeck = async (
 };
 
 export const readDeck = async (deckId: string) => {
-  const { data, error } = await client.GET("/api/decks/deck/{deck_id}", {
+  const { data, error } = await client.GET('/api/decks/deck/{deck_id}', {
     params: { path: { deck_id: deckId } },
   });
   if (error) {
@@ -25,11 +23,17 @@ export const readDeck = async (deckId: string) => {
   return data;
 };
 
-export const updateDeck = async (
-  deckId: string,
-  payload: components["schemas"]["DeckUpdate"],
-) => {
-  const { data, error } = await client.PUT("/api/decks/deck/{deck_id}", {
+// export const readDecks = async () => {
+//   const { data, error } = await client.GET('/api/decks/decks', {});
+//   if (error) {
+//     displayError(error);
+//     throw error;
+//   }
+//   return data;
+// };
+
+export const updateDeck = async (deckId: string, payload: components['schemas']['DeckUpdate']) => {
+  const { data, error } = await client.PUT('/api/decks/deck/{deck_id}', {
     params: { path: { deck_id: deckId } },
     body: payload,
   });
@@ -41,7 +45,7 @@ export const updateDeck = async (
 };
 
 export const deleteDeck = async (deckId: string) => {
-  const { error } = await client.DELETE("/api/decks/deck/{deck_id}", {
+  const { error } = await client.DELETE('/api/decks/deck/{deck_id}', {
     params: { path: { deck_id: deckId } },
   });
   if (error) {

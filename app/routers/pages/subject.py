@@ -35,7 +35,7 @@ def create_subject_form(request: Request):
 def create_subject(
     request: Request, db: SessionDep, subject: Annotated[SubjectCreate, Form()]
 ):
-    created_subject = db_create_subject(db, subject.name)
+    created_subject = db_create_subject(db, subject.model_dump())
     return templates.TemplateResponse(
         request=request,
         name="subject/read.jinja",

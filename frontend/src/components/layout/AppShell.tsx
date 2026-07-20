@@ -8,17 +8,17 @@ export default function AppShell() {
   const { pathname } = useLocation();
   const topBarTitle = navItems.find((item) => item.path === pathname)?.label ?? 'Unknown Page';
   return (
-    <div className="flex h-screen">
-      <aside className="w-64 shrink-0 bg-sidebar">
+    <div className="flex h-screen overflow-hidden">
+      <aside className="w-64 shrink-0 bg-sidebar overflow-y-auto">
         <SideBar />
       </aside>
-      <div className="flex-1 flex flex-col bg-main">
+      <div className="flex-1 flex flex-col bg-main overflow-hidden">
         <header
-          className={`${HEADER_HEIGHT} shrink-0 flex items-center border-b border-gray-500/15`}
+          className={`${HEADER_HEIGHT} shrink-0 flex items-center border-b border-small-text/15`}
         >
           <TopBar topBarTitle={topBarTitle} />
         </header>
-        <main className="flex-1">
+        <main className="flex-1 p-9 overflow-y-auto">
           <Outlet />
         </main>
       </div>

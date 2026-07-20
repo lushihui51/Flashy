@@ -21,7 +21,7 @@ export default function SideBar() {
               `text-sm text-main px-4 py-2 flex items-center gap-3 rounded-lg mx-2 my-0.5 ${isActive ? 'bg-sidebar-active' : 'hover:bg-sidebar-hover'}`
             }
           >
-            <Icon size={20} />
+            <Icon size={16} />
             {label}
           </NavLink>
         ))}
