@@ -9,13 +9,16 @@ export default function Select({
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
 }) {
+  const hasEmptyOption = options.some((option) => option.value === '');
   return (
     <div>
       <label>{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="" disabled>
-          Select {label}
-        </option>
+        {!hasEmptyOption && (
+          <option value="" disabled>
+            Select {label}
+          </option>
+        )}
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

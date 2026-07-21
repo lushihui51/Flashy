@@ -106,9 +106,7 @@ export default function FormModal<T extends Record<string, FieldValue>>({
                   <input
                     type="text"
                     value={(values[key as keyof T] as string) ?? ''}
-                    onChange={(e) =>
-                      setValues((prev) => ({ ...prev, [key]: e.target.value }) as T)
-                    }
+                    onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }) as T)}
                   />
                 </>
               )}

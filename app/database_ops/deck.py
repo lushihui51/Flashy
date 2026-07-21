@@ -32,7 +32,9 @@ def db_read_all_decks(db: Session) -> list[Deck]:
     return list(decks)
 
 
-def db_read_decks(db: Session) -> List[Tuple[Deck, int]]:
+def db_read_decks(
+    db: Session, subject_id: uuid.UUID | None = None
+) -> List[Tuple[Deck, int]]:
     card_count = (
         select(func.count(col(Card.id)))
         .where(Card.deck_id == Deck.id)
@@ -40,7 +42,10 @@ def db_read_decks(db: Session) -> List[Tuple[Deck, int]]:
         .scalar_subquery()
         .label("card_count")
     )
-    rows = db.exec(select(Deck, card_count)).all()
+    query = select(Deck, card_count)
+    if subject_id is not None:
+        query = query.where(Deck.subject_id == subject_id)
+    rows = db.exec(query).all()
     return list(rows)
 
 

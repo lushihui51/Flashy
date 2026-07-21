@@ -36,8 +36,8 @@ def read_deck(db: SessionDep, deck_id: uuid.UUID):
 
 
 @router.get("/decks", response_model=list[DeckRead], status_code=200)
-def read_decks(db: SessionDep):
-    rows = db_read_decks(db)
+def read_decks(db: SessionDep, subject_id: uuid.UUID | None = None):
+    rows = db_read_decks(db, subject_id)
     return [DeckRead(**deck.model_dump(), card_count=card_count) for deck, card_count in rows]
 
 

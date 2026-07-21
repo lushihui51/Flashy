@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { readSubjects, createSubject, deleteSubject, updateSubject } from 'src/api/subject';
 import NewButton from 'src/components/overview/NewButton';
 import All from 'src/components/overview/All';
@@ -25,6 +26,7 @@ const subjectFields: Record<keyof SubjectFormValues, FieldProperties> = {
 export default function SubjectsOverview() {
   const [newOpen, setNewOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<SubjectRead | null>(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {
     data: subjects = [],
@@ -106,7 +108,7 @@ export default function SubjectsOverview() {
         count={subject.deck_count}
         footerLabel="View decks"
         onClick={() => {
-          console.log(`Clicked on subject ${subject.id}`);
+          navigate(`/decks?subject=${subject.id}`);
         }}
         onEdit={() => {
           setEditingSubject(subject);

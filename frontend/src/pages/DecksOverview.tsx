@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { readDecks, createDeck, deleteDeck, updateDeck } from 'src/api/deck';
 import { readSubjects } from 'src/api/subject';
 import NewButton from 'src/components/overview/NewButton';
 import All from 'src/components/overview/All';
 import FormModal from 'src/components/new/FormModal';
 import type { FieldProperties } from 'src/components/new/FormModal';
+import Select from 'src/components/new/Select';
 import type { components } from 'src/api/types';
 import EntityCard from 'src/components/overview/EntityCard';
 import { Layers } from 'lucide-react';
@@ -27,19 +29,35 @@ type DeckEditFormValues = {
 export default function DecksOverview() {
   const [newOpen, setNewOpen] = useState(false);
   const [editingDeck, setEditingDeck] = useState<DeckRead | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
+  const subjectFilter = searchParams.get('subject') ?? '';
 
   const {
     data: decks = [],
     isPending,
     isError,
     error,
-  } = useQuery({ queryKey: ['decks'], queryFn: readDecks });
+  } = useQuery({
+    queryKey: ['decks', subjectFilter],
+    queryFn: () => readDecks(subjectFilter || undefined),
+  });
 
   const { data: subjects = [] } = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   const subjectOptions = subjects.map((subject) => ({ value: subject.id, label: subject.name }));
   const subjectNameById = new Map(subjects.map((subject) => [subject.id, subject.name]));
+
+  const handleFilterChange = (value: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set('subject', value);
+    } else {
+      nextParams.delete('subject');
+    }
+    setSearchParams(nextParams);
+  };
 
   const deckCreateFields: Record<keyof DeckCreateFormValues, FieldProperties> = {
     subject_id: {
@@ -85,7 +103,6 @@ export default function DecksOverview() {
       setNewOpen(false);
     },
   });
-
   const deleteDeckMutation = useMutation({
     mutationFn: (deckId: string) => {
       return deleteDeck(deckId);
@@ -165,6 +182,14 @@ export default function DecksOverview() {
           <NewButton description="+ New Deck" onClick={handleClickNew} />
         </div>
       </div>
+      <div className="mb-6 max-w-xs">
+        <Select
+          label="Subject"
+          value={subjectFilter}
+          options={[{ value: '', label: 'All Subjects' }, ...subjectOptions]}
+          onChange={handleFilterChange}
+        />
+      </div>
       <All items={decks} renderItem={renderItem} />
       {deleteDeckMutation.isError && (
         <p className="text-sm text-red-600">
@@ -176,6 +201,7 @@ export default function DecksOverview() {
           title="Create New Deck"
           caption="Add a new deck with the fields every card in it will share."
           fields={deckCreateFields}
+          initialValues={subjectFilter ? { subject_id: subjectFilter } : undefined}
           handleClose={handleClose}
           isSubmitting={createDeckMutation.isPending}
           error={createDeckMutation.error}

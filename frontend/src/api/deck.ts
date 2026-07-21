@@ -23,8 +23,10 @@ export const readDeck = async (deckId: string) => {
   return data;
 };
 
-export const readDecks = async () => {
-  const { data, error } = await client.GET('/api/decks/decks', {});
+export const readDecks = async (subjectId?: string) => {
+  const { data, error } = await client.GET('/api/decks/decks', {
+    params: { query: subjectId ? { subject_id: subjectId } : {} },
+  });
   if (error) {
     displayError(error);
     throw error;
