@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import Icon from 'src/components/new/Icon';
-import Select from 'src/components/new/Select';
-import KeyValueList from 'src/components/new/KeyValueList';
+import Icon from 'src/components/Icon';
+import Select from 'src/components/Select';
+import KeyValueList from 'src/components/KeyValueList';
 
 export type FieldProperties =
   | { displayName: string; mandatory: boolean; type?: 'text' }

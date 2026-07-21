@@ -1,5 +1,5 @@
 // components/overview/EntityCard.tsx
-import CardIcon from 'src/components/overview/CardIcon';
+import CardIcon from 'src/components/CardIcon';
 import type { LucideIcon } from 'lucide-react';
 import { SquarePen, Trash2 } from 'lucide-react';
 

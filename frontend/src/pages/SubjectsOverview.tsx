@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { readSubjects, createSubject, deleteSubject, updateSubject } from 'src/api/subject';
-import NewButton from 'src/components/overview/NewButton';
-import All from 'src/components/overview/All';
-import FormModal from 'src/components/new/FormModal';
-import type { FieldProperties } from 'src/components/new/FormModal';
+import NewButton from 'src/components/NewButton';
+import All from 'src/components/All';
+import FormModal from 'src/components/FormModal';
+import type { FieldProperties } from 'src/components/FormModal';
 import type { components } from 'src/api/types';
-import EntityCard from 'src/components/overview/EntityCard';
+import EntityCard from 'src/components/EntityCard';
 import { BookOpen } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 type SubjectRead = components['schemas']['SubjectRead'];
