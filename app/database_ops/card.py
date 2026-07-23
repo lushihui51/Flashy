@@ -1,9 +1,8 @@
 import uuid
 from typing import Any
 
-from sqlmodel import select
+from sqlmodel import Session, select
 
-from app.database import Session
 from app.models.card import Card
 
 
