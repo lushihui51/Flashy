@@ -6,7 +6,7 @@ import NewButton from 'src/components/NewButton';
 import All from 'src/components/All';
 import FormModal from 'src/components/FormModal';
 import type { FieldProperties } from 'src/components/FormModal';
-import Select from 'src/components/Select';
+import FilterChips from 'src/components/FilterChips';
 import type { components } from 'src/api/types';
 import EntityCard from 'src/components/EntityCard';
 import { Layers } from 'lucide-react';
@@ -174,21 +174,20 @@ export default function DecksOverview() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-9">
-        <p className="text-sm text-small-text">
-          {numDecks} decks, {numCards} cards total
-        </p>
-        <div className="bg-black text-white rounded-lg px-4 py-2">
-          <NewButton description="+ New Deck" onClick={handleClickNew} />
-        </div>
-      </div>
-      <div className="mb-6 max-w-xs">
-        <Select
-          label="Subject"
+      <div className="flex flex-wrap items-center gap-4 mb-9">
+        <FilterChips
+          options={[{ value: '', label: 'All' }, ...subjectOptions]}
           value={subjectFilter}
-          options={[{ value: '', label: 'All Subjects' }, ...subjectOptions]}
           onChange={handleFilterChange}
         />
+        <div className="ml-auto flex items-center gap-4">
+          <p className="text-sm text-small-text whitespace-nowrap">
+            {numDecks} decks, {numCards} cards total
+          </p>
+          <div className="bg-black text-white rounded-lg px-4 py-2">
+            <NewButton description="+ New Deck" onClick={handleClickNew} />
+          </div>
+        </div>
       </div>
       <All items={decks} renderItem={renderItem} />
       {deleteDeckMutation.isError && (

@@ -18,9 +18,13 @@ type SubjectFormValues = {
 };
 
 const subjectFields: Record<keyof SubjectFormValues, FieldProperties> = {
-  name: { displayName: 'Name', mandatory: true },
+  name: { displayName: 'Name', mandatory: true, placeholder: 'e.g. Math, Science, History' },
   icon: { displayName: 'Icon', mandatory: false, type: 'icon' },
-  description: { displayName: 'Description', mandatory: false },
+  description: {
+    displayName: 'Description',
+    mandatory: false,
+    placeholder: 'Briefly describe the subject...',
+  },
 };
 
 export default function SubjectsOverview() {
