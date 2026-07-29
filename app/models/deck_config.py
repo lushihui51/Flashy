@@ -1,27 +1,33 @@
 from __future__ import annotations
 
 import uuid
-from typing import List
 
 from pydantic import field_validator
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlmodel import Field
+from sqlmodel import CheckConstraint, Field
 
 from app.models.app_model import AppModel
 
 
 class DeckConfigBase(AppModel):
     deck_id: uuid.UUID = Field(foreign_key="deck.id")
-    static_reveals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    static_conceals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    dynamic_reveals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    static_reveals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    static_conceals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    dynamic_reveals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
     dynamic_reveal_quantities: list[int] = Field(
         sa_column=Column(ARRAY(Integer), nullable=False)
     )
-    dynamic_conceals: List[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    dynamic_conceals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
     dynamic_conceal_quantities: list[int] = Field(
         sa_column=Column(ARRAY(Integer), nullable=False)
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "cardinality(dynamic_reveals) = cardinality(dynamic_reveal_quantities)",
+            name="dynamic_reveals_len",
+        ),
     )
 
 
@@ -59,9 +65,16 @@ class DeckConfigRead(DeckConfigBase):
 
 class DeckConfigUpdate(AppModel):
     deck_id: uuid.UUID | None = None
-    static_reveals: List[str] | None = None
-    static_conceals: List[str] | None = None
-    dynamic_reveals: List[str] | None = None
+    static_reveals: list[str] | None = None
+    static_conceals: list[str] | None = None
+    dynamic_reveals: list[str] | None = None
     dynamic_reveal_quantities: list[int] | None = None
-    dynamic_conceals: List[str] | None = None
+    dynamic_conceals: list[str] | None = None
     dynamic_conceal_quantities: list[int] | None = None
+
+    __table_args__ = (
+        CheckConstraint(
+            "cardinality(dynamic_reveals) = cardinality(dynamic_reveal_quantities)",
+            name="dynamic_reveals_len",
+        ),
+    )

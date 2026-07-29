@@ -3,15 +3,16 @@ import uuid
 
 from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, Field
+from sqlmodel import Column, Field, UniqueConstraint
 
 from app.models.app_model import AppModel
 
 
 class DeckBase(AppModel):
     subject_id: uuid.UUID = Field(foreign_key="subject.id")
-    name: str = Field(unique=True, nullable=False)
+    name: str = Field(nullable=False)
     deck_schema: dict[str, str] = Field(sa_column=Column(JSONB, nullable=False))
+    __table_args__ = (UniqueConstraint("subject_id", "name"),)
 
 
 class Deck(DeckBase, table=True):
@@ -38,4 +39,5 @@ class DeckRead(DeckBase):
 class DeckUpdate(AppModel):
     subject_id: uuid.UUID | None = None
     name: str | None = None
+    __table_args__ = (UniqueConstraint("subject_id", "name"),)
     # deck_schema: dict[str, str] | None = None
