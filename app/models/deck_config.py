@@ -12,21 +12,21 @@ from app.models.app_model import AppModel
 
 class DeckConfigBase(AppModel):
     deck_id: uuid.UUID = Field(foreign_key="deck.id")
-    static_reveals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    static_conceals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    dynamic_reveals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    dynamic_reveal_quantities: list[int] = Field(
+    prompt_fields: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    answer_fields: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    prompt_pool: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    prompt_pool_counts: list[int] = Field(
         sa_column=Column(ARRAY(Integer), nullable=False)
     )
-    dynamic_conceals: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
-    dynamic_conceal_quantities: list[int] = Field(
+    answer_pool: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False))
+    answer_pool_counts: list[int] = Field(
         sa_column=Column(ARRAY(Integer), nullable=False)
     )
 
     __table_args__ = (
         CheckConstraint(
-            "cardinality(dynamic_reveals) = cardinality(dynamic_reveal_quantities)",
-            name="dynamic_reveals_len",
+            "cardinality(prompt_pool) = cardinality(prompt_pool_counts)",
+            name="prompt_pool_len",
         ),
     )
 
@@ -37,12 +37,12 @@ class DeckConfig(DeckConfigBase, table=True):
 
 class DeckConfigCreate(DeckConfigBase):
     @field_validator(
-        "static_reveals",
-        "static_conceals",
-        "dynamic_reveals",
-        "dynamic_conceals",
-        "dynamic_reveal_quantities",
-        "dynamic_conceal_quantities",
+        "prompt_fields",
+        "answer_fields",
+        "prompt_pool",
+        "answer_pool",
+        "prompt_pool_counts",
+        "answer_pool_counts",
         mode="before",
     )
     @classmethod
@@ -65,16 +65,16 @@ class DeckConfigRead(DeckConfigBase):
 
 class DeckConfigUpdate(AppModel):
     deck_id: uuid.UUID | None = None
-    static_reveals: list[str] | None = None
-    static_conceals: list[str] | None = None
-    dynamic_reveals: list[str] | None = None
-    dynamic_reveal_quantities: list[int] | None = None
-    dynamic_conceals: list[str] | None = None
-    dynamic_conceal_quantities: list[int] | None = None
+    prompt_fields: list[str] | None = None
+    answer_fields: list[str] | None = None
+    prompt_pool: list[str] | None = None
+    prompt_pool_counts: list[int] | None = None
+    answer_pool: list[str] | None = None
+    answer_pool_counts: list[int] | None = None
 
     __table_args__ = (
         CheckConstraint(
-            "cardinality(dynamic_reveals) = cardinality(dynamic_reveal_quantities)",
-            name="dynamic_reveals_len",
+            "cardinality(prompt_pool) = cardinality(prompt_pool_counts)",
+            name="prompt_pool_len",
         ),
     )

@@ -598,18 +598,18 @@ export interface components {
              * Format: uuid
              */
             deck_id: string;
-            /** Static Reveals */
-            static_reveals: string[];
-            /** Static Conceals */
-            static_conceals: string[];
-            /** Dynamic Reveals */
-            dynamic_reveals: string[];
-            /** Dynamic Reveal Quantities */
-            dynamic_reveal_quantities: number[];
-            /** Dynamic Conceals */
-            dynamic_conceals: string[];
-            /** Dynamic Conceal Quantities */
-            dynamic_conceal_quantities: number[];
+            /** Prompt Fields */
+            prompt_fields: string[];
+            /** Answer Fields */
+            answer_fields: string[];
+            /** Prompt Pool */
+            prompt_pool: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool */
+            answer_pool: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
         };
         /** DeckConfigRead */
         DeckConfigRead: {
@@ -618,18 +618,18 @@ export interface components {
              * Format: uuid
              */
             deck_id: string;
-            /** Static Reveals */
-            static_reveals: string[];
-            /** Static Conceals */
-            static_conceals: string[];
-            /** Dynamic Reveals */
-            dynamic_reveals: string[];
-            /** Dynamic Reveal Quantities */
-            dynamic_reveal_quantities: number[];
-            /** Dynamic Conceals */
-            dynamic_conceals: string[];
-            /** Dynamic Conceal Quantities */
-            dynamic_conceal_quantities: number[];
+            /** Prompt Fields */
+            prompt_fields: string[];
+            /** Answer Fields */
+            answer_fields: string[];
+            /** Prompt Pool */
+            prompt_pool: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool */
+            answer_pool: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
             /**
              * Id
              * Format: uuid
@@ -640,18 +640,18 @@ export interface components {
         DeckConfigUpdate: {
             /** Deck Id */
             deck_id?: string | null;
-            /** Static Reveals */
-            static_reveals?: string[] | null;
-            /** Static Conceals */
-            static_conceals?: string[] | null;
-            /** Dynamic Reveals */
-            dynamic_reveals?: string[] | null;
-            /** Dynamic Reveal Quantities */
-            dynamic_reveal_quantities?: number[] | null;
-            /** Dynamic Conceals */
-            dynamic_conceals?: string[] | null;
-            /** Dynamic Conceal Quantities */
-            dynamic_conceal_quantities?: number[] | null;
+            /** Prompt Fields */
+            prompt_fields?: string[] | null;
+            /** Answer Fields */
+            answer_fields?: string[] | null;
+            /** Prompt Pool */
+            prompt_pool?: string[] | null;
+            /** Prompt Pool Counts */
+            prompt_pool_counts?: number[] | null;
+            /** Answer Pool */
+            answer_pool?: string[] | null;
+            /** Answer Pool Counts */
+            answer_pool_counts?: number[] | null;
         };
         /** DeckCreate */
         DeckCreate: {

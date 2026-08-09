@@ -24,44 +24,39 @@ def _validate_deck_config_payload(
         deck = db_read_deck(db, payload.deck_id)
         if not deck:
             raise HTTPException(status_code=404, detail="Deck not found")
-    static_reveals = payload.static_reveals if payload.static_reveals else []
-    static_conceals = payload.static_conceals if payload.static_conceals else []
-    dynamic_reveals = payload.dynamic_reveals if payload.dynamic_reveals else []
-    dynamic_reveal_quantities = (
-        payload.dynamic_reveal_quantities if payload.dynamic_reveal_quantities else []
+    prompt_fields = payload.prompt_fields if payload.prompt_fields else []
+    answer_fields = payload.answer_fields if payload.answer_fields else []
+    prompt_pool = payload.prompt_pool if payload.prompt_pool else []
+    prompt_pool_counts = (
+        payload.prompt_pool_counts if payload.prompt_pool_counts else []
     )
-    dynamic_conceal_quantities = (
-        payload.dynamic_conceal_quantities if payload.dynamic_conceal_quantities else []
+    answer_pool_counts = (
+        payload.answer_pool_counts if payload.answer_pool_counts else []
     )
-    dynamic_conceals = payload.dynamic_conceals if payload.dynamic_conceals else []
-    if (
-        set(static_reveals)
-        & set(static_conceals)
-        & set(dynamic_reveals)
-        & set(dynamic_conceals)
-    ):
+    answer_pool = payload.answer_pool if payload.answer_pool else []
+    if set(prompt_fields) & set(answer_fields) & set(prompt_pool) & set(answer_pool):
         raise HTTPException(status_code=400, detail="Duplicated deck fields")
 
     if (
         deck
         and (
-            set(static_reveals)
-            | set(static_conceals)
-            | set(dynamic_reveals)
-            | set(dynamic_conceals)
+            set(prompt_fields)
+            | set(answer_fields)
+            | set(prompt_pool)
+            | set(answer_pool)
         )
         - deck.deck_schema.keys()
     ):
         raise HTTPException(status_code=400, detail="Unknown deck fields")
 
-    if min(dynamic_reveal_quantities, default=0) < 0 or max(
-        dynamic_reveal_quantities, default=0
-    ) > len(dynamic_reveals):
+    if min(prompt_pool_counts, default=0) < 0 or max(
+        prompt_pool_counts, default=0
+    ) > len(prompt_pool):
         raise HTTPException(status_code=400, detail="Invalid dynamic reveal quantity")
 
-    if min(dynamic_conceal_quantities, default=0) < 0 or max(
-        dynamic_reveal_quantities, default=0
-    ) > len(dynamic_conceals):
+    if min(answer_pool_counts, default=0) < 0 or max(
+        answer_pool_counts, default=0
+    ) > len(answer_pool):
         raise HTTPException(status_code=400, detail="Invalid dynamic conceal quantity")
 
 
@@ -72,12 +67,12 @@ def create_deck_config(db: SessionDep, deck_config: DeckConfigCreate):
     created_deck_config = db_create_deck_config(
         db,
         deck_config.deck_id,
-        deck_config.static_reveals,
-        deck_config.static_conceals,
-        deck_config.dynamic_reveals,
-        deck_config.dynamic_reveal_quantities,
-        deck_config.dynamic_conceals,
-        deck_config.dynamic_conceal_quantities,
+        deck_config.prompt_fields,
+        deck_config.answer_fields,
+        deck_config.prompt_pool,
+        deck_config.prompt_pool_counts,
+        deck_config.answer_pool,
+        deck_config.answer_pool_counts,
     )
     return created_deck_config
 

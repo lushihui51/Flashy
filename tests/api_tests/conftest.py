@@ -115,12 +115,12 @@ def existing_card(client, card_path, existing_deck):
 def valid_create_deck_config_payload(existing_card):
     return {
         "deck_id": existing_card["deck_id"],
-        "static_reveals": ["front"],
-        "dynamic_reveals": ["top", "left"],
-        "static_conceals": ["back"],
-        "dynamic_conceals": ["bottom", "right"],
-        "dynamic_reveal_quantities": [1, 2],
-        "dynamic_conceal_quantities": [1],
+        "prompt_fields": ["front"],
+        "prompt_pool": ["top", "left"],
+        "answer_fields": ["back"],
+        "answer_pool": ["bottom", "right"],
+        "prompt_pool_counts": [1, 2],
+        "answer_pool_counts": [1],
     }
 
 

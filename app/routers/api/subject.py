@@ -61,4 +61,3 @@ def delete_subject(db: SessionDep, id: uuid.UUID):
         raise HTTPException(status_code=404, detail="Subject not found")
     subject, deck_count = row
     db_delete_subject(db, subject)
-    return None

@@ -21,7 +21,11 @@
 
 - Never run commands if not in venv, activate with `source .venv/bin/activate`
 - Never edit frontend/src/api/types.ts by hand, regenerate with `npm run gen:api` (in /frontend)
-- Always read the generated migration before applying it.
+- Never edit documents in docs/
+- Always read the generated migration before applying it
+- Always manage Python dependencies with `uv`
+- Always manage Node dependencies with `npm` (in /frontend)
+- Always summarise what is done step by step at the end of
 
 ## Conventions
 

@@ -27,10 +27,10 @@ class TestDeckConfigCRUD:
         key = next(iter(existing_deck["deck_schema"]))
         valid_create_deck_config_payload.update(
             {
-                "static_reveals": [key],
-                "static_conceals": [key],
-                "dynamic_reveals": [key],
-                "dynamic_conceals": [key],
+                "prompt_fields": [key],
+                "answer_fields": [key],
+                "prompt_pool": [key],
+                "answer_pool": [key],
             }
         )
 
@@ -42,7 +42,7 @@ class TestDeckConfigCRUD:
     def test_create_deck_config_unknown_fields(
         self, client, deck_config_path, valid_create_deck_config_payload
     ):
-        valid_create_deck_config_payload["static_reveals"] = ["__unknown_field__"]
+        valid_create_deck_config_payload["prompt_fields"] = ["__unknown_field__"]
 
         res = client.post(deck_config_path, json=valid_create_deck_config_payload)
 
@@ -53,8 +53,8 @@ class TestDeckConfigCRUD:
         self, client, deck_config_path, existing_deck, valid_create_deck_config_payload
     ):
         key = next(iter(existing_deck["deck_schema"]))
-        valid_create_deck_config_payload["dynamic_reveals"] = [key]
-        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
+        valid_create_deck_config_payload["prompt_pool"] = [key]
+        valid_create_deck_config_payload["prompt_pool_counts"] = [2]
 
         res = client.post(deck_config_path, json=valid_create_deck_config_payload)
 
@@ -65,17 +65,10 @@ class TestDeckConfigCRUD:
         self, client, deck_config_path, existing_deck, valid_create_deck_config_payload
     ):
         key = next(iter(existing_deck["deck_schema"]))
-        valid_create_deck_config_payload["dynamic_reveals"] = [
-            key,
-            key,
-        ]  # len=2, still valid keys
-        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [
-            0,
-            1,
-            2,
-        ]  # passes reveal check, triggers conceal check
-        valid_create_deck_config_payload["dynamic_conceals"] = [key]
-        valid_create_deck_config_payload["dynamic_conceal_quantities"] = [0]
+        valid_create_deck_config_payload["prompt_pool"] = [key]
+        valid_create_deck_config_payload["prompt_pool_counts"] = [1]
+        valid_create_deck_config_payload["answer_pool"] = [key]
+        valid_create_deck_config_payload["answer_pool_counts"] = [2]
 
         res = client.post(deck_config_path, json=valid_create_deck_config_payload)
 
@@ -102,12 +95,12 @@ class TestDeckConfigCRUD:
 
         payload = {
             "deck_id": existing_deck["id"],
-            "static_reveals": [key],
-            "static_conceals": [],
-            "dynamic_reveals": [],
-            "dynamic_reveal_quantities": [],
-            "dynamic_conceals": [],
-            "dynamic_conceal_quantities": [],
+            "prompt_fields": [key],
+            "answer_fields": [],
+            "prompt_pool": [],
+            "prompt_pool_counts": [],
+            "answer_pool": [],
+            "answer_pool_counts": [],
         }
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}", json=payload
@@ -116,7 +109,7 @@ class TestDeckConfigCRUD:
         assert res.status_code == 200, res.text
         body = res.json()
         assert body["id"] == existing_deck_config["id"]
-        assert body["static_reveals"] == [key]
+        assert body["prompt_fields"] == [key]
 
     def test_update_deck_config_not_found(
         self, client, deck_config_path, valid_create_deck_config_payload
@@ -157,10 +150,10 @@ class TestDeckConfigCRUD:
 
         valid_create_deck_config_payload.update(
             {
-                "static_reveals": [key],
-                "static_conceals": [key],
-                "dynamic_reveals": [key],
-                "dynamic_conceals": [key],
+                "prompt_fields": [key],
+                "answer_fields": [key],
+                "prompt_pool": [key],
+                "answer_pool": [key],
             }
         )
 
@@ -180,7 +173,7 @@ class TestDeckConfigCRUD:
         existing_deck_config,
     ):
 
-        valid_create_deck_config_payload["static_reveals"] = ["__unknown_field__"]
+        valid_create_deck_config_payload["prompt_fields"] = ["__unknown_field__"]
 
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}",
@@ -199,8 +192,8 @@ class TestDeckConfigCRUD:
         existing_deck_config,
     ):
         key = next(iter(existing_deck["deck_schema"]))
-        valid_create_deck_config_payload["dynamic_reveals"] = [key]
-        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
+        valid_create_deck_config_payload["prompt_pool"] = [key]
+        valid_create_deck_config_payload["prompt_pool_counts"] = [2]
 
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}",
@@ -219,10 +212,10 @@ class TestDeckConfigCRUD:
         existing_deck_config,
     ):
         key = next(iter(existing_deck["deck_schema"]))
-        valid_create_deck_config_payload["dynamic_reveals"] = [key, key]
-        valid_create_deck_config_payload["dynamic_reveal_quantities"] = [2]
-        valid_create_deck_config_payload["dynamic_conceals"] = [key]
-        valid_create_deck_config_payload["dynamic_conceal_quantities"] = [0]
+        valid_create_deck_config_payload["prompt_pool"] = [key]
+        valid_create_deck_config_payload["prompt_pool_counts"] = [1]
+        valid_create_deck_config_payload["answer_pool"] = [key]
+        valid_create_deck_config_payload["answer_pool_counts"] = [2]
 
         res = client.patch(
             f"{deck_config_path}/{existing_deck_config['id']}",

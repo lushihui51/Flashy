@@ -1695,58 +1695,58 @@
             "format": "uuid",
             "title": "Deck Id"
           },
-          "static_reveals": {
+          "prompt_fields": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Static Reveals"
+            "title": "Prompt Fields"
           },
-          "static_conceals": {
+          "answer_fields": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Static Conceals"
+            "title": "Answer Fields"
           },
-          "dynamic_reveals": {
+          "prompt_pool": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Dynamic Reveals"
+            "title": "Prompt Pool"
           },
-          "dynamic_reveal_quantities": {
+          "prompt_pool_counts": {
             "items": {
               "type": "integer"
             },
             "type": "array",
-            "title": "Dynamic Reveal Quantities"
+            "title": "Prompt Pool Counts"
           },
-          "dynamic_conceals": {
+          "answer_pool": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Dynamic Conceals"
+            "title": "Answer Pool"
           },
-          "dynamic_conceal_quantities": {
+          "answer_pool_counts": {
             "items": {
               "type": "integer"
             },
             "type": "array",
-            "title": "Dynamic Conceal Quantities"
+            "title": "Answer Pool Counts"
           }
         },
         "type": "object",
         "required": [
           "deck_id",
-          "static_reveals",
-          "static_conceals",
-          "dynamic_reveals",
-          "dynamic_reveal_quantities",
-          "dynamic_conceals",
-          "dynamic_conceal_quantities"
+          "prompt_fields",
+          "answer_fields",
+          "prompt_pool",
+          "prompt_pool_counts",
+          "answer_pool",
+          "answer_pool_counts"
         ],
         "title": "DeckConfigCreate"
       },
@@ -1757,47 +1757,47 @@
             "format": "uuid",
             "title": "Deck Id"
           },
-          "static_reveals": {
+          "prompt_fields": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Static Reveals"
+            "title": "Prompt Fields"
           },
-          "static_conceals": {
+          "answer_fields": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Static Conceals"
+            "title": "Answer Fields"
           },
-          "dynamic_reveals": {
+          "prompt_pool": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Dynamic Reveals"
+            "title": "Prompt Pool"
           },
-          "dynamic_reveal_quantities": {
+          "prompt_pool_counts": {
             "items": {
               "type": "integer"
             },
             "type": "array",
-            "title": "Dynamic Reveal Quantities"
+            "title": "Prompt Pool Counts"
           },
-          "dynamic_conceals": {
+          "answer_pool": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Dynamic Conceals"
+            "title": "Answer Pool"
           },
-          "dynamic_conceal_quantities": {
+          "answer_pool_counts": {
             "items": {
               "type": "integer"
             },
             "type": "array",
-            "title": "Dynamic Conceal Quantities"
+            "title": "Answer Pool Counts"
           },
           "id": {
             "type": "string",
@@ -1808,12 +1808,12 @@
         "type": "object",
         "required": [
           "deck_id",
-          "static_reveals",
-          "static_conceals",
-          "dynamic_reveals",
-          "dynamic_reveal_quantities",
-          "dynamic_conceals",
-          "dynamic_conceal_quantities",
+          "prompt_fields",
+          "answer_fields",
+          "prompt_pool",
+          "prompt_pool_counts",
+          "answer_pool",
+          "answer_pool_counts",
           "id"
         ],
         "title": "DeckConfigRead"
@@ -1832,7 +1832,7 @@
             ],
             "title": "Deck Id"
           },
-          "static_reveals": {
+          "prompt_fields": {
             "anyOf": [
               {
                 "items": {
@@ -1844,9 +1844,9 @@
                 "type": "null"
               }
             ],
-            "title": "Static Reveals"
+            "title": "Prompt Fields"
           },
-          "static_conceals": {
+          "answer_fields": {
             "anyOf": [
               {
                 "items": {
@@ -1858,9 +1858,9 @@
                 "type": "null"
               }
             ],
-            "title": "Static Conceals"
+            "title": "Answer Fields"
           },
-          "dynamic_reveals": {
+          "prompt_pool": {
             "anyOf": [
               {
                 "items": {
@@ -1872,9 +1872,9 @@
                 "type": "null"
               }
             ],
-            "title": "Dynamic Reveals"
+            "title": "Prompt Pool"
           },
-          "dynamic_reveal_quantities": {
+          "prompt_pool_counts": {
             "anyOf": [
               {
                 "items": {
@@ -1886,9 +1886,9 @@
                 "type": "null"
               }
             ],
-            "title": "Dynamic Reveal Quantities"
+            "title": "Prompt Pool Counts"
           },
-          "dynamic_conceals": {
+          "answer_pool": {
             "anyOf": [
               {
                 "items": {
@@ -1900,9 +1900,9 @@
                 "type": "null"
               }
             ],
-            "title": "Dynamic Conceals"
+            "title": "Answer Pool"
           },
-          "dynamic_conceal_quantities": {
+          "answer_pool_counts": {
             "anyOf": [
               {
                 "items": {
@@ -1914,7 +1914,7 @@
                 "type": "null"
               }
             ],
-            "title": "Dynamic Conceal Quantities"
+            "title": "Answer Pool Counts"
           }
         },
         "type": "object",

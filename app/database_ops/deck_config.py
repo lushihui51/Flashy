@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, List
+from typing import Any
 
 from sqlmodel import Session, select
 
@@ -9,21 +9,21 @@ from app.models.deck_config import DeckConfig
 def db_create_deck_config(
     db: Session,
     deck_id: uuid.UUID,
-    static_reveals: List[str],
-    static_conceals: List[str],
-    dynamic_reveals: List[str],
-    dynamic_reveal_quantities: List[int],
-    dynamic_conceals: List[str],
-    dynamic_conceal_quantities: List[int],
+    prompt_fields: list[str],
+    answer_fields: list[str],
+    prompt_pool: list[str],
+    prompt_pool_counts: list[int],
+    answer_pool: list[str],
+    answer_pool_counts: list[int],
 ) -> DeckConfig:
     new_deck_config = DeckConfig(
         deck_id=deck_id,
-        static_reveals=static_reveals,
-        static_conceals=static_conceals,
-        dynamic_reveals=dynamic_reveals,
-        dynamic_reveal_quantities=dynamic_reveal_quantities,
-        dynamic_conceals=dynamic_conceals,
-        dynamic_conceal_quantities=dynamic_conceal_quantities,
+        prompt_fields=prompt_fields,
+        answer_fields=answer_fields,
+        prompt_pool=prompt_pool,
+        prompt_pool_counts=prompt_pool_counts,
+        answer_pool=answer_pool,
+        answer_pool_counts=answer_pool_counts,
     )
     db.add(new_deck_config)
     db.commit()
@@ -35,7 +35,7 @@ def db_read_deck_config(db: Session, deck_config_id: uuid.UUID) -> DeckConfig | 
     return db.get(DeckConfig, deck_config_id)
 
 
-def db_read_all_deck_configs(db: Session) -> List[DeckConfig]:
+def db_read_all_deck_configs(db: Session) -> list[DeckConfig]:
     deck_configs = db.exec(select(DeckConfig)).all()
     return list(deck_configs)
 

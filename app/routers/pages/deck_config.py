@@ -45,12 +45,12 @@ def create_deck_config(
     created_deck_config = db_create_deck_config(
         db,
         deck_config.deck_id,
-        deck_config.static_reveals,
-        deck_config.static_conceals,
-        deck_config.dynamic_reveals,
-        deck_config.dynamic_reveal_quantities,
-        deck_config.dynamic_conceals,
-        deck_config.dynamic_conceal_quantities,
+        deck_config.prompt_fields,
+        deck_config.answer_fields,
+        deck_config.prompt_pool,
+        deck_config.prompt_pool_counts,
+        deck_config.answer_pool,
+        deck_config.answer_pool_counts,
     )
     return templates.TemplateResponse(
         request=request,

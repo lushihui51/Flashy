@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 
 from sqlmodel import Session
 
@@ -13,7 +12,7 @@ from app.models.practice_session import PracticeSession
 
 
 def create_practice_session_from_configs(
-    db: Session, deck_config_ids: List[uuid.UUID]
+    db: Session, deck_config_ids: list[uuid.UUID]
 ) -> PracticeSession:
     if deck_config_ids is None or len(deck_config_ids) == 0:
         raise ValueError("At least one deck config id must be provided")

@@ -20,32 +20,24 @@ def db_create_practice_cards(
     for card in cards:
         position = curr_position * gap
         static_reveals, static_conceals, dynamic_reveals, dynamic_conceals = (
-            dict(),
-            dict(),
-            dict(),
-            dict(),
+            {},
+            {},
+            {},
+            {},
         )
-        for key in deck_config.static_reveals:
+        for key in deck_config.prompt_fields:
             static_reveals[key] = card.fields[key]
-        for key in deck_config.static_conceals:
+        for key in deck_config.answer_fields:
             static_conceals[key] = card.fields[key]
 
-        if (
-            len(deck_config.dynamic_reveal_quantities) > 0
-            and len(deck_config.dynamic_reveals) > 0
-        ):
-            num_revealed = random.choice(deck_config.dynamic_reveal_quantities)
-            fields_revealed = random.sample(deck_config.dynamic_reveals, num_revealed)
+        if len(deck_config.prompt_pool_counts) > 0 and len(deck_config.prompt_pool) > 0:
+            num_revealed = random.choice(deck_config.prompt_pool_counts)
+            fields_revealed = random.sample(deck_config.prompt_pool, num_revealed)
             for key in fields_revealed:
                 dynamic_reveals[key] = card.fields[key]
-        if (
-            len(deck_config.dynamic_conceal_quantities) > 0
-            and len(deck_config.dynamic_conceals) > 0
-        ):
-            num_concealed = random.choice(deck_config.dynamic_conceal_quantities)
-            fields_concealed = random.sample(
-                deck_config.dynamic_conceals, num_concealed
-            )
+        if len(deck_config.answer_pool_counts) > 0 and len(deck_config.answer_pool) > 0:
+            num_concealed = random.choice(deck_config.answer_pool_counts)
+            fields_concealed = random.sample(deck_config.answer_pool, num_concealed)
             for key in fields_concealed:
                 dynamic_conceals[key] = card.fields[key]
 
