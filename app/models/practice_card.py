@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import ARRAY, BigInteger, CheckConstraint, Index, Uuid
@@ -15,7 +16,13 @@ class PracticeCardStatus(str, Enum):
 
 class PracticeCard(AppModel, TimestampMixin, table=True):
     __table_args__ = (
-        UniqueConstraint("practice_session_id", "position"),
+        # Deferrable — db_renumber_pending_practice_cards reassigns a whole session's
+        # pending positions in one transaction, which needs to freely pass through
+        # intermediate states that collide with not-yet-updated rows. Checked only at
+        # COMMIT, same reasoning as field_def's position constraint.
+        UniqueConstraint(
+            "practice_session_id", "position", deferrable=True, initially="DEFERRED"
+        ),
         Index(
             "ix_practice_card_session_status_position",
             "practice_session_id",
@@ -34,3 +41,23 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
     status: PracticeCardStatus = Field(
         sa_column=Column(String, nullable=False, default=PracticeCardStatus.pending)
     )
+
+
+class PracticeCardRead(AppModel):
+    id: uuid.UUID
+    practice_session_id: uuid.UUID
+    card_id: uuid.UUID
+    position: int
+    prompts: list[uuid.UUID]
+    answers: list[uuid.UUID]
+    status: PracticeCardStatus
+    created_at: datetime
+
+
+class RatingSubmission(AppModel):
+    ratings: dict[uuid.UUID, int]
+
+
+class RatingSubmissionResult(AppModel):
+    rated_practice_card: PracticeCardRead
+    requeued_practice_card: PracticeCardRead | None

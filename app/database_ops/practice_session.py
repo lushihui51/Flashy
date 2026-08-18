@@ -1,0 +1,20 @@
+import uuid
+
+from sqlmodel import Session
+
+from app.models.practice_session import PracticeSession
+
+
+def db_create_practice_session(db: Session, user_id: uuid.UUID) -> PracticeSession:
+    """Does not commit — the caller owns the transaction (session start is one
+    explicit transaction: the session, its practice_decks, and its practice_cards)."""
+    session = PracticeSession(user_id=user_id)
+    db.add(session)
+    db.flush()
+    return session
+
+
+def db_read_practice_session(
+    db: Session, practice_session_id: uuid.UUID
+) -> PracticeSession | None:
+    return db.get(PracticeSession, practice_session_id)

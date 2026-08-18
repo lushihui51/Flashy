@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import CheckConstraint
@@ -27,3 +28,15 @@ class PracticeSession(AppModel, TimestampMixin, table=True):
     status: SessionStatus = Field(
         sa_column=Column(String, nullable=False, default=SessionStatus.active)
     )
+
+
+class PracticeSessionCreate(AppModel):
+    user_id: uuid.UUID
+    deck_practice_config_ids: list[uuid.UUID]
+
+
+class PracticeSessionRead(AppModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    status: SessionStatus
+    created_at: datetime

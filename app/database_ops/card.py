@@ -23,6 +23,10 @@ def db_read_card(db: Session, card_id: uuid.UUID) -> Card | None:
     ).first()
 
 
+def db_read_card_ids_for_deck(db: Session, deck_id: uuid.UUID) -> list[uuid.UUID]:
+    return list(db.exec(select(Card.id).where(Card.deck_id == deck_id)).all())
+
+
 def db_update_card_values(db: Session, card: Card, values: dict[uuid.UUID, str]) -> Card:
     existing = {v.field_def_id: v for v in card.values}
     for field_def_id, value in values.items():
