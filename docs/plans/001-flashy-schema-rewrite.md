@@ -25,14 +25,17 @@ asking. If an implementation seems to require breaking one, stop and raise it.
 3. **`review_log` is append-only.** No UPDATE, no DELETE, ever. Not in application code,
    not in tests, not in fixtures.
 4. **Mastery rows are created lazily** — only on first review of a (card, field). Any query
-   that needs "all fields of this card" must drive from `field_def` and LEFT JOIN mastery
-   with `COALESCE(..., :prior)`. Driving a query _from_ `card_field_mastery` is a bug.
+   that needs "all fields of this card" must drive from `field_def` and LEFT JOIN mastery.
+   Driving a query _from_ `card_field_mastery` is a bug.
 5. **Config snapshots are immutable.** `practice_deck` holds a copy of the config taken at
    session start. Editing or deleting a `deck_practice_config` must never affect a session.
 6. **Field deletion is archival** (`archived_at`), not destruction. Hard delete only when
    values, mastery, config references, and review logs are all empty.
 7. **Ownership is enforced in the query**, not in Python after the fetch. Every repository
    function that reads user data takes `user_id` as a parameter.
+8. **Mastery arithmetic exists only inside `MasteryStrategy` implementations.** SQL fetches
+   state; Python computes. No blending, scoring, or aggregation expressions in any SQL
+   string, SQLModel expression, or trigger — anywhere, in any phase.
 
 ---
 
@@ -152,30 +155,71 @@ recorded entirely by `shown_prompt_ids`.
 answer_mastery real, prompt_review_count int, answer_review_count int, updated_at,
 PK(card_id, field_def_id))`, FKs `ON DELETE CASCADE`.
 
-**Constants in one module** — every consumer reads from here, no duplicated literals:
+**The database stores mastery state; it never computes it.** No SQL-side blending, no
+aggregate expressions, no triggers. Postgres holds rows; all arithmetic — the update
+rule, the per-field score, the per-card aggregate — lives in one Python module behind a
+strategy interface. If a query in any later phase contains mastery arithmetic, that is a
+bug (invariant 8).
 
-- `MASTERY_PRIOR` (neutral starting value)
-- `EMA_ALPHA`
-- rating → normalized score mapping (1→0, 2→33, 3→67, 4→100 unless changed)
+**Strategy interface** (`app/mastery/strategy.py` or similar):
 
-**Update rule (EMA), applied per rated answer field:**
+```python
+class MasteryStrategy(Protocol):
+    name: str  # persisted nowhere yet; used for logging and test parametrization
 
-- Answer side: the rated field's `answer_mastery` blends toward the normalized rating.
-- Prompt side: every id in `shown_prompt_ids` blends its `prompt_mastery` toward the same
-  normalized rating.
-- Both via a single `INSERT ... ON CONFLICT DO UPDATE` — the INSERT branch blends against
-  `MASTERY_PRIOR`, the UPDATE branch blends against the existing column value.
+    def prior(self) -> FieldMasteryState:
+        """State assumed for a (card, field) with no row. Lazy creation, invariant 4."""
 
-**Build `rebuild_mastery(user_id=None)`:** truncate (or delete-scoped) `card_field_mastery`,
-replay `review_log` ordered by `reviewed_at`, apply the identical update rule. Slow is fine.
+    def apply_review(
+        self, current: FieldMasteryState | None, event: ReviewEvent
+    ) -> FieldMasteryState:
+        """Pure function: (state-or-None, one review_log row) -> new state.
+        Handles both the answer-side and prompt-side blend; `event` says which."""
 
-**Build `card_mastery(card_ids, field_ids=None)`** as a read-time aggregate. Never store it,
-never use a trigger. The query drives from `field_def`:
+    def field_score(self, state: FieldMasteryState | None) -> float:
+        """Collapse one field's state to a scalar. None means never reviewed."""
+
+    def card_score(self, field_scores: Sequence[float]) -> CardScore:
+        """Aggregate live-field scores to (mastery, reviewed_field_count)."""
+```
+
+- `FieldMasteryState` is a frozen dataclass mirroring the table's value columns exactly
+  (prompt/answer mastery, prompt/answer counts). The repository maps rows ↔ state
+  dumbly; strategies never see SQLModel objects.
+- `ReviewEvent` is derived from a `review_log` row: rating, the rated `field_def_id`,
+  `shown_prompt_ids`, `reviewed_at`. Strategies consume log rows and nothing else — this
+  is what keeps invariant 2 true.
+- **Every method is pure.** No I/O, no session, no clock. This is what makes the rebuild
+  oracle and property tests cheap.
+
+**Default strategy: `EmaStrategy`.** Its constants live on the strategy (or its config),
+not in a shared constants module — `MASTERY_PRIOR`, `EMA_ALPHA`, and the rating →
+normalized score mapping (1→0, 2→33, 3→67, 4→100 unless changed). No other module may
+import these; consumers go through the strategy.
+
+**Strategy selection:** one place constructs the active strategy (settings-driven or a
+module-level default). Repositories and services receive it as a dependency; nothing
+instantiates `EmaStrategy` inline.
+
+**Write path (per rated answer field, inside the rating transaction):**
+
+1. `SELECT ... FOR UPDATE` the mastery rows for the rated field and all
+   `shown_prompt_ids` for this card (some may not exist — that's the lazy case).
+2. Build `ReviewEvent`s, call `strategy.apply_review` per affected (card, field) —
+   answer-side for the rated field, prompt-side for each shown prompt id.
+3. Upsert the returned states. The upsert writes _computed values_; there is no
+   `ON CONFLICT DO UPDATE SET x = <expression>` arithmetic.
+
+Row locks replace the atomic SQL blend. Contention is one user rating one card; this is
+fine. Do not "optimize" back into SQL expressions.
+
+**Read path — `card_mastery(card_ids, field_ids=None)`:** the query fetches raw
+material only, still driving from `field_def` (invariant 4):
 
 ```sql
-SELECT c.id,
-       AVG(COALESCE((m.prompt_mastery + m.answer_mastery) / 2, :prior)) AS mastery,
-       COUNT(m.card_id) AS reviewed_field_count
+SELECT c.id AS card_id, f.id AS field_def_id,
+       m.prompt_mastery, m.answer_mastery,
+       m.prompt_review_count, m.answer_review_count
 FROM card c
 JOIN field_def f
   ON f.deck_id = c.deck_id
@@ -184,17 +228,30 @@ JOIN field_def f
 LEFT JOIN card_field_mastery m
   ON m.card_id = c.id AND m.field_def_id = f.id
 WHERE c.id = ANY(:card_ids)
-GROUP BY c.id
 ```
 
-`deck_mastery` is the same query grouped by `deck_id`, display-only.
+Python groups rows by card, maps NULL mastery rows to `None`, and computes
+`strategy.field_score` → `strategy.card_score`. `deck_mastery` is the same fetch grouped
+by deck in Python, display-only. Never store either; never add a trigger.
 
-**Acceptance (this is the important one):** a property test that generates a random review
-sequence, applies it incrementally, snapshots `card_field_mastery`, runs `rebuild_mastery()`,
-and asserts the two states are identical within float tolerance. This test is the reason the
-log exists — it must pass before Phase 4 starts.
+**Build `rebuild_mastery(strategy, user_id=None)`:** truncate (or delete-scoped)
+`card_field_mastery`, stream `review_log` ordered by `reviewed_at`, fold each row through
+`strategy.apply_review`, write the final states. Slow is fine. Because it takes the
+strategy as a parameter, **changing strategies is not a migration — it's a rebuild.**
 
-**Commit:** `feat: card_field_mastery with EMA updates and rebuild oracle`
+**Acceptance (this is the important one):**
+
+- The property test, parameterized over strategies (just `EmaStrategy` today): generate a
+  random review sequence, apply it incrementally through the write path, snapshot
+  `card_field_mastery`, run `rebuild_mastery(strategy)`, assert the two states are
+  identical within float tolerance. This test is the reason the log exists — it must pass
+  before Phase 4 starts.
+- A purity test: `apply_review` called twice with the same inputs returns equal states
+  (guards against hidden clock/random use).
+- A grep-level check in review: no mastery arithmetic in any `.sql` string or SQLModel
+  expression outside the raw-fetch queries above.
+
+**Commit:** `feat: card_field_mastery behind MasteryStrategy with rebuild oracle`
 
 ---
 
@@ -237,9 +294,11 @@ practice_card(id uuid PK, practice_session_id FK, card_id FK, position bigint,
 
 **Pool resolution at generation time** — drive from the pool array via `unnest`, join
 `field_def` (drops archived ids left in stale configs), join `card_field_value` (drops
-fields this card left blank), LEFT JOIN mastery with COALESCE, order ascending, limit.
-Clamp the drawn count to what survives. If zero prompts or zero answers survive for a
-card, skip that card rather than generating an unrenderable practice_card.
+fields this card left blank), LEFT JOIN mastery to fetch raw state rows. No ordering or
+scoring in SQL: score the surviving candidates in Python via `strategy.field_score`
+(NULL rows map to `None`), then apply the weighted low-mastery sampling. Clamp the drawn
+count to what survives. If zero prompts or zero answers survive for a card, skip that
+card rather than generating an unrenderable practice_card.
 
 **Selection is weighted, not pure argmin.** Sample biased toward low mastery so a requeued
 card doesn't reliably repeat the combination it just failed. Keep the weighting in one
@@ -249,13 +308,16 @@ function so it can be tuned.
 validated config → order cards by `card_mastery` scoped to that config's field ids →
 generate practice_cards with sparse positions.
 
-Ordering key: `ORDER BY (reviewed_field_count = 0) DESC, mastery ASC` so unseen material
-sorts first independently of `MASTERY_PRIOR`.
+Ordering is a Python sort on the `CardScore` tuples returned by `card_mastery`:
+unseen cards first (`reviewed_field_count == 0`), then ascending mastery. The semantic —
+unseen material sorts first independently of the prior — is unchanged from any SQL
+formulation; do not reintroduce it as an `ORDER BY` expression.
 
 **Rating submission — one explicit transaction, in this order:**
 
 1. insert `review_log` rows with `ON CONFLICT DO NOTHING`
-2. upsert `card_field_mastery` (answer field + all `shown_prompt_ids`)
+2. upsert `card_field_mastery` (answer field + all `shown_prompt_ids`) via the strategy
+   write path from Phase 3
 3. update `practice_card.status` to `passed` / `failed`
 4. if failed, insert a **new** `practice_card` row (fresh prompts/answers from current
    mastery, position from updated mastery). Never mutate the old row.
@@ -326,8 +388,9 @@ at the source deck is a failing test.
 ## Phase 8 — Documentation
 
 - ADR for this schema: field promotion, lazy mastery, the log-as-source-of-truth decision,
-  config snapshotting, archival over deletion, and copy-not-share. Record the _reasoning_,
-  not just the shape — it is invisible in the models otherwise.
+  the mastery strategy pattern (SQL stores, Python computes), config snapshotting,
+  archival over deletion, and copy-not-share. Record the _reasoning_, not just the shape —
+  it is invisible in the models otherwise.
 - Update AGENTS.md with the new entity vocabulary so assistance stops suggesting old shapes.
 
 **Commit:** `docs: ADR and AGENTS.md for field-based schema`
@@ -341,4 +404,6 @@ at the source deck is a failing test.
   if any rating in the group is 1, else rounded mean).
 - Share links / `shared_deck`. Phase 6's copy function is the hard part; the link table is
   additive.
-- Materialized views for mastery. Only if a dashboard actually gets slow.
+- Materialized views for mastery. Only if a dashboard actually gets slow — note that
+  `card_mastery` now fans out N×F rows to Python, so a whole-library dashboard is the
+  first place this would surface.
