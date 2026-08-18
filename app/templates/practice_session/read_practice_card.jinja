@@ -10,18 +10,18 @@
 <p>position: {{ practice_card.position }}</p>
 <h2>Revealed:</h2>
 <h3>Static:</h3>
-{% for key, value in practice_card.static_reveals.items() %}
+{% for key, value in practice_card.prompt_fields.items() %}
 <p>{{ key }} is {{ value }}</p>
 {% endfor %}
 
 <h3>Dynamic:</h3>
-{% for key, value in practice_card.dynamic_reveals.items() %}
+{% for key, value in practice_card.prompt_pool.items() %}
 <p>{{ key }} is {{ value }}</p>
 {% endfor %}
 
 <h2>Concealed:</h2>
 <h3>Static:</h3>
-{% for key, value in practice_card.static_conceals.items() %}
+{% for key, value in practice_card.answer_fields.items() %}
 <p>{{ key }} is
 <details>
     <summary>Show</summary>{{ value }}
@@ -30,7 +30,7 @@
 {% endfor %}
 
 <h3>Dynamic:</h3>
-{% for key, value in practice_card.dynamic_conceals.items() %}
+{% for key, value in practice_card.answer_pool.items() %}
 <p>{{ key }} is
 <details>
     <summary>Show</summary>{{ value }}

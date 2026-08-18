@@ -19,36 +19,31 @@ def db_create_practice_cards(
 
     for card in cards:
         position = curr_position * gap
-        static_reveals, static_conceals, dynamic_reveals, dynamic_conceals = (
-            {},
-            {},
-            {},
-            {},
-        )
+        prompt_fields, answer_fields, prompt_pool, answer_pool = ({}, {}, {}, {})
         for key in deck_config.prompt_fields:
-            static_reveals[key] = card.fields[key]
+            prompt_fields[key] = card.fields[key]
         for key in deck_config.answer_fields:
-            static_conceals[key] = card.fields[key]
+            answer_fields[key] = card.fields[key]
 
         if len(deck_config.prompt_pool_counts) > 0 and len(deck_config.prompt_pool) > 0:
             num_revealed = random.choice(deck_config.prompt_pool_counts)
             fields_revealed = random.sample(deck_config.prompt_pool, num_revealed)
             for key in fields_revealed:
-                dynamic_reveals[key] = card.fields[key]
+                prompt_pool[key] = card.fields[key]
         if len(deck_config.answer_pool_counts) > 0 and len(deck_config.answer_pool) > 0:
             num_concealed = random.choice(deck_config.answer_pool_counts)
             fields_concealed = random.sample(deck_config.answer_pool, num_concealed)
             for key in fields_concealed:
-                dynamic_conceals[key] = card.fields[key]
+                answer_pool[key] = card.fields[key]
 
         practice_card = PracticeCard(
             card_id=card.id,
             practice_session_id=practice_session_id,
             position=position,
-            static_reveals=static_reveals,
-            static_conceals=static_conceals,
-            dynamic_reveals=dynamic_reveals,
-            dynamic_conceals=dynamic_conceals,
+            prompt_fields=prompt_fields,
+            answer_fields=answer_fields,
+            prompt_pool=prompt_pool,
+            answer_pool=answer_pool,
         )
 
         db.add(practice_card)

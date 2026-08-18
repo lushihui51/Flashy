@@ -714,20 +714,20 @@ export interface components {
             practice_session_id: string;
             /** Position */
             position: number;
-            /** Static Reveals */
-            static_reveals: {
+            /** Prompt Fields */
+            prompt_fields: {
                 [key: string]: unknown;
             };
-            /** Static Conceals */
-            static_conceals: {
+            /** Answer Fields */
+            answer_fields: {
                 [key: string]: unknown;
             };
-            /** Dynamic Reveals */
-            dynamic_reveals: {
+            /** Prompt Pool */
+            prompt_pool: {
                 [key: string]: unknown;
             };
-            /** Dynamic Conceals */
-            dynamic_conceals: {
+            /** Answer Pool */
+            answer_pool: {
                 [key: string]: unknown;
             };
             /**

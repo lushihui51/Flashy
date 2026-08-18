@@ -38,10 +38,10 @@ class TestPractice:
             card_id=card_id,
             practice_session_id=existing_practice_session["id"],
             position=(1 << 40) * 2,
-            static_reveals=dict(),
-            static_conceals=dict(),
-            dynamic_reveals=dict(),
-            dynamic_conceals=dict(),
+            prompt_fields=dict(),
+            answer_fields=dict(),
+            prompt_pool=dict(),
+            answer_pool=dict(),
         )
 
         db.add(new_practice_card)

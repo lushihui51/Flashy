@@ -2043,25 +2043,25 @@
             "type": "integer",
             "title": "Position"
           },
-          "static_reveals": {
+          "prompt_fields": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Static Reveals"
+            "title": "Prompt Fields"
           },
-          "static_conceals": {
+          "answer_fields": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Static Conceals"
+            "title": "Answer Fields"
           },
-          "dynamic_reveals": {
+          "prompt_pool": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Dynamic Reveals"
+            "title": "Prompt Pool"
           },
-          "dynamic_conceals": {
+          "answer_pool": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Dynamic Conceals"
+            "title": "Answer Pool"
           },
           "id": {
             "type": "string",
@@ -2074,10 +2074,10 @@
           "card_id",
           "practice_session_id",
           "position",
-          "static_reveals",
-          "static_conceals",
-          "dynamic_reveals",
-          "dynamic_conceals",
+          "prompt_fields",
+          "answer_fields",
+          "prompt_pool",
+          "answer_pool",
           "id"
         ],
         "title": "PracticeCardRead"
