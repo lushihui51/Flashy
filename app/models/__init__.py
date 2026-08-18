@@ -3,6 +3,12 @@ from app.models.card import Card, CardCreate, CardRead, CardUpdate
 from app.models.card_field_mastery import CardFieldMastery
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck, DeckCreate, DeckRead, DeckUpdate
+from app.models.deck_practice_config import (
+    DeckPracticeConfig,
+    DeckPracticeConfigCreate,
+    DeckPracticeConfigRead,
+    DeckPracticeConfigUpdate,
+)
 from app.models.field_def import (
     FieldDef,
     FieldDefCreate,
@@ -10,6 +16,9 @@ from app.models.field_def import (
     FieldDefUpdate,
     FieldType,
 )
+from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.practice_deck import PracticeDeck
+from app.models.practice_session import PracticeSession, SessionStatus
 from app.models.review_log import ReviewLog
 from app.models.subject import Subject, SubjectCreate, SubjectRead, SubjectUpdate
 
@@ -25,11 +34,20 @@ __all__ = [
     "DeckCreate",
     "DeckRead",
     "DeckUpdate",
+    "DeckPracticeConfig",
+    "DeckPracticeConfigCreate",
+    "DeckPracticeConfigRead",
+    "DeckPracticeConfigUpdate",
     "FieldDef",
     "FieldDefCreate",
     "FieldDefRead",
     "FieldDefUpdate",
     "FieldType",
+    "PracticeCard",
+    "PracticeCardStatus",
+    "PracticeDeck",
+    "PracticeSession",
+    "SessionStatus",
     "ReviewLog",
     "Subject",
     "SubjectCreate",

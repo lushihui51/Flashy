@@ -19,9 +19,10 @@ class ReviewLog(AppModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="app_user.id")
     card_id: uuid.UUID = Field(foreign_key="card.id")
-    # Nullable, no FK yet — practice_card doesn't exist until Phase 4, which adds the
-    # constraint. review_group_id (not this) is the durable appearance identifier.
-    practice_card_id: uuid.UUID | None = Field(default=None)
+    # Nullable — a row can be logged before/without a live practice_card (e.g. rebuild
+    # replay, or review outside a session). review_group_id (not this) is the durable
+    # appearance identifier; grouping must never depend on practice_card_id.
+    practice_card_id: uuid.UUID | None = Field(default=None, foreign_key="practice_card.id")
     field_def_id: uuid.UUID = Field(foreign_key="field_def.id")
     review_group_id: uuid.UUID
     rating: int = Field(sa_column=Column(SmallInteger, nullable=False))
