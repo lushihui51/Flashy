@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -20,15 +21,31 @@ class FieldMasteryState:
 
 
 @dataclass(frozen=True)
-class ReviewEvent:
-    """One (card, field) side of a review_log row. side says whether this event blends
-    into prompt_mastery or answer_mastery; reviewed_at is carried through for the
-    repository to stamp updated_at deterministically (rebuild replays must produce the
-    same updated_at as the original incremental write), not for strategy arithmetic."""
+class ReviewGroup:
+    """One appearance: every review_log row sharing a review_group_id, collapsed. This
+    is the unit mastery math operates on, not the raw row — a prompt shown alongside n
+    rated answers in the same appearance is one piece of evidence of variable strength,
+    not n independent ones. Requires the appearance to have been logged atomically: a
+    group must never be assembled from a partial, still-growing set of rows."""
+
+    review_group_id: uuid.UUID
+    card_id: uuid.UUID
+    reviewed_at: datetime
+    ratings: tuple[tuple[uuid.UUID, int], ...]  # (field_def_id, rating) per rated answer
+    shown_prompt_ids: tuple[uuid.UUID, ...]
+
+
+@dataclass(frozen=True)
+class MasteryUpdate:
+    """One (card, field, side)'s decided update, produced by MasteryStrategy.expand.
+    target_score is what to blend toward; breadth is the evidence count behind it
+    (always 1 on the answer side — each answer field is rated exactly once per
+    appearance; the number of rated answers a prompt was shown for, on the prompt
+    side). apply_review is the only place breadth becomes an effective weight."""
 
     side: ReviewSide
-    rating: int
-    reviewed_at: datetime
+    target_score: float
+    breadth: int
 
 
 @dataclass(frozen=True)

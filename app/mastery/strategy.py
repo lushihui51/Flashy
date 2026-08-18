@@ -1,22 +1,43 @@
+import uuid
 from collections.abc import Sequence
 from typing import Protocol
 
-from app.mastery.types import CardScore, FieldMasteryState, ReviewEvent
+from app.mastery.types import (
+    CardScore,
+    FieldMasteryState,
+    MasteryUpdate,
+    ReviewGroup,
+    ReviewSide,
+)
 
 
 class MasteryStrategy(Protocol):
-    name: str  # persisted nowhere yet; used for logging and test parametrization
+    @property
+    def name(self) -> str:
+        """Persisted nowhere yet; used for logging and test parametrization."""
+        ...
 
     def prior(self) -> FieldMasteryState:
         """State assumed for a (card, field) with no row. Lazy creation, invariant 4."""
         ...
 
+    def expand(
+        self, group: ReviewGroup
+    ) -> dict[tuple[uuid.UUID, uuid.UUID, ReviewSide], MasteryUpdate]:
+        """The single place that decides targets and breadths for one appearance:
+        one MasteryUpdate per rated answer field (breadth 1) and one per shown prompt
+        field (breadth = how many answers it was shown alongside, same target for all
+        of them since it's evidence about the same appearance). Keyed by
+        (card_id, field_def_id, side)."""
+        ...
+
     def apply_review(
-        self, current: FieldMasteryState | None, event: ReviewEvent
+        self, current: FieldMasteryState | None, update: MasteryUpdate
     ) -> FieldMasteryState:
-        """Pure function: (state-or-None, one review side) -> new state. `event.side`
-        says whether this blends into prompt_mastery or answer_mastery; the other side
-        of the returned state is carried over from `current` (or the prior) unchanged."""
+        """Pure function: (state-or-None, one decided update) -> new state. Blends
+        toward update.target_score with a weight derived from update.breadth; the
+        updated side's review_count always increments by exactly 1 — breadth affects
+        the weight, never the count."""
         ...
 
     def field_score(self, state: FieldMasteryState | None) -> float | None:
