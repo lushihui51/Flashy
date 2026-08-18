@@ -25,7 +25,6 @@
 - Always read the generated migration before applying it
 - Always manage Python dependencies with `uv`
 - Always manage Node dependencies with `npm` (in /frontend)
-- Always summarise what is done step by step at the end of
 
 ## Conventions
 
