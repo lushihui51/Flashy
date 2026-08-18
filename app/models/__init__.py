@@ -9,6 +9,7 @@ from app.models.field_def import (
     FieldDefUpdate,
     FieldType,
 )
+from app.models.review_log import ReviewLog
 from app.models.subject import Subject, SubjectCreate, SubjectRead, SubjectUpdate
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "FieldDefRead",
     "FieldDefUpdate",
     "FieldType",
+    "ReviewLog",
     "Subject",
     "SubjectCreate",
     "SubjectRead",
