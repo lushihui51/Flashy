@@ -382,8 +382,7 @@ Single transactional function. Copy order, building id maps as you go:
 2. new `field_def` rows with **new uuids**, preserving name/type/position → `field_map`
 3. new `card` rows → `card_map`
 4. new `card_field_value` rows, both ids remapped
-5. selected `deck_practice_config` rows — remap every uuid inside **all six arrays**
-   through `field_map`. The sharer chooses whether and which configs to copy.
+5. selected `deck_practice_config` rows — remap every uuid inside **all six arrays** through `field_map`. The sharer chooses whether and which configs to copy.
 
 Never copied: `card_field_mastery`, `review_log`, sessions.
 
@@ -395,15 +394,39 @@ at the source deck is a failing test.
 
 ---
 
-## Phase 7 — Frontend reconciliation
+## Phase 7 — Contract validation and frontend survey
 
-- Regenerate OpenAPI types; let TypeScript enumerate the breakage.
-- Rewrite query hooks and form shapes for the new entities.
-- Do **not** preemptively delete components — icon picker, filter chips, modals, and deck
-  detail layout are mostly unaffected.
-- Update MSW handlers to the new payloads.
+**Context:** a full frontend rewrite follows this plan as its own execution document.
+This phase does **not** bring the existing UI to parity with the new API. Its outputs are
+the regenerated contract, one working smoke path, and a written survey that seeds the
+rewrite plan. Any work beyond that is waste — it will be rebuilt.
 
-**Commit:** `refactor: frontend to field-based API`
+- Regenerate OpenAPI types. Let TypeScript enumerate the breakage, but treat the errors
+  as a **reading exercise before a fixing exercise**: anywhere the generated types are
+  awkward to consume — payloads that force client-side joins, shapes that don't match
+  how a screen would use them, endpoints missing an obvious list/detail variant — fix
+  the **API**, not the frontend. This is the last cheap moment to change the contract.
+- Restore exactly **one end-to-end happy path** and keep it compiling and working:
+  create subject → deck → fields → cards → run a practice session → rate → see mastery
+  change. Ugly is fine. This is a smoke surface for the backend during the frontend
+  rewrite, not a product.
+- Everything outside that path: **stub or disconnect, do not fix.** Comment out broken
+  routes/hooks rather than rewriting them. Do not delete components — icon picker,
+  filter chips, modals, and deck detail layout are inventory for the rewrite, not dead
+  code yet.
+- Update MSW handlers **only** for the smoke path's endpoints. Delete handlers for
+  endpoints that no longer exist; do not author handlers for screens that aren't wired.
+- Write the survey (`docs/frontend-rewrite-survey.md`): per screen/feature — works
+  against new API / broken but salvageable / rebuild from scratch; plus a list of every
+  API awkwardness found (fixed or deliberately deferred), and capabilities the new
+  schema enables that the current UI has no surface for (per-field mastery display,
+  practice configs, deck copy). This document is the raw input to the frontend
+  execution plan.
+  **Acceptance:** `tsc` passes; the smoke path works in the browser against the local
+  backend; MSW-backed tests for the smoke path pass; the survey exists and covers every
+  current screen.
+
+**Commit:** `refactor: regenerate contract, restore smoke path, survey frontend for rewrite`
 
 ---
 
