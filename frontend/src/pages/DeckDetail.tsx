@@ -25,7 +25,7 @@ function toggleId(id: string, list: string[]): string[] {
 }
 
 // Smoke-path UI only: prompt/answer fields, no pools. "Ugly is fine" — this is a
-// stand-in for the frontend rewrite, not a product. See docs/frontend-rewrite-survey.md.
+// stand-in for the frontend rewrite, not a product. See docs/cc/2026-08-19-frontend-rewrite-survey.md.
 export default function DeckDetail() {
   const { deckId = '' } = useParams<{ deckId: string }>();
   const navigate = useNavigate();

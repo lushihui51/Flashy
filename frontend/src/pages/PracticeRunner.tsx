@@ -12,7 +12,7 @@ const RATINGS = [
   { value: 4, label: '4 · Easy' },
 ];
 
-// Smoke-path UI only — see docs/frontend-rewrite-survey.md. practice_card.prompts/
+// Smoke-path UI only — see docs/cc/2026-08-19-frontend-rewrite-survey.md. practice_card.prompts/
 // answers are field_def id arrays, not text, so this page has to additionally fetch
 // the underlying card's values (and the deck's field names, for a readable label)
 // to render anything — a real UI would probably want the API to embed that directly.

@@ -416,7 +416,7 @@ rewrite plan. Any work beyond that is waste — it will be rebuilt.
   code yet.
 - Update MSW handlers **only** for the smoke path's endpoints. Delete handlers for
   endpoints that no longer exist; do not author handlers for screens that aren't wired.
-- Write the survey (`docs/frontend-rewrite-survey.md`): per screen/feature — works
+- Write the survey (`docs/cc/2026-08-19-frontend-rewrite-survey.md`): per screen/feature — works
   against new API / broken but salvageable / rebuild from scratch; plus a list of every
   API awkwardness found (fixed or deliberately deferred), and capabilities the new
   schema enables that the current UI has no surface for (per-field mastery display,

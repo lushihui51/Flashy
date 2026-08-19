@@ -1,7 +1,12 @@
 # Frontend rewrite survey
 
-Written at the end of Phase 7 (`docs/plans/001-flashy-schema-rewrite.md`). This is raw
-input for the frontend execution plan that follows — not a design document itself.
+**Date:** 2026-08-19
+**Prompted by:** Phase 7 of `docs/plans/001-flashy-schema-rewrite.md` ("Contract
+validation and frontend survey") — its explicit acceptance criterion required this
+survey to exist and cover every current screen, as raw input for the frontend
+execution plan that follows.
+**Outcome:** survey complete, all six screens covered. Not a design document itself —
+seeds the frontend rewrite plan.
 
 ## Per-screen status
 
