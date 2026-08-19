@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.practice_session import PracticeSession
 
@@ -15,6 +15,10 @@ def db_create_practice_session(db: Session, user_id: uuid.UUID) -> PracticeSessi
 
 
 def db_read_practice_session(
-    db: Session, practice_session_id: uuid.UUID
+    db: Session, practice_session_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeSession | None:
-    return db.get(PracticeSession, practice_session_id)
+    return db.exec(
+        select(PracticeSession).where(
+            PracticeSession.id == practice_session_id, PracticeSession.user_id == user_id
+        )
+    ).first()

@@ -11,6 +11,7 @@ from app.database_ops.deck_practice_config import (
     db_read_deck_practice_configs,
     db_update_deck_practice_config,
 )
+from app.dependencies import CurrentUserDep
 from app.models.deck_practice_config import (
     DeckPracticeConfigCreate,
     DeckPracticeConfigRead,
@@ -31,8 +32,10 @@ _ARRAY_FIELDS = (
 
 
 @router.post("", response_model=DeckPracticeConfigRead, status_code=201)
-def create_deck_practice_config(db: SessionDep, payload: DeckPracticeConfigCreate):
-    if not db_read_deck(db, payload.deck_id):
+def create_deck_practice_config(
+    db: SessionDep, current_user: CurrentUserDep, payload: DeckPracticeConfigCreate
+):
+    if not db_read_deck(db, payload.deck_id, current_user.id):
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
         validate_deck_practice_config(
@@ -51,13 +54,17 @@ def create_deck_practice_config(db: SessionDep, payload: DeckPracticeConfigCreat
 
 
 @router.get("", response_model=list[DeckPracticeConfigRead], status_code=200)
-def read_deck_practice_configs(db: SessionDep, deck_id: uuid.UUID):
-    return db_read_deck_practice_configs(db, deck_id)
+def read_deck_practice_configs(
+    db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID
+):
+    return db_read_deck_practice_configs(db, deck_id, current_user.id)
 
 
 @router.get("/{config_id}", response_model=DeckPracticeConfigRead, status_code=200)
-def read_deck_practice_config(db: SessionDep, config_id: uuid.UUID):
-    config = db_read_deck_practice_config(db, config_id)
+def read_deck_practice_config(
+    db: SessionDep, current_user: CurrentUserDep, config_id: uuid.UUID
+):
+    config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
         raise HTTPException(status_code=404, detail="Practice config not found")
     return config
@@ -65,9 +72,12 @@ def read_deck_practice_config(db: SessionDep, config_id: uuid.UUID):
 
 @router.patch("/{config_id}", response_model=DeckPracticeConfigRead, status_code=200)
 def update_deck_practice_config(
-    db: SessionDep, config_id: uuid.UUID, payload: DeckPracticeConfigUpdate
+    db: SessionDep,
+    current_user: CurrentUserDep,
+    config_id: uuid.UUID,
+    payload: DeckPracticeConfigUpdate,
 ):
-    config = db_read_deck_practice_config(db, config_id)
+    config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
         raise HTTPException(status_code=404, detail="Practice config not found")
 
@@ -84,8 +94,10 @@ def update_deck_practice_config(
 
 
 @router.delete("/{config_id}", status_code=204)
-def delete_deck_practice_config(db: SessionDep, config_id: uuid.UUID):
-    config = db_read_deck_practice_config(db, config_id)
+def delete_deck_practice_config(
+    db: SessionDep, current_user: CurrentUserDep, config_id: uuid.UUID
+):
+    config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
         raise HTTPException(status_code=404, detail="Practice config not found")
     db_delete_deck_practice_config(db, config)

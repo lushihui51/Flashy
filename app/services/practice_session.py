@@ -19,10 +19,7 @@ from app.database_ops.practice_deck import (
     db_create_practice_deck,
     db_read_practice_deck_for_deck,
 )
-from app.database_ops.practice_session import (
-    db_create_practice_session,
-    db_read_practice_session,
-)
+from app.database_ops.practice_session import db_create_practice_session
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import ReviewGroup
 from app.models.practice_card import PracticeCard, PracticeCardStatus
@@ -70,7 +67,7 @@ def start_practice_session(
 
     configs = []
     for config_id in deck_practice_config_ids:
-        config = db_read_deck_practice_config(db, config_id)
+        config = db_read_deck_practice_config(db, config_id, user_id)
         if not config:
             raise LookupError(f"deck_practice_config {config_id} not found")
         configs.append(config)
@@ -248,26 +245,25 @@ def _requeue_failed_card(
 def submit_rating(
     db: Session,
     strategy: MasteryStrategy,
+    user_id: uuid.UUID,
     practice_card_id: uuid.UUID,
     ratings: dict[uuid.UUID, int],
     rng: random.Random | None = None,
 ) -> tuple[PracticeCard, PracticeCard | None]:
     """One explicit transaction, in the order the plan specifies: record_review_group,
     then update practice_card.status, then — if failed — requeue a new row. Raises
-    LookupError if the practice_card doesn't exist, ValueError if it's already been
+    LookupError if the practice_card doesn't exist (including: exists but belongs to
+    another user — a foreign id 404s, it doesn't 403), ValueError if it's already been
     rated or the ratings don't cover exactly its answer fields."""
     rng = rng or random.Random()
 
-    practice_card = db_read_practice_card(db, practice_card_id)
+    practice_card = db_read_practice_card(db, practice_card_id, user_id)
     if not practice_card:
         raise LookupError(f"practice_card {practice_card_id} not found")
     if practice_card.status != PracticeCardStatus.pending:
         raise ValueError("practice_card has already been rated")
     if set(ratings.keys()) != set(practice_card.answers):
         raise ValueError("ratings must cover exactly this practice_card's answer fields")
-
-    practice_session = db_read_practice_session(db, practice_card.practice_session_id)
-    assert practice_session is not None, "practice_card.practice_session_id is FK-enforced"
 
     group = ReviewGroup(
         review_group_id=practice_card.id,
@@ -276,7 +272,7 @@ def submit_rating(
         ratings=tuple(ratings.items()),
         shown_prompt_ids=tuple(practice_card.prompts),
     )
-    record_review_group(db, strategy, practice_session.user_id, group)
+    record_review_group(db, strategy, user_id, group)
 
     failed = any(rating == 1 for rating in ratings.values())
     new_status = PracticeCardStatus.failed if failed else PracticeCardStatus.passed
@@ -284,8 +280,8 @@ def submit_rating(
 
     requeued = None
     if failed:
-        card = db_read_card(db, practice_card.card_id)
-        assert card is not None, "practice_card.card_id is FK-enforced"
+        card = db_read_card(db, practice_card.card_id, user_id)
+        assert card is not None, "the practice_card fetch above already confirmed ownership"
         practice_deck = db_read_practice_deck_for_deck(
             db, practice_card.practice_session_id, card.deck_id
         )

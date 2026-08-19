@@ -5,17 +5,31 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
 from app.models.card_field_value import CardFieldValue
+from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
+from app.models.subject import Subject
 
 
-def db_read_field_def(db: Session, field_def_id: uuid.UUID) -> FieldDef | None:
-    return db.get(FieldDef, field_def_id)
+def db_read_field_def(
+    db: Session, field_def_id: uuid.UUID, user_id: uuid.UUID
+) -> FieldDef | None:
+    return db.exec(
+        select(FieldDef)
+        .join(Deck, Deck.id == FieldDef.deck_id)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(FieldDef.id == field_def_id, Subject.user_id == user_id)
+    ).first()
 
 
 def db_read_field_defs(
-    db: Session, deck_id: uuid.UUID, include_archived: bool = False
+    db: Session, deck_id: uuid.UUID, user_id: uuid.UUID, include_archived: bool = False
 ) -> list[FieldDef]:
-    query = select(FieldDef).where(FieldDef.deck_id == deck_id)
+    query = (
+        select(FieldDef)
+        .join(Deck, Deck.id == FieldDef.deck_id)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(FieldDef.deck_id == deck_id, Subject.user_id == user_id)
+    )
     if not include_archived:
         query = query.where(col(FieldDef.archived_at).is_(None))
     query = query.order_by(col(FieldDef.position))

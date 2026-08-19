@@ -203,7 +203,7 @@ class TestPracticeSessionAcceptance:
 
         ratings = {answer_id: 1 for answer_id in original.answers}  # force a fail
         rated, requeued = submit_rating(
-            db, strategy, original_id, ratings, rng=random.Random(99)
+            db, strategy, existing_user.id, original_id, ratings, rng=random.Random(99)
         )
         db.commit()
 
@@ -282,7 +282,9 @@ class TestPositionCollisionFallback:
         monkeypatch.setattr(practice_session_module, "_insertion_position", lambda *a, **k: 0)
 
         ratings = {answer_id: 1 for answer_id in target.answers}
-        rated, requeued = submit_rating(db, strategy, target.id, ratings, rng=random.Random(3))
+        rated, requeued = submit_rating(
+            db, strategy, existing_user.id, target.id, ratings, rng=random.Random(3)
+        )
         db.commit()
 
         assert rated.status == PracticeCardStatus.failed

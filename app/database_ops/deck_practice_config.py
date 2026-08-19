@@ -3,7 +3,9 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig
+from app.models.subject import Subject
 
 
 def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
@@ -20,14 +22,26 @@ def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfi
     return config
 
 
-def db_read_deck_practice_config(db: Session, config_id: uuid.UUID) -> DeckPracticeConfig | None:
-    return db.get(DeckPracticeConfig, config_id)
+def db_read_deck_practice_config(
+    db: Session, config_id: uuid.UUID, user_id: uuid.UUID
+) -> DeckPracticeConfig | None:
+    return db.exec(
+        select(DeckPracticeConfig)
+        .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(DeckPracticeConfig.id == config_id, Subject.user_id == user_id)
+    ).first()
 
 
-def db_read_deck_practice_configs(db: Session, deck_id: uuid.UUID) -> list[DeckPracticeConfig]:
+def db_read_deck_practice_configs(
+    db: Session, deck_id: uuid.UUID, user_id: uuid.UUID
+) -> list[DeckPracticeConfig]:
     return list(
         db.exec(
-            select(DeckPracticeConfig).where(DeckPracticeConfig.deck_id == deck_id)
+            select(DeckPracticeConfig)
+            .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
+            .join(Subject, Subject.id == Deck.subject_id)
+            .where(DeckPracticeConfig.deck_id == deck_id, Subject.user_id == user_id)
         ).all()
     )
 

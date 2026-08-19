@@ -11,6 +11,7 @@ from app.database_ops.card import (
 )
 from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import db_read_field_defs
+from app.dependencies import CurrentUserDep
 from app.models.card import CardCreate, CardRead, CardUpdate
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
@@ -26,11 +27,11 @@ def _card_read(card) -> CardRead:
 
 
 @router.post("", response_model=CardRead, status_code=201)
-def create_card(db: SessionDep, card: CardCreate):
-    if not db_read_deck(db, card.deck_id):
+def create_card(db: SessionDep, current_user: CurrentUserDep, card: CardCreate):
+    if not db_read_deck(db, card.deck_id, current_user.id):
         raise HTTPException(status_code=404, detail="Deck not found")
 
-    active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id)}
+    active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id, current_user.id)}
     if set(card.values.keys()) != active_field_ids:
         raise HTTPException(
             status_code=400,
@@ -42,20 +43,22 @@ def create_card(db: SessionDep, card: CardCreate):
 
 
 @router.get("/{card_id}", response_model=CardRead, status_code=200)
-def read_card(db: SessionDep, card_id: uuid.UUID):
-    card = db_read_card(db, card_id)
+def read_card(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID):
+    card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     return _card_read(card)
 
 
 @router.patch("/{card_id}", response_model=CardRead, status_code=200)
-def update_card(db: SessionDep, card_id: uuid.UUID, payload: CardUpdate):
-    card = db_read_card(db, card_id)
+def update_card(
+    db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID, payload: CardUpdate
+):
+    card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
 
-    active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id)}
+    active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id, current_user.id)}
     if not set(payload.values.keys()) <= active_field_ids:
         raise HTTPException(
             status_code=400,
@@ -67,8 +70,8 @@ def update_card(db: SessionDep, card_id: uuid.UUID, payload: CardUpdate):
 
 
 @router.delete("/{card_id}", status_code=204)
-def delete_card(db: SessionDep, card_id: uuid.UUID):
-    card = db_read_card(db, card_id)
+def delete_card(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID):
+    card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     db_delete_card(db, card)

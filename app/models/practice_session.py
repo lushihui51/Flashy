@@ -31,7 +31,6 @@ class PracticeSession(AppModel, TimestampMixin, table=True):
 
 
 class PracticeSessionCreate(AppModel):
-    user_id: uuid.UUID
     deck_practice_config_ids: list[uuid.UUID]
 
 

@@ -3,6 +3,7 @@ import uuid
 from sqlmodel import Session, func, select
 
 from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.practice_session import PracticeSession
 
 
 def db_create_practice_card(db: Session, data: dict) -> PracticeCard:
@@ -13,18 +14,26 @@ def db_create_practice_card(db: Session, data: dict) -> PracticeCard:
     return card
 
 
-def db_read_practice_card(db: Session, practice_card_id: uuid.UUID) -> PracticeCard | None:
-    return db.get(PracticeCard, practice_card_id)
+def db_read_practice_card(
+    db: Session, practice_card_id: uuid.UUID, user_id: uuid.UUID
+) -> PracticeCard | None:
+    return db.exec(
+        select(PracticeCard)
+        .join(PracticeSession, PracticeSession.id == PracticeCard.practice_session_id)
+        .where(PracticeCard.id == practice_card_id, PracticeSession.user_id == user_id)
+    ).first()
 
 
 def db_read_current_practice_card(
-    db: Session, practice_session_id: uuid.UUID
+    db: Session, practice_session_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeCard | None:
     """The derived current card — invariant: never stored, always this query."""
     return db.exec(
         select(PracticeCard)
+        .join(PracticeSession, PracticeSession.id == PracticeCard.practice_session_id)
         .where(
             PracticeCard.practice_session_id == practice_session_id,
+            PracticeSession.user_id == user_id,
             PracticeCard.status == PracticeCardStatus.pending,
         )
         .order_by(PracticeCard.position)

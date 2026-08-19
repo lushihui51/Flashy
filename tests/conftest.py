@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
 from app.database import get_session
+from app.dependencies import get_current_app_user
 from app.main import app
 
 engine = create_engine(settings.test_database_url, echo=False)
@@ -30,12 +31,6 @@ def db(init_db):
         yield session
 
 
-@pytest.fixture()
-def client(init_db):
-    with TestClient(app) as client:
-        yield client
-
-
 @pytest.fixture
 def existing_user(db):
     from app.models.app_user import AppUser
@@ -48,10 +43,39 @@ def existing_user(db):
 
 
 @pytest.fixture
-def existing_subject(client, existing_user):
-    response = client.post(
-        "/api/subjects", json={"user_id": str(existing_user.id), "name": "Test Subject"}
-    )
+def other_user(db):
+    from app.models.app_user import AppUser
+
+    user = AppUser(clerk_user_id="test-clerk-id-2")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture()
+def client(init_db, existing_user):
+    """Requests through this client are authenticated as existing_user by default —
+    real Clerk token verification is bypassed via a dependency override, the standard
+    FastAPI testing pattern (same idea as get_session's override above). Use act_as to
+    make specific requests as a different user."""
+    app.dependency_overrides[get_current_app_user] = lambda: existing_user
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.pop(get_current_app_user, None)
+
+
+@pytest.fixture
+def act_as(client):
+    def _act_as(user):
+        app.dependency_overrides[get_current_app_user] = lambda: user
+
+    return _act_as
+
+
+@pytest.fixture
+def existing_subject(client):
+    response = client.post("/api/subjects", json={"name": "Test Subject"})
     assert response.status_code == 201, response.text
     return response.json()
 

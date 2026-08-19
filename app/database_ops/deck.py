@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.models.deck import Deck
+from app.models.subject import Subject
 
 
 def db_create_deck(db: Session, data: dict) -> Deck:
@@ -18,12 +19,22 @@ def db_create_deck(db: Session, data: dict) -> Deck:
     return deck
 
 
-def db_read_deck(db: Session, deck_id: uuid.UUID) -> Deck | None:
-    return db.get(Deck, deck_id)
+def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | None:
+    return db.exec(
+        select(Deck)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(Deck.id == deck_id, Subject.user_id == user_id)
+    ).first()
 
 
-def db_read_decks(db: Session, subject_id: uuid.UUID | None = None) -> list[Deck]:
-    query = select(Deck)
+def db_read_decks(
+    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
+) -> list[Deck]:
+    query = (
+        select(Deck)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(Subject.user_id == user_id)
+    )
     if subject_id is not None:
         query = query.where(Deck.subject_id == subject_id)
     return list(db.exec(query).all())

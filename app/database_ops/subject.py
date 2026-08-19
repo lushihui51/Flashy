@@ -18,8 +18,10 @@ def db_create_subject(db: Session, data: dict) -> Subject:
     return subject
 
 
-def db_read_subject(db: Session, subject_id: uuid.UUID) -> Subject | None:
-    return db.get(Subject, subject_id)
+def db_read_subject(db: Session, subject_id: uuid.UUID, user_id: uuid.UUID) -> Subject | None:
+    return db.exec(
+        select(Subject).where(Subject.id == subject_id, Subject.user_id == user_id)
+    ).first()
 
 
 def db_read_subjects(db: Session, user_id: uuid.UUID) -> list[Subject]:
