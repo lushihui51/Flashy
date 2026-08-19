@@ -2,7 +2,7 @@ import { client, displayError } from 'src/api/client';
 import type { components } from 'src/api/types';
 
 export const createSubject = async (payload: components['schemas']['SubjectCreate']) => {
-  const { data, error } = await client.POST('/api/subjects/subject', {
+  const { data, error } = await client.POST('/api/subjects', {
     body: payload,
   });
   if (error) {
@@ -12,9 +12,9 @@ export const createSubject = async (payload: components['schemas']['SubjectCreat
   return data;
 };
 
-export const readSubject = async (id: string) => {
-  const { data, error } = await client.GET('/api/subjects/subject/{id}', {
-    params: { path: { id: id } },
+export const readSubject = async (subjectId: string) => {
+  const { data, error } = await client.GET('/api/subjects/{subject_id}', {
+    params: { path: { subject_id: subjectId } },
   });
   if (error) {
     displayError(error);
@@ -24,7 +24,7 @@ export const readSubject = async (id: string) => {
 };
 
 export const readSubjects = async () => {
-  const { data, error } = await client.GET('/api/subjects/subjects', {});
+  const { data, error } = await client.GET('/api/subjects', {});
   if (error) {
     displayError(error);
     throw error;
@@ -33,11 +33,11 @@ export const readSubjects = async () => {
 };
 
 export const updateSubject = async (
-  id: string,
+  subjectId: string,
   payload: components['schemas']['SubjectUpdate'],
 ) => {
-  const { data, error } = await client.PATCH('/api/subjects/subject/{id}', {
-    params: { path: { id: id } },
+  const { data, error } = await client.PATCH('/api/subjects/{subject_id}', {
+    params: { path: { subject_id: subjectId } },
     body: payload,
   });
   if (error) {
@@ -47,9 +47,9 @@ export const updateSubject = async (
   return data;
 };
 
-export const deleteSubject = async (id: string) => {
-  const { error } = await client.DELETE('/api/subjects/subject/{id}', {
-    params: { path: { id: id } },
+export const deleteSubject = async (subjectId: string) => {
+  const { error } = await client.DELETE('/api/subjects/{subject_id}', {
+    params: { path: { subject_id: subjectId } },
   });
   if (error) {
     displayError(error);

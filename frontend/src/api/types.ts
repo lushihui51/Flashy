@@ -4,24 +4,25 @@
  */
 
 export interface paths {
-    "/api/subjects/subject": {
+    "/api/subjects": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Read Subjects */
+        get: operations["read_subjects_api_subjects_get"];
         put?: never;
         /** Create Subject */
-        post: operations["create_subject_api_subjects_subject_post"];
+        post: operations["create_subject_api_subjects_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/subjects/subject/{id}": {
+    "/api/subjects/{subject_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,52 +30,36 @@ export interface paths {
             cookie?: never;
         };
         /** Read Subject */
-        get: operations["read_subject_api_subjects_subject__id__get"];
+        get: operations["read_subject_api_subjects__subject_id__get"];
         put?: never;
         post?: never;
         /** Delete Subject */
-        delete: operations["delete_subject_api_subjects_subject__id__delete"];
+        delete: operations["delete_subject_api_subjects__subject_id__delete"];
         options?: never;
         head?: never;
         /** Update Subject */
-        patch: operations["update_subject_api_subjects_subject__id__patch"];
+        patch: operations["update_subject_api_subjects__subject_id__patch"];
         trace?: never;
     };
-    "/api/subjects/subjects": {
+    "/api/decks": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Subjects */
-        get: operations["read_subjects_api_subjects_subjects_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/decks/deck": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
+        /** Read Decks */
+        get: operations["read_decks_api_decks_get"];
         put?: never;
         /** Create Deck */
-        post: operations["create_deck_api_decks_deck_post"];
+        post: operations["create_deck_api_decks_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/decks/deck/{deck_id}": {
+    "/api/decks/{deck_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -82,35 +67,36 @@ export interface paths {
             cookie?: never;
         };
         /** Read Deck */
-        get: operations["read_deck_api_decks_deck__deck_id__get"];
-        /** Update Deck */
-        put: operations["update_deck_api_decks_deck__deck_id__put"];
+        get: operations["read_deck_api_decks__deck_id__get"];
+        put?: never;
         post?: never;
         /** Delete Deck */
-        delete: operations["delete_deck_api_decks_deck__deck_id__delete"];
+        delete: operations["delete_deck_api_decks__deck_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Deck */
+        patch: operations["update_deck_api_decks__deck_id__patch"];
         trace?: never;
     };
-    "/api/decks/decks": {
+    "/api/decks/{deck_id}/fields": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Decks */
-        get: operations["read_decks_api_decks_decks_get"];
+        /** Read Field Defs */
+        get: operations["read_field_defs_api_decks__deck_id__fields_get"];
         put?: never;
-        post?: never;
+        /** Create Field Def */
+        post: operations["create_field_def_api_decks__deck_id__fields_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/cards/card": {
+    "/api/decks/{deck_id}/fields/reorder": {
         parameters: {
             query?: never;
             header?: never;
@@ -119,34 +105,34 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create Card */
-        post: operations["create_card_api_cards_card_post"];
+        /** Reorder Field Defs */
+        post: operations["reorder_field_defs_api_decks__deck_id__fields_reorder_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/cards/card/{card_id}": {
+    "/api/fields/{field_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Card */
-        get: operations["read_card_api_cards_card__card_id__get"];
-        /** Update Card */
-        put: operations["update_card_api_cards_card__card_id__put"];
+        /** Read Field Def */
+        get: operations["read_field_def_api_fields__field_id__get"];
+        put?: never;
         post?: never;
-        /** Delete Card */
-        delete: operations["delete_card_api_cards_card__card_id__delete"];
+        /** Archive Field Def */
+        delete: operations["archive_field_def_api_fields__field_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Field Def */
+        patch: operations["update_field_def_api_fields__field_id__patch"];
         trace?: never;
     };
-    "/api/deck_configs/deck_config": {
+    "/api/fields/{field_id}/hard": {
         parameters: {
             query?: never;
             header?: never;
@@ -155,206 +141,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create Deck Config */
-        post: operations["create_deck_config_api_deck_configs_deck_config_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/deck_configs/deck_config/{deck_config_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Deck Config */
-        get: operations["read_deck_config_api_deck_configs_deck_config__deck_config_id__get"];
-        put?: never;
         post?: never;
-        /** Delete Deck Config */
-        delete: operations["delete_deck_config_api_deck_configs_deck_config__deck_config_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Deck Config */
-        patch: operations["update_deck_config_api_deck_configs_deck_config__deck_config_id__patch"];
-        trace?: never;
-    };
-    "/api/practice_sessions/practice_session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Practice Session */
-        post: operations["create_practice_session_api_practice_sessions_practice_session_post"];
-        delete?: never;
+        /** Hard Delete Field Def */
+        delete: operations["hard_delete_field_def_api_fields__field_id__hard_delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/practice_session/{practice_session_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Practice Session */
-        get: operations["read_practice_session_api_practice_sessions_practice_session__practice_session_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/practice_sessions/practice_session/{practice_session_id}/practice_card": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Practice Card */
-        get: operations["read_practice_card_api_practice_sessions_practice_session__practice_session_id__practice_card_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Home */
-        get: operations["read_home_page__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/subjects/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Subjects */
-        get: operations["read_subjects_page_subjects__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/subjects/subject/new": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Create Subject Form */
-        get: operations["create_subject_form_page_subjects_subject_new_get"];
-        put?: never;
-        /** Create Subject */
-        post: operations["create_subject_page_subjects_subject_new_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/subjects/subject/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Subject */
-        get: operations["read_subject_page_subjects_subject__id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/decks/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Decks */
-        get: operations["read_decks_page_decks__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/decks/deck/new": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Create Deck Form */
-        get: operations["create_deck_form_page_decks_deck_new_get"];
-        put?: never;
-        /** Create Deck */
-        post: operations["create_deck_page_decks_deck_new_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/decks/deck/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Deck */
-        get: operations["read_deck_page_decks_deck__id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/cards/": {
+    "/api/cards": {
         parameters: {
             query?: never;
             header?: never;
@@ -362,34 +157,17 @@ export interface paths {
             cookie?: never;
         };
         /** Read Cards */
-        get: operations["read_cards_page_cards__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/cards/card/new": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Create Card Form */
-        get: operations["create_card_form_page_cards_card_new_get"];
+        get: operations["read_cards_api_cards_get"];
         put?: never;
         /** Create Card */
-        post: operations["create_card_page_cards_card_new_post"];
+        post: operations["create_card_api_cards_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/page/cards/card/{id}": {
+    "/api/cards/{card_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -397,7 +175,26 @@ export interface paths {
             cookie?: never;
         };
         /** Read Card */
-        get: operations["read_card_page_cards_card__id__get"];
+        get: operations["read_card_api_cards__card_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Card */
+        delete: operations["delete_card_api_cards__card_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Card */
+        patch: operations["update_card_api_cards__card_id__patch"];
+        trace?: never;
+    };
+    "/api/cards/{card_id}/mastery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Card Mastery */
+        get: operations["read_card_mastery_api_cards__card_id__mastery_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -406,102 +203,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/page/deck_configs/": {
+    "/api/deck_practice_configs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Deck Configs */
-        get: operations["read_deck_configs_page_deck_configs__get"];
+        /** Read Deck Practice Configs */
+        get: operations["read_deck_practice_configs_api_deck_practice_configs_get"];
+        put?: never;
+        /** Create Deck Practice Config */
+        post: operations["create_deck_practice_config_api_deck_practice_configs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deck_practice_configs/{config_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Deck Practice Config */
+        get: operations["read_deck_practice_config_api_deck_practice_configs__config_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Deck Practice Config */
+        delete: operations["delete_deck_practice_config_api_deck_practice_configs__config_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Deck Practice Config */
+        patch: operations["update_deck_practice_config_api_deck_practice_configs__config_id__patch"];
         trace?: never;
     };
-    "/page/deck_configs/deck_config/create": {
+    "/api/practice_sessions": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Create Deck Config Form */
-        get: operations["create_deck_config_form_page_deck_configs_deck_config_create_get"];
-        put?: never;
-        /** Create Deck Config */
-        post: operations["create_deck_config_page_deck_configs_deck_config_create_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/deck_configs/deck_config/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Deck Config */
-        get: operations["read_deck_config_page_deck_configs_deck_config__id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/practice_sessions/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Practice Sessions */
-        get: operations["read_practice_sessions_page_practice_sessions__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/page/practice_sessions/practice_session/create": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Create Practice Session Form */
-        get: operations["create_practice_session_form_page_practice_sessions_practice_session_create_get"];
+        get?: never;
         put?: never;
         /** Create Practice Session */
-        post: operations["create_practice_session_page_practice_sessions_practice_session_create_post"];
+        post: operations["create_practice_session_api_practice_sessions_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/page/practice_sessions/practice_session/{practice_session_id}": {
+    "/api/practice_sessions/{practice_session_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Practice */
-        get: operations["read_practice_page_practice_sessions_practice_session__practice_session_id__get"];
+        /** Read Practice Session */
+        get: operations["read_practice_session_api_practice_sessions__practice_session_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -510,17 +274,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/page/practice_sessions/practice_session/{practice_session_id}/practice_card": {
+    "/api/practice_sessions/{practice_session_id}/current_card": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Practice Card */
-        get: operations["read_practice_card_page_practice_sessions_practice_session__practice_session_id__practice_card_get"];
+        /** Read Current Practice Card */
+        get: operations["read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practice_cards/{practice_card_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rate Practice Card */
+        post: operations["rate_practice_card_api_practice_cards__practice_card_id__rate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -555,10 +336,21 @@ export interface components {
              * Format: uuid
              */
             deck_id: string;
-            /** Fields */
-            fields: {
-                [key: string]: unknown;
+            /** Values */
+            values: {
+                [key: string]: string;
             };
+        };
+        /**
+         * CardMasteryRead
+         * @description Display-only aggregate — never stored, computed fresh from card_field_mastery
+         *     via the active MasteryStrategy on every request (invariant 8).
+         */
+        CardMasteryRead: {
+            /** Mastery */
+            mastery: number;
+            /** Reviewed Field Count */
+            reviewed_field_count: number;
         };
         /** CardRead */
         CardRead: {
@@ -567,91 +359,27 @@ export interface components {
              * Format: uuid
              */
             deck_id: string;
-            /** Fields */
-            fields: {
-                [key: string]: unknown;
-            };
             /**
              * Id
              * Format: uuid
              */
             id: string;
             /**
-             * Last Modified
+             * Created At
              * Format: date-time
              */
-            last_modified: string;
+            created_at: string;
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
         };
         /** CardUpdate */
         CardUpdate: {
-            /** Deck Id */
-            deck_id?: string | null;
-            /** Fields */
-            fields?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** DeckConfigCreate */
-        DeckConfigCreate: {
-            /**
-             * Deck Id
-             * Format: uuid
-             */
-            deck_id: string;
-            /** Prompt Fields */
-            prompt_fields: string[];
-            /** Answer Fields */
-            answer_fields: string[];
-            /** Prompt Pool */
-            prompt_pool: string[];
-            /** Prompt Pool Counts */
-            prompt_pool_counts: number[];
-            /** Answer Pool */
-            answer_pool: string[];
-            /** Answer Pool Counts */
-            answer_pool_counts: number[];
-        };
-        /** DeckConfigRead */
-        DeckConfigRead: {
-            /**
-             * Deck Id
-             * Format: uuid
-             */
-            deck_id: string;
-            /** Prompt Fields */
-            prompt_fields: string[];
-            /** Answer Fields */
-            answer_fields: string[];
-            /** Prompt Pool */
-            prompt_pool: string[];
-            /** Prompt Pool Counts */
-            prompt_pool_counts: number[];
-            /** Answer Pool */
-            answer_pool: string[];
-            /** Answer Pool Counts */
-            answer_pool_counts: number[];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-        };
-        /** DeckConfigUpdate */
-        DeckConfigUpdate: {
-            /** Deck Id */
-            deck_id?: string | null;
-            /** Prompt Fields */
-            prompt_fields?: string[] | null;
-            /** Answer Fields */
-            answer_fields?: string[] | null;
-            /** Prompt Pool */
-            prompt_pool?: string[] | null;
-            /** Prompt Pool Counts */
-            prompt_pool_counts?: number[] | null;
-            /** Answer Pool */
-            answer_pool?: string[] | null;
-            /** Answer Pool Counts */
-            answer_pool_counts?: number[] | null;
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
         };
         /** DeckCreate */
         DeckCreate: {
@@ -662,10 +390,77 @@ export interface components {
             subject_id: string;
             /** Name */
             name: string;
-            /** Deck Schema */
-            deck_schema: {
-                [key: string]: string;
-            };
+        };
+        /** DeckPracticeConfigCreate */
+        DeckPracticeConfigCreate: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /** Name */
+            name: string;
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+        };
+        /** DeckPracticeConfigRead */
+        DeckPracticeConfigRead: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /** Name */
+            name: string;
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** DeckPracticeConfigUpdate */
+        DeckPracticeConfigUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Prompt Field Ids */
+            prompt_field_ids?: string[] | null;
+            /** Answer Field Ids */
+            answer_field_ids?: string[] | null;
+            /** Prompt Pool Ids */
+            prompt_pool_ids?: string[] | null;
+            /** Prompt Pool Counts */
+            prompt_pool_counts?: number[] | null;
+            /** Answer Pool Ids */
+            answer_pool_ids?: string[] | null;
+            /** Answer Pool Counts */
+            answer_pool_counts?: number[] | null;
         };
         /** DeckRead */
         DeckRead: {
@@ -676,17 +471,16 @@ export interface components {
             subject_id: string;
             /** Name */
             name: string;
-            /** Deck Schema */
-            deck_schema: {
-                [key: string]: string;
-            };
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /** Card Count */
-            card_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** DeckUpdate */
         DeckUpdate: {
@@ -695,6 +489,48 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** FieldDefCreate */
+        FieldDefCreate: {
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+        };
+        /** FieldDefRead */
+        FieldDefRead: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+            /** Position */
+            position: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Archived At */
+            archived_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** FieldDefUpdate */
+        FieldDefUpdate: {
+            /** Name */
+            name?: string | null;
+            type?: components["schemas"]["FieldType"] | null;
+        };
+        /**
+         * FieldType
+         * @enum {string}
+         */
+        FieldType: "text" | "image" | "audio";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -703,43 +539,42 @@ export interface components {
         /** PracticeCardRead */
         PracticeCardRead: {
             /**
-             * Card Id
+             * Id
              * Format: uuid
              */
-            card_id: string;
+            id: string;
             /**
              * Practice Session Id
              * Format: uuid
              */
             practice_session_id: string;
-            /** Position */
-            position: number;
-            /** Prompt Fields */
-            prompt_fields: {
-                [key: string]: unknown;
-            };
-            /** Answer Fields */
-            answer_fields: {
-                [key: string]: unknown;
-            };
-            /** Prompt Pool */
-            prompt_pool: {
-                [key: string]: unknown;
-            };
-            /** Answer Pool */
-            answer_pool: {
-                [key: string]: unknown;
-            };
             /**
-             * Id
+             * Card Id
              * Format: uuid
              */
-            id: string;
+            card_id: string;
+            /** Position */
+            position: number;
+            /** Prompts */
+            prompts: string[];
+            /** Answers */
+            answers: string[];
+            status: components["schemas"]["PracticeCardStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
+        /**
+         * PracticeCardStatus
+         * @enum {string}
+         */
+        PracticeCardStatus: "pending" | "passed" | "failed";
         /** PracticeSessionCreate */
         PracticeSessionCreate: {
-            /** Deck Config Ids */
-            deck_config_ids: string[];
+            /** Deck Practice Config Ids */
+            deck_practice_config_ids: string[];
         };
         /** PracticeSessionRead */
         PracticeSessionRead: {
@@ -748,9 +583,35 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Curr */
-            curr: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
+        /** RatingSubmission */
+        RatingSubmission: {
+            /** Ratings */
+            ratings: {
+                [key: string]: number;
+            };
+        };
+        /** RatingSubmissionResult */
+        RatingSubmissionResult: {
+            rated_practice_card: components["schemas"]["PracticeCardRead"];
+            requeued_practice_card: components["schemas"]["PracticeCardRead"] | null;
+        };
+        /**
+         * SessionStatus
+         * @enum {string}
+         */
+        SessionStatus: "active" | "completed" | "abandoned";
         /** SubjectCreate */
         SubjectCreate: {
             /** Name */
@@ -773,8 +634,16 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Deck Count */
-            deck_count: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** SubjectUpdate */
         SubjectUpdate: {
@@ -807,10 +676,43 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    create_subject_api_subjects_subject_post: {
+    read_subjects_api_subjects_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_subject_api_subjects_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -840,12 +742,14 @@ export interface operations {
             };
         };
     };
-    read_subject_api_subjects_subject__id__get: {
+    read_subject_api_subjects__subject_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                id: string;
+                subject_id: string;
             };
             cookie?: never;
         };
@@ -871,12 +775,14 @@ export interface operations {
             };
         };
     };
-    delete_subject_api_subjects_subject__id__delete: {
+    delete_subject_api_subjects__subject_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                id: string;
+                subject_id: string;
             };
             cookie?: never;
         };
@@ -900,12 +806,14 @@ export interface operations {
             };
         };
     };
-    update_subject_api_subjects_subject__id__patch: {
+    update_subject_api_subjects__subject_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                id: string;
+                subject_id: string;
             };
             cookie?: never;
         };
@@ -935,10 +843,14 @@ export interface operations {
             };
         };
     };
-    read_subjects_api_subjects_subjects_get: {
+    read_decks_api_decks_get: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                subject_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -950,15 +862,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubjectRead"][];
+                    "application/json": components["schemas"]["DeckRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    create_deck_api_decks_deck_post: {
+    create_deck_api_decks_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -988,10 +911,12 @@ export interface operations {
             };
         };
     };
-    read_deck_api_decks_deck__deck_id__get: {
+    read_deck_api_decks__deck_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 deck_id: string;
             };
@@ -1019,10 +944,43 @@ export interface operations {
             };
         };
     };
-    update_deck_api_decks_deck__deck_id__put: {
+    delete_deck_api_decks__deck_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deck_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_deck_api_decks__deck_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 deck_id: string;
             };
@@ -1054,12 +1012,226 @@ export interface operations {
             };
         };
     };
-    delete_deck_api_decks_deck__deck_id__delete: {
+    read_field_defs_api_decks__deck_id__fields_get: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 deck_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_field_def_api_decks__deck_id__fields_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deck_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_field_defs_api_decks__deck_id__fields_reorder_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                deck_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": string[];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_field_def_api_fields__field_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_field_def_api_fields__field_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_field_def_api_fields__field_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hard_delete_field_def_api_fields__field_id__hard_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                field_id: string;
             };
             cookie?: never;
         };
@@ -1083,12 +1255,14 @@ export interface operations {
             };
         };
     };
-    read_decks_api_decks_decks_get: {
+    read_cards_api_cards_get: {
         parameters: {
-            query?: {
-                subject_id?: string | null;
+            query: {
+                deck_id: string;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1100,7 +1274,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckRead"][];
+                    "application/json": components["schemas"]["CardRead"][];
                 };
             };
             /** @description Validation Error */
@@ -1114,10 +1288,12 @@ export interface operations {
             };
         };
     };
-    create_card_api_cards_card_post: {
+    create_card_api_cards_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1147,10 +1323,12 @@ export interface operations {
             };
         };
     };
-    read_card_api_cards_card__card_id__get: {
+    read_card_api_cards__card_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 card_id: string;
             };
@@ -1178,10 +1356,43 @@ export interface operations {
             };
         };
     };
-    update_card_api_cards_card__card_id__put: {
+    delete_card_api_cards__card_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_card_api_cards__card_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 card_id: string;
             };
@@ -1213,10 +1424,12 @@ export interface operations {
             };
         };
     };
-    delete_card_api_cards_card__card_id__delete: {
+    read_card_mastery_api_cards__card_id__mastery_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 card_id: string;
             };
@@ -1225,11 +1438,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CardMasteryRead"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -1242,16 +1457,51 @@ export interface operations {
             };
         };
     };
-    create_deck_config_api_deck_configs_deck_config_post: {
+    read_deck_practice_configs_api_deck_practice_configs_get: {
+        parameters: {
+            query: {
+                deck_id: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckPracticeConfigRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deck_practice_config_api_deck_practice_configs_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DeckConfigCreate"];
+                "application/json": components["schemas"]["DeckPracticeConfigCreate"];
             };
         };
         responses: {
@@ -1261,7 +1511,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckConfigRead"];
+                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
                 };
             };
             /** @description Validation Error */
@@ -1275,12 +1525,14 @@ export interface operations {
             };
         };
     };
-    read_deck_config_api_deck_configs_deck_config__deck_config_id__get: {
+    read_deck_practice_config_api_deck_practice_configs__config_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                deck_config_id: string;
+                config_id: string;
             };
             cookie?: never;
         };
@@ -1292,7 +1544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckConfigRead"];
+                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
                 };
             };
             /** @description Validation Error */
@@ -1306,12 +1558,14 @@ export interface operations {
             };
         };
     };
-    delete_deck_config_api_deck_configs_deck_config__deck_config_id__delete: {
+    delete_deck_practice_config_api_deck_practice_configs__config_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                deck_config_id: string;
+                config_id: string;
             };
             cookie?: never;
         };
@@ -1335,18 +1589,20 @@ export interface operations {
             };
         };
     };
-    update_deck_config_api_deck_configs_deck_config__deck_config_id__patch: {
+    update_deck_practice_config_api_deck_practice_configs__config_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
-                deck_config_id: string;
+                config_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DeckConfigUpdate"];
+                "application/json": components["schemas"]["DeckPracticeConfigUpdate"];
             };
         };
         responses: {
@@ -1356,7 +1612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckConfigRead"];
+                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
                 };
             };
             /** @description Validation Error */
@@ -1370,10 +1626,12 @@ export interface operations {
             };
         };
     };
-    create_practice_session_api_practice_sessions_practice_session_post: {
+    create_practice_session_api_practice_sessions_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1403,10 +1661,12 @@ export interface operations {
             };
         };
     };
-    read_practice_session_api_practice_sessions_practice_session__practice_session_id__get: {
+    read_practice_session_api_practice_sessions__practice_session_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 practice_session_id: string;
             };
@@ -1434,12 +1694,12 @@ export interface operations {
             };
         };
     };
-    read_practice_card_api_practice_sessions_practice_session__practice_session_id__practice_card_get: {
+    read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get: {
         parameters: {
-            query: {
-                forward: boolean;
+            query?: never;
+            header?: {
+                authorization?: string | null;
             };
-            header?: never;
             path: {
                 practice_session_id: string;
             };
@@ -1467,284 +1727,20 @@ export interface operations {
             };
         };
     };
-    read_home_page__get: {
+    rate_practice_card_api_practice_cards__practice_card_id__rate_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
+            header?: {
+                authorization?: string | null;
             };
-        };
-    };
-    read_subjects_page_subjects__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
+            path: {
+                practice_card_id: string;
             };
-        };
-    };
-    create_subject_form_page_subjects_subject_new_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_subject_page_subjects_subject_new_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/x-www-form-urlencoded": components["schemas"]["SubjectCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_subject_page_subjects_subject__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_decks_page_decks__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_deck_form_page_decks_deck_new_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_deck_page_decks_deck_new_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["DeckCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_deck_page_decks_deck__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_cards_page_cards__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_card_form_page_cards_card_new_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_card_page_cards_card_new_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["CardCreate"];
+                "application/json": components["schemas"]["RatingSubmission"];
             };
         };
         responses: {
@@ -1754,279 +1750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_card_page_cards_card__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_deck_configs_page_deck_configs__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_deck_config_form_page_deck_configs_deck_config_create_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_deck_config_page_deck_configs_deck_config_create_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["DeckConfigCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_deck_config_page_deck_configs_deck_config__id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_practice_sessions_page_practice_sessions__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_practice_session_form_page_practice_sessions_practice_session_create_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-        };
-    };
-    create_practice_session_page_practice_sessions_practice_session_create_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["PracticeSessionCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_practice_page_practice_sessions_practice_session__practice_session_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                practice_session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_practice_card_page_practice_sessions_practice_session__practice_session_id__practice_card_get: {
-        parameters: {
-            query: {
-                forward: boolean;
-            };
-            header?: never;
-            path: {
-                practice_session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/html": string;
+                    "application/json": components["schemas"]["RatingSubmissionResult"];
                 };
             };
             /** @description Validation Error */

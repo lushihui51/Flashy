@@ -5,22 +5,40 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/subjects/subject": {
+    "/api/subjects": {
       "post": {
         "tags": [
           "Subjects"
         ],
         "summary": "Create Subject",
-        "operationId": "create_subject_api_subjects_subject_post",
+        "operationId": "create_subject_api_subjects_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SubjectCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -44,24 +62,91 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Read Subjects",
+        "operationId": "read_subjects_api_subjects_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubjectRead"
+                  },
+                  "title": "Response Read Subjects Api Subjects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/subjects/subject/{id}": {
+    "/api/subjects/{subject_id}": {
       "get": {
         "tags": [
           "Subjects"
         ],
         "summary": "Read Subject",
-        "operationId": "read_subject_api_subjects_subject__id__get",
+        "operationId": "read_subject_api_subjects__subject_id__get",
         "parameters": [
           {
-            "name": "id",
+            "name": "subject_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Id"
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -93,16 +178,32 @@
           "Subjects"
         ],
         "summary": "Update Subject",
-        "operationId": "update_subject_api_subjects_subject__id__patch",
+        "operationId": "update_subject_api_subjects__subject_id__patch",
         "parameters": [
           {
-            "name": "id",
+            "name": "subject_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Id"
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -144,16 +245,32 @@
           "Subjects"
         ],
         "summary": "Delete Subject",
-        "operationId": "delete_subject_api_subjects_subject__id__delete",
+        "operationId": "delete_subject_api_subjects__subject_id__delete",
         "parameters": [
           {
-            "name": "id",
+            "name": "subject_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Id"
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -174,47 +291,40 @@
         }
       }
     },
-    "/api/subjects/subjects": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subjects",
-        "operationId": "read_subjects_api_subjects_subjects_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SubjectRead"
-                  },
-                  "type": "array",
-                  "title": "Response Read Subjects Api Subjects Subjects Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/decks/deck": {
+    "/api/decks": {
       "post": {
         "tags": [
           "Decks"
         ],
         "summary": "Create Deck",
-        "operationId": "create_deck_api_decks_deck_post",
+        "operationId": "create_deck_api_decks_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DeckCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -238,15 +348,83 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Decks"
+        ],
+        "summary": "Read Decks",
+        "operationId": "read_decks_api_decks_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeckRead"
+                  },
+                  "title": "Response Read Decks Api Decks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/decks/deck/{deck_id}": {
+    "/api/decks/{deck_id}": {
       "get": {
         "tags": [
           "Decks"
         ],
         "summary": "Read Deck",
-        "operationId": "read_deck_api_decks_deck__deck_id__get",
+        "operationId": "read_deck_api_decks__deck_id__get",
         "parameters": [
           {
             "name": "deck_id",
@@ -256,6 +434,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -282,12 +476,12 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
           "Decks"
         ],
         "summary": "Update Deck",
-        "operationId": "update_deck_api_decks_deck__deck_id__put",
+        "operationId": "update_deck_api_decks__deck_id__patch",
         "parameters": [
           {
             "name": "deck_id",
@@ -297,6 +491,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -338,7 +548,7 @@
           "Decks"
         ],
         "summary": "Delete Deck",
-        "operationId": "delete_deck_api_decks_deck__deck_id__delete",
+        "operationId": "delete_deck_api_decks__deck_id__delete",
         "parameters": [
           {
             "name": "deck_id",
@@ -348,6 +558,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -368,29 +594,115 @@
         }
       }
     },
-    "/api/decks/decks": {
-      "get": {
+    "/api/decks/{deck_id}/fields": {
+      "post": {
         "tags": [
-          "Decks"
+          "Field Definitions"
         ],
-        "summary": "Read Decks",
-        "operationId": "read_decks_api_decks_decks_get",
+        "summary": "Create Field Def",
+        "operationId": "create_field_def_api_decks__deck_id__fields_post",
         "parameters": [
           {
-            "name": "subject_id",
-            "in": "query",
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "format": "uuid"
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Subject Id"
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldDefCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Read Field Defs",
+        "operationId": "read_field_defs_api_decks__deck_id__fields_get",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -402,9 +714,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeckRead"
+                    "$ref": "#/components/schemas/FieldDefRead"
                   },
-                  "title": "Response Read Decks Api Decks Decks Get"
+                  "title": "Response Read Field Defs Api Decks  Deck Id  Fields Get"
                 }
               }
             }
@@ -422,22 +734,353 @@
         }
       }
     },
-    "/api/cards/card": {
+    "/api/decks/{deck_id}/fields/reorder": {
+      "post": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Reorder Field Defs",
+        "operationId": "reorder_field_defs_api_decks__deck_id__fields_reorder_post",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": "Ordered Ids"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FieldDefRead"
+                  },
+                  "title": "Response Reorder Field Defs Api Decks  Deck Id  Fields Reorder Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fields/{field_id}": {
+      "get": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Read Field Def",
+        "operationId": "read_field_def_api_fields__field_id__get",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Update Field Def",
+        "operationId": "update_field_def_api_fields__field_id__patch",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldDefUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Archive Field Def",
+        "operationId": "archive_field_def_api_fields__field_id__delete",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fields/{field_id}/hard": {
+      "delete": {
+        "tags": [
+          "Field Definitions"
+        ],
+        "summary": "Hard Delete Field Def",
+        "operationId": "hard_delete_field_def_api_fields__field_id__hard_delete",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cards": {
       "post": {
         "tags": [
           "Cards"
         ],
         "summary": "Create Card",
-        "operationId": "create_card_api_cards_card_post",
+        "operationId": "create_card_api_cards_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CardCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -461,15 +1104,76 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Cards"
+        ],
+        "summary": "Read Cards",
+        "operationId": "read_cards_api_cards_get",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CardRead"
+                  },
+                  "title": "Response Read Cards Api Cards Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/cards/card/{card_id}": {
+    "/api/cards/{card_id}": {
       "get": {
         "tags": [
           "Cards"
         ],
         "summary": "Read Card",
-        "operationId": "read_card_api_cards_card__card_id__get",
+        "operationId": "read_card_api_cards__card_id__get",
         "parameters": [
           {
             "name": "card_id",
@@ -479,6 +1183,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Card Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -505,12 +1225,12 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
           "Cards"
         ],
         "summary": "Update Card",
-        "operationId": "update_card_api_cards_card__card_id__put",
+        "operationId": "update_card_api_cards__card_id__patch",
         "parameters": [
           {
             "name": "card_id",
@@ -520,6 +1240,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Card Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -561,7 +1297,7 @@
           "Cards"
         ],
         "summary": "Delete Card",
-        "operationId": "delete_card_api_cards_card__card_id__delete",
+        "operationId": "delete_card_api_cards__card_id__delete",
         "parameters": [
           {
             "name": "card_id",
@@ -571,6 +1307,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Card Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -591,30 +1343,48 @@
         }
       }
     },
-    "/api/deck_configs/deck_config": {
-      "post": {
+    "/api/cards/{card_id}/mastery": {
+      "get": {
         "tags": [
-          "Deck Configuration"
+          "Cards"
         ],
-        "summary": "Create Deck Config",
-        "operationId": "create_deck_config_api_deck_configs_deck_config_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeckConfigCreate"
-              }
+        "summary": "Read Card Mastery",
+        "operationId": "read_card_mastery_api_cards__card_id__mastery_get",
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Card Id"
             }
           },
-          "required": true
-        },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
-          "201": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckConfigRead"
+                  "$ref": "#/components/schemas/CardMasteryRead"
                 }
               }
             }
@@ -632,22 +1402,95 @@
         }
       }
     },
-    "/api/deck_configs/deck_config/{deck_config_id}": {
-      "get": {
+    "/api/deck_practice_configs": {
+      "post": {
         "tags": [
-          "Deck Configuration"
+          "Practice Config"
         ],
-        "summary": "Read Deck Config",
-        "operationId": "read_deck_config_api_deck_configs_deck_config__deck_config_id__get",
+        "summary": "Create Deck Practice Config",
+        "operationId": "create_deck_practice_config_api_deck_practice_configs_post",
         "parameters": [
           {
-            "name": "deck_config_id",
-            "in": "path",
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeckPracticeConfigCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Practice Config"
+        ],
+        "summary": "Read Deck Practice Configs",
+        "operationId": "read_deck_practice_configs_api_deck_practice_configs_get",
+        "parameters": [
+          {
+            "name": "deck_id",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Deck Config Id"
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -657,7 +1500,70 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckConfigRead"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeckPracticeConfigRead"
+                  },
+                  "title": "Response Read Deck Practice Configs Api Deck Practice Configs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deck_practice_configs/{config_id}": {
+      "get": {
+        "tags": [
+          "Practice Config"
+        ],
+        "summary": "Read Deck Practice Config",
+        "operationId": "read_deck_practice_config_api_deck_practice_configs__config_id__get",
+        "parameters": [
+          {
+            "name": "config_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Config Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
                 }
               }
             }
@@ -676,19 +1582,35 @@
       },
       "patch": {
         "tags": [
-          "Deck Configuration"
+          "Practice Config"
         ],
-        "summary": "Update Deck Config",
-        "operationId": "update_deck_config_api_deck_configs_deck_config__deck_config_id__patch",
+        "summary": "Update Deck Practice Config",
+        "operationId": "update_deck_practice_config_api_deck_practice_configs__config_id__patch",
         "parameters": [
           {
-            "name": "deck_config_id",
+            "name": "config_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Deck Config Id"
+              "title": "Config Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -697,7 +1619,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DeckConfigUpdate"
+                "$ref": "#/components/schemas/DeckPracticeConfigUpdate"
               }
             }
           }
@@ -708,7 +1630,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckConfigRead"
+                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
                 }
               }
             }
@@ -727,19 +1649,35 @@
       },
       "delete": {
         "tags": [
-          "Deck Configuration"
+          "Practice Config"
         ],
-        "summary": "Delete Deck Config",
-        "operationId": "delete_deck_config_api_deck_configs_deck_config__deck_config_id__delete",
+        "summary": "Delete Deck Practice Config",
+        "operationId": "delete_deck_practice_config_api_deck_practice_configs__config_id__delete",
         "parameters": [
           {
-            "name": "deck_config_id",
+            "name": "config_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Deck Config Id"
+              "title": "Config Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -760,22 +1698,40 @@
         }
       }
     },
-    "/api/practice_sessions/practice_session": {
+    "/api/practice_sessions": {
       "post": {
         "tags": [
           "Practice"
         ],
         "summary": "Create Practice Session",
-        "operationId": "create_practice_session_api_practice_sessions_practice_session_post",
+        "operationId": "create_practice_session_api_practice_sessions_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PracticeSessionCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -801,13 +1757,13 @@
         }
       }
     },
-    "/api/practice_sessions/practice_session/{practice_session_id}": {
+    "/api/practice_sessions/{practice_session_id}": {
       "get": {
         "tags": [
           "Practice"
         ],
         "summary": "Read Practice Session",
-        "operationId": "read_practice_session_api_practice_sessions_practice_session__practice_session_id__get",
+        "operationId": "read_practice_session_api_practice_sessions__practice_session_id__get",
         "parameters": [
           {
             "name": "practice_session_id",
@@ -817,6 +1773,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Practice Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -844,13 +1816,13 @@
         }
       }
     },
-    "/api/practice_sessions/practice_session/{practice_session_id}/practice_card": {
+    "/api/practice_sessions/{practice_session_id}/current_card": {
       "get": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Card",
-        "operationId": "read_practice_card_api_practice_sessions_practice_session__practice_session_id__practice_card_get",
+        "summary": "Read Current Practice Card",
+        "operationId": "read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get",
         "parameters": [
           {
             "name": "practice_session_id",
@@ -863,12 +1835,19 @@
             }
           },
           {
-            "name": "forward",
-            "in": "query",
-            "required": true,
+            "name": "authorization",
+            "in": "header",
+            "required": false,
             "schema": {
-              "type": "boolean",
-              "title": "Forward"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -896,680 +1875,58 @@
         }
       }
     },
-    "/page/": {
-      "get": {
-        "tags": [
-          "Home"
-        ],
-        "summary": "Read Home",
-        "operationId": "read_home_page__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/subjects/": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subjects",
-        "operationId": "read_subjects_page_subjects__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/subjects/subject/new": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Create Subject Form",
-        "operationId": "create_subject_form_page_subjects_subject_new_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
+    "/api/practice_cards/{practice_card_id}/rate": {
       "post": {
         "tags": [
-          "Subjects"
+          "Practice"
         ],
-        "summary": "Create Subject",
-        "operationId": "create_subject_page_subjects_subject_new_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/subjects/subject/{id}": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subject",
-        "operationId": "read_subject_page_subjects_subject__id__get",
+        "summary": "Rate Practice Card",
+        "operationId": "rate_practice_card_api_practice_cards__practice_card_id__rate_post",
         "parameters": [
           {
-            "name": "id",
+            "name": "practice_card_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
+              "title": "Practice Card Id"
             }
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/decks/": {
-      "get": {
-        "tags": [
-          "Decks"
-        ],
-        "summary": "Read Decks",
-        "operationId": "read_decks_page_decks__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/decks/deck/new": {
-      "get": {
-        "tags": [
-          "Decks"
-        ],
-        "summary": "Create Deck Form",
-        "operationId": "create_deck_form_page_decks_deck_new_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Decks"
-        ],
-        "summary": "Create Deck",
-        "operationId": "create_deck_page_decks_deck_new_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/DeckCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/decks/deck/{id}": {
-      "get": {
-        "tags": [
-          "Decks"
-        ],
-        "summary": "Read Deck",
-        "operationId": "read_deck_page_decks_deck__id__get",
-        "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "required": true,
+            "name": "authorization",
+            "in": "header",
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
+              "anyOf": [
+                {
                   "type": "string"
+                },
+                {
+                  "type": "null"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
+              ],
+              "title": "Authorization"
             }
           }
-        }
-      }
-    },
-    "/page/cards/": {
-      "get": {
-        "tags": [
-          "Cards"
         ],
-        "summary": "Read Cards",
-        "operationId": "read_cards_page_cards__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/cards/card/new": {
-      "get": {
-        "tags": [
-          "Cards"
-        ],
-        "summary": "Create Card Form",
-        "operationId": "create_card_form_page_cards_card_new_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Cards"
-        ],
-        "summary": "Create Card",
-        "operationId": "create_card_page_cards_card_new_post",
         "requestBody": {
+          "required": true,
           "content": {
-            "application/x-www-form-urlencoded": {
+            "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CardCreate"
+                "$ref": "#/components/schemas/RatingSubmission"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/cards/card/{id}": {
-      "get": {
-        "tags": [
-          "Cards"
-        ],
-        "summary": "Read Card",
-        "operationId": "read_card_page_cards_card__id__get",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/deck_configs/": {
-      "get": {
-        "tags": [
-          "Deck Configurations"
-        ],
-        "summary": "Read Deck Configs",
-        "operationId": "read_deck_configs_page_deck_configs__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/deck_configs/deck_config/create": {
-      "get": {
-        "tags": [
-          "Deck Configurations"
-        ],
-        "summary": "Create Deck Config Form",
-        "operationId": "create_deck_config_form_page_deck_configs_deck_config_create_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Deck Configurations"
-        ],
-        "summary": "Create Deck Config",
-        "operationId": "create_deck_config_page_deck_configs_deck_config_create_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/DeckConfigCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/deck_configs/deck_config/{id}": {
-      "get": {
-        "tags": [
-          "Deck Configurations"
-        ],
-        "summary": "Read Deck Config",
-        "operationId": "read_deck_config_page_deck_configs_deck_config__id__get",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/practice_sessions/": {
-      "get": {
-        "tags": [
-          "Practices"
-        ],
-        "summary": "Read Practice Sessions",
-        "operationId": "read_practice_sessions_page_practice_sessions__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/practice_sessions/practice_session/create": {
-      "get": {
-        "tags": [
-          "Practices"
-        ],
-        "summary": "Create Practice Session Form",
-        "operationId": "create_practice_session_form_page_practice_sessions_practice_session_create_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Practices"
-        ],
-        "summary": "Create Practice Session",
-        "operationId": "create_practice_session_page_practice_sessions_practice_session_create_post",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PracticeSessionCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/practice_sessions/practice_session/{practice_session_id}": {
-      "get": {
-        "tags": [
-          "Practices"
-        ],
-        "summary": "Read Practice",
-        "operationId": "read_practice_page_practice_sessions_practice_session__practice_session_id__get",
-        "parameters": [
-          {
-            "name": "practice_session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Practice Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/page/practice_sessions/practice_session/{practice_session_id}/practice_card": {
-      "get": {
-        "tags": [
-          "Practices"
-        ],
-        "summary": "Read Practice Card",
-        "operationId": "read_practice_card_page_practice_sessions_practice_session__practice_session_id__practice_card_get",
-        "parameters": [
-          {
-            "name": "practice_session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Practice Session Id"
-            }
-          },
-          {
-            "name": "forward",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "boolean",
-              "title": "Forward"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/RatingSubmissionResult"
                 }
               }
             }
@@ -1613,18 +1970,42 @@
             "format": "uuid",
             "title": "Deck Id"
           },
-          "fields": {
-            "additionalProperties": true,
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
             "type": "object",
-            "title": "Fields"
+            "title": "Values"
           }
         },
         "type": "object",
         "required": [
           "deck_id",
-          "fields"
+          "values"
         ],
         "title": "CardCreate"
+      },
+      "CardMasteryRead": {
+        "properties": {
+          "mastery": {
+            "type": "number",
+            "title": "Mastery"
+          },
+          "reviewed_field_count": {
+            "type": "integer",
+            "title": "Reviewed Field Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mastery",
+          "reviewed_field_count"
+        ],
+        "title": "CardMasteryRead",
+        "description": "Display-only aggregate \u2014 never stored, computed fresh from card_field_mastery\nvia the active MasteryStrategy on every request (invariant 8)."
       },
       "CardRead": {
         "properties": {
@@ -1633,292 +2014,54 @@
             "format": "uuid",
             "title": "Deck Id"
           },
-          "fields": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Fields"
-          },
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
-          "last_modified": {
+          "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Last Modified"
+            "title": "Created At"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Values"
           }
         },
         "type": "object",
         "required": [
           "deck_id",
-          "fields",
           "id",
-          "last_modified"
+          "created_at",
+          "values"
         ],
         "title": "CardRead"
       },
       "CardUpdate": {
         "properties": {
-          "deck_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deck Id"
-          },
-          "fields": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fields"
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Values"
           }
         },
         "type": "object",
+        "required": [
+          "values"
+        ],
         "title": "CardUpdate"
-      },
-      "DeckConfigCreate": {
-        "properties": {
-          "deck_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Deck Id"
-          },
-          "prompt_fields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Prompt Fields"
-          },
-          "answer_fields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Answer Fields"
-          },
-          "prompt_pool": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Prompt Pool"
-          },
-          "prompt_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Answer Pool"
-          },
-          "answer_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Answer Pool Counts"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deck_id",
-          "prompt_fields",
-          "answer_fields",
-          "prompt_pool",
-          "prompt_pool_counts",
-          "answer_pool",
-          "answer_pool_counts"
-        ],
-        "title": "DeckConfigCreate"
-      },
-      "DeckConfigRead": {
-        "properties": {
-          "deck_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Deck Id"
-          },
-          "prompt_fields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Prompt Fields"
-          },
-          "answer_fields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Answer Fields"
-          },
-          "prompt_pool": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Prompt Pool"
-          },
-          "prompt_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Answer Pool"
-          },
-          "answer_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Answer Pool Counts"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deck_id",
-          "prompt_fields",
-          "answer_fields",
-          "prompt_pool",
-          "prompt_pool_counts",
-          "answer_pool",
-          "answer_pool_counts",
-          "id"
-        ],
-        "title": "DeckConfigRead"
-      },
-      "DeckConfigUpdate": {
-        "properties": {
-          "deck_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deck Id"
-          },
-          "prompt_fields": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Fields"
-          },
-          "answer_fields": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Fields"
-          },
-          "prompt_pool": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Pool"
-          },
-          "prompt_pool_counts": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Pool"
-          },
-          "answer_pool_counts": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Pool Counts"
-          }
-        },
-        "type": "object",
-        "title": "DeckConfigUpdate"
       },
       "DeckCreate": {
         "properties": {
@@ -1930,22 +2073,273 @@
           "name": {
             "type": "string",
             "title": "Name"
-          },
-          "deck_schema": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Deck Schema"
           }
         },
         "type": "object",
         "required": [
           "subject_id",
-          "name",
-          "deck_schema"
+          "name"
         ],
         "title": "DeckCreate"
+      },
+      "DeckPracticeConfigCreate": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "name",
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts"
+        ],
+        "title": "DeckPracticeConfigCreate"
+      },
+      "DeckPracticeConfigRead": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "name",
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "id",
+          "created_at"
+        ],
+        "title": "DeckPracticeConfigRead"
+      },
+      "DeckPracticeConfigUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "prompt_field_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Pool Counts"
+          }
+        },
+        "type": "object",
+        "title": "DeckPracticeConfigUpdate"
       },
       "DeckRead": {
         "properties": {
@@ -1958,30 +2352,23 @@
             "type": "string",
             "title": "Name"
           },
-          "deck_schema": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Deck Schema"
-          },
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
-          "card_count": {
-            "type": "integer",
-            "title": "Card Count"
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "subject_id",
           "name",
-          "deck_schema",
           "id",
-          "card_count"
+          "created_at"
         ],
         "title": "DeckRead"
       },
@@ -2014,6 +2401,112 @@
         "type": "object",
         "title": "DeckUpdate"
       },
+      "FieldDefCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "FieldDefCreate"
+      },
+      "FieldDefRead": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "name",
+          "type",
+          "position",
+          "id",
+          "archived_at",
+          "created_at"
+        ],
+        "title": "FieldDefRead"
+      },
+      "FieldDefUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "FieldDefUpdate"
+      },
+      "FieldType": {
+        "type": "string",
+        "enum": [
+          "text",
+          "image",
+          "audio"
+        ],
+        "title": "FieldType"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2029,73 +2522,86 @@
       },
       "PracticeCardRead": {
         "properties": {
-          "card_id": {
+          "id": {
             "type": "string",
             "format": "uuid",
-            "title": "Card Id"
+            "title": "Id"
           },
           "practice_session_id": {
             "type": "string",
             "format": "uuid",
             "title": "Practice Session Id"
           },
+          "card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Card Id"
+          },
           "position": {
             "type": "integer",
             "title": "Position"
           },
-          "prompt_fields": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Prompt Fields"
-          },
-          "answer_fields": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Answer Fields"
-          },
-          "prompt_pool": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Prompt Pool"
-          },
-          "answer_pool": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Answer Pool"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "card_id",
-          "practice_session_id",
-          "position",
-          "prompt_fields",
-          "answer_fields",
-          "prompt_pool",
-          "answer_pool",
-          "id"
-        ],
-        "title": "PracticeCardRead"
-      },
-      "PracticeSessionCreate": {
-        "properties": {
-          "deck_config_ids": {
+          "prompts": {
             "items": {
               "type": "string",
               "format": "uuid"
             },
             "type": "array",
-            "title": "Deck Config Ids"
+            "title": "Prompts"
+          },
+          "answers": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answers"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PracticeCardStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
-          "deck_config_ids"
+          "id",
+          "practice_session_id",
+          "card_id",
+          "position",
+          "prompts",
+          "answers",
+          "status",
+          "created_at"
+        ],
+        "title": "PracticeCardRead"
+      },
+      "PracticeCardStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "passed",
+          "failed"
+        ],
+        "title": "PracticeCardStatus"
+      },
+      "PracticeSessionCreate": {
+        "properties": {
+          "deck_practice_config_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Deck Practice Config Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_practice_config_ids"
         ],
         "title": "PracticeSessionCreate"
       },
@@ -2106,17 +2612,79 @@
             "format": "uuid",
             "title": "Id"
           },
-          "curr": {
-            "type": "integer",
-            "title": "Curr"
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "curr"
+          "user_id",
+          "status",
+          "created_at"
         ],
         "title": "PracticeSessionRead"
+      },
+      "RatingSubmission": {
+        "properties": {
+          "ratings": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Ratings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ratings"
+        ],
+        "title": "RatingSubmission"
+      },
+      "RatingSubmissionResult": {
+        "properties": {
+          "rated_practice_card": {
+            "$ref": "#/components/schemas/PracticeCardRead"
+          },
+          "requeued_practice_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PracticeCardRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "rated_practice_card",
+          "requeued_practice_card"
+        ],
+        "title": "RatingSubmissionResult"
+      },
+      "SessionStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "completed",
+          "abandoned"
+        ],
+        "title": "SessionStatus"
       },
       "SubjectCreate": {
         "properties": {
@@ -2186,16 +2754,23 @@
             "format": "uuid",
             "title": "Id"
           },
-          "deck_count": {
-            "type": "integer",
-            "title": "Deck Count"
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "name",
           "id",
-          "deck_count"
+          "user_id",
+          "created_at"
         ],
         "title": "SubjectRead"
       },

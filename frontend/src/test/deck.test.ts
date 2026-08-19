@@ -11,12 +11,11 @@ describe("createDeck", () => {
     const payload: components["schemas"]["DeckCreate"] = {
       subject_id: "00000000-0000-0000-0000-000000000301",
       name: "Biology Deck",
-      deck_schema: { front: "string", back: "string" },
     };
     let sentBody: unknown;
 
     server.use(
-      http.post(`${BASE}/api/decks/deck`, async ({ request }) => {
+      http.post(`${BASE}/api/decks`, async ({ request }) => {
         sentBody = await request.json();
         return HttpResponse.json(
           { id: "00000000-0000-0000-0000-000000000302", ...payload },
@@ -35,7 +34,7 @@ describe("createDeck", () => {
 
   it("throws a formatted message on a 422 validation error", async () => {
     server.use(
-      http.post(`${BASE}/api/decks/deck`, () =>
+      http.post(`${BASE}/api/decks`, () =>
         HttpResponse.json(
           {
             detail: [
@@ -51,7 +50,6 @@ describe("createDeck", () => {
       createDeck({
         subject_id: "",
         name: "",
-        deck_schema: {},
       }),
     ).rejects.toThrow("body.name: Field required");
   });
@@ -60,12 +58,11 @@ describe("createDeck", () => {
 describe("readDeck", () => {
   it("requests the right id and returns the deck", async () => {
     server.use(
-      http.get(`${BASE}/api/decks/deck/:deck_id`, ({ params }) =>
+      http.get(`${BASE}/api/decks/:deck_id`, ({ params }) =>
         HttpResponse.json({
           id: params.deck_id,
           subject_id: "00000000-0000-0000-0000-000000000301",
           name: "Chemistry Deck",
-          deck_schema: { front: "string", back: "string" },
         }),
       ),
     );
@@ -74,13 +71,12 @@ describe("readDeck", () => {
       id: "deck_42",
       subject_id: "00000000-0000-0000-0000-000000000301",
       name: "Chemistry Deck",
-      deck_schema: { front: "string", back: "string" },
     });
   });
 
   it("throws the detail string on a 404", async () => {
     server.use(
-      http.get(`${BASE}/api/decks/deck/:deck_id`, () =>
+      http.get(`${BASE}/api/decks/:deck_id`, () =>
         HttpResponse.json({ detail: "Deck not found" }, { status: 404 }),
       ),
     );
@@ -97,15 +93,14 @@ describe("updateDeck", () => {
     let sentBody: unknown;
 
     server.use(
-      http.put(
-        `${BASE}/api/decks/deck/:deck_id`,
+      http.patch(
+        `${BASE}/api/decks/:deck_id`,
         async ({ request, params }) => {
           sentBody = await request.json();
           return HttpResponse.json({
             id: params.deck_id,
             subject_id: "00000000-0000-0000-0000-000000000301",
             name: "Updated Deck",
-            deck_schema: { front: "string", back: "string" },
           });
         },
       ),
@@ -117,7 +112,6 @@ describe("updateDeck", () => {
       id: "deck_7",
       subject_id: "00000000-0000-0000-0000-000000000301",
       name: "Updated Deck",
-      deck_schema: { front: "string", back: "string" },
     });
   });
 });
@@ -126,7 +120,7 @@ describe("deleteDeck", () => {
   it("resolves with no value on success", async () => {
     server.use(
       http.delete(
-        `${BASE}/api/decks/deck/:deck_id`,
+        `${BASE}/api/decks/:deck_id`,
         () => new HttpResponse(null, { status: 204 }),
       ),
     );

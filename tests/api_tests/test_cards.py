@@ -1,6 +1,29 @@
 import uuid
 
 
+class TestCardList:
+    def test_lists_all_cards_in_deck(self, client, existing_deck, existing_field_defs):
+        values = {fd["id"]: f"{fd['name']} value" for fd in existing_field_defs}
+        first = client.post("/api/cards", json={"deck_id": existing_deck["id"], "values": values})
+        second = client.post("/api/cards", json={"deck_id": existing_deck["id"], "values": values})
+        assert first.status_code == 201 and second.status_code == 201
+
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 200, response.text
+        ids = {c["id"] for c in response.json()}
+        assert ids == {first.json()["id"], second.json()["id"]}
+
+    def test_empty_deck_returns_empty_list(self, client, existing_deck):
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_foreign_deck_not_found(self, client, other_user, act_as, existing_deck):
+        act_as(other_user)
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 404
+
+
 class TestCardCRUD:
     def test_create_card(self, client, existing_deck, existing_field_defs):
         values = {fd["id"]: f"{fd['name']} value" for fd in existing_field_defs}
@@ -75,3 +98,21 @@ class TestCardCRUD:
 
         get_response = client.get(f"/api/cards/{existing_card['id']}")
         assert get_response.status_code == 404
+
+
+class TestCardMastery:
+    def test_unreviewed_card_reports_prior_and_zero_reviewed(self, client, existing_card):
+        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["reviewed_field_count"] == 0
+        assert data["mastery"] == 50.0  # EmaStrategy's MASTERY_PRIOR
+
+    def test_foreign_card_not_found(self, client, other_user, act_as, existing_card):
+        act_as(other_user)
+        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
+        assert response.status_code == 404
+
+    def test_missing_card_not_found(self, client):
+        response = client.get(f"/api/cards/{uuid.uuid4()}/mastery")
+        assert response.status_code == 404

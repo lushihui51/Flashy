@@ -31,3 +31,11 @@ class CardRead(CardBase):
 
 class CardUpdate(AppModel):
     values: dict[uuid.UUID, str]
+
+
+class CardMasteryRead(AppModel):
+    """Display-only aggregate — never stored, computed fresh from card_field_mastery
+    via the active MasteryStrategy on every request (invariant 8)."""
+
+    mastery: float
+    reviewed_field_count: int
