@@ -6,7 +6,9 @@
 - Description: Flashcard SaaS
 - Frontend: React/TypeScript/Vite
 - Backend: FastAPI/SQLModel/PostgreSQL
-- Auth: Clerk (planned, not yet integrated — no auth checks exist in the API currently)
+- Auth: Clerk, integrated — every router depends on `CurrentUserDep`
+  (`app/dependencies.py`), which verifies the session JWT and scopes ownership in
+  the query, not in Python after the fetch
 
 ## Commands
 
@@ -52,6 +54,38 @@
 - `MasteryStrategy.expand(group)` decides one `MasteryUpdate` per `(card_id, field_def_id, side)` up front, because the prompt side needs the whole group to know its breadth — it can't be decided one log row at a time.
 - Breadth (how many rated answers a prompt was shown for in one appearance) changes the _weight_ of the prompt-side update, not its _target_ — the 0-100 mastery scale has no room to express "more evidence" through the target once it's already saturated. `EmaStrategy`'s effective weight is `alpha_eff = 1-(1-alpha)^(breadth^beta)`; `beta` (default `0.5`) is the diminishing-evidence knob, tunable on the strategy like `alpha`. `prompt_review_count` `answer_review_count` increment by exactly 1 per appearance regardless of breadth
 - **Harshest-wins** is the rule for collapsing multiple per-field answer ratings into one signal, and it is applied in two separate places that must stay consistent: a `practice_card` is marked failed if _any_ one of its answer fields is rated 1 (`app/services/practice_session.py`, `submit_rating`), and the prompt-side mastery target for that same appearance is the harshest (rating-1) score if any answer failed, otherwise the mean of the normalized scores (`app/mastery/ema.py`, `EmaStrategy._aggregate_target`). Changing one site's aggregation rule without the other would make a card's pass/fail outcome silently disagree with the mastery value driving its own resurfacing.
+
+## Entity vocabulary
+
+All 12 tables under `app/models/`. When suggesting code, use these — not
+`deck_schema`, per-card `fields` dicts, or any other pre-rewrite shape.
+
+- `app_user` — the authenticated end user (keyed by `clerk_user_id`); root of every
+  per-user ownership chain.
+- `subject` — a user's top-level grouping of decks (e.g. a course or topic); owns
+  `deck` rows, unique per `(user_id, name)`.
+- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`,
+  and `deck_practice_config` rows, unique per `(subject_id, name)`.
+- `field_def` — the sole source of truth for what a field is (name, `FieldType`,
+  display `position`); archived via `archived_at`, never hard-deleted by default
+  (ADR 009, ADR 010). Every other table references a field only by `field_def.id`.
+- `card` — one flashcard belonging to a `deck`; holds no content itself.
+- `card_field_value` — a card's actual per-field content: one row per
+  `(card_id, field_def_id)`.
+- `review_log` — append-only, immutable ledger of every rated field review; the
+  single source of truth mastery is rebuildable from (ADR 011).
+- `card_field_mastery` — disposable, lazily-created cache of per-(card, field)
+  mastery scores, computed by a `MasteryStrategy` and fully rebuildable from
+  `review_log` (ADR 011, ADR 012).
+- `deck_practice_config` — a saved, named template describing which fields are
+  prompts/answers and pool-sampling rules; mutable.
+- `practice_session` — one user's practice run (`active`/`completed`/`abandoned`);
+  spans one or more `practice_deck`s.
+- `practice_deck` — an immutable snapshot of a `deck_practice_config`, copied at
+  session start; editing or deleting the source config never affects it (ADR 013).
+- `practice_card` — one generated card instance within a session
+  (`pending`/`passed`/`failed`); a failed card is requeued as a new row, never
+  mutated in place.
 
 ## Context
 
