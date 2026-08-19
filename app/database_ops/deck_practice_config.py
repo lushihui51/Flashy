@@ -33,6 +33,14 @@ def db_read_deck_practice_config(
     ).first()
 
 
+def db_read_deck_practice_config_for_copy(
+    db: Session, config_id: uuid.UUID
+) -> DeckPracticeConfig | None:
+    """Deliberately unscoped — see db_read_deck_for_copy. Callers must independently
+    check config.deck_id against the source deck they've already established."""
+    return db.get(DeckPracticeConfig, config_id)
+
+
 def db_read_deck_practice_configs(
     db: Session, deck_id: uuid.UUID, user_id: uuid.UUID
 ) -> list[DeckPracticeConfig]:

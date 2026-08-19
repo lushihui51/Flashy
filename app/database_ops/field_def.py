@@ -36,6 +36,20 @@ def db_read_field_defs(
     return list(db.exec(query).all())
 
 
+def db_read_field_defs_for_copy(db: Session, deck_id: uuid.UUID) -> list[FieldDef]:
+    """Deliberately unscoped, live fields only — see db_read_deck_for_copy. Archived
+    fields never propagate into a copy: there's no review_log/mastery history for them
+    to protect on the new deck, and deck_practice_config validation already restricts
+    configs to live field ids, so field_map only ever needs to cover these."""
+    return list(
+        db.exec(
+            select(FieldDef)
+            .where(FieldDef.deck_id == deck_id, col(FieldDef.archived_at).is_(None))
+            .order_by(col(FieldDef.position))
+        ).all()
+    )
+
+
 def db_next_position(db: Session, deck_id: uuid.UUID) -> int:
     max_position = db.exec(
         select(func.max(FieldDef.position)).where(FieldDef.deck_id == deck_id)

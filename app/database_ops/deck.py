@@ -27,6 +27,14 @@ def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | 
     ).first()
 
 
+def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
+    """Deliberately unscoped — Phase 6's copy_deck reads the source deck as raw copy
+    material, not as the caller's own data (invariant 7 protects the latter). Whether
+    the caller may copy from this particular source is a question for whatever
+    authorizes the call (a future share-link check), not this fetch."""
+    return db.get(Deck, deck_id)
+
+
 def db_read_decks(
     db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
 ) -> list[Deck]:

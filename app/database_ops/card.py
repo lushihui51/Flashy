@@ -39,6 +39,18 @@ def db_read_card_ids_for_deck(db: Session, deck_id: uuid.UUID) -> list[uuid.UUID
     return list(db.exec(select(Card.id).where(Card.deck_id == deck_id)).all())
 
 
+def db_read_cards_with_values_for_deck(db: Session, deck_id: uuid.UUID) -> list[Card]:
+    """Deliberately unscoped — see db_read_deck_for_copy; deck_id is already
+    established as valid copy source material by the caller."""
+    return list(
+        db.exec(
+            select(Card)
+            .where(Card.deck_id == deck_id)
+            .options(selectinload(Card.values))
+        ).all()
+    )
+
+
 def db_update_card_values(db: Session, card: Card, values: dict[uuid.UUID, str]) -> Card:
     existing = {v.field_def_id: v for v in card.values}
     for field_def_id, value in values.items():
