@@ -4,6 +4,7 @@ import uuid
 import pytest
 from sqlmodel import select
 
+from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.services.practice_session import start_practice_session, submit_rating
@@ -219,10 +220,13 @@ class TestPracticeSessionAcceptance:
             original_answers,
         )
 
-        # Position consistent with updated (now lower, post-fail) mastery: this card
-        # just failed, so among the session's remaining pending cards it should rank
-        # at or near the front — never at the original position (a fresh row, and the
-        # old one is no longer pending), and always a legal sparse position (unique).
+        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR),
+        # so a forced fail always drops the requeued card's mastery below all of them
+        # — the exact scenario `_insertion_position` guarantees becomes the new session
+        # minimum: it is inserted before whatever was previously second-in-queue,
+        # making it the new front. This is a hard guarantee of the insertion formula,
+        # not an approximation — assert the guarantee itself (new front of the pending
+        # queue, i.e. it's what gets served next), not just "position changed".
         assert requeued.position != original_position
         pending_positions = db.exec(
             select(PracticeCard.position).where(
@@ -231,7 +235,11 @@ class TestPracticeSessionAcceptance:
             )
         ).all()
         assert len(pending_positions) == len(set(pending_positions))  # all unique
-        assert requeued.position in pending_positions
+        assert requeued.position == min(pending_positions)
+
+        current = db_read_current_practice_card(db, session.id, existing_user.id)
+        assert current is not None
+        assert current.id == requeued.id
 
         db.refresh(original)
         assert original.status == PracticeCardStatus.failed
