@@ -1,16 +1,22 @@
 import uuid
+from datetime import datetime
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, UniqueConstraint
+
+from app.models.base import AppModel, TimestampMixin
 
 
-class SubjectBase(SQLModel):
-    name: str = Field(unique=True)
+class SubjectBase(AppModel):
+    name: str
     icon: str | None = None
     description: str | None = None
 
 
-class Subject(SubjectBase, table=True):
+class Subject(SubjectBase, TimestampMixin, table=True):
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="app_user.id")
 
 
 class SubjectCreate(SubjectBase):
@@ -19,10 +25,11 @@ class SubjectCreate(SubjectBase):
 
 class SubjectRead(SubjectBase):
     id: uuid.UUID
-    deck_count: int
+    user_id: uuid.UUID
+    created_at: datetime
 
 
-class SubjectUpdate(SQLModel):
+class SubjectUpdate(AppModel):
     name: str | None = None
     icon: str | None = None
     description: str | None = None

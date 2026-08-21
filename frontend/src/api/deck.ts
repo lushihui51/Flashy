@@ -2,7 +2,7 @@ import { client, displayError } from 'src/api/client';
 import type { components } from 'src/api/types';
 
 export const createDeck = async (payload: components['schemas']['DeckCreate']) => {
-  const { data, error } = await client.POST('/api/decks/deck', {
+  const { data, error } = await client.POST('/api/decks', {
     body: payload,
   });
   if (error) {
@@ -13,7 +13,7 @@ export const createDeck = async (payload: components['schemas']['DeckCreate']) =
 };
 
 export const readDeck = async (deckId: string) => {
-  const { data, error } = await client.GET('/api/decks/deck/{deck_id}', {
+  const { data, error } = await client.GET('/api/decks/{deck_id}', {
     params: { path: { deck_id: deckId } },
   });
   if (error) {
@@ -24,7 +24,7 @@ export const readDeck = async (deckId: string) => {
 };
 
 export const readDecks = async (subjectId?: string) => {
-  const { data, error } = await client.GET('/api/decks/decks', {
+  const { data, error } = await client.GET('/api/decks', {
     params: { query: subjectId ? { subject_id: subjectId } : {} },
   });
   if (error) {
@@ -35,7 +35,7 @@ export const readDecks = async (subjectId?: string) => {
 };
 
 export const updateDeck = async (deckId: string, payload: components['schemas']['DeckUpdate']) => {
-  const { data, error } = await client.PUT('/api/decks/deck/{deck_id}', {
+  const { data, error } = await client.PATCH('/api/decks/{deck_id}', {
     params: { path: { deck_id: deckId } },
     body: payload,
   });
@@ -47,7 +47,7 @@ export const updateDeck = async (deckId: string, payload: components['schemas'][
 };
 
 export const deleteDeck = async (deckId: string) => {
-  const { error } = await client.DELETE('/api/decks/deck/{deck_id}', {
+  const { error } = await client.DELETE('/api/decks/{deck_id}', {
     params: { path: { deck_id: deckId } },
   });
   if (error) {

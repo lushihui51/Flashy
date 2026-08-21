@@ -1,59 +1,62 @@
 import uuid
-from typing import List, Tuple
 
-from sqlmodel import Session, col, func, select
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
 
-from app.models.card import Card
 from app.models.deck import Deck
+from app.models.subject import Subject
 
 
-def db_create_deck(
-    db: Session, name: str, subject_id: uuid.UUID, deck_schema: dict[str, str]
-) -> Deck:
-    new_deck = Deck(name=name, subject_id=subject_id, deck_schema=deck_schema)
-    db.add(new_deck)
-    db.commit()
-    db.refresh(new_deck)
-    return new_deck
+def db_create_deck(db: Session, data: dict) -> Deck:
+    deck = Deck(**data)
+    db.add(deck)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Deck with this name already exists in this subject") from None
+    db.refresh(deck)
+    return deck
 
 
-def db_read_deck(db: Session, deck_id: uuid.UUID) -> Deck | None:
+def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | None:
+    return db.exec(
+        select(Deck)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(Deck.id == deck_id, Subject.user_id == user_id)
+    ).first()
+
+
+def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
+    """Deliberately unscoped — Phase 6's copy_deck reads the source deck as raw copy
+    material, not as the caller's own data (invariant 7 protects the latter). Whether
+    the caller may copy from this particular source is a question for whatever
+    authorizes the call (a future share-link check), not this fetch."""
     return db.get(Deck, deck_id)
 
 
-def db_read_deck_card_count(db: Session, deck_id: uuid.UUID) -> int:
-    return db.exec(
-        select(func.count(col(Card.id))).where(Card.deck_id == deck_id)
-    ).one()
-
-
-def db_read_all_decks(db: Session) -> list[Deck]:
-    decks = db.exec(select(Deck)).all()
-    return list(decks)
-
-
 def db_read_decks(
-    db: Session, subject_id: uuid.UUID | None = None
-) -> List[Tuple[Deck, int]]:
-    card_count = (
-        select(func.count(col(Card.id)))
-        .where(Card.deck_id == Deck.id)
-        .correlate(Deck)
-        .scalar_subquery()
-        .label("card_count")
+    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
+) -> list[Deck]:
+    query = (
+        select(Deck)
+        .join(Subject, Subject.id == Deck.subject_id)
+        .where(Subject.user_id == user_id)
     )
-    query = select(Deck, card_count)
     if subject_id is not None:
         query = query.where(Deck.subject_id == subject_id)
-    rows = db.exec(query).all()
-    return list(rows)
+    return list(db.exec(query).all())
 
 
-def db_update_deck(db: Session, deck: Deck, payload: dict) -> Deck:
-    for key, value in payload.items():
+def db_update_deck(db: Session, deck: Deck, data: dict) -> Deck:
+    for key, value in data.items():
         setattr(deck, key, value)
     db.add(deck)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Deck with this name already exists in this subject") from None
     db.refresh(deck)
     return deck
 

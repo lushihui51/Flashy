@@ -1,51 +1,42 @@
 import uuid
-from typing import List, Tuple
 
-from sqlmodel import Session, col, func, select
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
 
-from app.models.deck import Deck
 from app.models.subject import Subject
 
 
-def db_create_subject(db: Session, payload: dict) -> Subject:
-    subject = Subject(**payload)
+def db_create_subject(db: Session, data: dict) -> Subject:
+    subject = Subject(**data)
     db.add(subject)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Subject with this name already exists for this user") from None
     db.refresh(subject)
     return subject
 
 
-def db_read_subject(db: Session, id: uuid.UUID) -> Tuple[Subject, int] | None:
-    deck_count = (
-        select(func.count(col(Deck.id)))
-        .where(Deck.subject_id == Subject.id)
-        .correlate(Subject)
-        .scalar_subquery()
-        .label("deck_count")
-    )
-    row = db.exec(select(Subject, deck_count).where(Subject.id == id)).first()
-
-    # subject = db.get(Subject, id)
-    return row
+def db_read_subject(db: Session, subject_id: uuid.UUID, user_id: uuid.UUID) -> Subject | None:
+    return db.exec(
+        select(Subject).where(Subject.id == subject_id, Subject.user_id == user_id)
+    ).first()
 
 
-def db_read_subjects(db: Session) -> List[Tuple[Subject, int]]:
-    deck_count = (
-        select(func.count(col(Deck.id)))
-        .where(Deck.subject_id == Subject.id)
-        .correlate(Subject)
-        .scalar_subquery()
-        .label("deck_count")
-    )
-    rows = db.exec(select(Subject, deck_count)).all()
-    return list(rows)
+def db_read_subjects(db: Session, user_id: uuid.UUID) -> list[Subject]:
+    return list(db.exec(select(Subject).where(Subject.user_id == user_id)).all())
 
 
-def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject:
-    for key, value in payload.items():
+def db_update_subject(db: Session, subject: Subject, data: dict) -> Subject:
+    for key, value in data.items():
         setattr(subject, key, value)
     db.add(subject)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Subject with this name already exists for this user") from None
     db.refresh(subject)
     return subject
 
@@ -53,8 +44,3 @@ def db_update_subject(db: Session, subject: Subject, payload: dict) -> Subject:
 def db_delete_subject(db: Session, subject: Subject) -> None:
     db.delete(subject)
     db.commit()
-
-
-def db_read_all_subjects(db: Session) -> List[Subject]:
-    subjects = db.exec(select(Subject)).all()
-    return list(subjects)

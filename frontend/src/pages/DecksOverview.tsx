@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { readDecks, createDeck, deleteDeck, updateDeck } from 'src/api/deck';
 import { readSubjects } from 'src/api/subject';
 import NewButton from 'src/components/NewButton';
@@ -13,15 +13,7 @@ import { Layers } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 type DeckRead = components['schemas']['DeckRead'];
 
-type DeckCreateFormValues = {
-  subject_id: string;
-  name: string;
-  deck_schema: Record<string, string>;
-};
-
-// The backend doesn't support changing a deck's schema after creation, so
-// editing only exposes subject_id and name.
-type DeckEditFormValues = {
+type DeckFormValues = {
   subject_id: string;
   name: string;
 };
@@ -30,6 +22,7 @@ export default function DecksOverview() {
   const [newOpen, setNewOpen] = useState(false);
   const [editingDeck, setEditingDeck] = useState<DeckRead | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const subjectFilter = searchParams.get('subject') ?? '';
@@ -59,18 +52,7 @@ export default function DecksOverview() {
     setSearchParams(nextParams);
   };
 
-  const deckCreateFields: Record<keyof DeckCreateFormValues, FieldProperties> = {
-    subject_id: {
-      displayName: 'Subject',
-      mandatory: true,
-      type: 'select',
-      options: subjectOptions,
-    },
-    name: { displayName: 'Name', mandatory: true },
-    deck_schema: { displayName: 'Fields', mandatory: true, type: 'keyvalue' },
-  };
-
-  const deckEditFields: Record<keyof DeckEditFormValues, FieldProperties> = {
+  const deckFields: Record<keyof DeckFormValues, FieldProperties> = {
     subject_id: {
       displayName: 'Subject',
       mandatory: true,
@@ -81,7 +63,7 @@ export default function DecksOverview() {
   };
 
   const createDeckMutation = useMutation({
-    mutationFn: (values: DeckCreateFormValues) => {
+    mutationFn: (values: DeckFormValues) => {
       const name = values.name.trim();
       if (!name) {
         throw new Error('Name is required');
@@ -89,14 +71,7 @@ export default function DecksOverview() {
       if (!values.subject_id) {
         throw new Error('Subject is required');
       }
-      if (Object.keys(values.deck_schema).length === 0) {
-        throw new Error('At least one field is required');
-      }
-      return createDeck({
-        name,
-        subject_id: values.subject_id,
-        deck_schema: values.deck_schema,
-      });
+      return createDeck({ name, subject_id: values.subject_id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['decks'] });
@@ -113,7 +88,7 @@ export default function DecksOverview() {
   });
 
   const editDeckMutation = useMutation({
-    mutationFn: ({ deckId, values }: { deckId: string; values: DeckEditFormValues }) => {
+    mutationFn: ({ deckId, values }: { deckId: string; values: DeckFormValues }) => {
       const name = values.name.trim();
       if (!name) {
         throw new Error('Name is required');
@@ -136,7 +111,6 @@ export default function DecksOverview() {
   if (isError) return <div>Error: {error.message}</div>;
 
   const numDecks = decks.length;
-  const numCards = decks.reduce((sum, deck) => sum + deck.card_count, 0);
 
   const handleClickNew = () => {
     setNewOpen(true);
@@ -155,11 +129,9 @@ export default function DecksOverview() {
         name={deck.name}
         description={subjectNameById.get(deck.subject_id)}
         fallbackDescription="Uncategorized"
-        countLabel="cards"
-        count={deck.card_count}
-        footerLabel="View cards"
+        footerLabel="View deck"
         onClick={() => {
-          console.log(`Clicked on deck ${deck.id}`);
+          navigate(`/decks/${deck.id}`);
         }}
         onEdit={() => {
           setEditingDeck(deck);
@@ -181,9 +153,7 @@ export default function DecksOverview() {
           onChange={handleFilterChange}
         />
         <div className="ml-auto flex items-center gap-4">
-          <p className="text-sm text-small-text whitespace-nowrap">
-            {numDecks} decks, {numCards} cards total
-          </p>
+          <p className="text-sm text-small-text whitespace-nowrap">{numDecks} decks</p>
           <div className="bg-black text-white rounded-lg px-4 py-2">
             <NewButton description="+ New Deck" onClick={handleClickNew} />
           </div>
@@ -196,10 +166,10 @@ export default function DecksOverview() {
         </p>
       )}
       {newOpen && (
-        <FormModal<DeckCreateFormValues>
+        <FormModal<DeckFormValues>
           title="Create New Deck"
-          caption="Add a new deck with the fields every card in it will share."
-          fields={deckCreateFields}
+          caption="Add a new deck. You'll add fields and cards from the deck's page next."
+          fields={deckFields}
           initialValues={subjectFilter ? { subject_id: subjectFilter } : undefined}
           handleClose={handleClose}
           isSubmitting={createDeckMutation.isPending}
@@ -208,10 +178,10 @@ export default function DecksOverview() {
         />
       )}
       {editingDeck && (
-        <FormModal<DeckEditFormValues>
+        <FormModal<DeckFormValues>
           title="Edit Deck"
           caption="Edit the details of this deck."
-          fields={deckEditFields}
+          fields={deckFields}
           initialValues={{
             subject_id: editingDeck.subject_id,
             name: editingDeck.name,

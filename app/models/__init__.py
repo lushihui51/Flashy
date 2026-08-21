@@ -1,27 +1,56 @@
-from sqlmodel import SQLModel
-
-SQLModel.metadata.naming_convention = {
-    "ix": "ix_%(column_0_label)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s",
-}
-
-from app.models.card import Card
-from app.models.deck import Deck
-from app.models.deck_config import DeckConfig
-from app.models.practice_card import PracticeCard
-from app.models.practice_session import PracticeSession
-from app.models.practice_session_deck_config import PracticeSessionDeckConfig
-from app.models.subject import Subject
+from app.models.app_user import AppUser
+from app.models.card import Card, CardCreate, CardRead, CardUpdate
+from app.models.card_field_mastery import CardFieldMastery
+from app.models.card_field_value import CardFieldValue
+from app.models.deck import Deck, DeckCreate, DeckRead, DeckUpdate
+from app.models.deck_practice_config import (
+    DeckPracticeConfig,
+    DeckPracticeConfigCreate,
+    DeckPracticeConfigRead,
+    DeckPracticeConfigUpdate,
+)
+from app.models.field_def import (
+    FieldDef,
+    FieldDefCreate,
+    FieldDefRead,
+    FieldDefUpdate,
+    FieldType,
+)
+from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.practice_deck import PracticeDeck
+from app.models.practice_session import PracticeSession, SessionStatus
+from app.models.review_log import ReviewLog
+from app.models.subject import Subject, SubjectCreate, SubjectRead, SubjectUpdate
 
 __all__ = [
+    "AppUser",
     "Card",
+    "CardCreate",
+    "CardRead",
+    "CardUpdate",
+    "CardFieldMastery",
+    "CardFieldValue",
     "Deck",
-    "DeckConfig",
+    "DeckCreate",
+    "DeckRead",
+    "DeckUpdate",
+    "DeckPracticeConfig",
+    "DeckPracticeConfigCreate",
+    "DeckPracticeConfigRead",
+    "DeckPracticeConfigUpdate",
+    "FieldDef",
+    "FieldDefCreate",
+    "FieldDefRead",
+    "FieldDefUpdate",
+    "FieldType",
     "PracticeCard",
+    "PracticeCardStatus",
+    "PracticeDeck",
     "PracticeSession",
-    "PracticeSessionDeckConfig",
+    "SessionStatus",
+    "ReviewLog",
     "Subject",
+    "SubjectCreate",
+    "SubjectRead",
+    "SubjectUpdate",
 ]

@@ -1,34 +1,41 @@
 import uuid
-from typing import List
+from datetime import datetime
+from enum import Enum
 
-from pydantic import field_validator
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import BIGINT
-from sqlmodel import Field
+from sqlalchemy import CheckConstraint
+from sqlmodel import Column, Field, String
 
-from app.models.app_model import AppModel
-
-
-class PracticeSessionBase(AppModel):
-    pass
+from app.models.base import AppModel, TimestampMixin
 
 
-class PracticeSession(PracticeSessionBase, table=True):
+class SessionStatus(str, Enum):
+    active = "active"
+    completed = "completed"
+    abandoned = "abandoned"
+
+
+class PracticeSession(AppModel, TimestampMixin, table=True):
+    """No deck_id and no curr — a session spans one practice_deck per deck (Phase 4.2),
+    and the current card is derived (WHERE status='pending' ORDER BY position LIMIT 1),
+    never stored."""
+
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'completed', 'abandoned')", name="status_valid"),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    curr: int = Field(default=-1, sa_column=Column(BIGINT, nullable=False))
+    user_id: uuid.UUID = Field(foreign_key="app_user.id")
+    status: SessionStatus = Field(
+        sa_column=Column(String, nullable=False, default=SessionStatus.active)
+    )
 
 
-class PracticeSessionCreate(PracticeSessionBase):
-    deck_config_ids: List[uuid.UUID]
-
-    @field_validator("deck_config_ids", mode="before")
-    @classmethod
-    def parse_empty_form_field(cls, v):
-        if v == [""]:
-            return []
-        return v
+class PracticeSessionCreate(AppModel):
+    deck_practice_config_ids: list[uuid.UUID]
 
 
-class PracticeSessionRead(PracticeSessionBase):
+class PracticeSessionRead(AppModel):
     id: uuid.UUID
-    curr: int
+    user_id: uuid.UUID
+    status: SessionStatus
+    created_at: datetime

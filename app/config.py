@@ -6,8 +6,10 @@ class Settings(BaseSettings):
     test_database_url: str
     cache_host: str
     cache_port: str
-
+    permitted_origins: list[str]
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    vite_clerk_publishable_key: str
+    clerk_fapi_url: str
 
 
 settings = Settings()  # type: ignore[call-arg]

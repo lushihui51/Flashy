@@ -1,50 +1,41 @@
-import json
 import uuid
 from datetime import datetime
-from typing import Any
 
-from pydantic import field_validator
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, DateTime, Field, func
+from sqlmodel import Field, Relationship
 
-from app.models.app_model import AppModel
+from app.models.base import AppModel, TimestampMixin
+from app.models.card_field_value import CardFieldValue
 
 
 class CardBase(AppModel):
     deck_id: uuid.UUID = Field(foreign_key="deck.id")
-    fields: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
 
 
-class Card(CardBase, table=True):
+class Card(CardBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    last_modified: datetime = Field(
-        default=None,
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-        ),
+
+    values: list[CardFieldValue] = Relationship(
+        back_populates="card", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 
 class CardCreate(CardBase):
-    @field_validator("fields", mode="before")
-    @classmethod
-    def parse_deck_schema(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                raise ValueError("fields must be valid JSON")
-        return v
+    values: dict[uuid.UUID, str]
 
 
 class CardRead(CardBase):
     id: uuid.UUID
-    last_modified: datetime
+    created_at: datetime
+    values: dict[uuid.UUID, str]
 
 
 class CardUpdate(AppModel):
-    deck_id: uuid.UUID | None = None
-    fields: dict[str, Any] | None = None
+    values: dict[uuid.UUID, str]
+
+
+class CardMasteryRead(AppModel):
+    """Display-only aggregate — never stored, computed fresh from card_field_mastery
+    via the active MasteryStrategy on every request (invariant 8)."""
+
+    mastery: float
+    reviewed_field_count: int

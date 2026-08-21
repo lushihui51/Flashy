@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
+import app.database  # noqa: F401 — applies naming_convention to SQLModel.metadata
 import app.models  # noqa: F401 — registers all tables on SQLModel.metadata
 from alembic import context
 from app.config import settings

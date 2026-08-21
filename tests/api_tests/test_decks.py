@@ -1,56 +1,47 @@
 class TestDeckCRUD:
-    def test_create_deck(self, client, deck_path, existing_subject):
+    def test_create_deck(self, client, existing_subject):
         response = client.post(
-            deck_path,
-            json={
-                "name": "Create Test Deck",
-                "subject_id": existing_subject["id"],
-                "deck_schema": {"front": "str", "back": "str"},
-            },
+            "/api/decks",
+            json={"subject_id": existing_subject["id"], "name": "Create Test Deck"},
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, response.text
         data = response.json()
         assert data["name"] == "Create Test Deck"
         assert data["subject_id"] == existing_subject["id"]
-        assert data["deck_schema"] == {"front": "str", "back": "str"}
         assert "id" in data
 
-    def test_read_deck(self, client, deck_path, existing_deck):
-        deck_id = existing_deck["id"]
+    def test_create_deck_subject_not_found(self, client):
+        import uuid
 
-        response = client.get(f"{deck_path}/{deck_id}")
+        response = client.post(
+            "/api/decks", json={"subject_id": str(uuid.uuid4()), "name": "Orphan Deck"}
+        )
+        assert response.status_code == 404
+
+    def test_read_deck(self, client, existing_deck):
+        response = client.get(f"/api/decks/{existing_deck['id']}")
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == deck_id
+        assert data["id"] == existing_deck["id"]
         assert data["name"] == "Test Deck"
-        assert data["subject_id"] == existing_deck["subject_id"]
-        assert data["deck_schema"] == {
-            "front": "str",
-            "back": "str",
-            "top": "str",
-            "bottom": "str",
-            "left": "str",
-            "right": "str",
-        }
 
-    def test_update_deck(self, client, deck_path, existing_subject, existing_deck):
-        deck_id = existing_deck["id"]
+    def test_read_decks_by_subject(self, client, existing_subject, existing_deck):
+        response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
+        assert response.status_code == 200
+        assert [d["id"] for d in response.json()] == [existing_deck["id"]]
 
-        response = client.put(
-            f"{deck_path}/{deck_id}",
-            json={"name": "Updated Deck Name", "subject_id": existing_subject["id"]},
+    def test_update_deck(self, client, existing_deck):
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}", json={"name": "Updated Deck Name"}
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == deck_id
+        assert data["id"] == existing_deck["id"]
         assert data["name"] == "Updated Deck Name"
-        assert data["subject_id"] == existing_subject["id"]
 
-    def test_delete_deck(self, client, deck_path, existing_deck):
-        deck_id = existing_deck["id"]
-
-        response = client.delete(f"{deck_path}/{deck_id}")
+    def test_delete_deck(self, client, existing_deck):
+        response = client.delete(f"/api/decks/{existing_deck['id']}")
         assert response.status_code == 204
 
-        get_response = client.get(f"{deck_path}/{deck_id}")
+        get_response = client.get(f"/api/decks/{existing_deck['id']}")
         assert get_response.status_code == 404

@@ -88,7 +88,6 @@ export default function SubjectsOverview() {
   if (isError) return <div>Error: {error.message}</div>;
 
   const numSubjects = subjects.length;
-  const numDecks = subjects.reduce((sum, subject) => sum + subject.deck_count, 0);
 
   const handleClickNew = () => {
     setNewOpen(true);
@@ -108,8 +107,6 @@ export default function SubjectsOverview() {
         name={subject.name}
         description={subject.description}
         fallbackDescription="An exciting subject"
-        countLabel="decks"
-        count={subject.deck_count}
         footerLabel="View decks"
         onClick={() => {
           navigate(`/decks?subject=${subject.id}`);
@@ -128,9 +125,7 @@ export default function SubjectsOverview() {
   return (
     <div>
       <div className="flex items-center justify-between mb-9">
-        <p className="text-sm text-small-text">
-          {numSubjects} subjects, {numDecks} decks total
-        </p>
+        <p className="text-sm text-small-text">{numSubjects} subjects</p>
         <div className="bg-black text-white rounded-lg px-4 py-2">
           <NewButton description="+ New Subject" onClick={handleClickNew} />
         </div>

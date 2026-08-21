@@ -1,43 +1,31 @@
-import json
 import uuid
+from datetime import datetime
 
-from pydantic import field_validator
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, Field, UniqueConstraint
+from sqlmodel import Field, UniqueConstraint
 
-from app.models.app_model import AppModel
+from app.models.base import AppModel, TimestampMixin
 
 
 class DeckBase(AppModel):
     subject_id: uuid.UUID = Field(foreign_key="subject.id")
-    name: str = Field(nullable=False)
-    deck_schema: dict[str, str] = Field(sa_column=Column(JSONB, nullable=False))
+    name: str
+
     __table_args__ = (UniqueConstraint("subject_id", "name"),)
 
 
-class Deck(DeckBase, table=True):
+class Deck(DeckBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
 
 class DeckCreate(DeckBase):
-    @field_validator("deck_schema", mode="before")
-    @classmethod
-    def parse_deck_schema(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                raise ValueError("deck_schema must be valid JSON")
-        return v
+    pass
 
 
 class DeckRead(DeckBase):
     id: uuid.UUID
-    card_count: int
+    created_at: datetime
 
 
 class DeckUpdate(AppModel):
     subject_id: uuid.UUID | None = None
     name: str | None = None
-    __table_args__ = (UniqueConstraint("subject_id", "name"),)
-    # deck_schema: dict[str, str] | None = None

@@ -15,7 +15,7 @@ describe("createSubject", () => {
     let sentBody: unknown;
     const id = crypto.randomUUID();
     server.use(
-      http.post(`${BASE}/api/subjects/subject`, async ({ request }) => {
+      http.post(`${BASE}/api/subjects`, async ({ request }) => {
         sentBody = await request.json();
         return HttpResponse.json({ id, name: "Biology" }, { status: 201 });
       }),
@@ -29,7 +29,7 @@ describe("createSubject", () => {
 
   it("throws a formatted message on a 422 validation error", async () => {
     server.use(
-      http.post(`${BASE}/api/subjects/subject`, () =>
+      http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
           {
             detail: [
@@ -51,8 +51,8 @@ describe("readSubject", () => {
   it("requests the right id and returns the subject", async () => {
     const id = crypto.randomUUID();
     server.use(
-      http.get(`${BASE}/api/subjects/subject/:id`, ({ params }) =>
-        HttpResponse.json({ id: params.id, name: "Chemistry" }),
+      http.get(`${BASE}/api/subjects/:subject_id`, ({ params }) =>
+        HttpResponse.json({ id: params.subject_id, name: "Chemistry" }),
       ),
     );
 
@@ -65,7 +65,7 @@ describe("readSubject", () => {
   it("throws the detail string on a 404", async () => {
     const id = crypto.randomUUID();
     server.use(
-      http.get(`${BASE}/api/subjects/subject/:id`, () =>
+      http.get(`${BASE}/api/subjects/:subject_id`, () =>
         HttpResponse.json({ detail: "Subject not found" }, { status: 404 }),
       ),
     );
@@ -80,10 +80,10 @@ describe("updateSubject", () => {
     let sentBody: unknown;
     server.use(
       http.patch(
-        `${BASE}/api/subjects/subject/:id`,
+        `${BASE}/api/subjects/:subject_id`,
         async ({ request, params }) => {
           sentBody = await request.json();
-          return HttpResponse.json({ id: params.id, name: "Physics" });
+          return HttpResponse.json({ id: params.subject_id, name: "Physics" });
         },
       ),
     );
@@ -99,7 +99,7 @@ describe("deleteSubject", () => {
     const id = crypto.randomUUID();
     server.use(
       http.delete(
-        `${BASE}/api/subjects/subject/:id`,
+        `${BASE}/api/subjects/:subject_id`,
         () => new HttpResponse(null, { status: 204 }),
       ),
     );

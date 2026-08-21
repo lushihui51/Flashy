@@ -1,85 +1,118 @@
+import uuid
+
+
+class TestCardList:
+    def test_lists_all_cards_in_deck(self, client, existing_deck, existing_field_defs):
+        values = {fd["id"]: f"{fd['name']} value" for fd in existing_field_defs}
+        first = client.post("/api/cards", json={"deck_id": existing_deck["id"], "values": values})
+        second = client.post("/api/cards", json={"deck_id": existing_deck["id"], "values": values})
+        assert first.status_code == 201 and second.status_code == 201
+
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 200, response.text
+        ids = {c["id"] for c in response.json()}
+        assert ids == {first.json()["id"], second.json()["id"]}
+
+    def test_empty_deck_returns_empty_list(self, client, existing_deck):
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_foreign_deck_not_found(self, client, other_user, act_as, existing_deck):
+        act_as(other_user)
+        response = client.get("/api/cards", params={"deck_id": existing_deck["id"]})
+        assert response.status_code == 404
+
+
 class TestCardCRUD:
-    def test_create_card(self, client, card_path, existing_deck):
+    def test_create_card(self, client, existing_deck, existing_field_defs):
+        values = {fd["id"]: f"{fd['name']} value" for fd in existing_field_defs}
         response = client.post(
-            card_path,
-            json={
-                "deck_id": existing_deck["id"],
-                "fields": {
-                    "front": "Create Test Front",
-                    "back": "Create Test Back",
-                    "top": "Create Test Top",
-                    "bottom": "Create Test Bottom",
-                    "left": "Create Test Left",
-                    "right": "Create Test Right",
-                },
-            },
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, response.text
         data = response.json()
         assert data["deck_id"] == existing_deck["id"]
-        assert data["fields"] == {
-            "front": "Create Test Front",
-            "back": "Create Test Back",
-            "top": "Create Test Top",
-            "bottom": "Create Test Bottom",
-            "left": "Create Test Left",
-            "right": "Create Test Right",
-        }
+        assert data["values"] == values
         assert "id" in data
-        assert "last_modified" in data
+        assert "created_at" in data
 
-    def test_read_card(self, client, card_path, existing_card):
-        card_id = existing_card["id"]
-
-        response = client.get(f"{card_path}/{card_id}")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == card_id
-        assert data["deck_id"] == existing_card["deck_id"]
-        assert data["fields"] == {
-            "front": "Front Value",
-            "back": "Back Value",
-            "top": "Top Value",
-            "bottom": "Bottom Value",
-            "left": "Left Value",
-            "right": "Right Value",
-        }
-
-    def test_update_card(self, client, card_path, existing_card, existing_deck):
-        card_id = existing_card["id"]
-
-        response = client.put(
-            f"{card_path}/{card_id}",
-            json={
-                "deck_id": existing_deck["id"],
-                "fields": {
-                    "front": "Updated Front",
-                    "back": "Updated Back",
-                    "top": "Updated Top",
-                    "bottom": "Updated Bottom",
-                    "left": "Updated Left",
-                    "right": "Updated Right",
-                },
-            },
+    def test_create_card_missing_field_rejected(self, client, existing_deck, existing_field_defs):
+        values = {existing_field_defs[0]["id"]: "only one value"}
+        response = client.post(
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
         )
+        assert response.status_code == 400
+
+    def test_create_card_unknown_field_rejected(self, client, existing_deck, existing_field_defs):
+        values = {fd["id"]: "v" for fd in existing_field_defs}
+        values[str(uuid.uuid4())] = "extra"
+        response = client.post(
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
+        )
+        assert response.status_code == 400
+
+    def test_create_card_deck_not_found(self, client, existing_field_defs):
+        values = {fd["id"]: "v" for fd in existing_field_defs}
+        response = client.post(
+            "/api/cards", json={"deck_id": str(uuid.uuid4()), "values": values}
+        )
+        assert response.status_code == 404
+
+    def test_create_card_excludes_archived_fields(self, client, existing_deck, existing_field_defs):
+        archived_field = existing_field_defs[0]
+        client.delete(f"/api/fields/{archived_field['id']}")
+
+        remaining = {fd["id"]: "v" for fd in existing_field_defs if fd["id"] != archived_field["id"]}
+        response = client.post(
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": remaining}
+        )
+        assert response.status_code == 201, response.text
+
+        with_archived = dict(remaining)
+        with_archived[archived_field["id"]] = "v"
+        rejected = client.post(
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": with_archived}
+        )
+        assert rejected.status_code == 400
+
+    def test_read_card(self, client, existing_card):
+        response = client.get(f"/api/cards/{existing_card['id']}")
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == card_id
-        assert data["deck_id"] == existing_deck["id"]
-        assert data["fields"] == {
-            "front": "Updated Front",
-            "back": "Updated Back",
-            "top": "Updated Top",
-            "bottom": "Updated Bottom",
-            "left": "Updated Left",
-            "right": "Updated Right",
-        }
+        assert data["id"] == existing_card["id"]
+        assert data["values"] == existing_card["values"]
 
-    def test_delete_card(self, client, card_path, existing_card):
-        card_id = existing_card["id"]
+    def test_update_card_values(self, client, existing_card, existing_field_defs):
+        field_id = existing_field_defs[0]["id"]
+        response = client.patch(
+            f"/api/cards/{existing_card['id']}",
+            json={"values": {field_id: "Updated value"}},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["values"][field_id] == "Updated value"
 
-        response = client.delete(f"{card_path}/{card_id}")
+    def test_delete_card(self, client, existing_card):
+        response = client.delete(f"/api/cards/{existing_card['id']}")
         assert response.status_code == 204
 
-        get_response = client.get(f"{card_path}/{card_id}")
+        get_response = client.get(f"/api/cards/{existing_card['id']}")
         assert get_response.status_code == 404
+
+
+class TestCardMastery:
+    def test_unreviewed_card_reports_prior_and_zero_reviewed(self, client, existing_card):
+        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["reviewed_field_count"] == 0
+        assert data["mastery"] == 50.0  # EmaStrategy's MASTERY_PRIOR
+
+    def test_foreign_card_not_found(self, client, other_user, act_as, existing_card):
+        act_as(other_user)
+        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
+        assert response.status_code == 404
+
+    def test_missing_card_not_found(self, client):
+        response = client.get(f"/api/cards/{uuid.uuid4()}/mastery")
+        assert response.status_code == 404
