@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { mockSignedOut } from 'src/test/mocks/clerk';
+import { mockSignedOut, mockSignedIn } from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
 
 beforeEach(() => {
@@ -58,5 +58,31 @@ describe('AppShell', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(hamburger).toHaveFocus();
+  });
+
+  it('opens the account sheet when the avatar is clicked, not the drawer', async () => {
+    mockSignedIn({ username: 'ada' });
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+
+    expect(screen.getByRole('dialog', { name: 'ada' })).toBeInTheDocument();
+  });
+
+  it('never has the drawer and the account sheet open at the same time', async () => {
+    mockSignedIn({ username: 'ada' });
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+
+    // The drawer is modal: Radix hides everything outside its trapped
+    // content from the accessibility tree (and blocks its pointer events),
+    // so the avatar isn't even queryable while it's open — proving the two
+    // overlays can't both be open through the UI.
+    expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
   });
 });

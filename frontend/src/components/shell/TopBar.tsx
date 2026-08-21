@@ -8,6 +8,7 @@ type TopBarProps = {
   isMenuOpen: boolean;
   onAvatarClick: () => void;
   menuButtonRef?: Ref<HTMLButtonElement>;
+  avatarButtonRef?: Ref<HTMLButtonElement>;
 };
 
 export default function TopBar({
@@ -15,6 +16,7 @@ export default function TopBar({
   isMenuOpen,
   onAvatarClick,
   menuButtonRef,
+  avatarButtonRef,
 }: TopBarProps) {
   return (
     <div className="flex h-14 w-full items-center gap-3 border-b border-(--color-surface-elevated) bg-(--color-surface) px-3">
@@ -44,7 +46,7 @@ export default function TopBar({
 
       {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
       <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
-        <AuthSlot onAvatarClick={onAvatarClick} />
+        <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
       </div>
     </div>
   );

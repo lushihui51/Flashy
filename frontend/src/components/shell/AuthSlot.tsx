@@ -1,7 +1,9 @@
+import { type Ref } from 'react';
 import { useUser, useClerk } from '@clerk/react';
 
 type AuthSlotProps = {
   onAvatarClick: () => void;
+  avatarButtonRef?: Ref<HTMLButtonElement>;
 };
 
 function initialsFor(user: {
@@ -17,7 +19,7 @@ function initialsFor(user: {
 
 // @clerk/react (unlike @clerk/clerk-react) has no <SignedIn>/<SignedOut>
 // components, so this branches on useUser()'s isLoaded/isSignedIn directly.
-export default function AuthSlot({ onAvatarClick }: AuthSlotProps) {
+export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotProps) {
   const { isLoaded, isSignedIn, user } = useUser();
   const clerk = useClerk();
 
@@ -46,6 +48,7 @@ export default function AuthSlot({ onAvatarClick }: AuthSlotProps) {
 
   return (
     <button
+      ref={avatarButtonRef}
       type="button"
       onClick={onAvatarClick}
       aria-label={`Account menu for ${name}`}
