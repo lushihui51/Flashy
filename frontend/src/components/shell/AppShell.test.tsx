@@ -26,18 +26,31 @@ describe('AppShell', () => {
     expect(screen.getByText('home content')).toBeInTheDocument();
   });
 
-  it('toggles the hamburger state when clicked', async () => {
+  it('opens the side drawer when the hamburger is clicked', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+
+    // Radix hides the rest of the page (including the now "Close menu"
+    // hamburger) from the accessibility tree while the modal drawer is
+    // trapped, so the queryable close paths here are Esc/scrim/item-click.
+    expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
+  });
+
+  it('returns focus to the hamburger when the drawer closes via Escape', async () => {
     const user = userEvent.setup();
     renderShell();
 
     const hamburger = screen.getByRole('button', { name: 'Open menu' });
-    expect(hamburger).toHaveAttribute('aria-expanded', 'false');
-
     await user.click(hamburger);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
 
-    expect(screen.getByRole('button', { name: 'Close menu' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(hamburger).toHaveFocus();
   });
 });
