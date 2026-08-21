@@ -1,14 +1,21 @@
 import { type Ref } from 'react';
 import { Menu } from 'lucide-react';
 import Logo from 'src/components/shell/Logo';
+import AuthSlot from 'src/components/shell/AuthSlot';
 
 type TopBarProps = {
   onMenuClick: () => void;
   isMenuOpen: boolean;
+  onAvatarClick: () => void;
   menuButtonRef?: Ref<HTMLButtonElement>;
 };
 
-export default function TopBar({ onMenuClick, isMenuOpen, menuButtonRef }: TopBarProps) {
+export default function TopBar({
+  onMenuClick,
+  isMenuOpen,
+  onAvatarClick,
+  menuButtonRef,
+}: TopBarProps) {
   return (
     <div className="flex h-14 w-full items-center gap-3 border-b border-(--color-surface-elevated) bg-(--color-surface) px-3">
       <button
@@ -35,14 +42,9 @@ export default function TopBar({ onMenuClick, isMenuOpen, menuButtonRef }: TopBa
         + Create
       </button>
 
-      {/* Fixed-width so swapping Log in <-> avatar (P3) never shifts layout. */}
+      {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
       <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
-        <button
-          type="button"
-          className="h-11 shrink-0 rounded-full bg-(--color-primary) px-4 text-sm font-semibold text-(--color-primary-contrast)"
-        >
-          Log in
-        </button>
+        <AuthSlot onAvatarClick={onAvatarClick} />
       </div>
     </div>
   );

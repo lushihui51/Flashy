@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { mockSignedOut } from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockSignedOut();
+});
 
 function renderShell(initialEntries: string[] = ['/']) {
   return render(

@@ -15,6 +15,8 @@ export default function AppShell() {
         <TopBar
           onMenuClick={() => setIsMenuOpen((open) => !open)}
           isMenuOpen={isMenuOpen}
+          // AccountSheet lands in P4; until then the avatar button is inert.
+          onAvatarClick={() => {}}
           menuButtonRef={menuButtonRef}
         />
         <div className="px-3">
