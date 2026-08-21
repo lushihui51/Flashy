@@ -33,7 +33,15 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[calc(3.5rem+0.75rem)] focus:outline-none"
+          onPointerDownOutside={(event) => {
+            // Let the (still-visible, but pointer-events-blocked-by-default)
+            // hamburger's own onClick handle the close, instead of Radix's
+            // outside-pointerdown dismiss racing with it.
+            if (triggerRef.current?.contains(event.target as Node)) {
+              event.preventDefault();
+            }
+          }}
+          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[7.25rem] focus:outline-none"
         >
           <nav>
             <ul className="flex flex-col gap-1">

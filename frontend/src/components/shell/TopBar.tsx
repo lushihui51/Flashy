@@ -27,6 +27,11 @@ export default function TopBar({
         aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isMenuOpen}
         aria-controls="side-drawer"
+        // Inline (not a Tailwind class) so it reliably overrides Radix's
+        // own inline `body.style.pointerEvents = 'none'` while the modal
+        // drawer is open — an element's own inline style always wins over
+        // an inherited one, regardless of any stylesheet's presence.
+        style={{ pointerEvents: 'auto' }}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--color-text-muted)"
       >
         <Menu aria-hidden="true" className="h-5 w-5" />
@@ -36,17 +41,19 @@ export default function TopBar({
 
       <div className="flex-1" />
 
-      {/* TODO(defer:nav-targets) Create is visible/focusable but does nothing yet. */}
-      <button
-        type="button"
-        className="h-11 shrink-0 px-3 text-sm font-medium text-(--color-text)"
-      >
-        + Create
-      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        {/* TODO(defer:nav-targets) Create is visible/focusable but does nothing yet. */}
+        <button
+          type="button"
+          className="h-11 shrink-0 px-3 text-sm font-medium text-(--color-text)"
+        >
+          + Create
+        </button>
 
-      {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
-      <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
-        <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
+        {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
+        <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
+          <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
+        </div>
       </div>
     </div>
   );

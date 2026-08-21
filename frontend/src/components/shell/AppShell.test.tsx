@@ -46,6 +46,23 @@ describe('AppShell', () => {
     expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
   });
 
+  it('closes the drawer when the hamburger is clicked again while open', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const hamburger = screen.getByRole('button', { name: 'Open menu' });
+    await user.click(hamburger);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // The hamburger is still visually the top bar's close control, and
+    // remains genuinely clickable (pointer-events-auto overrides the
+    // pointer-events:none Radix puts on <body> for everything else while
+    // the modal drawer is trapped) — clicking it again should close it.
+    await user.click(hamburger);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('returns focus to the hamburger when the drawer closes via Escape', async () => {
     const user = userEvent.setup();
     renderShell();
