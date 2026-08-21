@@ -1,11 +1,12 @@
 @import 'tailwindcss';
 
+/* TODO(defer:colors) placeholder palette; swap values here only. */
 @theme {
-  --color-sidebar: #0a0a0a;
-  --color-sidebar-active: #3d3d3d;
-  --color-sidebar-hover: #262626;
-  --color-main: #f2f2f2;
-  --color-accent: #ffffff;
-  --color-small-text: #828282;
-  --color-ink: #1a1a1a;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f4f4f6;
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b6b7b;
+  --color-primary: #4147f5;
+  --color-primary-contrast: #ffffff;
+  --color-scrim: rgb(0 0 0 / 0.5);
 }
