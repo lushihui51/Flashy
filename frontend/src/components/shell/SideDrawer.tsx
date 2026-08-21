@@ -24,7 +24,7 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-20 bg-(--color-scrim)" />
+        <Dialog.Overlay data-testid="scrim" className="fixed inset-0 z-20 bg-(--color-scrim)" />
         <Dialog.Content
           id="side-drawer"
           aria-label="Main menu"

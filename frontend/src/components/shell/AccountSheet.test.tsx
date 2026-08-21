@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { signOut, mockSignedIn } from 'src/test/mocks/clerk';
 import { renderWithRouter } from 'src/test/testUtils';
 import AccountSheet from 'src/components/shell/AccountSheet';
@@ -78,5 +78,29 @@ describe('AccountSheet', () => {
     renderWithRouter(<AccountSheet open={false} onClose={() => {}} triggerRef={triggerRef} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('calls onClose when the scrim is clicked', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithRouter(<AccountSheet open onClose={onClose} triggerRef={triggerRef} />);
+
+    await user.click(screen.getByTestId('scrim'));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('locks body scroll while open and releases it on close', () => {
+    const { rerender } = renderWithRouter(
+      <AccountSheet open onClose={() => {}} triggerRef={triggerRef} />,
+    );
+    expect(document.body).toHaveAttribute('data-scroll-locked');
+
+    rerender(
+      <MemoryRouter>
+        <AccountSheet open={false} onClose={() => {}} triggerRef={triggerRef} />
+      </MemoryRouter>,
+    );
+    expect(document.body).not.toHaveAttribute('data-scroll-locked');
   });
 });

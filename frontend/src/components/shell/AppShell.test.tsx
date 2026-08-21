@@ -60,7 +60,7 @@ describe('AppShell', () => {
     expect(hamburger).toHaveFocus();
   });
 
-  it('opens the account sheet when the avatar is clicked, not the drawer', async () => {
+  it('opens the account sheet when the avatar is clicked, not the drawer, without navigating', async () => {
     mockSignedIn({ username: 'ada' });
     const user = userEvent.setup();
     renderShell();
@@ -68,6 +68,7 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('button', { name: /account menu/i }));
 
     expect(screen.getByRole('dialog', { name: 'ada' })).toBeInTheDocument();
+    expect(screen.getByText('home content')).toBeInTheDocument();
   });
 
   it('never has the drawer and the account sheet open at the same time', async () => {

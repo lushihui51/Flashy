@@ -32,7 +32,7 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-20 bg-(--color-scrim)" />
+        <Dialog.Overlay data-testid="scrim" className="fixed inset-0 z-20 bg-(--color-scrim)" />
         <Dialog.Content
           aria-labelledby={nameId}
           aria-modal="true"
