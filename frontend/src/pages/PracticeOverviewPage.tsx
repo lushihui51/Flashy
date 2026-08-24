@@ -91,13 +91,24 @@ export default function PracticeOverviewPage() {
     <div className="p-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-(--color-text)">Practice</h1>
-        <button
-          type="button"
-          onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
-          className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-        >
-          New practice
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              navigate({ pathname: '/practice/configs', search: searchParams.toString() })
+            }
+            className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
+          >
+            Configs
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
+            className="h-9 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
+          >
+            New practice
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">

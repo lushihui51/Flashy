@@ -5,6 +5,8 @@ import LibraryPage from 'src/pages/LibraryPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
+import PracticeConfigsPage from 'src/pages/PracticeConfigsPage';
+import PracticeConfigEditor from 'src/components/practice/PracticeConfigEditor';
 import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
@@ -21,6 +23,12 @@ function App() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/practice" element={<PracticeOverviewPage />} />
           <Route path="/practice/new" element={<PracticeCreatePage />} />
+          <Route path="/practice/configs" element={<PracticeConfigsPage />} />
+          <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
+          <Route
+            path="/practice/configs/:configId/edit"
+            element={<PracticeConfigEditor mode="edit" />}
+          />
           <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
