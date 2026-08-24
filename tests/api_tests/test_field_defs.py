@@ -11,6 +11,17 @@ class TestFieldDefLifecycle:
         assert data["position"] == 0
         assert data["archived_at"] is None
 
+    def test_archive_below_two_active_fields_rejected(self, client, existing_field_defs):
+        """D3: archiving counts as removing — a deck can't archive down to fewer than
+        two active fields, same floor as create and the batch-edit endpoint."""
+        field_id = existing_field_defs[0]["id"]
+        response = client.delete(f"/api/fields/{field_id}")
+        assert response.status_code == 422
+        assert "at least two fields" in response.json()["detail"]
+
+        get_response = client.get(f"/api/fields/{field_id}")
+        assert get_response.json()["archived_at"] is None
+
     def test_positions_auto_increment(self, client, existing_field_defs):
         positions = [fd["position"] for fd in existing_field_defs]
         assert positions == sorted(positions)
@@ -19,6 +30,9 @@ class TestFieldDefLifecycle:
     def test_list_field_defs_excludes_archived_by_default(
         self, client, existing_deck, existing_field_defs
     ):
+        # D3: archiving down to fewer than two active fields is rejected, so a third
+        # field exists here purely to leave two active after the archive below.
+        client.post(f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"})
         field_id = existing_field_defs[0]["id"]
         client.delete(f"/api/fields/{field_id}")
 
@@ -55,6 +69,9 @@ class TestFieldDefLifecycle:
         assert response.status_code == 400
 
     def test_archive_then_recreate_same_name_succeeds(self, client, existing_deck, existing_field_defs):
+        # D3: leave a third field active so archiving `field` below doesn't drop the
+        # deck under the two-active-field floor.
+        client.post(f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"})
         field = existing_field_defs[0]
 
         archive_response = client.delete(f"/api/fields/{field['id']}")
@@ -81,14 +98,19 @@ class TestFieldDefLifecycle:
         response = client.delete(f"/api/fields/{field_id}/hard")
         assert response.status_code == 400
 
-    def test_hard_delete_blocked_when_values_exist(self, client, existing_card, existing_field_defs):
+    def test_hard_delete_blocked_when_values_exist(
+        self, client, existing_deck, existing_card, existing_field_defs
+    ):
+        # D3: a third field keeps two active after archiving one below.
+        client.post(f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"})
         field_id = existing_field_defs[0]["id"]
         client.delete(f"/api/fields/{field_id}")
 
         response = client.delete(f"/api/fields/{field_id}/hard")
         assert response.status_code == 400
 
-    def test_hard_delete_succeeds_when_empty(self, client, existing_field_defs):
+    def test_hard_delete_succeeds_when_empty(self, client, existing_deck, existing_field_defs):
+        client.post(f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"})
         field_id = existing_field_defs[0]["id"]
         client.delete(f"/api/fields/{field_id}")
 

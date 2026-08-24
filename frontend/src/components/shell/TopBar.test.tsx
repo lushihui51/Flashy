@@ -13,7 +13,13 @@ beforeEach(() => {
 
 function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
   return renderWithRouter(
-    <TopBar onMenuClick={() => {}} isMenuOpen={false} onAvatarClick={() => {}} {...overrides} />,
+    <TopBar
+      onMenuClick={() => {}}
+      isMenuOpen={false}
+      onAvatarClick={() => {}}
+      onCreateClick={() => {}}
+      {...overrides}
+    />,
   );
 }
 
@@ -57,15 +63,22 @@ describe('TopBar', () => {
     );
   });
 
-  it('does not navigate when Create is clicked', async () => {
+  it('calls onCreateClick, and does not itself navigate, when Create is clicked', async () => {
     const user = userEvent.setup();
+    const onCreateClick = vi.fn();
     renderWithRouter(
-      <TopBar onMenuClick={() => {}} isMenuOpen={false} onAvatarClick={() => {}} />,
+      <TopBar
+        onMenuClick={() => {}}
+        isMenuOpen={false}
+        onAvatarClick={() => {}}
+        onCreateClick={onCreateClick}
+      />,
       ['/practice'],
     );
 
     await user.click(screen.getByRole('button', { name: '+ Create' }));
 
+    expect(onCreateClick).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: '+ Create' })).toBeInTheDocument();
   });
 });

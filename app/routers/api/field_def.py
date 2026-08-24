@@ -15,7 +15,9 @@ from app.database_ops.field_def import (
     db_reorder_field_defs,
 )
 from app.dependencies import CurrentUserDep
+from app.models.deck import Deck
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
+from app.services.activity import touch
 
 router = APIRouter(tags=["Field Definitions"])
 
@@ -24,8 +26,10 @@ router = APIRouter(tags=["Field Definitions"])
 def create_field_def(
     db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID, payload: FieldDefCreate
 ):
-    if not db_read_deck(db, deck_id, current_user.id):
+    deck = db_read_deck(db, deck_id, current_user.id)
+    if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
+    touch(db, deck)
     try:
         return db_create_field_def(db, deck_id, payload.name, payload.type)
     except ValueError as e:
@@ -57,7 +61,8 @@ def reorder_field_defs(
     deck_id: uuid.UUID,
     ordered_ids: list[uuid.UUID],
 ):
-    if not db_read_deck(db, deck_id, current_user.id):
+    deck = db_read_deck(db, deck_id, current_user.id)
+    if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     field_defs = db_read_field_defs(db, deck_id, current_user.id, include_archived=True)
     if {fd.id for fd in field_defs} != set(ordered_ids) or len(ordered_ids) != len(
@@ -67,6 +72,7 @@ def reorder_field_defs(
             status_code=400,
             detail="ordered_ids must contain exactly the deck's field ids",
         )
+    touch(db, deck)
     return db_reorder_field_defs(db, field_defs, ordered_ids)
 
 
@@ -89,6 +95,9 @@ def update_field_def(
         raise HTTPException(status_code=400, detail="Field type cannot be changed")
     if payload.name is None:
         return field_def
+    deck = db.get(Deck, field_def.deck_id)
+    if deck:
+        touch(db, deck)
     try:
         return db_rename_field_def(db, field_def, payload.name)
     except ValueError as e:
@@ -100,6 +109,15 @@ def archive_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uu
     field_def = db_read_field_def(db, field_id, current_user.id)
     if not field_def:
         raise HTTPException(status_code=404, detail="Field not found")
+    if field_def.archived_at is None:
+        # D3: archiving counts as removing — a deck can't archive down to fewer than
+        # two active fields, same floor as create and the batch-edit endpoint.
+        active_count = len(db_read_field_defs(db, field_def.deck_id, current_user.id))
+        if active_count <= 2:
+            raise HTTPException(status_code=422, detail="a deck needs at least two fields")
+        deck = db.get(Deck, field_def.deck_id)
+        if deck:
+            touch(db, deck)
     return db_archive_field_def(db, field_def)
 
 
@@ -116,4 +134,7 @@ def hard_delete_field_def(db: SessionDep, current_user: CurrentUserDep, field_id
         raise HTTPException(
             status_code=400, detail="Field still has card values, cannot hard delete"
         )
+    deck = db.get(Deck, field_def.deck_id)
+    if deck:
+        touch(db, deck)
     db_hard_delete_field_def(db, field_def)

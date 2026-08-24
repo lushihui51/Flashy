@@ -7,16 +7,20 @@ type TopBarProps = {
   onMenuClick: () => void;
   isMenuOpen: boolean;
   onAvatarClick: () => void;
+  onCreateClick: () => void;
   menuButtonRef?: Ref<HTMLButtonElement>;
   avatarButtonRef?: Ref<HTMLButtonElement>;
+  createButtonRef?: Ref<HTMLButtonElement>;
 };
 
 export default function TopBar({
   onMenuClick,
   isMenuOpen,
   onAvatarClick,
+  onCreateClick,
   menuButtonRef,
   avatarButtonRef,
+  createButtonRef,
 }: TopBarProps) {
   return (
     <div className="flex h-14 w-full items-center gap-3 border-b border-(--color-surface-elevated) bg-(--color-surface) px-3">
@@ -42,9 +46,10 @@ export default function TopBar({
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1">
-        {/* TODO(defer:nav-targets) Create is visible/focusable but does nothing yet. */}
         <button
+          ref={createButtonRef}
           type="button"
+          onClick={onCreateClick}
           className="h-11 shrink-0 px-3 text-sm font-medium text-(--color-text)"
         >
           + Create

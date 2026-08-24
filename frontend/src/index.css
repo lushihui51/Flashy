@@ -5,8 +5,11 @@
   --color-surface: #ffffff;
   --color-surface-elevated: #f4f4f6;
   --color-text: #1a1a2e;
+  --color-text-secondary: #45455a;
   --color-text-muted: #6b6b7b;
   --color-primary: #4147f5;
   --color-primary-contrast: #ffffff;
+  --color-danger: #d33a3a;
+  --color-danger-contrast: #ffffff;
   --color-scrim: rgb(0 0 0 / 0.5);
 }

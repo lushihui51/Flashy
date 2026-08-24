@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import declared_attr
 from sqlmodel import DateTime, Field, SQLModel, func
@@ -7,6 +7,12 @@ from sqlmodel import DateTime, Field, SQLModel, func
 
 def _camel_to_snake(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def utcnow() -> datetime:
+    """Current time as an explicit, timezone-aware value — used by `touch()`
+    (app/services/activity.py) to set `last_activity_at` (D13)."""
+    return datetime.now(UTC)
 
 
 class AppModel(SQLModel):

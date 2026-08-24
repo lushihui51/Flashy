@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "gen:api:json": "uv run --directory .. app/scripts/export_openapi.py",
-    "gen:api:typescript": "openapi-typescript src/api/openapi.json -o src/api/types.ts",
+    "gen:api:typescript": "openapi-typescript src/api/openapi.json -o src/api/types.ts --default-non-nullable false",
     "gen:api": "npm run gen:api:json && npm run gen:api:typescript"
   },
   "dependencies": {

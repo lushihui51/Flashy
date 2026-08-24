@@ -329,6 +329,45 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * CardBatchCreate
+         * @description `values` is keyed by a real field_def id or a same-request `client_key`
+         *     (§2.3, widened in Phase 7 — see `CardBatchUpdate`).
+         */
+        CardBatchCreate: {
+            /** Values */
+            values?: {
+                [key: string]: string | null;
+            };
+        };
+        /** CardBatchOps */
+        CardBatchOps: {
+            /** Create */
+            create?: components["schemas"]["CardBatchCreate"][];
+            /** Update */
+            update?: components["schemas"]["CardBatchUpdate"][];
+            /** Delete */
+            delete?: string[];
+        };
+        /**
+         * CardBatchUpdate
+         * @description `values` is partial (only changed fields), keyed by a real field_def id or a
+         *     same-request `client_key` — the deck editor's edit-mode diff (Phase 7) can set an
+         *     existing card's value for a field created in the very same request (field
+         *     creates are always applied before card updates, per the stated operation order,
+         *     so the field already has a real row by the time this runs).
+         */
+        CardBatchUpdate: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Values */
+            values?: {
+                [key: string]: string | null;
+            };
+        };
         /** CardCreate */
         CardCreate: {
             /**
@@ -381,15 +420,85 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * DeckBatchEdit
+         * @description `PATCH /api/decks/{id}` body (§2.3, Phase 6). Every top-level key is optional —
+         *     a request can touch just `name`, just `field_defs`, or any combination — but the
+         *     whole thing is applied as one transaction: a failure anywhere rolls back
+         *     everything, including an already-changed `name`.
+         */
+        DeckBatchEdit: {
+            /** Name */
+            name?: string | null;
+            /** Subject Id */
+            subject_id?: string | null;
+            field_defs?: components["schemas"]["FieldDefBatchOps"] | null;
+            cards?: components["schemas"]["CardBatchOps"] | null;
+        };
+        /**
+         * DeckCardCreate
+         * @description One card in an atomic deck-create payload: `values[i]` belongs to
+         *     `field_defs[i]` by position (D6) — no client-side field ids yet to key by.
+         */
+        DeckCardCreate: {
+            /** Values */
+            values: (string | null)[];
+        };
         /** DeckCreate */
         DeckCreate: {
+            /** Name */
+            name: string;
             /**
              * Subject Id
              * Format: uuid
              */
             subject_id: string;
+            /** Field Defs */
+            field_defs: components["schemas"]["FieldDefCreate"][];
+            /** Cards */
+            cards: components["schemas"]["DeckCardCreate"][];
+        };
+        /** DeckDetail */
+        DeckDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Name */
             name: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Field Defs */
+            field_defs: components["schemas"]["DeckFieldDefRead"][];
+            /** Cards */
+            cards: components["schemas"]["CardRead"][];
+        };
+        /** DeckFieldDefRead */
+        DeckFieldDefRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+            /** Position */
+            position: number;
         };
         /** DeckPracticeConfigCreate */
         DeckPracticeConfigCreate: {
@@ -462,8 +571,15 @@ export interface components {
             /** Answer Pool Counts */
             answer_pool_counts?: number[] | null;
         };
-        /** DeckRead */
-        DeckRead: {
+        /**
+         * DeckSummary
+         * @description DeckRead plus preview data for a list row (Phase 2.6) — card_count and
+         *     field_names (position order, active fields only). Only `GET /api/decks` returns
+         *     this; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the
+         *     richer `DeckDetail` instead, which already includes everything here except these
+         *     two list-row-only fields.
+         */
+        DeckSummary: {
             /**
              * Subject Id
              * Format: uuid
@@ -481,13 +597,50 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Card Count */
+            card_count: number;
+            /** Field Names */
+            field_names: string[];
         };
-        /** DeckUpdate */
-        DeckUpdate: {
-            /** Subject Id */
-            subject_id?: string | null;
+        /** FieldDefBatchCreate */
+        FieldDefBatchCreate: {
+            /** Client Key */
+            client_key: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+        };
+        /**
+         * FieldDefBatchOps
+         * @description §2.3's `field_defs` changeset. Applied in the stated order (create → update →
+         *     delete → reorder) inside the batch-edit transaction — this model just carries the
+         *     four lists; the service resolves ids/client_keys and enforces D3.
+         */
+        FieldDefBatchOps: {
+            /** Create */
+            create?: components["schemas"]["FieldDefBatchCreate"][];
+            /** Update */
+            update?: components["schemas"]["FieldDefBatchUpdate"][];
+            /** Delete */
+            delete?: string[];
+            /** Order */
+            order?: string[];
+        };
+        /** FieldDefBatchUpdate */
+        FieldDefBatchUpdate: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Name */
             name?: string | null;
+            type?: components["schemas"]["FieldType"] | null;
         };
         /** FieldDefCreate */
         FieldDefCreate: {
@@ -616,19 +769,31 @@ export interface components {
         SubjectCreate: {
             /** Name */
             name: string;
-            /** Icon */
-            icon?: string | null;
-            /** Description */
-            description?: string | null;
+            /**
+             * Icon
+             * @default book-open
+             */
+            icon?: string;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
         };
         /** SubjectRead */
         SubjectRead: {
             /** Name */
             name: string;
-            /** Icon */
-            icon?: string | null;
-            /** Description */
-            description?: string | null;
+            /**
+             * Icon
+             * @default book-open
+             */
+            icon?: string;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
             /**
              * Id
              * Format: uuid
@@ -644,6 +809,54 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+        };
+        /**
+         * SubjectSummary
+         * @description SubjectRead plus a deck count for a library list row (Phase 2.6). Only
+         *     `GET /api/subjects` returns this — the subject detail page derives its own deck/
+         *     card counts from the (separately-fetched, already-enriched) deck list instead of
+         *     needing this here too.
+         */
+        SubjectSummary: {
+            /** Name */
+            name: string;
+            /**
+             * Icon
+             * @default book-open
+             */
+            icon?: string;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Deck Count */
+            deck_count: number;
         };
         /** SubjectUpdate */
         SubjectUpdate: {
@@ -693,7 +906,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubjectRead"][];
+                    "application/json": components["schemas"]["SubjectSummary"][];
                 };
             };
             /** @description Validation Error */
@@ -862,7 +1075,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckRead"][];
+                    "application/json": components["schemas"]["DeckSummary"][];
                 };
             };
             /** @description Validation Error */
@@ -897,7 +1110,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckRead"];
+                    "application/json": components["schemas"]["DeckDetail"];
                 };
             };
             /** @description Validation Error */
@@ -930,7 +1143,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckRead"];
+                    "application/json": components["schemas"]["DeckDetail"];
                 };
             };
             /** @description Validation Error */
@@ -988,7 +1201,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DeckUpdate"];
+                "application/json": components["schemas"]["DeckBatchEdit"];
             };
         };
         responses: {
@@ -998,7 +1211,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckRead"];
+                    "application/json": components["schemas"]["DeckDetail"];
                 };
             };
             /** @description Validation Error */

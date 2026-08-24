@@ -15,7 +15,7 @@ export const readDecks = async (subjectId?: string) =>
     }),
   );
 
-export const updateDeck = async (deckId: string, payload: components['schemas']['DeckUpdate']) =>
+export const updateDeck = async (deckId: string, payload: components['schemas']['DeckBatchEdit']) =>
   unwrap(
     await client.PATCH('/api/decks/{deck_id}', {
       params: { path: { deck_id: deckId } },

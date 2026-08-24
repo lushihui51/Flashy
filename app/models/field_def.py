@@ -15,7 +15,7 @@ class FieldType(str, Enum):
 
 
 class FieldDefBase(AppModel):
-    deck_id: uuid.UUID = Field(foreign_key="deck.id")
+    deck_id: uuid.UUID = Field(foreign_key="deck.id", ondelete="CASCADE")
     name: str
     type: FieldType = Field(sa_column=Column(String, nullable=False))
     position: int

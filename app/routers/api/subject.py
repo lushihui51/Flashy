@@ -7,11 +7,11 @@ from app.database_ops.subject import (
     db_create_subject,
     db_delete_subject,
     db_read_subject,
-    db_read_subjects,
+    db_read_subjects_with_summary,
     db_update_subject,
 )
 from app.dependencies import CurrentUserDep
-from app.models.subject import SubjectCreate, SubjectRead, SubjectUpdate
+from app.models.subject import SubjectCreate, SubjectRead, SubjectSummary, SubjectUpdate
 
 router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
@@ -24,9 +24,9 @@ def create_subject(db: SessionDep, current_user: CurrentUserDep, subject: Subjec
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.get("", response_model=list[SubjectRead], status_code=200)
+@router.get("", response_model=list[SubjectSummary], status_code=200)
 def read_subjects(db: SessionDep, current_user: CurrentUserDep):
-    return db_read_subjects(db, current_user.id)
+    return db_read_subjects_with_summary(db, current_user.id)
 
 
 @router.get("/{subject_id}", response_model=SubjectRead, status_code=200)

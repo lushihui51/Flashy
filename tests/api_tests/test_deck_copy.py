@@ -284,7 +284,12 @@ class TestCopyDeckPracticeConfig:
         # copied must be rejected, not silently accepted.
         other_deck = client.post(
             "/api/decks",
-            json={"subject_id": target_subject["id"], "name": "Unrelated Deck"},
+            json={
+                "subject_id": target_subject["id"],
+                "name": "Unrelated Deck",
+                "field_defs": [{"name": "seed", "type": "text"}, {"name": "seed2", "type": "text"}],
+                "cards": [],
+            },
         )
         assert other_deck.status_code == 201, other_deck.text
         other_field = client.post(
@@ -350,7 +355,12 @@ class TestCopyDeckErrors:
     ):
         collide = client.post(
             "/api/decks",
-            json={"subject_id": target_subject["id"], "name": source_setup["deck"]["name"]},
+            json={
+                "subject_id": target_subject["id"],
+                "name": source_setup["deck"]["name"],
+                "field_defs": [{"name": "seed", "type": "text"}, {"name": "seed2", "type": "text"}],
+                "cards": [],
+            },
         )
         assert collide.status_code == 201, collide.text
 

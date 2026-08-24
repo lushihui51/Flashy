@@ -95,7 +95,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectRead"
+                    "$ref": "#/components/schemas/SubjectSummary"
                   },
                   "title": "Response Read Subjects Api Subjects Get"
                 }
@@ -332,7 +332,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckRead"
+                  "$ref": "#/components/schemas/DeckDetail"
                 }
               }
             }
@@ -398,7 +398,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeckRead"
+                    "$ref": "#/components/schemas/DeckSummary"
                   },
                   "title": "Response Read Decks Api Decks Get"
                 }
@@ -459,7 +459,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckRead"
+                  "$ref": "#/components/schemas/DeckDetail"
                 }
               }
             }
@@ -515,7 +515,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DeckUpdate"
+                "$ref": "#/components/schemas/DeckBatchEdit"
               }
             }
           }
@@ -526,7 +526,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeckRead"
+                  "$ref": "#/components/schemas/DeckDetail"
                 }
               }
             }
@@ -1963,6 +1963,84 @@
   },
   "components": {
     "schemas": {
+      "CardBatchCreate": {
+        "properties": {
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "title": "CardBatchCreate",
+        "description": "`values` is keyed by a real field_def id or a same-request `client_key`\n(\u00a72.3, widened in Phase 7 \u2014 see `CardBatchUpdate`)."
+      },
+      "CardBatchOps": {
+        "properties": {
+          "create": {
+            "items": {
+              "$ref": "#/components/schemas/CardBatchCreate"
+            },
+            "type": "array",
+            "title": "Create"
+          },
+          "update": {
+            "items": {
+              "$ref": "#/components/schemas/CardBatchUpdate"
+            },
+            "type": "array",
+            "title": "Update"
+          },
+          "delete": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Delete"
+          }
+        },
+        "type": "object",
+        "title": "CardBatchOps"
+      },
+      "CardBatchUpdate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "CardBatchUpdate",
+        "description": "`values` is partial (only changed fields), keyed by a real field_def id or a\nsame-request `client_key` \u2014 the deck editor's edit-mode diff (Phase 7) can set an\nexisting card's value for a field created in the very same request (field\ncreates are always applied before card updates, per the stated operation order,\nso the field already has a real row by the time this runs)."
+      },
       "CardCreate": {
         "properties": {
           "deck_id": {
@@ -2063,24 +2141,195 @@
         ],
         "title": "CardUpdate"
       },
+      "DeckBatchEdit": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "field_defs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldDefBatchOps"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cards": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardBatchOps"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "DeckBatchEdit",
+        "description": "`PATCH /api/decks/{id}` body (\u00a72.3, Phase 6). Every top-level key is optional \u2014\na request can touch just `name`, just `field_defs`, or any combination \u2014 but the\nwhole thing is applied as one transaction: a failure anywhere rolls back\neverything, including an already-changed `name`."
+      },
+      "DeckCardCreate": {
+        "properties": {
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "DeckCardCreate",
+        "description": "One card in an atomic deck-create payload: `values[i]` belongs to\n`field_defs[i]` by position (D6) \u2014 no client-side field ids yet to key by."
+      },
       "DeckCreate": {
         "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "subject_id": {
             "type": "string",
             "format": "uuid",
             "title": "Subject Id"
           },
-          "name": {
-            "type": "string",
-            "title": "Name"
+          "field_defs": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDefCreate"
+            },
+            "type": "array",
+            "title": "Field Defs"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/DeckCardCreate"
+            },
+            "type": "array",
+            "title": "Cards"
           }
         },
         "type": "object",
         "required": [
+          "name",
           "subject_id",
-          "name"
+          "field_defs",
+          "cards"
         ],
         "title": "DeckCreate"
+      },
+      "DeckDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "field_defs": {
+            "items": {
+              "$ref": "#/components/schemas/DeckFieldDefRead"
+            },
+            "type": "array",
+            "title": "Field Defs"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/CardRead"
+            },
+            "type": "array",
+            "title": "Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "subject_id",
+          "created_at",
+          "last_activity_at",
+          "field_defs",
+          "cards"
+        ],
+        "title": "DeckDetail"
+      },
+      "DeckFieldDefRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "position"
+        ],
+        "title": "DeckFieldDefRead"
       },
       "DeckPracticeConfigCreate": {
         "properties": {
@@ -2341,7 +2590,7 @@
         "type": "object",
         "title": "DeckPracticeConfigUpdate"
       },
-      "DeckRead": {
+      "DeckSummary": {
         "properties": {
           "subject_id": {
             "type": "string",
@@ -2361,6 +2610,22 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "card_count": {
+            "type": "integer",
+            "title": "Card Count"
+          },
+          "field_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Field Names"
           }
         },
         "type": "object",
@@ -2368,23 +2633,78 @@
           "subject_id",
           "name",
           "id",
-          "created_at"
+          "created_at",
+          "last_activity_at",
+          "card_count",
+          "field_names"
         ],
-        "title": "DeckRead"
+        "title": "DeckSummary",
+        "description": "DeckRead plus preview data for a list row (Phase 2.6) \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
       },
-      "DeckUpdate": {
+      "FieldDefBatchCreate": {
         "properties": {
-          "subject_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Id"
+          "client_key": {
+            "type": "string",
+            "title": "Client Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_key",
+          "name",
+          "type"
+        ],
+        "title": "FieldDefBatchCreate"
+      },
+      "FieldDefBatchOps": {
+        "properties": {
+          "create": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDefBatchCreate"
+            },
+            "type": "array",
+            "title": "Create"
+          },
+          "update": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDefBatchUpdate"
+            },
+            "type": "array",
+            "title": "Update"
+          },
+          "delete": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Delete"
+          },
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "title": "FieldDefBatchOps",
+        "description": "\u00a72.3's `field_defs` changeset. Applied in the stated order (create \u2192 update \u2192\ndelete \u2192 reorder) inside the batch-edit transaction \u2014 this model just carries the\nfour lists; the service resolves ids/client_keys and enforces D3."
+      },
+      "FieldDefBatchUpdate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
           },
           "name": {
             "anyOf": [
@@ -2396,10 +2716,23 @@
               }
             ],
             "title": "Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
-        "title": "DeckUpdate"
+        "required": [
+          "id"
+        ],
+        "title": "FieldDefBatchUpdate"
       },
       "FieldDefCreate": {
         "properties": {
@@ -2693,26 +3026,14 @@
             "title": "Name"
           },
           "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
+            "type": "string",
+            "title": "Icon",
+            "default": "book-open"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
+            "type": "string",
+            "title": "Description",
+            "default": ""
           }
         },
         "type": "object",
@@ -2728,26 +3049,14 @@
             "title": "Name"
           },
           "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
+            "type": "string",
+            "title": "Icon",
+            "default": "book-open"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
+            "type": "string",
+            "title": "Description",
+            "default": ""
           },
           "id": {
             "type": "string",
@@ -2763,6 +3072,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
           }
         },
         "type": "object",
@@ -2770,9 +3084,63 @@
           "name",
           "id",
           "user_id",
-          "created_at"
+          "created_at",
+          "last_activity_at"
         ],
         "title": "SubjectRead"
+      },
+      "SubjectSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon",
+            "default": "book-open"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "deck_count": {
+            "type": "integer",
+            "title": "Deck Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "user_id",
+          "created_at",
+          "last_activity_at",
+          "deck_count"
+        ],
+        "title": "SubjectSummary",
+        "description": "SubjectRead plus a deck count for a library list row (Phase 2.6). Only\n`GET /api/subjects` returns this \u2014 the subject detail page derives its own deck/\ncard counts from the (separately-fetched, already-enriched) deck list instead of\nneeding this here too."
       },
       "SubjectUpdate": {
         "properties": {
