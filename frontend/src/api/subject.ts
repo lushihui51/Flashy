@@ -1,58 +1,25 @@
-import { client, displayError } from 'src/api/client';
+import { client } from 'src/api/client';
+import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
-export const createSubject = async (payload: components['schemas']['SubjectCreate']) => {
-  const { data, error } = await client.POST('/api/subjects', {
-    body: payload,
-  });
-  if (error) {
-    displayError(error);
-    throw error;
-  }
-  return data;
-};
+export const createSubject = async (payload: components['schemas']['SubjectCreate']) =>
+  unwrap(await client.POST('/api/subjects', { body: payload }));
 
-export const readSubject = async (subjectId: string) => {
-  const { data, error } = await client.GET('/api/subjects/{subject_id}', {
-    params: { path: { subject_id: subjectId } },
-  });
-  if (error) {
-    displayError(error);
-    throw error;
-  }
-  return data;
-};
+export const readSubject = async (subjectId: string) =>
+  unwrap(await client.GET('/api/subjects/{subject_id}', { params: { path: { subject_id: subjectId } } }));
 
-export const readSubjects = async () => {
-  const { data, error } = await client.GET('/api/subjects', {});
-  if (error) {
-    displayError(error);
-    throw error;
-  }
-  return data;
-};
+export const readSubjects = async () => unwrap(await client.GET('/api/subjects', {}));
 
 export const updateSubject = async (
   subjectId: string,
   payload: components['schemas']['SubjectUpdate'],
-) => {
-  const { data, error } = await client.PATCH('/api/subjects/{subject_id}', {
-    params: { path: { subject_id: subjectId } },
-    body: payload,
-  });
-  if (error) {
-    displayError(error);
-    throw error;
-  }
-  return data;
-};
+) =>
+  unwrap(
+    await client.PATCH('/api/subjects/{subject_id}', {
+      params: { path: { subject_id: subjectId } },
+      body: payload,
+    }),
+  );
 
-export const deleteSubject = async (subjectId: string) => {
-  const { error } = await client.DELETE('/api/subjects/{subject_id}', {
-    params: { path: { subject_id: subjectId } },
-  });
-  if (error) {
-    displayError(error);
-    throw error;
-  }
-};
+export const deleteSubject = async (subjectId: string) =>
+  unwrapVoid(await client.DELETE('/api/subjects/{subject_id}', { params: { path: { subject_id: subjectId } } }));

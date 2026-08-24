@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (implementation pending)
+Accepted
 
 ## Context
 
@@ -21,6 +21,14 @@ Rejected because weeks of work would produce an undifferentiated feature with a 
 ### Considered Alternative: Self-hosted auth (e.g. Keycloak)
 
 This alternative avoids vendor dependencies, however it's rejected for the costs of running, upgrading and securing an auth server, which is too much operation burden for a solo project.
+
+### Implementation note
+
+The frontend package is `@clerk/react` (not `@clerk/clerk-react`, which an
+earlier planning doc — `docs/plans/002` — assumed). `@clerk/react` has no
+`<SignedIn>`/`<SignedOut>` components; the frontend branches on `useUser()`'s
+`isLoaded`/`isSignedIn` fields directly instead (`AuthSlot.tsx`). Sign-in uses
+`useClerk().openSignIn()`; sign-out uses `useClerk().signOut()`.
 
 ## Consequences
 
