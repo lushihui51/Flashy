@@ -1,8 +1,6 @@
 # Flashy Decompose — Creation Flows (Subject, Deck, Card)
 
-**Status:** Draft v1
-**Depends on:** App Shell decompose (top bar, drawer, auth, account sheet) merged.
-**Scope:** Creating the three library artifacts — Subject, Deck, Card — from three entry points, with atomic backend writes. Mobile-first. Practice is an activity, not an artifact, and is out of scope here.
+**Status:** Draft v1 **Depends on:** App Shell decompose (top bar, drawer, auth, account sheet) merged. **Scope:** Creating the three library artifacts — Subject, Deck, Card — from three entry points, with atomic backend writes. Mobile-first. Practice is an activity, not an artifact, and is out of scope here.
 
 ---
 
@@ -193,13 +191,13 @@ Single-card operations are atomic per card. They are a different scope from the 
 
 ## 3. Routes
 
-| Route                  | Page                                            | Create entry points present                                      |
-| ---------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
-| `/library`             | Library — tabs: **Subjects**, **Decks**         | Subject (list page), Deck (list page)                            |
-| `/subjects/:subjectId` | Subject detail — header + decks in this subject | Deck (contextual, subject locked)                                |
-| `/decks/:deckId`       | Deck detail — header + cards                    | Card (contextual, deck locked); `Edit` opens editor in edit mode |
-| `/decks/new`           | Deck editor, create mode                        | —                                                                |
-| `/decks/:deckId/edit`  | Deck editor, edit mode                          | —                                                                |
+| Route | Page | Create entry points present |
+| --- | --- | --- |
+| `/library` | Library — tabs: **Subjects**, **Decks** | Subject (list page), Deck (list page) |
+| `/subjects/:subjectId` | Subject detail — header + decks in this subject | Deck (contextual, subject locked) |
+| `/decks/:deckId` | Deck detail — header + cards | Card (contextual, deck locked); `Edit` opens editor in edit mode |
+| `/decks/new` | Deck editor, create mode | — |
+| `/decks/:deckId/edit` | Deck editor, edit mode | — |
 
 `Create` in the top bar opens the **Create sheet** (§4.1) from anywhere.
 
@@ -309,9 +307,7 @@ Shared grammar: identity and shape on the left, size on the right, chevron last;
 - Unit test: `POST /api/subjects` with only `name` returns defaults populated.
 - Regenerate frontend OpenAPI types.
 
-**STOP — Phase 0**
-_Automated:_ migration applies cleanly up and down; backend tests green; `tsc --noEmit` green after type regen.
-_Browser check:_ open `/docs`; `POST /api/subjects` with `{"name":"Test"}` returns 201 with non-null `description` and `icon`; `GET` the same subject and confirm.
+**STOP — Phase 0** _Automated:_ migration applies cleanly up and down; backend tests green; `tsc --noEmit` green after type regen. _Browser check:_ open `/docs`; `POST /api/subjects` with `{"name":"Test"}` returns 201 with non-null `description` and `icon`; `GET` the same subject and confirm.
 
 ### Phase 1 — Backend: atomic deck create + DeckDetail
 
@@ -321,9 +317,7 @@ _Browser check:_ open `/docs`; `POST /api/subjects` with `{"name":"Test"}` retur
 - Tests: happy path; fewer than two fields (zero, and one) → 422; duplicate field names → 422; misaligned `values` length → 422; all-empty card dropped; card values are dense over field_defs — `len(values) == len(field_defs)` for every persisted card, including one with a blank value stored as `""` (D10); rollback when a later card fails validation (nothing persisted).
 - Regenerate types.
 
-**STOP — Phase 1**
-_Automated:_ backend tests green including the rollback test; types regenerated; `tsc` green.
-_Browser check:_ in `/docs`, create a deck with two fields and three cards (one of them all-empty); `GET` it and confirm two fields with positions 0 and 1, **two** cards, each with exactly two values keyed by field id (D10). Try a payload with zero `field_defs` and confirm 422 with a readable message.
+**STOP — Phase 1** _Automated:_ backend tests green including the rollback test; types regenerated; `tsc` green. _Browser check:_ in `/docs`, create a deck with two fields and three cards (one of them all-empty); `GET` it and confirm two fields with positions 0 and 1, **two** cards, each with exactly two values keyed by field id (D10). Try a payload with zero `field_defs` and confirm 422 with a readable message.
 
 ### Phase 1.5 — Backend: invariants and cascade (done)
 
@@ -341,15 +335,11 @@ Corrections to Phase 1, shipped as one PR before Phase 2:
 - `SubjectDetailPage` and `DeckDetailPage` read-only, with create buttons present but pointing at the same placeholders.
 - Empty states for all lists.
 
-**STOP — Phase 2**
-_Automated:_ frontend tests green; every route renders without console errors with MSW-mocked data.
-_Browser check (narrow viewport, signed in):_ tap `Create` → sheet opens with three rows and a drag handle; scrim tap and Esc close it. Open drawer → **Your library** → tabs switch, lists show real subjects and decks from the backend. Tap a subject → its decks. Tap a deck → field chips and card rows. Each create button is visible, sized for touch, and leads somewhere that names the pending form. Sign out → `/library` behaves sensibly (redirect or sign-in prompt, whichever the shell already does).
+**STOP — Phase 2** _Automated:_ frontend tests green; every route renders without console errors with MSW-mocked data. _Browser check (narrow viewport, signed in):_ tap `Create` → sheet opens with three rows and a drag handle; scrim tap and Esc close it. Open drawer → **Your library** → tabs switch, lists show real subjects and decks from the backend. Tap a subject → its decks. Tap a deck → field chips and card rows. Each create button is visible, sized for touch, and leads somewhere that names the pending form. Sign out → `/library` behaves sensibly (redirect or sign-in prompt, whichever the shell already does).
 
 ### Phase 2.5 -- Deck detail page layout
 
-**Addendum to:** Creation Flows decompose, between Phase 2 and Phase 3.
-**Scope:** Presentation only on `/decks/:deckId`. No backend changes, no new endpoints, no new queries.
-**Not in scope:** colours/palette, mastery indicators, search or filter within a deck, sorting, desktop grid, practice session behaviour.
+**Addendum to:** Creation Flows decompose, between Phase 2 and Phase 3. **Scope:** Presentation only on `/decks/:deckId`. No backend changes, no new endpoints, no new queries. **Not in scope:** colours/palette, mastery indicators, search or filter within a deck, sorting, desktop grid, practice session behaviour.
 
 ---
 
@@ -389,11 +379,11 @@ Backend: `DEFAULT_SUBJECT_ICON` is `"book-open"` (changed from the emoji `"📚"
 
 Three controls in one row, directly under the meta line:
 
-| Control      | Style                                             | Behaviour                                                                          |
-| ------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Practice** | Primary, fills remaining width, play icon + label | No-op for now. `// TODO(defer:nav-targets)`                                        |
-| **New card** | Icon-only, bordered, `plus` icon                  | Opens the card form (currently the Phase 2 placeholder; Phase 5 wires it for real) |
-| **Edit**     | Icon-only, bordered, `edit` icon                  | Navigates to `/decks/:deckId/edit` (currently the Phase 4 placeholder)             |
+| Control | Style | Behaviour |
+| --- | --- | --- |
+| **Practice** | Primary, fills remaining width, play icon + label | No-op for now. `// TODO(defer:nav-targets)` |
+| **New card** | Icon-only, bordered, `plus` icon | Opens the card form (currently the Phase 2 placeholder; Phase 5 wires it for real) |
+| **Edit** | Icon-only, bordered, `edit` icon | Navigates to `/decks/:deckId/edit` (currently the Phase 4 placeholder) |
 
 Practice is primary because it's the reason the deck exists; edit and add-card are maintenance. Icon-only buttons need `aria-label` ("New card", "Edit deck") and must still meet the 44×44 tap target from the shell decompose even though they render at 38px visually — pad the hit area.
 
@@ -469,9 +459,7 @@ Report which `subject.icon` interpretation you found (identifier vs emoji), the 
 
 ### Phase 2.6 -- Subject detail and library rows
 
-**Addendum to:** Creation Flows decompose. Runs after Phase 2.5, before Phase 3.
-**Scope:** Presentation on `/subjects/:subjectId` and the row layout on `/library`. No new endpoints.
-**Not in scope:** colours/palette, mastery indicators, search or filter, sorting, practice session behaviour, desktop layout.
+**Addendum to:** Creation Flows decompose. Runs after Phase 2.5, before Phase 3. **Scope:** Presentation on `/subjects/:subjectId` and the row layout on `/library`. No new endpoints. **Not in scope:** colours/palette, mastery indicators, search or filter, sorting, practice session behaviour, desktop layout.
 
 Subject icon rendering was fixed in Phase 2.5 and is not revisited here — reuse the existing helper at every call site added below.
 
@@ -523,11 +511,11 @@ Replaces the current standalone `1 decks` label — delete it. (`1 decks` is a l
 
 Same grammar as the deck detail page:
 
-| Control      | Style                                                         | Behaviour                                                                                   |
-| ------------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Practice** | Primary, fills remaining width, play icon + label             | No-op. `// TODO(defer:nav-targets)`                                                         |
-| **New deck** | Icon-only, bordered, `plus` icon, `aria-label="New deck"`     | Opens deck creation with this subject prefilled and locked (Phase 4 placeholder until then) |
-| **Edit**     | Icon-only, bordered, `edit` icon, `aria-label="Edit subject"` | Subject edit (placeholder for now)                                                          |
+| Control | Style | Behaviour |
+| --- | --- | --- |
+| **Practice** | Primary, fills remaining width, play icon + label | No-op. `// TODO(defer:nav-targets)` |
+| **New deck** | Icon-only, bordered, `plus` icon, `aria-label="New deck"` | Opens deck creation with this subject prefilled and locked (Phase 4 placeholder until then) |
+| **Edit** | Icon-only, bordered, `edit` icon, `aria-label="Edit subject"` | Subject edit (placeholder for now) |
 
 Practice is primary because a session can span multiple decks (`practice_deck` supports it), so "practice this subject" is a real action, not a stand-in.
 
@@ -612,9 +600,7 @@ Report the subject-detail response shape you found and any backend change made, 
 
 ### Phase 2.7: List row grammar
 
-**Addendum to:** Creation Flows decompose. Runs after Phase 2.6, before Phase 3.
-**Scope:** How `/library` and `/subjects/:subjectId` display their children. Presentation only, no endpoint changes.
-**Supersedes:** Phase 2.6 §2.5 (deck list rows) and §3 (library subject rows). Everything else in 2.6 stands — breadcrumb, header block, meta line, action row, empty states are unchanged.
+**Addendum to:** Creation Flows decompose. Runs after Phase 2.6, before Phase 3. **Scope:** How `/library` and `/subjects/:subjectId` display their children. Presentation only, no endpoint changes. **Supersedes:** Phase 2.6 §2.5 (deck list rows) and §3 (library subject rows). Everything else in 2.6 stands — breadcrumb, header block, meta line, action row, empty states are unchanged.
 
 ---
 
@@ -674,12 +660,12 @@ A subject with no description renders a two-line row; one with a description ren
 
 Replaces the composite subtitle from 2.6 §2.5.
 
-| Slot       | Content                                                                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leading`  | _(none)_                                                                                                                                          |
-| `title`    | Deck name                                                                                                                                         |
+| Slot | Content |
+| --- | --- |
+| `leading` | _(none)_ |
+| `title` | Deck name |
 | `subtitle` | Field names in `position` order, joined by `, `, archived excluded — first two names, with ` +N` appended when more remain. No `+N` at ≤2 fields. |
-| `meta`     | `{n} cards` (singular at 1), or the literal `No cards` when zero                                                                                  |
+| `meta` | `{n} cards` (singular at 1), or the literal `No cards` when zero |
 
 Note two changes from 2.6:
 
@@ -729,9 +715,7 @@ Confirm `ListRow` is a single shared component used by both pages, not duplicate
 - Verify `PATCH /api/subjects/:id` and `DELETE /api/subjects/:id` exist with sensible shapes; add if missing (small backend change, same PR is acceptable here since it's additive).
 - After create → navigate to the new subject's page; after edit → stay, header reflects changes; after delete → `/library`. Lists update via query invalidation, no manual refresh.
 
-**STOP — Phase 3**
-_Automated:_ form validation (empty name blocked in both modes); create submit; edit submit sends only the form's fields; delete confirm flow; query invalidation for list and detail.
-_Browser check:_ create a subject from the sheet with only a name → lands on its page → back to Library shows it with `0 decks`. Create another from the Library tab with a description → description shows on its row and header. Open a subject → `Edit` → change the description → save → header updates without reload. Open `Edit` on a subject with decks → `Delete subject` → confirm names the deck count → after confirming, you're on `/library` and it's gone. Keyboard doesn't cover the primary button on mobile. `Cancel` with changes prompts; without changes doesn't.
+**STOP — Phase 3** _Automated:_ form validation (empty name blocked in both modes); create submit; edit submit sends only the form's fields; delete confirm flow; query invalidation for list and detail. _Browser check:_ create a subject from the sheet with only a name → lands on its page → back to Library shows it with `0 decks`. Create another from the Library tab with a description → description shows on its row and header. Open a subject → `Edit` → change the description → save → header updates without reload. Open `Edit` on a subject with decks → `Delete subject` → confirm names the deck count → after confirming, you're on `/library` and it's gone. Keyboard doesn't cover the primary button on mobile. `Cancel` with changes prompts; without changes doesn't.
 
 ### Phase 4 — Frontend: Deck editor, create mode
 
@@ -740,9 +724,7 @@ _Browser check:_ create a subject from the sheet with only a name → lands on i
 - Wire: Create sheet → Deck; Library › Decks → `New deck`; Subject detail → `New deck` icon button (subject locked).
 - Inline subject creation from inside the editor via `SubjectPicker`.
 
-**STOP — Phase 4**
-_Automated:_ reducer tests (add/rename/reorder/remove field; add/edit/remove card; values realigned after reorder; remove is a no-op at two fields, D3); payload builder (ordering, `""`→`null`, all-empty cards dropped, never fewer than two field*defs); type select offers only `text`; submit against MSW; `ListRow` with `onClick` renders no link and fires the handler on click and Enter.
-\_Browser check:* from Subject detail → `New deck` → subject locked. Rename `Term` to `Word`, add a third field, reorder it to first via the overflow menu's Move up. Type select shows only `text`. Add three cards, leave one fully empty; leave another with a blank first field → its editor row reads `empty`. Remove down to two fields, then try to remove either → blocked on both (D3). Remove a field that has values (while three or more remain) → confirm names the card count. Type a subject that doesn't exist → `Create "…"` → selected. Save → lands on deck detail; the table shows two cards, fields in your order, `empty` where you left a blank. Reload → persisted. Start a new deck, type something, `Cancel` → prompt.
+**STOP — Phase 4** _Automated:_ reducer tests (add/rename/reorder/remove field; add/edit/remove card; values realigned after reorder; remove is a no-op at two fields, D3); payload builder (ordering, `""`→`null`, all-empty cards dropped, never fewer than two field*defs); type select offers only `text`; submit against MSW; `ListRow` with `onClick` renders no link and fires the handler on click and Enter. \_Browser check:* from Subject detail → `New deck` → subject locked. Rename `Term` to `Word`, add a third field, reorder it to first via the overflow menu's Move up. Type select shows only `text`. Add three cards, leave one fully empty; leave another with a blank first field → its editor row reads `empty`. Remove down to two fields, then try to remove either → blocked on both (D3). Remove a field that has values (while three or more remain) → confirm names the card count. Type a subject that doesn't exist → `Create "…"` → selected. Save → lands on deck detail; the table shows two cards, fields in your order, `empty` where you left a blank. Reload → persisted. Start a new deck, type something, `Cancel` → prompt.
 
 ### Phase 4.5 — Backend: single-card endpoints conform to §2.6 (conditional)
 
@@ -757,9 +739,7 @@ If anything differs, fix it here:
 - Tests named for the rule they enforce, e.g. `test_card_create_writes_dense_rows_for_omitted_fields`, `test_card_create_rejects_archived_field_key`, `test_card_patch_cannot_blank_all_values`.
 - Regenerate types.
 
-**STOP — Phase 4.5**
-_Automated:_ backend tests green; types regenerated; `tsc -b` clean.
-_Browser check:_ in `/docs`, `POST /api/cards` with only one of two fields → `GET` shows both keys, the omitted one `""`. `POST` with a key from another deck → 422. `PATCH` blanking the last non-empty value → 422.
+**STOP — Phase 4.5** _Automated:_ backend tests green; types regenerated; `tsc -b` clean. _Browser check:_ in `/docs`, `POST /api/cards` with only one of two fields → `GET` shows both keys, the omitted one `""`. `POST` with a key from another deck → 422. `PATCH` blanking the last non-empty value → 422.
 
 ### Phase 5 — Frontend: Standalone card create, edit, delete
 
@@ -770,9 +750,7 @@ _Browser check:_ in `/docs`, `POST /api/cards` with only one of two fields → `
 - Changing the deck after typing values → confirm → clear.
 - After any write, the deck detail query invalidates and the table reflects it.
 
-**STOP — Phase 5**
-_Automated:_ picker empty state; deck-change confirm/clear; create submit; edit submit sends only changed keys; delete confirm flow; invalidation.
-_Browser check:_ Deck detail → `New card` → deck locked, inputs match the deck's fields in order → save → new row in the table. Tap that row → form prefilled → change one value → save → table updates. Tap it again → `Delete card` → confirm → row gone; meta line count decrements. From the sheet → Card → pick a deck → type → switch deck → confirm → inputs cleared. On a fresh account, sheet → Card shows `Create a deck first` and leads to the deck editor. A deck containing an `image`-typed field (seed one via `/docs`) renders that field read-only with the unsupported note and does not crash.
+**STOP — Phase 5** _Automated:_ picker empty state; deck-change confirm/clear; create submit; edit submit sends only changed keys; delete confirm flow; invalidation. _Browser check:_ Deck detail → `New card` → deck locked, inputs match the deck's fields in order → save → new row in the table. Tap that row → form prefilled → change one value → save → table updates. Tap it again → `Delete card` → confirm → row gone; meta line count decrements. From the sheet → Card → pick a deck → type → switch deck → confirm → inputs cleared. On a fresh account, sheet → Card shows `Create a deck first` and leads to the deck editor. A deck containing an `image`-typed field (seed one via `/docs`) renders that field read-only with the unsupported note and does not crash.
 
 ### Phase 5.4 — Backend: `last_activity_at` and recency ordering
 
@@ -787,13 +765,13 @@ Every list of subjects or decks anywhere in the app — library tabs, subject pa
 
 **Bubbling rule for `last_activity_at`** (and only `last_activity_at`):
 
-| Event                                                        | Touches `last_activity_at` on            |
-| ------------------------------------------------------------ | ---------------------------------------- |
-| Subject name/description/icon edited                         | subject                                  |
-| Deck created, deleted, or moved to another subject           | subject (both old and new on move), deck |
-| Deck name edited                                             | deck                                     |
-| Field created, edited, archived, deleted, reordered          | deck                                     |
-| Card created, edited, deleted (standalone or via batch edit) | deck                                     |
+| Event | Touches `last_activity_at` on |
+| --- | --- |
+| Subject name/description/icon edited | subject |
+| Deck created, deleted, or moved to another subject | subject (both old and new on move), deck |
+| Deck name edited | deck |
+| Field created, edited, archived, deleted, reordered | deck |
+| Card created, edited, deleted (standalone or via batch edit) | deck |
 
 Editing a card does **not** touch the subject — that's two levels up. Cards get neither column; the deck detail table stays in creation order so editing a card never reorders it under the user. "Last practiced" for a card, when it's wanted, is `MAX(card_field_mastery.updated_at)` over that card's mastery rows — derived, not stored.
 
@@ -840,8 +818,7 @@ Named for the rule they enforce:
 
 #### STOP — Phase 5.4
 
-**Automated:** migration up and down clean; backend tests green including both `does_not_change_deck_updated_at` guards; types regenerated.
-**Browser check:** in `/docs`, list subjects → note the order. `PATCH` the last subject's description → list again → it's first, and its `updated_at` and `last_activity_at` both moved. `POST` a card into a deck in another subject → `GET` that deck → `last_activity_at` moved, **`updated_at` did not**; it's first in its subject's deck list; the subject order is unchanged. Open `/library` → subjects and decks already appear in recency order with no frontend change.
+**Automated:** migration up and down clean; backend tests green including both `does_not_change_deck_updated_at` guards; types regenerated. **Browser check:** in `/docs`, list subjects → note the order. `PATCH` the last subject's description → list again → it's first, and its `updated_at` and `last_activity_at` both moved. `POST` a card into a deck in another subject → `GET` that deck → `last_activity_at` moved, **`updated_at` did not**; it's first in its subject's deck list; the subject order is unchanged. Open `/library` → subjects and decks already appear in recency order with no frontend change.
 
 ---
 
@@ -955,9 +932,7 @@ Report whether the two pickers share a base component and confirm `SubjectForm` 
 - Tests: each operation alone; combined create-field + add-card-using-client_key; delete-below-two-fields → 422 (both from two fields and from one, if reachable); foreign id → 422; mid-request failure rolls back everything; reorder updates positions contiguously; **`test_field_create_backfills_dense_card_field_value_rows`** — adding a field to a deck with existing cards gives every one of them a new `""` row, in the same transaction; **`test_field_delete_cascades_card_field_value_rows`** — deleting a field removes its `card_field_value` rows (D10/D11).
 - Regenerate types.
 
-**STOP — Phase 6**
-_Automated:_ backend tests green; types regenerated; `tsc` green.
-_Browser check:_ in `/docs`, on the deck from Phase 1: add a field via `client_key` and a card referencing it in the same request; `GET` and confirm both exist with the card's value attached to the new field's real id. Send a delete of every field → 422.
+**STOP — Phase 6** _Automated:_ backend tests green; types regenerated; `tsc` green. _Browser check:_ in `/docs`, on the deck from Phase 1: add a field via `client_key` and a card referencing it in the same request; `GET` and confirm both exist with the card's value attached to the new field's real id. Send a delete of every field → 422.
 
 ### Phase 7 — Frontend: Deck editor, edit mode
 
@@ -967,14 +942,11 @@ _Browser check:_ in `/docs`, on the deck from Phase 1: add a field via `client_k
 - Deleting a field shows the cascade confirm with the count of affected cards (this time it's destructive on the server).
 - Cards section in edit mode uses the same `ListRow` rows as create mode; tapping a row opens `CardForm` in its in-editor role, not the standalone edit mode — edits here are batched into the changeset, not sent immediately.
 
-**STOP — Phase 7**
-_Automated:_ diff tests (no-op → empty body; rename only; reorder only; new field + new card referencing it; delete card; mixed); submit against MSW.
-_Browser check:_ edit the Phase 4 deck: rename a field, add a field, add a card with a value in the new field, delete one old card, reorder → Save → detail reflects all of it → reload → persisted. Open edit, change nothing, Save → no request is sent (or an empty-body request that's a no-op — state which). Open edit, delete down to two fields, then try either → blocked in UI (D3). Edit a card from inside the deck editor, then `Cancel` the editor → the card is unchanged on the detail page.
+**STOP — Phase 7** _Automated:_ diff tests (no-op → empty body; rename only; reorder only; new field + new card referencing it; delete card; mixed); submit against MSW. _Browser check:_ edit the Phase 4 deck: rename a field, add a field, add a card with a value in the new field, delete one old card, reorder → Save → detail reflects all of it → reload → persisted. Open edit, change nothing, Save → no request is sent (or an empty-body request that's a no-op — state which). Open edit, delete down to two fields, then try either → blocked in UI (D3). Edit a card from inside the deck editor, then `Cancel` the editor → the card is unchanged on the detail page.
 
 ### Phase 7.5: Staged removals and save-in-place
 
-**Addendum to:** Creation Flows decompose. Runs now, before Phase 8.
-**Scope:** Deck editor only. Presentation of staged removals, the confirm's timing, and post-save behaviour. The diff/batch architecture is untouched.
+**Addendum to:** Creation Flows decompose. Runs now, before Phase 8. **Scope:** Deck editor only. Presentation of staged removals, the confirm's timing, and post-save behaviour. The diff/batch architecture is untouched.
 
 _(Revised after the first implementation shipped and was reviewed live — the per-row undo buttons and the per-field "clears values on N cards" note added more UI than wanted. This revision replaces both with one global Undo and one aggregate save-time warning; everything else about the shipped version — staging instead of deleting, the diff builder's handling of pending rows, save-in-place — is unchanged.)_
 
@@ -1048,8 +1020,7 @@ Report nothing beyond the standard checks; end your turn.
 
 ### Phase 7.6: Deck deletion
 
-**Addendum to:** Phase 7 (§4.7's "DeckEditor" spec). Runs now, before Phase 8.
-**Scope:** `DeckEditor` only. A plain gap-fill: `SubjectForm` and `CardStandaloneForm` have always had a `Delete {entity}` action in edit mode (§4.2, §4.6); `DeckEditor` never got its equivalent, and `DELETE /api/decks/{id}` has existed since Phase 1.5 with no frontend caller. No new backend work, no new decisions — copy the established convention exactly.
+**Addendum to:** Phase 7 (§4.7's "DeckEditor" spec). Runs now, before Phase 8. **Scope:** `DeckEditor` only. A plain gap-fill: `SubjectForm` and `CardStandaloneForm` have always had a `Delete {entity}` action in edit mode (§4.2, §4.6); `DeckEditor` never got its equivalent, and `DELETE /api/decks/{id}` has existed since Phase 1.5 with no frontend caller. No new backend work, no new decisions — copy the established convention exactly.
 
 - `Delete deck` button, edit mode only, placed at the bottom of the page (after the Cards section, before the confirm dialogs) — mirrors where `SubjectForm`/`CardStandaloneForm` place theirs.
 - Behind a `ConfirmDialog`, `title="Delete deck?"`, destructive, `confirmLabel="Delete"`: description is `This will also delete {n} cards. This can't be undone.` when the deck has cards, else `This can't be undone.` — same phrasing shape as `SubjectForm`'s deck-count confirm. The count is the deck's real (server-known) card count, not the live editor state — deleting ignores whatever's staged/unsaved, same as the other two entities' delete already does.
@@ -1080,8 +1051,7 @@ Report nothing beyond the standard checks; end your turn.
 
 #### STOP — Phase 7.7
 
-**Automated:** migration up/down/up clean; backend tests green; types regenerated; frontend `tsc -b`, `vitest run`, `eslint .` clean.
-**Browser check:** in `/docs`, `GET`/`PATCH` a subject and a deck — response bodies include `last_activity_at` but no `updated_at`; nothing 500s.
+**Automated:** migration up/down/up clean; backend tests green; types regenerated; frontend `tsc -b`, `vitest run`, `eslint .` clean. **Browser check:** in `/docs`, `GET`/`PATCH` a subject and a deck — response bodies include `last_activity_at` but no `updated_at`; nothing 500s.
 
 Report nothing beyond the standard checks; end your turn.
 

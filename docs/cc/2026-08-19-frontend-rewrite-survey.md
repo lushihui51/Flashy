@@ -1,17 +1,11 @@
 # Frontend rewrite survey
 
-**Date:** 2026-08-19
-**Prompted by:** Phase 7 of `docs/plans/001-flashy-schema-rewrite.md` ("Contract
-validation and frontend survey") — its explicit acceptance criterion required this
-survey to exist and cover every current screen, as raw input for the frontend
-execution plan that follows.
-**Outcome:** survey complete, all six screens covered. Not a design document itself —
-seeds the frontend rewrite plan.
+**Date:** 2026-08-19 **Prompted by:** Phase 7 of `docs/plans/001-flashy-schema-rewrite.md` ("Contract validation and frontend survey") — its explicit acceptance criterion required this survey to exist and cover every current screen, as raw input for the frontend execution plan that follows. **Outcome:** survey complete, all six screens covered. Not a design document itself — seeds the frontend rewrite plan.
 
 ## Per-screen status
 
 | Screen | Route | Status | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Dashboard | `/dashboard` | **Rebuild from scratch** | `DashboardOverview.tsx` is a Clerk sign-in/sign-up stub with no real content and a stray debug `console.log` of the publishable key. Never had a product surface; still doesn't. |
 | Subjects | `/subjects` | **Works against new API** | Full CRUD (`SubjectsOverview.tsx`) rewritten this phase against `/api/subjects`. The `deck_count` aggregate it used to display is gone (dropped by design in Phase 1); the summary line now just says "N subjects." |
 | Decks | `/decks` | **Works against new API** | Full CRUD (`DecksOverview.tsx`) rewritten against `/api/decks`. The old `deck_schema` inline field editor (a `KeyValueList` of name→type pairs) is gone — fields are now first-class `field_def` rows managed on the deck's own page, not at deck-creation time. Subject filter chips still work. |
@@ -56,4 +50,4 @@ These exist in the backend (Phases 1–6) but have zero frontend presence, smoke
 - `tsc -b --force` is clean across the whole frontend.
 - Backend: 109/109 pytest passing (includes the two new endpoints' tests).
 - Frontend: 37/37 vitest passing, covering every touched API wrapper file (`subject`, `deck`, `card`, `field_def`, `deck_practice_config`, `practice_session`) against the regenerated contract. `deck_config.test.ts` was deleted — its endpoint and types no longer exist.
-- **Manual browser verification was partial.** Both dev servers were started and driven headlessly: the app shell, routing, and page rendering all work with no console errors beyond the *expected* 401s (no Clerk session was available in the automated environment — there's no test/bypass credential wired up for local dev). Actually exercising the authenticated create-subject → deck → fields → cards → practice → rate → mastery path needs a real signed-in browser session, which this session couldn't provide. Recommend the user run the smoke path once by hand before treating it as verified end-to-end.
+- **Manual browser verification was partial.** Both dev servers were started and driven headlessly: the app shell, routing, and page rendering all work with no console errors beyond the _expected_ 401s (no Clerk session was available in the automated environment — there's no test/bypass credential wired up for local dev). Actually exercising the authenticated create-subject → deck → fields → cards → practice → rate → mastery path needs a real signed-in browser session, which this session couldn't provide. Recommend the user run the smoke path once by hand before treating it as verified end-to-end.

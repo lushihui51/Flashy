@@ -1,8 +1,6 @@
 # Flashy Frontend Decompose — App Shell (Top Bar, Sidebar, Login, Account Sheet)
 
-**Status:** Executed — see `rewrite/frontend-shell` (commits P0 through P5, plus a post-manual-testing bugfix commit). Two corrections surfaced during execution; see "Post-execution notes" below.
-**Scope:** Mobile-first app shell. Visual/behavioural reference is Quizlet's mobile web UI (see `reference/` screenshots if present, otherwise the descriptions below are authoritative).
-**Out of scope (deferred, see §8):** colour system, search behaviour, destination content for nav items, final logo.
+**Status:** Executed — see `rewrite/frontend-shell` (commits P0 through P5, plus a post-manual-testing bugfix commit). Two corrections surfaced during execution; see "Post-execution notes" below. **Scope:** Mobile-first app shell. Visual/behavioural reference is Quizlet's mobile web UI (see `reference/` screenshots if present, otherwise the descriptions below are authoritative). **Out of scope (deferred, see §8):** colour system, search behaviour, destination content for nav items, final logo.
 
 **Post-execution notes (2026-08-24):**
 
@@ -30,18 +28,18 @@ Acceptance criteria (§6): every box below was either covered by an automated Vi
 
 Layout, left → right, single row, fixed to top, full width:
 
-| Slot | Element                                 | Behaviour                                                                                                     |
-| ---- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1    | **Hamburger** (circular outline button) | Toggles the sidebar drawer (§1.3). `aria-label="Open menu"` / `"Close menu"`, `aria-expanded` reflects state. |
-| 2    | **Logo**                                | Placeholder mark. Renders as a link to `/`. Nothing else. `// TODO(defer:logo)`                               |
-| 3    | _(spacer)_                              |                                                                                                               |
-| 4    | **Create** (`+ Create`)                 | Visible, focusable, clickable, does nothing. `// TODO(defer:nav-targets)`                                     |
-| 5    | **Auth slot**                           | Signed out → `Log in` pill button (primary). Signed in → circular profile avatar button. See §1.2.            |
+| Slot | Element | Behaviour |
+| --- | --- | --- |
+| 1 | **Hamburger** (circular outline button) | Toggles the sidebar drawer (§1.3). `aria-label="Open menu"` / `"Close menu"`, `aria-expanded` reflects state. |
+| 2 | **Logo** | Placeholder mark. Renders as a link to `/`. Nothing else. `// TODO(defer:logo)` |
+| 3 | _(spacer)_ |  |
+| 4 | **Create** (`+ Create`) | Visible, focusable, clickable, does nothing. `// TODO(defer:nav-targets)` |
+| 5 | **Auth slot** | Signed out → `Log in` pill button (primary). Signed in → circular profile avatar button. See §1.2. |
 
 Second row (below the bar, part of the same header region):
 
-| Element          | Behaviour                                                                                                                                                                                                                                                                                                                                                |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Element | Behaviour |
+| --- | --- |
 | **Search input** | Real `<input type="search">` with leading search icon, placeholder `Search for practice tests` (keep placeholder text configurable via prop; default can be Flashy-appropriate, e.g. `Search`). Fully typeable (controlled state). **Enter does nothing** (`preventDefault`, no navigation, no submit). **No results dropdown.** `// TODO(defer:search)` |
 
 Notes:
@@ -190,13 +188,13 @@ Before running P0, the agent must print the proposed keep/delete lists and **wai
 
 ### P1–P5
 
-| #   | Deliverable                                                                                                                                                                                               | Depends on |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| P1  | `AppShell` layout route + 4 placeholder pages + routing. Top bar with hamburger (no-op), `Logo`, `Create` (no-op), and a static `Log in` button (no Clerk yet). `SearchBar` typeable. Colour tokens file. | P0         |
-| P2  | `SideDrawer` wired to hamburger, with focus/scroll/Esc behaviour.                                                                                                                                         | P1         |
-| P3  | `AuthSlot` wired to Clerk: `openSignIn`, `SignedIn`/`SignedOut`, avatar from `user.imageUrl`, loading placeholder.                                                                                        | P1         |
-| P4  | `AccountSheet` wired to avatar, `Log out` via `signOut`.                                                                                                                                                  | P3         |
-| P5  | Test pass: all §6 criteria green; a11y sweep (§4); `TODO(defer:*)` audit — every deferred item tagged.                                                                                                    | P2–P4      |
+| # | Deliverable | Depends on |
+| --- | --- | --- |
+| P1 | `AppShell` layout route + 4 placeholder pages + routing. Top bar with hamburger (no-op), `Logo`, `Create` (no-op), and a static `Log in` button (no Clerk yet). `SearchBar` typeable. Colour tokens file. | P0 |
+| P2 | `SideDrawer` wired to hamburger, with focus/scroll/Esc behaviour. | P1 |
+| P3 | `AuthSlot` wired to Clerk: `openSignIn`, `SignedIn`/`SignedOut`, avatar from `user.imageUrl`, loading placeholder. | P1 |
+| P4 | `AccountSheet` wired to avatar, `Log out` via `signOut`. | P3 |
+| P5 | Test pass: all §6 criteria green; a11y sweep (§4); `TODO(defer:*)` audit — every deferred item tagged. | P2–P4 |
 
 ---
 
@@ -253,12 +251,12 @@ Before running P0, the agent must print the proposed keep/delete lists and **wai
 
 ## 8. Deferred — how to resume later
 
-| Tag           | What's parked                                                            | Resume by                                                                                                  |
-| ------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `colors`      | Real palette, dark/light mode                                            | Replace values in the tokens file; nothing else should change.                                             |
-| `search`      | Debounced query, results dropdown, Enter → results page, recent searches | Add `onSubmit`/`onChange` props to `SearchBar`; build `SearchResults` as a sibling rendered by `AppShell`. |
-| `nav-targets` | Real Home / Library / Practice / Notifications pages; Create flow        | Replace placeholder page bodies; wire `Create` to a route or sheet.                                        |
-| `logo`        | Final mark                                                               | Swap the SVG in `Logo.tsx`.                                                                                |
+| Tag | What's parked | Resume by |
+| --- | --- | --- |
+| `colors` | Real palette, dark/light mode | Replace values in the tokens file; nothing else should change. |
+| `search` | Debounced query, results dropdown, Enter → results page, recent searches | Add `onSubmit`/`onChange` props to `SearchBar`; build `SearchResults` as a sibling rendered by `AppShell`. |
+| `nav-targets` | Real Home / Library / Practice / Notifications pages; Create flow | Replace placeholder page bodies; wire `Create` to a route or sheet. |
+| `logo` | Final mark | Swap the SVG in `Logo.tsx`. |
 
 ---
 
