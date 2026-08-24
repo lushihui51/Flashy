@@ -8,13 +8,14 @@ from app.database_ops.deck_practice_config import (
     db_create_deck_practice_config,
     db_delete_deck_practice_config,
     db_read_deck_practice_config,
-    db_read_deck_practice_configs,
+    db_read_deck_practice_configs_with_context,
     db_update_deck_practice_config,
 )
 from app.dependencies import CurrentUserDep
 from app.models.deck_practice_config import (
     DeckPracticeConfigCreate,
     DeckPracticeConfigRead,
+    DeckPracticeConfigSummary,
     DeckPracticeConfigUpdate,
 )
 from app.services.deck_practice_config import validate_deck_practice_config
@@ -53,11 +54,20 @@ def create_deck_practice_config(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.get("", response_model=list[DeckPracticeConfigRead], status_code=200)
+@router.get("", response_model=list[DeckPracticeConfigSummary], status_code=200)
 def read_deck_practice_configs(
-    db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID
+    db: SessionDep,
+    current_user: CurrentUserDep,
+    subject_id: uuid.UUID | None = None,
+    deck_id: uuid.UUID | None = None,
 ):
-    return db_read_deck_practice_configs(db, deck_id, current_user.id)
+    """Every config the user owns unless narrowed by subject and/or deck. Each row
+    carries its deck and subject: the creation page groups by deck, and two decks in
+    different subjects may share a name, so the subject has to travel with the row
+    rather than be joined back in on the client."""
+    return db_read_deck_practice_configs_with_context(
+        db, current_user.id, subject_id, deck_id
+    )
 
 
 @router.get("/{config_id}", response_model=DeckPracticeConfigRead, status_code=200)

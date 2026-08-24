@@ -58,7 +58,8 @@ class TestDeckDeleteCascade:
         assert config.status_code == 201, config.text
 
         session = client.post(
-            "/api/practice_sessions", json={"deck_practice_config_ids": [config.json()["id"]]}
+            "/api/practice_sessions",
+            json={"name": "Cascade run", "deck_practice_config_ids": [config.json()["id"]]},
         )
         assert session.status_code == 201, session.text
         session_id = session.json()["id"]

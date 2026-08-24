@@ -1849,15 +1849,40 @@
           "Practice Config"
         ],
         "summary": "Read Deck Practice Configs",
+        "description": "Every config the user owns unless narrowed by subject and/or deck. Each row\ncarries its deck and subject: the creation page groups by deck, and two decks in\ndifferent subjects may share a name, so the subject has to travel with the row\nrather than be joined back in on the client.",
         "operationId": "read_deck_practice_configs_api_deck_practice_configs_get",
         "parameters": [
           {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
             "name": "deck_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Deck Id"
             }
           },
@@ -1902,7 +1927,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DeckPracticeConfigRead"
+                    "$ref": "#/components/schemas/DeckPracticeConfigSummary"
                   },
                   "title": "Response Read Deck Practice Configs Api Deck Practice Configs Get"
                 }
@@ -2152,6 +2177,7 @@
           "Practice"
         ],
         "summary": "Create Practice Session",
+        "description": "Create *is* start: the session, its snapshots, and every practice_card are\nwritten in one transaction. There is no draft session and no deferred generation.",
         "operationId": "create_practice_session_api_practice_sessions_post",
         "parameters": [
           {
@@ -2204,6 +2230,108 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PracticeSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Read Practice Sessions",
+        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (schema invariant 5\n\u2014 there is no config lineage to filter on).",
+        "operationId": "read_practice_sessions_api_practice_sessions_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "deck_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PracticeSessionSummary"
+                  },
+                  "title": "Response Read Practice Sessions Api Practice Sessions Get"
                 }
               }
             }
@@ -2997,6 +3125,106 @@
         ],
         "title": "DeckPracticeConfigRead"
       },
+      "DeckPracticeConfigSummary": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "deck_name": {
+            "type": "string",
+            "title": "Deck Name"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "name",
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "id",
+          "created_at",
+          "deck_name",
+          "subject_id",
+          "subject_name"
+        ],
+        "title": "DeckPracticeConfigSummary",
+        "description": "A list row for the config picker and the config management surface: the config\nplus where it lives. Two decks in different subjects may share a name, so a row is\nonly unambiguous with its subject alongside its deck."
+      },
       "DeckPracticeConfigUpdate": {
         "properties": {
           "name": {
@@ -3435,6 +3663,10 @@
       },
       "PracticeSessionCreate": {
         "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "deck_practice_config_ids": {
             "items": {
               "type": "string",
@@ -3446,9 +3678,41 @@
         },
         "type": "object",
         "required": [
+          "name",
           "deck_practice_config_ids"
         ],
         "title": "PracticeSessionCreate"
+      },
+      "PracticeSessionDeckSummary": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "deck_name": {
+            "type": "string",
+            "title": "Deck Name"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "deck_name",
+          "subject_id",
+          "subject_name"
+        ],
+        "title": "PracticeSessionDeckSummary",
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the *only* link between a session and a subject/deck \u2014 `practice_deck`\nhas no `source_config_id` and never will (schema invariant 5), so \"which sessions\nrelate to this deck\" can only be asked this way."
       },
       "PracticeSessionRead": {
         "properties": {
@@ -3461,6 +3725,10 @@
             "type": "string",
             "format": "uuid",
             "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
           },
           "status": {
             "$ref": "#/components/schemas/SessionStatus"
@@ -3475,10 +3743,55 @@
         "required": [
           "id",
           "user_id",
+          "name",
           "status",
           "created_at"
         ],
         "title": "PracticeSessionRead"
+      },
+      "PracticeSessionSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeSessionDeckSummary"
+            },
+            "type": "array",
+            "title": "Decks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "status",
+          "created_at",
+          "decks"
+        ],
+        "title": "PracticeSessionSummary",
+        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter."
       },
       "RatingSubmission": {
         "properties": {

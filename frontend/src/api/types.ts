@@ -210,7 +210,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read Deck Practice Configs */
+        /**
+         * Read Deck Practice Configs
+         * @description Every config the user owns unless narrowed by subject and/or deck. Each row
+         *     carries its deck and subject: the creation page groups by deck, and two decks in
+         *     different subjects may share a name, so the subject has to travel with the row
+         *     rather than be joined back in on the client.
+         */
         get: operations["read_deck_practice_configs_api_deck_practice_configs_get"];
         put?: never;
         /** Create Deck Practice Config */
@@ -247,9 +253,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read Practice Sessions
+         * @description Newest first, each row carrying the decks (and their subjects) it snapshotted.
+         *     Filters are the same relation, asked as a question: a session matches a subject or
+         *     deck if any of its practice_deck rows points at a matching deck (schema invariant 5
+         *     — there is no config lineage to filter on).
+         */
+        get: operations["read_practice_sessions_api_practice_sessions_get"];
         put?: never;
-        /** Create Practice Session */
+        /**
+         * Create Practice Session
+         * @description Create *is* start: the session, its snapshots, and every practice_card are
+         *     written in one transaction. There is no draft session and no deferred generation.
+         */
         post: operations["create_practice_session_api_practice_sessions_post"];
         delete?: never;
         options?: never;
@@ -554,6 +571,52 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * DeckPracticeConfigSummary
+         * @description A list row for the config picker and the config management surface: the config
+         *     plus where it lives. Two decks in different subjects may share a name, so a row is
+         *     only unambiguous with its subject alongside its deck.
+         */
+        DeckPracticeConfigSummary: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /** Name */
+            name: string;
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deck Name */
+            deck_name: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /** Subject Name */
+            subject_name: string;
+        };
         /** DeckPracticeConfigUpdate */
         DeckPracticeConfigUpdate: {
             /** Name */
@@ -726,8 +789,34 @@ export interface components {
         PracticeCardStatus: "pending" | "passed" | "failed";
         /** PracticeSessionCreate */
         PracticeSessionCreate: {
+            /** Name */
+            name: string;
             /** Deck Practice Config Ids */
             deck_practice_config_ids: string[];
+        };
+        /**
+         * PracticeSessionDeckSummary
+         * @description One deck a session touches, resolved through `practice_deck → deck → subject`.
+         *
+         *     This chain is the *only* link between a session and a subject/deck — `practice_deck`
+         *     has no `source_config_id` and never will (schema invariant 5), so "which sessions
+         *     relate to this deck" can only be asked this way.
+         */
+        PracticeSessionDeckSummary: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /** Deck Name */
+            deck_name: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /** Subject Name */
+            subject_name: string;
         };
         /** PracticeSessionRead */
         PracticeSessionRead: {
@@ -741,12 +830,47 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+            /** Name */
+            name: string;
             status: components["schemas"]["SessionStatus"];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * PracticeSessionSummary
+         * @description A list row for the practice overview: the session plus the decks it snapshotted,
+         *     so the client can render and filter by subject/deck without a second round trip or a
+         *     client-side join.
+         *
+         *     `decks` omits any `practice_deck` whose source deck has since been deleted
+         *     (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
+         *     the session still lists, but a deleted deck has no name or subject left to show and
+         *     can never match a filter.
+         */
+        PracticeSessionSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decks */
+            decks: components["schemas"]["PracticeSessionDeckSummary"][];
         };
         /** RatingSubmission */
         RatingSubmission: {
@@ -1695,8 +1819,9 @@ export interface operations {
     };
     read_deck_practice_configs_api_deck_practice_configs_get: {
         parameters: {
-            query: {
-                deck_id: string;
+            query?: {
+                subject_id?: string | null;
+                deck_id?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -1713,7 +1838,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckPracticeConfigRead"][];
+                    "application/json": components["schemas"]["DeckPracticeConfigSummary"][];
                 };
             };
             /** @description Validation Error */
@@ -1854,6 +1979,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeckPracticeConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_practice_sessions_api_practice_sessions_get: {
+        parameters: {
+            query?: {
+                subject_id?: string | null;
+                deck_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSessionSummary"][];
                 };
             };
             /** @description Validation Error */

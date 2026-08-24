@@ -66,6 +66,7 @@ class TestPracticeSessionHTTPFlow:
         res = client.post(
             "/api/practice_sessions",
             json={
+                "name": "Evening run",
                 "user_id": str(existing_user.id),
                 "deck_practice_config_ids": [session_config["id"]],
             },
@@ -78,7 +79,11 @@ class TestPracticeSessionHTTPFlow:
     def test_start_session_config_not_found(self, client, existing_user):
         res = client.post(
             "/api/practice_sessions",
-            json={"user_id": str(existing_user.id), "deck_practice_config_ids": [str(uuid.uuid4())]},
+            json={
+                "name": "Evening run",
+                "user_id": str(existing_user.id),
+                "deck_practice_config_ids": [str(uuid.uuid4())],
+            },
         )
         assert res.status_code == 404
 
@@ -88,6 +93,7 @@ class TestPracticeSessionHTTPFlow:
         start_res = client.post(
             "/api/practice_sessions",
             json={
+                "name": "Evening run",
                 "user_id": str(existing_user.id),
                 "deck_practice_config_ids": [session_config["id"]],
             },
@@ -113,6 +119,7 @@ class TestPracticeSessionHTTPFlow:
         start_res = client.post(
             "/api/practice_sessions",
             json={
+                "name": "Evening run",
                 "user_id": str(existing_user.id),
                 "deck_practice_config_ids": [session_config["id"]],
             },
@@ -132,6 +139,7 @@ class TestPracticeSessionHTTPFlow:
         start_res = client.post(
             "/api/practice_sessions",
             json={
+                "name": "Evening run",
                 "user_id": str(existing_user.id),
                 "deck_practice_config_ids": [session_config["id"]],
             },
@@ -152,6 +160,7 @@ class TestPracticeSessionHTTPFlow:
         start_res = client.post(
             "/api/practice_sessions",
             json={
+                "name": "Evening run",
                 "user_id": str(existing_user.id),
                 "deck_practice_config_ids": [session_config["id"]],
             },
@@ -184,7 +193,7 @@ class TestPracticeSessionAcceptance:
         config_id = uuid.UUID(session_config["id"])
 
         session = start_practice_session(
-            db, strategy, existing_user.id, [config_id], rng=random.Random(1)
+            db, strategy, existing_user.id, "Acceptance run", [config_id], rng=random.Random(1)
         )
         db.commit()
 
@@ -263,7 +272,7 @@ class TestPositionCollisionFallback:
         config_id = uuid.UUID(session_config["id"])
 
         session = start_practice_session(
-            db, strategy, existing_user.id, [config_id], rng=random.Random(7)
+            db, strategy, existing_user.id, "Collision run", [config_id], rng=random.Random(7)
         )
         db.commit()
 
@@ -319,3 +328,167 @@ class TestPositionCollisionFallback:
             )
         ).all()
         assert len(positions) == len(set(positions))
+
+
+def _start(client, name, config_ids):
+    res = client.post(
+        "/api/practice_sessions",
+        json={"name": name, "deck_practice_config_ids": config_ids},
+    )
+    assert res.status_code == 201, res.text
+    return res.json()
+
+
+class TestPracticeSessionList:
+    """GET /api/practice_sessions — the practice overview's only read. Relevance to a
+    subject or deck is answered through practice_deck → deck → subject and nothing else
+    (schema invariant 5: a session has no config lineage)."""
+
+    def test_lists_newest_first_with_name_and_deck_context(self, client, multi_subject_library):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
+
+        res = client.get("/api/practice_sessions")
+        assert res.status_code == 200, res.text
+        rows = res.json()
+
+        assert [row["name"] for row in rows] == ["Beta run", "Alpha run"]
+        assert all(row["status"] == "active" for row in rows)
+        assert rows[0]["decks"] == [
+            {
+                "deck_id": lib["decks"]["b"]["id"],
+                "deck_name": "Shared Deck Name",
+                "subject_id": lib["subjects"]["b"]["id"],
+                "subject_name": "Beta",
+            }
+        ]
+
+    def test_name_is_stored_verbatim(self, client, multi_subject_library):
+        name = "Aug 24, 2026, 2:15 PM"
+        created = _start(client, name, [multi_subject_library["configs"]["a"]["id"]])
+        assert created["name"] == name
+        assert client.get(f"/api/practice_sessions/{created['id']}").json()["name"] == name
+
+    def test_session_spanning_two_decks_lists_both(self, client, multi_subject_library):
+        lib = multi_subject_library
+        _start(
+            client,
+            "Both decks",
+            [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]],
+        )
+        rows = client.get("/api/practice_sessions").json()
+        assert len(rows) == 1
+        assert {deck["subject_name"] for deck in rows[0]["decks"]} == {"Alpha", "Beta"}
+
+    def test_subject_filter(self, client, multi_subject_library):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
+
+        rows = client.get(
+            "/api/practice_sessions", params={"subject_id": lib["subjects"]["a"]["id"]}
+        ).json()
+        assert [row["name"] for row in rows] == ["Alpha run"]
+
+    def test_deck_filter_disambiguates_same_named_decks(self, client, multi_subject_library):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
+
+        rows = client.get(
+            "/api/practice_sessions", params={"deck_id": lib["decks"]["b"]["id"]}
+        ).json()
+        assert [row["name"] for row in rows] == ["Beta run"]
+
+    def test_filters_combine_with_and(self, client, multi_subject_library):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
+
+        rows = client.get(
+            "/api/practice_sessions",
+            params={
+                "subject_id": lib["subjects"]["a"]["id"],
+                "deck_id": lib["decks"]["b"]["id"],
+            },
+        ).json()
+        assert rows == []
+
+    def test_another_users_sessions_are_invisible(
+        self, client, act_as, other_user, multi_subject_library
+    ):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+
+        act_as(other_user)
+        assert client.get("/api/practice_sessions").json() == []
+        assert (
+            client.get(
+                "/api/practice_sessions", params={"subject_id": lib["subjects"]["a"]["id"]}
+            ).json()
+            == []
+        )
+
+
+class TestSessionStartErrorShape:
+    """The creation page selects several configs at once, so a start failure has to name
+    the offending config rather than arrive as a bare message."""
+
+    def test_unknown_config_404s_with_the_config_id(self, client):
+        missing = str(uuid.uuid4())
+        res = client.post(
+            "/api/practice_sessions",
+            json={"name": "Run", "deck_practice_config_ids": [missing]},
+        )
+        assert res.status_code == 404
+        assert res.json()["detail"]["code"] == "config_not_found"
+        assert res.json()["detail"]["config_id"] == missing
+
+    def test_two_configs_for_one_deck_400s_with_the_second_config_id(
+        self, client, existing_deck, session_config, session_fields
+    ):
+        f = session_fields
+        second = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": existing_deck["id"],
+                "name": "Second Config",
+                "prompt_field_ids": [str(f["prompt1"])],
+                "answer_field_ids": [str(f["answer1"])],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert second.status_code == 201, second.text
+
+        res = client.post(
+            "/api/practice_sessions",
+            json={
+                "name": "Run",
+                "deck_practice_config_ids": [session_config["id"], second.json()["id"]],
+            },
+        )
+        assert res.status_code == 400
+        assert res.json()["detail"]["code"] == "duplicate_deck"
+        assert res.json()["detail"]["config_id"] == second.json()["id"]
+
+    def test_config_gone_stale_since_saving_400s_with_the_config_id(
+        self, client, session_cards, session_config, session_fields
+    ):
+        # Archiving a field the config still references is exactly how a saved config
+        # goes stale — validation runs again at session start for this reason.
+        archived = client.delete(f"/api/fields/{session_fields['prompt1']}")
+        assert archived.status_code == 200, archived.text
+
+        res = client.post(
+            "/api/practice_sessions",
+            json={"name": "Run", "deck_practice_config_ids": [session_config["id"]]},
+        )
+        assert res.status_code == 400
+        detail = res.json()["detail"]
+        assert detail["code"] == "stale_config"
+        assert detail["config_id"] == session_config["id"]
+        assert "not live" in detail["message"]

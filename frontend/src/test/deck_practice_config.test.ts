@@ -42,20 +42,43 @@ describe("createDeckPracticeConfig", () => {
 });
 
 describe("readDeckPracticeConfigs", () => {
-  it("sends the deck_id query and returns the list of configs", async () => {
-    let deckIdQuery: string | null = null;
+  const summaryBody = {
+    ...configBody,
+    deck_name: "Shared Deck Name",
+    subject_id: "subject_1",
+    subject_name: "Alpha",
+  };
+
+  it("sends no query params when unfiltered and returns rows with deck context", async () => {
+    let search = "";
 
     server.use(
       http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
-        const url = new URL(request.url);
-        deckIdQuery = url.searchParams.get("deck_id");
-        return HttpResponse.json([{ id: "config_1", ...configBody }]);
+        search = new URL(request.url).search;
+        return HttpResponse.json([{ id: "config_1", ...summaryBody }]);
       }),
     );
 
-    const configs = await readDeckPracticeConfigs("deck_1");
-    expect(deckIdQuery).toBe("deck_1");
-    expect(configs).toHaveLength(1);
+    const configs = await readDeckPracticeConfigs();
+    expect(search).toBe("");
+    expect(configs).toEqual([{ id: "config_1", ...summaryBody }]);
+  });
+
+  it("sends the subject and deck filters", async () => {
+    let search = "";
+
+    server.use(
+      http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
+        search = new URL(request.url).search;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await readDeckPracticeConfigs({ subjectId: "subject_1", deckId: "deck_1" });
+
+    const params = new URLSearchParams(search);
+    expect(params.get("subject_id")).toBe("subject_1");
+    expect(params.get("deck_id")).toBe("deck_1");
   });
 });
 

@@ -2,12 +2,25 @@ import { client } from 'src/api/client';
 import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
+/** Both optional: with neither, every config the user owns comes back, each carrying
+ * its deck and subject. */
+export type DeckPracticeConfigFilters = { subjectId?: string; deckId?: string };
+
 export const createDeckPracticeConfig = async (
   payload: components['schemas']['DeckPracticeConfigCreate'],
 ) => unwrap(await client.POST('/api/deck_practice_configs', { body: payload }));
 
-export const readDeckPracticeConfigs = async (deckId: string) =>
-  unwrap(await client.GET('/api/deck_practice_configs', { params: { query: { deck_id: deckId } } }));
+export const readDeckPracticeConfigs = async (filters: DeckPracticeConfigFilters = {}) =>
+  unwrap(
+    await client.GET('/api/deck_practice_configs', {
+      params: {
+        query: {
+          ...(filters.subjectId ? { subject_id: filters.subjectId } : {}),
+          ...(filters.deckId ? { deck_id: filters.deckId } : {}),
+        },
+      },
+    }),
+  );
 
 export const readDeckPracticeConfig = async (configId: string) =>
   unwrap(

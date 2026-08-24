@@ -10,6 +10,14 @@ function formatError(error: unknown): string {
   if (Array.isArray(detail)) {
     return detail.map((e) => `${e.loc.join('.')}: ${e.msg}`).join('; ');
   }
+  // A few endpoints answer with an object detail because the message alone isn't
+  // enough to act on — session start names the config that failed, so the caller can
+  // render against that row. Callers that care read `detail` off the response
+  // themselves; this keeps the thrown message readable for everyone else.
+  if (typeof detail === 'object' && detail !== null && 'message' in detail) {
+    const { message } = detail as { message?: unknown };
+    if (typeof message === 'string') return message;
+  }
   return `An unknown error occurred (${error instanceof Error ? error.message : 'Inspect console for details'})`;
 }
 
