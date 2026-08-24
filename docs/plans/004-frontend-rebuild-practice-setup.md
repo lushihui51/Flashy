@@ -18,7 +18,7 @@ These carry over from `001-schema-rewrite.md` or were decided for this task. If 
 
 1. **`practice_deck` has no config lineage.** There is no `source_config_id` and none may be added. "Which sessions relate to this subject/deck" is answered exclusively through `practice_deck.deck_id → deck → subject`. A session does not know which `deck_practice_config` it came from, by design (schema invariant 5).
 2. **Create = start.** The practice creation page's Create button runs the full Phase 4.2 session-start path: create `practice_session`, snapshot one `practice_deck` per selected config, generate all `practice_card` rows. There is no draft state, no deferred generation, no session that exists but has no cards.
-3. **Editing or deleting a `deck_practice_config` never touches any session** — past or active. The UI must not imply otherwise (no "this will affect N active sessions" warnings).
+3. **Editing or deleting a `deck_practice_config` never touches any session** — past or active. The UI must not imply otherwise (no "this will affect N sessions" warnings).
 4. **Fields are referenced by `field_def.id` everywhere.** Names are display strings. The config builder's payload contains uuids only.
 5. **Archived fields never appear in the config builder.** Not in the drag source, not in any row. (Existing configs that reference since-archived fields are handled by the backend at session start, not by the builder.)
 6. **The four field arrays of a config are pairwise disjoint** — the builder enforces this _by construction_: dragging a field into a row moves it (a field lives in exactly one place: the unassigned box or one row), never copies it.
@@ -78,7 +78,13 @@ Two corrections to the braindump, already agreed:
 
 - Lists the user's sessions from the Phase 0 list endpoint, newest first.
 - **Filters: subject and deck.** Both are selectable; the deck options narrow to the selected subject when one is set (two decks may share a name across subjects, so the deck filter is by deck **id**, with the subject providing disambiguation). Filters combine with AND. Relevance per invariant 1: a session matches if any of its `practice_deck` rows points to a matching deck.
-- **Status handling (in scope, decided):** a segmented filter / tab row — All · Active · Completed · Abandoned. Each row shows name, status badge, created date, and its deck/subject chips. Clicking any session opens practice_details (Phase 4 defines what details shows per status).
+- **Status handling (in scope, decided 2026-08-24):** the session model is **two statuses — `active` and `completed`; `abandoned` is dropped.** Backend pre-steps for this phase:
+  - shrink `SessionStatus` (enum + CHECK migration) and change the ADR 015 read-path transition in `get_current_practice_card` to set `completed` when no pending card remains;
+  - record the decision as an amendment to ADR 015. The accepted blur: a session stranded by deck deletion also reads Completed. Mitigate in display only — when `practice_deck.deck_id` is null, render its deck chip as "deleted deck".
+
+  Tab row: All · Active · Completed. Each row shows name, status badge, created date, and deck/subject chips. Clicking any session opens practice_details (Phase 4 defines what details shows per status).
+
+- **Session delete (in scope, decided 2026-08-24):** with `abandoned` gone, user delete is the only way a session ever leaves the list, so it ships now. Backend pre-steps: verify/add `ON DELETE CASCADE` on `practice_card.practice_session_id` and `practice_deck.practice_session_id` (ADR 015 defined deck-delete cascades, not session-delete — a `practice_deck` survives its _deck_ dying but is owned by its _session_), then a DELETE endpoint. `review_log` is untouched: its `practice_card_id` already goes SET NULL and `card_id`/`field_def_id` stay populated, so history and mastery rebuilds are unaffected. UI: delete with confirm from the overview row and from practice_details.
 - **New practice** button → session creation surface, carrying current filters as initial state.
 - Filter state lives in the URL (query params), so entry points below can deep-link.
 
@@ -111,7 +117,7 @@ The braindump's "very important" page. Build it as one surface used for both cre
 
 **The assignment board:**
 
-- Top: a draggable box holding the deck's live field*defs (by `name`), i.e. the \_unassigned* set.
+- Top: a draggable box holding the deck's live field_defs (by `name`), i.e. the _unassigned_ set.
 - Below: a table with four rows — `prompt_fields`, `answer_fields`, `prompt_pool`, `answer_pool` — and columns: row label · **fields** (drop zone) · **frequency**.
 - Drag is **move** semantics (invariant 6): box → row, row → row, row → box. A field exists in exactly one place.
 - **Frequency column:** for the two pool rows only, a checkbox list labeled 1…n where n = number of fields currently in that row. Zero fields in a pool row, or any non-pool row → show `N/A`. When a field is dragged out of a pool row and n shrinks, **prune any checked value now greater than n**. Checked values become the `*_pool_counts` array (sorted ascending).
@@ -156,7 +162,8 @@ Save stays disabled with an inline explanation until valid.
 
 - Session name, status badge, created date, deck/subject chips.
 - **Active:** a Start Practice button. Since create = start (invariant 2), the cards already exist; the button is **pure navigation** to the run surface. Until that surface exists, it navigates to a stub route.
-- **Completed / abandoned:** same header, no Start button; body says a summary is coming later. Do not build stats now.
+- **Completed:** same header, no Start button; body says a summary is coming later. Do not build stats now.
+- **Delete** with confirm (Phase 1's endpoint), also surfaced here; on success, navigate back to the overview.
 - Reachable from overview click-through and as the landing page after creation.
 
 **Wire and verify the full pre-filter chain from the braindump, end to end:**
@@ -166,7 +173,7 @@ Save stays disabled with an inline explanation until valid.
 
 Context rides on URL params/router state established in Phases 1–3; this phase is where the chain is tested as a whole rather than per page.
 
-**Acceptance:** both chains verified in the browser and by an MSW-backed test walking each chain; details renders correctly for all three statuses (seed one of each); `tsc` clean; full test suite green.
+**Acceptance:** both chains verified in the browser and by an MSW-backed test walking each chain; details renders correctly for both statuses (seed one of each) and for a session whose deck was deleted (chip shows "deleted deck"); delete round-trips and `review_log` rows survive it; `tsc` clean; full test suite green.
 
 **Commit:** `feat: practice details and contextual pre-filter chain`
 
@@ -174,8 +181,8 @@ Context rides on URL params/router state established in Phases 1–3; this phase
 
 ## Deferred — do not build
 
-- The run surface (prompt rendering, rating, requeue display) — next task, `feat/practice-run`, which will also decide what a completed session's summary shows.
+- The run surface (prompt rendering, rating, requeue display) — next task, `rewrite/practice-run`, which will also decide what a completed session's summary shows.
 - Home page practice launchers.
-- Abandon/resume actions on practice_details — needs the run flow's definition of progress to mean anything.
+- **Restart** ("run again" on practice_details). Design is settled, build is deferred to the run task: create a new session from the old session's own `practice_deck` snapshot rows — never from the saved `deck_practice_config`, which may have changed or been deleted — then delete the old session. One transaction, **creation first**, so a failed restart (e.g. every snapshot field since archived, zero cards survive the 4.2 skip rules) leaves the old session intact. Snapshots with `deck_id` null are unrestartable. The new run regenerates against current mastery, so ordering and prompt/answer combinations will differ from the original — intended.
 - Any "stale config" badge on config lists (configs referencing since-archived fields). Session start already handles it; revisit only if users hit the failure state often.
-- Session rename/delete from the UI. Not in the braindump; raise separately if wanted.
+- Session rename from the UI. Not in the braindump; raise separately if wanted.
