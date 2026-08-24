@@ -217,11 +217,26 @@ describe('PracticeOverviewPage', () => {
     expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
   });
 
-  it('renders a "deleted deck" chip for a snapshot whose deck is gone', async () => {
-    mockLibrary(() => [session({ deleted_deck_count: 1, decks: [] })]);
+  it('states deleted decks as a proportion of the session, not a bare count', async () => {
+    mockLibrary(() => [session({ deleted_deck_count: 1 })]); // one deck left, one gone
     renderOverview();
 
-    expect(await screen.findByText('deleted deck')).toBeInTheDocument();
+    expect(await screen.findByText('1 / 2 decks deleted')).toBeInTheDocument();
+  });
+
+  it('a session whose every deck is gone says so against its own total', async () => {
+    mockLibrary(() => [session({ deleted_deck_count: 3, decks: [] })]);
+    renderOverview();
+
+    expect(await screen.findByText('3 / 3 decks deleted')).toBeInTheDocument();
+  });
+
+  it('says nothing about deleted decks when every deck is intact', async () => {
+    mockLibrary(() => [session()]);
+    renderOverview();
+
+    await screen.findByText('Alpha run');
+    expect(screen.queryByText(/decks deleted/)).not.toBeInTheDocument();
   });
 
   it('a session row links to its details page', async () => {

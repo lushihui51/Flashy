@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { formatDate } from 'src/lib/datetime';
-import { pluralize } from 'src/lib/pluralize';
 import type { components } from 'src/api/types';
 
 type PracticeSessionSummary = components['schemas']['PracticeSessionSummary'];
@@ -15,6 +14,10 @@ type PracticeSessionRowProps = {
  * own, neither of which fits that row's identity-shape-size grammar. */
 export default function PracticeSessionRow({ session, onDelete }: PracticeSessionRowProps) {
   const active = session.status === 'active';
+  // A session can span several decks, so how much of it is still there is a proportion,
+  // not a count: `decks` holds the ones that resolve, `deleted_deck_count` the snapshots
+  // whose deck is gone, and together they are every practice_deck the session has.
+  const totalDecks = session.decks.length + session.deleted_deck_count;
 
   return (
     <div className="flex items-center gap-2">
@@ -46,12 +49,12 @@ export default function PracticeSessionRow({ session, onDelete }: PracticeSessio
           ))}
           {/* A snapshot whose deck was deleted still counts as part of this session, and
               is the one visible difference between a session that was cut short and one
-              played to the end — both read as Completed now (ADR 015, amended). */}
+              played to the end — both read as Completed now (ADR 015, amended). Stated
+              against the session's whole deck count, since losing one of four decks and
+              losing the only one are very different things. */}
           {session.deleted_deck_count > 0 && (
             <span className="rounded-full bg-(--color-surface-elevated) px-2 py-0.5 text-[11px] text-(--color-text-muted) italic">
-              {session.deleted_deck_count === 1
-                ? 'deleted deck'
-                : `${pluralize(session.deleted_deck_count, 'deleted deck')}`}
+              {session.deleted_deck_count} / {totalDecks} decks deleted
             </span>
           )}
           <span className="text-[11px] text-(--color-text-muted)">
