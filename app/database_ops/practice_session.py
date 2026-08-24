@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
 from app.models.practice_deck import PracticeDeck
@@ -65,6 +65,7 @@ def db_read_practice_sessions_with_decks(
     if not sessions:
         return []
 
+    session_ids = [s.id for s in sessions]
     rows = db.exec(
         select(
             PracticeDeck.practice_session_id,
@@ -75,7 +76,7 @@ def db_read_practice_sessions_with_decks(
         )
         .join(Deck, Deck.id == PracticeDeck.deck_id)
         .join(Subject, Subject.id == Deck.subject_id)
-        .where(col(PracticeDeck.practice_session_id).in_([s.id for s in sessions]))
+        .where(col(PracticeDeck.practice_session_id).in_(session_ids))
         .order_by(col(Subject.name), col(Deck.name))
     ).all()
 
@@ -90,15 +91,43 @@ def db_read_practice_sessions_with_decks(
             )
         )
 
+    # Snapshots whose deck has since been deleted are counted, not listed — there is no
+    # name or subject left to put in a chip, but the client still has to show *something*
+    # (ADR 015 as amended — a session stranded that way now reads as Completed, and these chips are
+    # what distinguishes it from one the user actually finished).
+    deleted_counts = dict(
+        db.exec(
+            select(PracticeDeck.practice_session_id, func.count())
+            .where(
+                col(PracticeDeck.practice_session_id).in_(session_ids),
+                col(PracticeDeck.deck_id).is_(None),
+            )
+            .group_by(col(PracticeDeck.practice_session_id))
+        ).all()
+    )
+
     # model_validate over the ORM row rather than **model_dump(): `status` is stored in
     # a plain String column, so dumping the table model hands back a bare str and
     # pydantic then complains about the enum field it lands in.
     return [
         PracticeSessionSummary.model_validate(
-            session, update={"decks": decks_by_session.get(session.id, [])}
+            session,
+            update={
+                "decks": decks_by_session.get(session.id, []),
+                "deleted_deck_count": deleted_counts.get(session.id, 0),
+            },
         )
         for session in sessions
     ]
+
+
+def db_delete_practice_session(db: Session, session: PracticeSession) -> None:
+    """The session's practice_cards and practice_decks go with it (ON DELETE CASCADE,
+    ADR 015 as amended) — they are session-owned state, not history. review_log rows are not
+    touched: their practice_card_id nulls out, their card_id/field_def_id stay, and
+    rebuild_mastery replays exactly as before."""
+    db.delete(session)
+    db.commit()
 
 
 def db_update_practice_session_status(

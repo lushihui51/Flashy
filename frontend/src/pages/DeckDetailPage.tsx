@@ -56,9 +56,11 @@ export default function DeckDetailPage() {
       </p>
 
       <div className="mt-3 flex items-center gap-2">
-        {/* TODO(defer:nav-targets) Practice is a no-op until practice sessions exist. */}
         <button
           type="button"
+          // Both params, not just the deck: two decks in different subjects can share a
+          // name, so the subject is what makes the filtered list unambiguous on arrival.
+          onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
           className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
         >
           <Play aria-hidden="true" className="h-4 w-4" />

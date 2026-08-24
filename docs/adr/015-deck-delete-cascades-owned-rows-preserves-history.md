@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-08-24 (see Amendment below)
 
 ## Context
 
@@ -47,3 +47,52 @@ Costs:
 
 - `review_log` and `practice_deck` accumulate orphaned rows over time (nulled references) that nothing purges — acceptable, since they're append-only history by design, but worth knowing before writing a query against either table that assumes every foreign key is populated.
 - A downgrade of the migration that introduced these `ondelete` rules will fail once any row has actually gone null in production — expected (there's no data-preserving way to force a null back into a `NOT NULL`/no-`ondelete` column), not a defect in the migration.
+
+## Amendment (2026-08-24): two session statuses, and a session owns its snapshot rows
+
+Two follow-on decisions, taken while planning the practice overview UI
+(`docs/plans/004-frontend-rebuild-practice-setup.md`, Phase 1). They revise this ADR's
+"session liveness on the read path" paragraph rather than standing alone, because both
+follow directly from the deletion policy above.
+
+### `SessionStatus` loses `abandoned`; the read path sets `completed`
+
+`SessionStatus` is now `active` and `completed` only. `get_current_practice_card` sets
+`completed` where it previously set `abandoned`.
+
+The original decision above already declined to distinguish "the user genuinely finished"
+from "cascade-deleted cards stranded it" — both leave nothing to practice, and telling
+them apart would need state nothing writes. But it still spent a *status* on the
+undistinguished case, which had two costs once a UI existed: a session the user finished
+displayed as "Abandoned", and the overview's status filter offered a `completed` tab that
+nothing could ever populate, since no code path set it. A status nothing writes is not a
+status.
+
+**The accepted blur:** a session stranded by a deck deletion now reads as Completed,
+indistinguishable at a glance from one played to the end. It is mitigated in *display
+only* — the session list returns `deleted_deck_count` alongside its resolvable
+`decks`, and the client renders that many "deleted deck" chips. Nothing new is stored,
+and the count is derived from the `practice_deck.deck_id IS NULL` rows this ADR already
+produces.
+
+Rejected alternative: keep `abandoned` and have something set it deliberately — e.g. a
+user "abandon" action, or marking sessions stranded by a cascade. Both invent
+state-tracking to preserve a distinction no consumer had asked for, which is the same
+trade this ADR already refused for `practice_card.card_id`.
+
+### `practice_card` and `practice_deck` cascade with their **session**
+
+`practice_card.practice_session_id` and `practice_deck.practice_session_id` are now
+`ON DELETE CASCADE`. This ADR defined the *deck*-deletion answer for both tables; it left
+session deletion undefined because nothing deleted a session.
+
+With `abandoned` gone, a user delete is the only way a session ever leaves the list, so
+the endpoint ships — and its cascades follow the same owned-state-versus-history split as
+the rest of this ADR. A `practice_deck` outlives its **deck** (the snapshot is
+self-contained) but not its **session**, which owns it outright: a snapshot of a session
+that no longer exists is not history anyone can read.
+
+`review_log` is untouched by a session delete, as everywhere else here: its
+`practice_card_id` was already nullable with `ON DELETE SET NULL`, and `card_id` /
+`field_def_id` stay populated, so `rebuild_mastery` replays a deleted session's reviews
+exactly as before.

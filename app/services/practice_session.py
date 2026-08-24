@@ -194,15 +194,17 @@ def get_current_practice_card(
 ) -> PracticeCard | None:
     """The derived current card — never stored, always this query (invariant, see
     PracticeSession's docstring). If none remain for a still-active session, it
-    transitions to abandoned rather than leaving the caller to 404 against it forever.
+    transitions to completed rather than leaving the caller to 404 against it forever.
     This doesn't distinguish *why* nothing remains — genuine completion and
     practice_card rows cascade-deleted out from under the session by a card deletion
-    look the same here, and that's fine: either way there's nothing left to practice."""
+    look the same here. ADR 015 as amended accepts that blur rather than tracking a third status
+    nothing could set reliably; the client tells the second case apart by the session's
+    "deleted deck" chips."""
     card = db_read_current_practice_card(db, practice_session_id, user_id)
     if card is None:
         session = db_read_practice_session(db, practice_session_id, user_id)
         if session is not None and session.status == SessionStatus.active:
-            db_update_practice_session_status(db, session, SessionStatus.abandoned)
+            db_update_practice_session_status(db, session, SessionStatus.completed)
     return card
 
 

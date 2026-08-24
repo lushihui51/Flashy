@@ -73,7 +73,11 @@ function mockSubject({
 function LocationProbe() {
   const location = useLocation();
   return (
-    <span data-testid="location" data-state={JSON.stringify(location.state)}>
+    <span
+      data-testid="location"
+      data-state={JSON.stringify(location.state)}
+      data-search={location.search}
+    >
       {location.pathname}
     </span>
   );
@@ -248,6 +252,18 @@ describe('SubjectDetailPage', () => {
       'data-state',
       JSON.stringify({ subject: { id: 's1', name: 'Math', icon: 'brain' } }),
     );
+  });
+
+  it('Practice opens the overview pre-filtered to this subject', async () => {
+    mockSubject();
+    const user = userEvent.setup();
+    renderAtSubjectRoute(<LocationProbe />);
+
+    await screen.findByRole('heading', { name: 'Math' });
+    await user.click(screen.getByRole('button', { name: 'Practice' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice');
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?subject=s1');
   });
 
   it('Edit subject navigates to the subject-edit placeholder route', async () => {

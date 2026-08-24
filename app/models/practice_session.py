@@ -9,9 +9,13 @@ from app.models.base import AppModel, TimestampMixin
 
 
 class SessionStatus(str, Enum):
+    """Two states, not three. `abandoned` was dropped: nothing could distinguish it from
+    `completed` without tracking why a session ran out of pending cards, which ADR 015
+    had already declined to invent state for. A session is either still practisable or it
+    isn't (ADR 015, amended)."""
+
     active = "active"
     completed = "completed"
-    abandoned = "abandoned"
 
 
 class PracticeSession(AppModel, TimestampMixin, table=True):
@@ -20,7 +24,7 @@ class PracticeSession(AppModel, TimestampMixin, table=True):
     never stored."""
 
     __table_args__ = (
-        CheckConstraint("status IN ('active', 'completed', 'abandoned')", name="status_valid"),
+        CheckConstraint("status IN ('active', 'completed')", name="status_valid"),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -69,6 +73,10 @@ class PracticeSessionSummary(PracticeSessionRead):
     `decks` omits any `practice_deck` whose source deck has since been deleted
     (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
     the session still lists, but a deleted deck has no name or subject left to show and
-    can never match a filter."""
+    can never match a filter. Those snapshots are counted in `deleted_deck_count`
+    instead, so the client can render them as "deleted deck" chips: with `abandoned`
+    gone, a session stranded by a deck deletion reads as Completed, and the chip is the
+    only thing that tells the two apart (ADR 015 as amended)."""
 
     decks: list[PracticeSessionDeckSummary]
+    deleted_deck_count: int

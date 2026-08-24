@@ -4,6 +4,7 @@ import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
+import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/practice" element={<PracticeOverviewPage />} />
+          <Route path="/practice/new" element={<PracticeCreatePage />} />
           <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />

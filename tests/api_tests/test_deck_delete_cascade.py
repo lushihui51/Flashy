@@ -211,13 +211,15 @@ class TestDeckDeleteCascade:
         )
         assert rate_response.status_code == 404, rate_response.text
 
-    def test_current_card_read_abandons_session_when_nothing_remains(
+    def test_current_card_read_completes_session_when_nothing_remains(
         self, db, client, existing_deck
     ):
         """The read path, not the rate path: once the deck (and with it every pending
         practice_card) is gone, the next GET of current_card finds nothing and — since
-        the session was still active — transitions it to abandoned instead of leaving
-        it active forever against an endpoint that will only ever 404."""
+        the session was still active — transitions it to completed instead of leaving
+        it active forever against an endpoint that will only ever 404. There is no
+        `abandoned` to land in (ADR 015 as amended); the session's "deleted deck" chips are what
+        tell this apart from one the user finished."""
         ids = self._setup(db, client, existing_deck, rate=False)
 
         response = client.delete(f"/api/decks/{existing_deck['id']}")
@@ -230,7 +232,7 @@ class TestDeckDeleteCascade:
 
         session = client.get(f"/api/practice_sessions/{ids['session_id']}")
         assert session.status_code == 200, session.text
-        assert session.json()["status"] == SessionStatus.abandoned.value
+        assert session.json()["status"] == SessionStatus.completed.value
 
     def test_deleting_the_card_being_practiced_serves_the_next_pending_card(
         self, db, client, existing_deck

@@ -76,7 +76,11 @@ function mockDeck({
 function LocationProbe() {
   const location = useLocation();
   return (
-    <span data-testid="location" data-state={JSON.stringify(location.state)}>
+    <span
+      data-testid="location"
+      data-state={JSON.stringify(location.state)}
+      data-search={location.search}
+    >
       {location.pathname}
     </span>
   );
@@ -200,6 +204,20 @@ describe('DeckDetailPage', () => {
 
     expect(screen.getByTestId('location')).toHaveTextContent('/cards/new');
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ deckId: 'd1' }));
+  });
+
+  it('Practice opens the overview pre-filtered to this deck and its subject', async () => {
+    mockDeck();
+    const user = userEvent.setup();
+    renderAtDeckRoute(<LocationProbe />);
+
+    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await user.click(screen.getByRole('button', { name: 'Practice' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice');
+    // Both params: two decks in different subjects can share a name, so the deck id
+    // alone would leave the arriving list ambiguous about which subject it belongs to.
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?subject=s1&deck=d1');
   });
 
   it('Edit navigates to the deck-edit placeholder route', async () => {

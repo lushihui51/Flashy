@@ -285,7 +285,12 @@ export interface paths {
         get: operations["read_practice_session_api_practice_sessions__practice_session_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Practice Session
+         * @description User delete is the only way a session leaves the list — there is no `abandoned`
+         *     status for one to fall out of view into (ADR 015 as amended).
+         */
+        delete: operations["delete_practice_session_api_practice_sessions__practice_session_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -848,7 +853,10 @@ export interface components {
          *     `decks` omits any `practice_deck` whose source deck has since been deleted
          *     (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
          *     the session still lists, but a deleted deck has no name or subject left to show and
-         *     can never match a filter.
+         *     can never match a filter. Those snapshots are counted in `deleted_deck_count`
+         *     instead, so the client can render them as "deleted deck" chips: with `abandoned`
+         *     gone, a session stranded by a deck deletion reads as Completed, and the chip is the
+         *     only thing that tells the two apart (ADR 015 as amended).
          */
         PracticeSessionSummary: {
             /**
@@ -871,6 +879,8 @@ export interface components {
             created_at: string;
             /** Decks */
             decks: components["schemas"]["PracticeSessionDeckSummary"][];
+            /** Deleted Deck Count */
+            deleted_deck_count: number;
         };
         /** RatingSubmission */
         RatingSubmission: {
@@ -886,9 +896,13 @@ export interface components {
         };
         /**
          * SessionStatus
+         * @description Two states, not three. `abandoned` was dropped: nothing could distinguish it from
+         *     `completed` without tracking why a session ran out of pending cards, which ADR 015
+         *     had already declined to invent state for. A session is either still practisable or it
+         *     isn't (ADR 015, amended).
          * @enum {string}
          */
-        SessionStatus: "active" | "completed" | "abandoned";
+        SessionStatus: "active" | "completed";
         /** SubjectCreate */
         SubjectCreate: {
             /** Name */
@@ -2085,6 +2099,38 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PracticeSessionRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_practice_session_api_practice_sessions__practice_session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

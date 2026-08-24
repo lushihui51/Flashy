@@ -2422,6 +2422,73 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Delete Practice Session",
+        "description": "User delete is the only way a session leaves the list \u2014 there is no `abandoned`\nstatus for one to fall out of view into (ADR 015 as amended).",
+        "operationId": "delete_practice_session_api_practice_sessions__practice_session_id__delete",
+        "parameters": [
+          {
+            "name": "practice_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/practice_sessions/{practice_session_id}/current_card": {
@@ -3779,6 +3846,10 @@
             },
             "type": "array",
             "title": "Decks"
+          },
+          "deleted_deck_count": {
+            "type": "integer",
+            "title": "Deleted Deck Count"
           }
         },
         "type": "object",
@@ -3788,10 +3859,11 @@
           "name",
           "status",
           "created_at",
-          "decks"
+          "decks",
+          "deleted_deck_count"
         ],
         "title": "PracticeSessionSummary",
-        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter."
+        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter. Those snapshots are counted in `deleted_deck_count`\ninstead, so the client can render them as \"deleted deck\" chips: with `abandoned`\ngone, a session stranded by a deck deletion reads as Completed, and the chip is the\nonly thing that tells the two apart (ADR 015 as amended)."
       },
       "RatingSubmission": {
         "properties": {
@@ -3839,10 +3911,10 @@
         "type": "string",
         "enum": [
           "active",
-          "completed",
-          "abandoned"
+          "completed"
         ],
-        "title": "SessionStatus"
+        "title": "SessionStatus",
+        "description": "Two states, not three. `abandoned` was dropped: nothing could distinguish it from\n`completed` without tracking why a session ran out of pending cards, which ADR 015\nhad already declined to invent state for. A session is either still practisable or it\nisn't (ADR 015, amended)."
       },
       "SubjectCreate": {
         "properties": {

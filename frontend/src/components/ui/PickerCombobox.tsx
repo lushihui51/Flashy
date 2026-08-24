@@ -1,18 +1,40 @@
 import { useId, useState, type ReactNode, type RefObject } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { PICKER_MAX_ITEMS } from 'src/lib/pickerConfig';
 
 export type PickerItem = { id: string; name: string };
 
-type PickerComboboxProps<T extends PickerItem> = {
+/** Choosing a value to *keep* (a form field) versus choosing one to *narrow by* (a
+ * filter) differ in exactly one place: the extra row the list always carries. Picking
+ * one of these decides which row that is, and makes the other variant's props a type
+ * error — a filter can't accidentally offer "New subject…", and a form field can't
+ * offer a clear row that would leave it empty. */
+type PurposeProps =
+  | {
+      purpose?: 'create';
+      /** The always-present, always-last create row (Phase 5.5 §2) — this component
+       * doesn't know or care what selecting it does (open an overlay, navigate away). */
+      onSelectCreate: () => void;
+      createLabel: string;
+      clearLabel?: never;
+      onClear?: never;
+    }
+  | {
+      purpose: 'filter';
+      /** The always-present, always-**first** row, e.g. "All subjects" — the way back to
+       * no filter at all. First, not last, because it is where the eye starts when the
+       * question is "which of these am I narrowing to?". */
+      clearLabel: string;
+      onClear: () => void;
+      onSelectCreate?: never;
+      createLabel?: never;
+    };
+
+type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   /** Already in server order (D13: recency) — this component never sorts. */
   items: T[];
   selected: T | null;
   onSelect: (item: T) => void;
-  /** The always-present, always-last create row (Phase 5.5 §2) — this component
-   * doesn't know or care what selecting it does (open an overlay, navigate away). */
-  onSelectCreate: () => void;
-  createLabel: string;
   placeholder: string;
   /** Static chip, no combobox — edit mode only (a card can't move between decks). */
   locked?: boolean;
@@ -26,16 +48,18 @@ type PickerComboboxProps<T extends PickerItem> = {
 
 /** The one combobox in the app (Phase 5.5 §2), used directly by every caller:
  * open-on-focus-or-click, filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y"
- * footer when there's more, and an always-present create row. What "create" actually
- * *does* — and how items are fetched — is left to the two thin wrappers, since those
- * differ completely (an inline overlay vs. a full navigation round-trip; readSubjects
- * vs. readDecks). */
+ * footer when there's more, and one always-present action row — "New X…" when picking a
+ * value, "All X" when narrowing by one (see PurposeProps). What that row *does*, and how
+ * the items were fetched, belong to the caller: nothing here reaches for data. */
 export default function PickerCombobox<T extends PickerItem>({
   items,
   selected,
   onSelect,
+  purpose = 'create',
   onSelectCreate,
   createLabel,
+  clearLabel,
+  onClear,
   placeholder,
   locked,
   renderLeading,
@@ -67,8 +91,11 @@ export default function PickerCombobox<T extends PickerItem>({
   const shown = matches.slice(0, PICKER_MAX_ITEMS);
   const hasMore = matches.length > shown.length;
 
-  // The create row participates in the same highlighted-index cycle as real items —
-  // it's always the last navigable stop, one past the shown items.
+  // The action row participates in the same highlighted-index cycle as real items: one
+  // stop before them when it clears, one past them when it creates.
+  const filtering = purpose === 'filter';
+  const actionIndex = filtering ? 0 : shown.length;
+  const firstItemIndex = filtering ? 1 : 0;
   const navigableCount = shown.length + 1;
 
   const selectItem = (item: T) => {
@@ -78,12 +105,17 @@ export default function PickerCombobox<T extends PickerItem>({
   };
 
   const chooseIndex = (index: number) => {
-    if (index === shown.length) {
+    if (index === actionIndex) {
       setOpen(false);
-      onSelectCreate();
+      if (filtering) {
+        setQuery('');
+        onClear?.();
+      } else {
+        onSelectCreate?.();
+      }
       return;
     }
-    const item = shown[index];
+    const item = shown[index - firstItemIndex];
     if (item) selectItem(item);
   };
 
@@ -118,6 +150,29 @@ export default function PickerCombobox<T extends PickerItem>({
     );
   }
 
+  const actionRow = (
+    <li
+      role="option"
+      aria-selected={highlighted === actionIndex}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        chooseIndex(actionIndex);
+      }}
+      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm font-medium text-(--color-primary) ${
+        filtering ? 'border-b' : 'border-t'
+      } border-(--color-surface-elevated) ${
+        highlighted === actionIndex ? 'bg-(--color-surface-elevated)' : ''
+      }`}
+    >
+      {filtering ? (
+        <X aria-hidden="true" className="h-4 w-4 shrink-0" />
+      ) : (
+        <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
+      )}
+      {filtering ? clearLabel : createLabel}
+    </li>
+  );
+
   return (
     <div className="relative">
       <input
@@ -150,6 +205,9 @@ export default function PickerCombobox<T extends PickerItem>({
           role="listbox"
           className="absolute z-10 mt-1 w-full rounded-lg border border-(--color-surface-elevated) bg-(--color-surface) py-1 shadow-lg"
         >
+          {/* The action row: first when it clears a filter, last when it creates. Same
+              markup either way, so both are one keyboard cycle and one click path. */}
+          {filtering && actionRow}
           {shown.map((item, index) => (
             // The handler lives on the li itself (the element `getByRole('option')`
             // resolves to), not a nested button — nesting it would put the handler
@@ -159,13 +217,13 @@ export default function PickerCombobox<T extends PickerItem>({
             <li
               key={item.id}
               role="option"
-              aria-selected={index === highlighted}
+              aria-selected={index + firstItemIndex === highlighted}
               onMouseDown={(e) => {
                 e.preventDefault();
-                chooseIndex(index);
+                chooseIndex(index + firstItemIndex);
               }}
               className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm ${
-                index === highlighted ? 'bg-(--color-surface-elevated)' : ''
+                index + firstItemIndex === highlighted ? 'bg-(--color-surface-elevated)' : ''
               }`}
             >
               {renderLeading?.(item)}
@@ -180,20 +238,7 @@ export default function PickerCombobox<T extends PickerItem>({
               Showing {shown.length} of {matches.length} · type to narrow
             </li>
           )}
-          <li
-            role="option"
-            aria-selected={highlighted === shown.length}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              chooseIndex(shown.length);
-            }}
-            className={`flex w-full cursor-pointer items-center gap-2 border-t border-(--color-surface-elevated) px-3 py-2 text-left text-sm font-medium text-(--color-primary) ${
-              highlighted === shown.length ? 'bg-(--color-surface-elevated)' : ''
-            }`}
-          >
-            <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
-            {createLabel}
-          </li>
+          {!filtering && actionRow}
         </ul>
       )}
     </div>

@@ -2,11 +2,12 @@ import random
 import uuid
 
 import pytest
-from sqlmodel import select
+from sqlmodel import col, select
 
 from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
 from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.review_log import ReviewLog
 from app.services.practice_session import start_practice_session, submit_rating
 
 
@@ -525,3 +526,116 @@ class TestSessionStartErrorShape:
         assert detail["code"] == "stale_config"
         assert detail["config_id"] == str(legacy.id)
         assert client.get("/api/practice_sessions").json() == []
+
+
+class TestPracticeSessionDelete:
+    """A session owns its practice_decks and practice_cards outright, so deleting it
+    takes them with it (ADR 015, amended). review_log is history and survives — the same
+    split ADR 015 drew for deck deletion, applied one level up."""
+
+    def test_delete_removes_the_session_and_its_owned_rows(
+        self, client, db, session_cards, session_config
+    ):
+        from app.models.practice_card import PracticeCard
+        from app.models.practice_deck import PracticeDeck
+        from app.models.practice_session import PracticeSession
+
+        created = _start(client, "Doomed run", [session_config["id"]])
+        session_id = uuid.UUID(created["id"])
+
+        card = client.get(f"/api/practice_sessions/{created['id']}/current_card").json()
+        rated = client.post(
+            f"/api/practice_cards/{card['id']}/rate",
+            json={"ratings": {aid: 4 for aid in card["answers"]}},
+        )
+        assert rated.status_code == 200, rated.text
+
+        review_log_ids = list(
+            db.exec(select(ReviewLog.id).where(ReviewLog.user_id == created["user_id"])).all()
+        )
+        assert review_log_ids, "rating should have produced a review_log row"
+
+        deleted = client.delete(f"/api/practice_sessions/{created['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        assert db.get(PracticeSession, session_id) is None
+        assert (
+            db.exec(
+                select(PracticeCard).where(PracticeCard.practice_session_id == session_id)
+            ).all()
+            == []
+        )
+        assert (
+            db.exec(
+                select(PracticeDeck).where(PracticeDeck.practice_session_id == session_id)
+            ).all()
+            == []
+        )
+        assert client.get(f"/api/practice_sessions/{created['id']}").status_code == 404
+        assert client.get("/api/practice_sessions").json() == []
+
+        # History outlives the session: the rows stay, only the practice_card reference
+        # nulls out, so rebuild_mastery still replays them.
+        surviving = db.exec(select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))).all()
+        assert len(surviving) == len(review_log_ids)
+        assert all(row.practice_card_id is None for row in surviving)
+        assert all(row.card_id is not None for row in surviving)
+        assert all(row.field_def_id is not None for row in surviving)
+
+    def test_delete_unknown_session_404s(self, client):
+        assert client.delete(f"/api/practice_sessions/{uuid.uuid4()}").status_code == 404
+
+    def test_delete_another_users_session_404s(
+        self, client, act_as, other_user, session_cards, session_config
+    ):
+        created = _start(client, "Not yours", [session_config["id"]])
+
+        act_as(other_user)
+        assert client.delete(f"/api/practice_sessions/{created['id']}").status_code == 404
+
+        act_as_owner = client.get(f"/api/practice_sessions/{created['id']}")
+        assert act_as_owner.status_code == 404  # still acting as other_user
+
+
+class TestDeletedDeckChips:
+    def test_a_snapshot_whose_deck_was_deleted_is_counted_not_listed(
+        self, client, multi_subject_library
+    ):
+        """The session survives its deck (practice_deck.deck_id SET NULL, ADR 015) but
+        has no name or subject left to put in a chip. With `abandoned` gone, this count
+        is the only thing distinguishing a session stranded this way from one the user
+        actually finished."""
+        lib = multi_subject_library
+        _start(
+            client,
+            "Both decks",
+            [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]],
+        )
+
+        deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        rows = client.get("/api/practice_sessions").json()
+        assert len(rows) == 1
+        assert [deck["subject_name"] for deck in rows[0]["decks"]] == ["Beta"]
+        assert rows[0]["deleted_deck_count"] == 1
+
+    def test_sessions_with_every_deck_intact_count_zero(self, client, multi_subject_library):
+        _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
+        rows = client.get("/api/practice_sessions").json()
+        assert rows[0]["deleted_deck_count"] == 0
+
+    def test_a_deleted_deck_no_longer_matches_its_own_filter(
+        self, client, multi_subject_library
+    ):
+        lib = multi_subject_library
+        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        assert client.delete(f"/api/decks/{lib['decks']['a']['id']}").status_code == 204
+
+        assert client.get("/api/practice_sessions").json() != []
+        assert (
+            client.get(
+                "/api/practice_sessions", params={"deck_id": lib["decks"]["a"]["id"]}
+            ).json()
+            == []
+        )

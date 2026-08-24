@@ -79,9 +79,11 @@ export default function SubjectDetailPage() {
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        {/* TODO(defer:nav-targets) Practice is a no-op until practice sessions exist. */}
         <button
           type="button"
+          // Deep-links into the overview with this subject already filtered — the filters
+          // live in the URL precisely so an entry point is just the right link.
+          onClick={() => navigate(`/practice?subject=${subjectId!}`)}
           className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
         >
           <Play aria-hidden="true" className="h-4 w-4" />

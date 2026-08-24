@@ -132,22 +132,29 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   `review_log` (ADR 011, ADR 012).
 - `deck_practice_config` — a saved, named template describing which fields are
   prompts/answers and pool-sampling rules; mutable.
-- `practice_session` — one user's practice run (`active`/`completed`/`abandoned`);
-  spans one or more `practice_deck`s. Status is never inferred except on the
+- `practice_session` — one user's practice run, `active` or `completed`. There is no
+  third status: `abandoned` was dropped because nothing could set it reliably (ADR 015,
+  amended). Spans one or more `practice_deck`s. Status is never inferred except on the
   current-card read path: `get_current_practice_card` transitions an `active` session
-  to `abandoned` if no pending `practice_card` remains, whether because the user
+  to `completed` if no pending `practice_card` remains, whether because the user
   genuinely finished or because cascade-deleted cards stranded it — that distinction
-  isn't tracked (ADR 015).
+  isn't tracked. The session list surfaces `deleted_deck_count` (its `practice_deck`
+  rows whose `deck_id` has gone null) so the UI can render "deleted deck" chips, which
+  is the only thing distinguishing the second case; nothing new is stored for it.
+  Deleting a session is a user action and the only way one leaves the list.
 - `practice_deck` — an immutable snapshot of a `deck_practice_config`, copied at
   session start; editing or deleting the source config never affects it (ADR 013).
   `deck_id` is nullable with `ON DELETE SET NULL` — the snapshot survives deleting the
   source deck too, since it copies the config's field/pool ids into its own arrays
-  rather than referencing the deck live (ADR 015).
+  rather than referencing the deck live (ADR 015). It does **not** survive its own
+  session: `practice_session_id` is `ON DELETE CASCADE`, because a snapshot of a session
+  that no longer exists is history nobody can read.
 - `practice_card` — one generated card instance within a session
   (`pending`/`passed`/`failed`); a failed card is requeued as a new row, never
   mutated in place. `card_id` is `NOT NULL` with `ON DELETE CASCADE` — a practice_card
   without a card is meaningless, so deleting the card deletes it too, rather than
   leaving a nullable reference every reader would have to guard against (ADR 015).
+  `practice_session_id` cascades too: the row is session-owned state, not history.
 
 ## Context
 

@@ -1,5 +1,5 @@
 import { client } from 'src/api/client';
-import { unwrap } from 'src/api/unwrap';
+import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
 /** Subject and deck narrow the session list through `practice_deck → deck → subject` —
@@ -25,6 +25,13 @@ export const readPracticeSessions = async (filters: PracticeSessionFilters = {})
 export const readPracticeSession = async (practiceSessionId: string) =>
   unwrap(
     await client.GET('/api/practice_sessions/{practice_session_id}', {
+      params: { path: { practice_session_id: practiceSessionId } },
+    }),
+  );
+
+export const deletePracticeSession = async (practiceSessionId: string) =>
+  unwrapVoid(
+    await client.DELETE('/api/practice_sessions/{practice_session_id}', {
       params: { path: { practice_session_id: practiceSessionId } },
     }),
   );

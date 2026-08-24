@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.database import SessionDep
 from app.database_ops.practice_session import (
+    db_delete_practice_session,
     db_read_practice_session,
     db_read_practice_sessions_with_decks,
 )
@@ -73,6 +74,18 @@ def read_practice_session(
     if not session:
         raise HTTPException(status_code=404, detail="Practice session not found")
     return session
+
+
+@router.delete("/practice_sessions/{practice_session_id}", status_code=204)
+def delete_practice_session(
+    db: SessionDep, current_user: CurrentUserDep, practice_session_id: uuid.UUID
+):
+    """User delete is the only way a session leaves the list — there is no `abandoned`
+    status for one to fall out of view into (ADR 015 as amended)."""
+    session = db_read_practice_session(db, practice_session_id, current_user.id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Practice session not found")
+    db_delete_practice_session(db, session)
 
 
 @router.get(
