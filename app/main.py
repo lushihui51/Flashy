@@ -33,7 +33,7 @@ app.add_middleware(
     allow_origins=settings.permitted_origins,
     allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Timezone"],
 )
 
 

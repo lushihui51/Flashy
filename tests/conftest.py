@@ -12,11 +12,11 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
-from app.database import get_session
+from app.database import _CONNECT_ARGS, get_session
 from app.dependencies import get_current_app_user
 from app.main import app
 
-engine = create_engine(settings.test_database_url, echo=False)
+engine = create_engine(settings.test_database_url, echo=False, connect_args=_CONNECT_ARGS)
 
 
 def override_get_session():

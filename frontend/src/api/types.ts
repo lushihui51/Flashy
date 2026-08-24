@@ -894,6 +894,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -925,6 +926,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -960,6 +962,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 subject_id: string;
@@ -993,6 +996,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 subject_id: string;
@@ -1024,6 +1028,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 subject_id: string;
@@ -1063,6 +1068,7 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1094,6 +1100,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1129,6 +1136,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1162,6 +1170,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1193,6 +1202,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1232,6 +1242,7 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1265,6 +1276,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1302,6 +1314,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 deck_id: string;
@@ -1339,6 +1352,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 field_id: string;
@@ -1372,6 +1386,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 field_id: string;
@@ -1405,6 +1420,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 field_id: string;
@@ -1442,6 +1458,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 field_id: string;
@@ -1475,6 +1492,7 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1506,6 +1524,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1541,6 +1560,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 card_id: string;
@@ -1574,6 +1594,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 card_id: string;
@@ -1605,6 +1626,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 card_id: string;
@@ -1642,6 +1664,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 card_id: string;
@@ -1677,6 +1700,7 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1708,6 +1732,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1743,6 +1768,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 config_id: string;
@@ -1776,6 +1802,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 config_id: string;
@@ -1807,6 +1834,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 config_id: string;
@@ -1844,6 +1872,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1879,6 +1908,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 practice_session_id: string;
@@ -1912,6 +1942,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 practice_session_id: string;
@@ -1945,6 +1976,7 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
+                "x-timezone"?: string | null;
             };
             path: {
                 practice_card_id: string;
