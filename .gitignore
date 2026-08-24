@@ -221,3 +221,6 @@ __marimo__/
 
 # Vite
 .vite/
+
+# Node (a stray root-level install, e.g. from a disposable dev tool)
+node_modules/
