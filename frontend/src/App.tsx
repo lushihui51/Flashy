@@ -2,7 +2,8 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AppShell from 'src/components/shell/AppShell';
 import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
-import PracticePage from 'src/pages/PracticePage';
+import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
+import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
@@ -17,7 +18,8 @@ function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/library" element={<LibraryPage />} />
-          <Route path="/practice" element={<PracticePage />} />
+          <Route path="/practice" element={<PracticeOverviewPage />} />
+          <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
           <Route path="/decks/:deckId" element={<DeckDetailPage />} />

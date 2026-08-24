@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PickerCombobox from 'src/components/library/PickerCombobox';
+import PickerCombobox from 'src/components/ui/PickerCombobox';
 
 const items = Array.from({ length: 11 }, (_, i) => ({ id: `d${i}`, name: `Deck ${i}` }));
 

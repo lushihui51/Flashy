@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import SubjectIcon from 'src/components/library/SubjectIcon';
-import ListRow from 'src/components/library/ListRow';
+import ListRow from 'src/components/ui/ListRow';
 import { pluralize } from 'src/lib/pluralize';
 
 type Tab = 'subjects' | 'decks';

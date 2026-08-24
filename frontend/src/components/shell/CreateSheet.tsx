@@ -1,7 +1,7 @@
 import { type RefObject } from 'react';
 import { Folder, Layers, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomSheet from 'src/components/shell/BottomSheet';
+import BottomSheet from 'src/components/ui/BottomSheet';
 
 type CreateSheetProps = {
   open: boolean;

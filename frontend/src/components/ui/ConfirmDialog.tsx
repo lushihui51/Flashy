@@ -20,7 +20,7 @@ type ConfirmDialogProps = {
  * edge meant for navigation-style content.
  *
  * z-70/z-80, strictly above FullScreenDialog's z-50/z-60: a confirm can be opened
- * from *inside* a FullScreenDialog (e.g. SubjectPicker's "New subject…" overlay has
+ * from *inside* a FullScreenDialog (e.g. the deck editor's "New subject…" overlay has
  * its own unsaved-changes confirm) and must always win that stack, not render
  * underneath it and become invisible/unclickable. */
 export default function ConfirmDialog({

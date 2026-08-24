@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import FullScreenDialog from 'src/components/library/FullScreenDialog';
+import FullScreenDialog from 'src/components/ui/FullScreenDialog';
 import CardFieldsForm, { type CardFieldsFormField } from 'src/components/library/CardFieldsForm';
 
 type CardFormEditorProps = {

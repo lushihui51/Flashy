@@ -2,10 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createCard, deleteCard, readCard, updateCard } from 'src/api/card';
-import { readDeck } from 'src/api/deck';
-import DeckPicker from 'src/components/library/DeckPicker';
+import { readDeck, readDecks } from 'src/api/deck';
+import PickerCombobox from 'src/components/ui/PickerCombobox';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
-import ConfirmDialog from 'src/components/library/ConfirmDialog';
+import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import type { components } from 'src/api/types';
 
 type CardStandaloneFormProps = {
@@ -45,7 +45,7 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
 
   // Same `state.deckId` shape for two different entry points (Phase 5.5 §4/§5): a
   // contextual "New card" from a deck's own page, and returning from the deck
-  // editor's "New deck…" round-trip. Both preselect via DeckPicker's `defaultValue`
+  // editor's "New deck…" round-trip. Both preselect the deck combobox
   // now — neither locks the picker (only card **edit** mode does, below).
   const initialDeckId =
     mode === 'edit' ? cardQuery.data!.deck_id : ((location.state as LocationState)?.deckId ?? null);
@@ -80,31 +80,34 @@ function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardS
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deckChange, setDeckChange] = useState<{ previousDeckId: string | null } | null>(null);
   const [confirmCreateDeckOpen, setConfirmCreateDeckOpen] = useState(false);
-  // DeckPicker only reads `defaultValue` once, at mount (a true default, like a
-  // native <input defaultValue>) — so reverting `deckId` here after a cancelled
-  // "Change deck?" confirm has no way to tell it to redisplay the old selection.
-  // Bumping this key forces a remount exactly then; the reverted deck's data is
-  // already in the query cache from when it was first selected, so the remount
-  // reads the correct name immediately with no loading flash.
-  const [deckPickerKey, setDeckPickerKey] = useState(0);
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
     queryFn: () => readDeck(deckId!),
     enabled: !!deckId,
   });
+  // The combobox's own options. Fetched here rather than inside a picker component,
+  // because a shared component takes its data as props (AGENTS.md) — and with the fetch
+  // here there is nothing left for a wrapper to hold.
+  const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
-  // A card can't move between decks once it exists — that's the only case DeckPicker
-  // is ever locked for (Phase 5.5 §5). A contextual "New card" and the deck-editor
+  // Derived from `deckId` rather than kept as its own state: reverting `deckId` after a
+  // cancelled "Change deck?" confirm then redisplays the previous deck by itself, with no
+  // remount needed to tell the combobox its selection moved back. Falls back to the
+  // single-deck fetch for the initial preselection, which lands before the list does.
+  const selectedDeck =
+    decksQuery.data?.find((deck) => deck.id === deckId) ??
+    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
+
+  // A card can't move between decks once it exists — that's the only case the deck
+  // combobox is ever locked for (Phase 5.5 §5). A contextual "New card" and the deck-editor
   // round-trip both just preselect via `defaultValue`, still fully editable (D1).
   const deckLocked = mode === 'edit';
 
-  // Gate on the preselected deck's own fetch landing, so DeckPicker's `defaultValue`
-  // (which it only reads once, at its own mount — a true "default") sees the real
-  // {id, name} the first time it renders, not a still-loading placeholder it would
-  // never revisit. Doesn't apply once the user has picked something themselves
-  // (`deckId` no longer equals `initialDeckId`) — only the initial preselection needs
-  // this wait.
+  // Gate on the preselected deck's own fetch landing, so the combobox shows the real
+  // deck name on its first render rather than an empty box that fills in a beat later.
+  // Doesn't apply once the user has picked something themselves (`deckId` no longer
+  // equals `initialDeckId`) — only the initial preselection needs this wait.
   if (deckId === initialDeckId && initialDeckId && !deckQuery.data) return null;
 
   const dirty =
@@ -217,11 +220,16 @@ function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardS
       )}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
-        <DeckPicker
-          key={deckPickerKey}
-          defaultValue={deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null}
-          onChange={handleDeckChange}
-          onCreateNew={handleCreateNewDeck}
+        <PickerCombobox
+          items={decksQuery.data ?? []}
+          selected={selectedDeck}
+          onSelect={(item) => handleDeckChange(item.id)}
+          // No inline create (D4: creating a card never creates a deck) — a deck editor is
+          // too heavy to nest in a dialog, so this always means leaving the page, and only
+          // this form knows whether there are typed values to confirm away first.
+          onSelectCreate={handleCreateNewDeck}
+          createLabel="New deck…"
+          placeholder="Deck"
           locked={deckLocked}
         />
 
@@ -273,10 +281,7 @@ function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardS
           setDeckChange(null);
         }}
         onCancel={() => {
-          if (deckChange) {
-            setDeckId(deckChange.previousDeckId);
-            setDeckPickerKey((k) => k + 1);
-          }
+          if (deckChange) setDeckId(deckChange.previousDeckId);
           setDeckChange(null);
         }}
       />

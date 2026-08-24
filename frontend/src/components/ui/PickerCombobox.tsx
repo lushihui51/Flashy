@@ -18,13 +18,13 @@ type PickerComboboxProps<T extends PickerItem> = {
   locked?: boolean;
   renderLeading?: (item: T) => ReactNode;
   disabled?: boolean;
-  /** So a caller opening an overlay from the create row (SubjectPicker) can pass this
+  /** So a caller opening an overlay from the create row (DeckEditor) can pass this
    * straight through as FullScreenDialog's triggerRef, returning focus to the actual
    * input on close rather than to nothing in particular. */
   inputRef?: RefObject<HTMLInputElement | null>;
 };
 
-/** The interaction layer both SubjectPicker and DeckPicker share (Phase 5.5 §2):
+/** The one combobox in the app (Phase 5.5 §2), used directly by every caller:
  * open-on-focus-or-click, filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y"
  * footer when there's more, and an always-present create row. What "create" actually
  * *does* — and how items are fetched — is left to the two thin wrappers, since those

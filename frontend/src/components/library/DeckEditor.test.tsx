@@ -232,7 +232,54 @@ describe('DeckEditor — create mode', () => {
     expect(await screen.findByPlaceholderText('Subject')).toBeInTheDocument();
   });
 
-  it('opened via a DeckPicker round-trip: Save navigates back to returnTo with the new deck id', async () => {
+  // The subject combobox's create row used to live in a picker wrapper with its own test
+  // file; the overlay is wired here now, so its coverage moved here with it.
+  it('"New subject…" opens the create overlay; cancel leaves the selection unchanged', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+      </Routes>,
+      [{ pathname: '/decks/new', state: { subject: { id: 's1', name: 'Math', icon: 'brain' } } }],
+    );
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    // Scoped to the dialog: the editor's own header has a Cancel button too.
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Subject')).toHaveValue('Math');
+  });
+
+  it('creating a subject in the overlay selects it immediately, without waiting for a refetch', async () => {
+    mockSubjects();
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json(
+          { id: 's3', name: 'History', icon: 'book-open', description: '', user_id: 'u1', created_at: '' },
+          { status: 201 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'History');
+    await user.click(within(dialog).getByRole('button', { name: 'Create subject' }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText('Subject')).toHaveValue('History'));
+    expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
+  });
+
+  it('opened via a "New deck…" round-trip: Save navigates back to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })));
     const user = userEvent.setup();
@@ -253,7 +300,7 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ deckId: 'd9' }));
   });
 
-  it('opened via a DeckPicker round-trip: Cancel with no changes navigates back to returnTo with no state', async () => {
+  it('opened via a "New deck…" round-trip: Cancel with no changes navigates back to returnTo with no state', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
