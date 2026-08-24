@@ -73,9 +73,15 @@ class TestForeignResourcesAreNotFound:
     def test_deck_create_with_foreign_subject_id_not_found(self, client, other_user, act_as, owned):
         act_as(other_user)
         response = client.post(
-            "/api/decks", json={"subject_id": owned["subject"]["id"], "name": "Intruder"}
+            "/api/decks",
+            json={
+                "subject_id": owned["subject"]["id"],
+                "name": "Intruder",
+                "field_defs": [{"name": "Front", "type": "text"}],
+                "cards": [],
+            },
         )
-        assert response.status_code == 404
+        assert response.status_code == 422
 
     def test_field_def_endpoints(self, client, other_user, act_as, owned):
         deck_id = owned["deck"]["id"]

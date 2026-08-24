@@ -78,7 +78,11 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   `lucide-react`) — not emoji, and not the full icon library. An unrecognized,
   blank, or legacy value (the pre-rewrite default was the emoji `"📚"`) falls back to
   `BookOpen`. Default is `"book-open"` (`DEFAULT_SUBJECT_ICON`,
-  `app/models/subject.py`).
+  `app/models/subject.py`). `last_activity_at` is the sort key every subject list
+  orders by descending; it bubbles from owned decks (a deck created/deleted/moved
+  under this subject) as well as the subject's own edits, written only by `touch()`
+  (`app/services/activity.py`). There is no `updated_at` — a prior version had one and
+  it was removed for having zero consumers (ADR 018).
 - `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`,
   and `deck_practice_config` rows, unique per `(subject_id, name)`. Deleting a deck
   cascades all three — and, transitively, `card_field_value`, `card_field_mastery`,
@@ -87,7 +91,9 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   flows plan) — a practice session needs at least one prompt field and one answer
   field, and a field is one or the other, never both, so fewer than two makes a deck
   unpractisable. Enforced on create, on the batch-edit endpoint, and on archiving a
-  field (archiving counts as removing for this purpose).
+  field (archiving counts as removing for this purpose). `last_activity_at` is the
+  same sort-key mechanism as `subject`'s — bumps on the deck's own edits and on any
+  field/card write under it — and likewise has no `updated_at` (ADR 018).
 - `field_def` — the sole source of truth for what a field is (name, `FieldType`,
   display `position`); archived via `archived_at`, never hard-deleted by default
   (ADR 009, ADR 010). Every other table references a field only by `field_def.id`.

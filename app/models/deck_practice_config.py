@@ -8,7 +8,7 @@ from app.models.base import AppModel, TimestampMixin
 
 
 class DeckPracticeConfigBase(AppModel):
-    deck_id: uuid.UUID = Field(foreign_key="deck.id")
+    deck_id: uuid.UUID = Field(foreign_key="deck.id", ondelete="CASCADE")
     name: str
     prompt_field_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
     answer_field_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))

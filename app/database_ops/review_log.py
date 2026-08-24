@@ -3,7 +3,7 @@ from enum import Enum
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.models.review_log import ReviewLog
 
@@ -96,8 +96,16 @@ def db_log_review_group(
 def db_fetch_review_log_for_rebuild(
     db: Session, user_id: uuid.UUID | None = None
 ) -> list[ReviewLog]:
-    """Every row, oldest first — the replay order rebuild_mastery folds through."""
-    query = select(ReviewLog).order_by(ReviewLog.reviewed_at)
+    """Every row with a live card and field, oldest first — the replay order
+    rebuild_mastery folds through. A row whose card_id or field_def_id has gone SET
+    NULL (its card, or the whole deck, was deleted) is excluded: mastery is a cache for
+    a live (card, field), and card_field_mastery cascade-deletes with the card, so
+    there's nothing to rebuild for it — only orphaned review_log history remains."""
+    query = (
+        select(ReviewLog)
+        .where(col(ReviewLog.card_id).is_not(None), col(ReviewLog.field_def_id).is_not(None))
+        .order_by(ReviewLog.reviewed_at)
+    )
     if user_id is not None:
         query = query.where(ReviewLog.user_id == user_id)
     return list(db.exec(query).all())

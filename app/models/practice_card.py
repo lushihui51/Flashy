@@ -34,7 +34,10 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     practice_session_id: uuid.UUID = Field(foreign_key="practice_session.id")
-    card_id: uuid.UUID = Field(foreign_key="card.id")
+    # NOT NULL, ON DELETE CASCADE — a practice_card without a card is meaningless, so
+    # it can't exist. review_log (not this) is the durable historical record that
+    # outlives a deleted card; this row is operational session state, not history.
+    card_id: uuid.UUID = Field(foreign_key="card.id", ondelete="CASCADE")
     position: int = Field(sa_column=Column(BigInteger, nullable=False))
     prompts: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
     answers: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))

@@ -11,6 +11,8 @@ describe("createDeck", () => {
     const payload: components["schemas"]["DeckCreate"] = {
       subject_id: "00000000-0000-0000-0000-000000000301",
       name: "Biology Deck",
+      field_defs: [{ name: "Term", type: "text" }],
+      cards: [{ values: ["Mitochondria"] }],
     };
     let sentBody: unknown;
 
@@ -50,6 +52,8 @@ describe("createDeck", () => {
       createDeck({
         subject_id: "",
         name: "",
+        field_defs: [],
+        cards: [],
       }),
     ).rejects.toThrow("body.name: Field required");
   });
@@ -87,7 +91,7 @@ describe("readDeck", () => {
 
 describe("updateDeck", () => {
   it("sends the update body to the right id", async () => {
-    const payload: components["schemas"]["DeckUpdate"] = {
+    const payload: components["schemas"]["DeckBatchEdit"] = {
       name: "Updated Deck",
     };
     let sentBody: unknown;

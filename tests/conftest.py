@@ -1,3 +1,12 @@
+import os
+import uuid
+
+# Force the dev-auth bypass (app/dependencies.py) off for tests regardless of what a
+# developer has set in their local .env for `fastapi dev` — real OS env vars take
+# priority over .env in pydantic-settings, and this must be set before app.config is
+# imported anywhere below, since Settings() is instantiated at import time.
+os.environ["DEV_AUTH_USER_ID"] = ""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -81,13 +90,25 @@ def existing_subject(client):
 
 
 @pytest.fixture
-def existing_deck(client, existing_subject):
-    response = client.post(
-        "/api/decks",
-        json={"subject_id": existing_subject["id"], "name": "Test Deck"},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()
+def existing_deck(db, existing_subject):
+    """Inserted directly, not via POST /api/decks — that endpoint now requires
+    field_defs atomically (D3: a deck always has >=2 field_defs), but most tests that
+    depend on this fixture only care about having a deck to hang their own fields (via
+    existing_field_defs) or other rows on, not about exercising deck-create validation.
+    Bypassing the endpoint here keeps this fixture, and everything built on top of it,
+    unaffected by that invariant — same idea as existing_user bypassing Clerk."""
+    from app.models.deck import Deck
+
+    deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Test Deck")
+    db.add(deck)
+    db.commit()
+    db.refresh(deck)
+    return {
+        "id": str(deck.id),
+        "subject_id": str(deck.subject_id),
+        "name": deck.name,
+        "created_at": deck.created_at.isoformat(),
+    }
 
 
 @pytest.fixture

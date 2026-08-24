@@ -10,6 +10,7 @@ from app.database_ops.card import db_read_card, db_read_card_ids_for_deck
 from app.database_ops.deck_practice_config import db_read_deck_practice_config
 from app.database_ops.practice_card import (
     db_create_practice_card,
+    db_read_current_practice_card,
     db_read_pending_practice_cards,
     db_read_practice_card,
     db_renumber_pending_practice_cards,
@@ -19,12 +20,16 @@ from app.database_ops.practice_deck import (
     db_create_practice_deck,
     db_read_practice_deck_for_deck,
 )
-from app.database_ops.practice_session import db_create_practice_session
+from app.database_ops.practice_session import (
+    db_create_practice_session,
+    db_read_practice_session,
+    db_update_practice_session_status,
+)
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import ReviewGroup
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
-from app.models.practice_session import PracticeSession
+from app.models.practice_session import PracticeSession, SessionStatus
 from app.services.deck_practice_config import validate_deck_practice_config
 from app.services.mastery import card_mastery, record_review_group
 from app.services.practice_generation import generate_practice_card_fields
@@ -142,6 +147,23 @@ def start_practice_session(
     db.commit()
     db.refresh(session)
     return session
+
+
+def get_current_practice_card(
+    db: Session, practice_session_id: uuid.UUID, user_id: uuid.UUID
+) -> PracticeCard | None:
+    """The derived current card — never stored, always this query (invariant, see
+    PracticeSession's docstring). If none remain for a still-active session, it
+    transitions to abandoned rather than leaving the caller to 404 against it forever.
+    This doesn't distinguish *why* nothing remains — genuine completion and
+    practice_card rows cascade-deleted out from under the session by a card deletion
+    look the same here, and that's fine: either way there's nothing left to practice."""
+    card = db_read_current_practice_card(db, practice_session_id, user_id)
+    if card is None:
+        session = db_read_practice_session(db, practice_session_id, user_id)
+        if session is not None and session.status == SessionStatus.active:
+            db_update_practice_session_status(db, session, SessionStatus.abandoned)
+    return card
 
 
 def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:

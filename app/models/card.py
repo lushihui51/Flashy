@@ -8,7 +8,7 @@ from app.models.card_field_value import CardFieldValue
 
 
 class CardBase(AppModel):
-    deck_id: uuid.UUID = Field(foreign_key="deck.id")
+    deck_id: uuid.UUID = Field(foreign_key="deck.id", ondelete="CASCADE")
 
 
 class Card(CardBase, TimestampMixin, table=True):

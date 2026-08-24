@@ -3,13 +3,16 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import SessionDep
-from app.database_ops.practice_card import db_read_current_practice_card
 from app.database_ops.practice_session import db_read_practice_session
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.practice_card import PracticeCardRead, RatingSubmission, RatingSubmissionResult
 from app.models.practice_session import PracticeSessionCreate, PracticeSessionRead
-from app.services.practice_session import start_practice_session, submit_rating
+from app.services.practice_session import (
+    get_current_practice_card,
+    start_practice_session,
+    submit_rating,
+)
 
 router = APIRouter(tags=["Practice"])
 
@@ -53,7 +56,7 @@ def read_current_practice_card(
 ):
     if not db_read_practice_session(db, practice_session_id, current_user.id):
         raise HTTPException(status_code=404, detail="Practice session not found")
-    card = db_read_current_practice_card(db, practice_session_id, current_user.id)
+    card = get_current_practice_card(db, practice_session_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="No pending practice card")
     return card
