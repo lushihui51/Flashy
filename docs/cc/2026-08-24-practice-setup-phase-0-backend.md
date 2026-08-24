@@ -5,8 +5,8 @@
   Phase 4.1/4.2 shipped and close the API gaps the practice UI needs, before any of it is
   written.
 - **Outcome:** gaps closed in code (one Alembic revision, two list endpoints, a structured
-  session-start error); one invariant conflict found and **deferred pending a decision** —
-  see "Raised: a config can start a cardless session".
+  session-start error), plus one invariant conflict found and **fixed in the same phase** on
+  the author's instruction — see "Fixed: a config could start a cardless session".
 
 ## Verification findings
 
@@ -92,35 +92,39 @@ alternative and takes `include_archived` (default false). Plan invariant 5 needs
 5. **Types regenerated** (`npm run gen:api`); `readPracticeSessions` and a filter-taking
    `readDeckPracticeConfigs` added to the api layer.
 
-## Raised: a config can start a cardless session (plan invariant 2)
+## Fixed: a config could start a cardless session (plan invariant 2)
 
-`validate_deck_practice_config` accepts a config whose pool has ids but an **empty** counts
+`validate_deck_practice_config` accepted a config whose pool had ids but an **empty** counts
 array — the range check `1 <= count <= len(pool_ids)` iterates an empty list, and the
-producibility rule only asks that `prompt_pool_ids` be non-empty
-(`app/services/deck_practice_config.py:54-68`). At generation time that config draws
-`count = 0` fields, every card resolves to zero prompts and is skipped, and the session is
-created with **no `practice_card` rows at all**. Verified against the running API: the config
-saves 201, the session starts 201, and the first `current_card` read 404s and flips the
-session straight to `abandoned`.
+producibility rule only asked that `prompt_pool_ids` be non-empty. At generation time that
+config drew `count = 0` fields, every card resolved to zero prompts and was skipped, and the
+session was created with **no `practice_card` rows at all**. Verified against the running
+API before the fix: the config saved 201, the session started 201, and the first
+`current_card` read 404d and flipped the session straight to `abandoned` — exactly the state
+plan invariant 2 forbids.
 
-That is exactly the state plan invariant 2 forbids ("no session that exists but has no
-cards"), and it also means Phase 2's client rule — "a pool row with fields but zero checked
-counts is invalid" — would *not* be mirroring the backend; it would be stricter than it.
+`validate_deck_practice_config` now rejects a non-empty `*_pool_ids` with an empty
+`*_pool_counts` (`app/services/deck_practice_config.py:64-72`). Because that function is the
+single choke point for all three write paths, config create, config update, and session start
+are all covered by the one rule; each is asserted independently, including a config inserted
+directly into the table to stand in for a row saved before the rule existed
+(`tests/api_tests/test_practice_session.py:496-527`).
 
-The fix is one rule in `validate_deck_practice_config`: a non-empty `*_pool_ids` requires a
-non-empty `*_pool_counts`. It is not applied here because it narrows what counts as a legal
-config, which could invalidate configs a user has already saved, and 001's Phase 4.1 fixed
-that rule list deliberately. **Decision needed before Phase 2** — Phase 2 is where the
-client-side mirror gets written, so it must be settled by then. If the answer is "leave the
-backend as is", Phase 2's disabled-save rule stops being a mirror and needs its own note.
+The narrowing was safe to apply immediately: the database held no `deck_practice_config`,
+`practice_deck`, or `practice_session` rows, so no saved config was invalidated.
+
+Phase 2's client-side rule ("a pool row with fields but zero checked counts is invalid") is
+now a genuine mirror of the backend rather than a stricter rule of its own, which is how that
+phase's validation section reads it.
 
 ## Acceptance
 
 - One Alembic revision; `alembic upgrade head` applied; `alembic check` reports no drift.
-- `pytest`: 220 passed. New coverage: session list ordering/name/deck context, subject
+- `pytest`: 225 passed. New coverage: session list ordering/name/deck context, subject
   filter, deck filter (against two same-named decks in different subjects, via the new
   `multi_subject_library` fixture in `tests/conftest.py:137-191`), AND-composition, and the
   other-user-sees-nothing check for both list endpoints; all three session-start error codes
-  asserted with their `config_id`.
+  asserted with their `config_id`; the uncounted-pool rule asserted at create, update, and
+  session start.
 - Frontend: `npx vitest run` 296 passed, `npm run lint` clean, `npm run build` (tsc + bundle)
   clean.

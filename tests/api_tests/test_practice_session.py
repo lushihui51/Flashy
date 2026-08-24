@@ -492,3 +492,36 @@ class TestSessionStartErrorShape:
         assert detail["code"] == "stale_config"
         assert detail["config_id"] == session_config["id"]
         assert "not live" in detail["message"]
+
+    def test_uncounted_pool_config_cannot_start_a_session(
+        self, client, db, existing_deck, session_cards, session_fields
+    ):
+        """Inserted straight into the table, bypassing the endpoint: the create path now
+        rejects an uncounted pool, so the only way this shape still reaches session start
+        is a row saved before the rule existed. Start revalidates for exactly that reason
+        — it must refuse rather than write a session with no practice_cards."""
+        from app.models.deck_practice_config import DeckPracticeConfig
+
+        f = session_fields
+        legacy = DeckPracticeConfig(
+            deck_id=uuid.UUID(existing_deck["id"]),
+            name="Uncounted pool",
+            prompt_field_ids=[],
+            answer_field_ids=[f["answer1"]],
+            prompt_pool_ids=[f["pool_p1"], f["pool_p2"]],
+            prompt_pool_counts=[],
+            answer_pool_ids=[],
+            answer_pool_counts=[],
+        )
+        db.add(legacy)
+        db.commit()
+
+        res = client.post(
+            "/api/practice_sessions",
+            json={"name": "Run", "deck_practice_config_ids": [str(legacy.id)]},
+        )
+        assert res.status_code == 400
+        detail = res.json()["detail"]
+        assert detail["code"] == "stale_config"
+        assert detail["config_id"] == str(legacy.id)
+        assert client.get("/api/practice_sessions").json() == []

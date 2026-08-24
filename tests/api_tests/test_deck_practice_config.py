@@ -138,6 +138,38 @@ class TestDeckPracticeConfigValidation:
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
 
+    def test_pool_ids_without_counts_rejected(self, client, valid_config_payload):
+        """A pool with no counts draws zero fields per card, so the pool is inert and a
+        config resting on it alone generates a session with no cards at all."""
+        valid_config_payload["prompt_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 400
+        assert "prompt_pool_counts" in res.json()["detail"]
+
+    def test_answer_pool_ids_without_counts_rejected(self, client, valid_config_payload):
+        valid_config_payload["answer_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 400
+        assert "answer_pool_counts" in res.json()["detail"]
+
+    def test_update_emptying_pool_counts_rejected(self, client, existing_config):
+        res = client.patch(
+            f"/api/deck_practice_configs/{existing_config['id']}",
+            json={"prompt_pool_counts": []},
+        )
+        assert res.status_code == 400
+        assert "prompt_pool_counts" in res.json()["detail"]
+
+    def test_empty_pool_with_empty_counts_is_valid(self, client, valid_config_payload):
+        """The rule is about an *uncounted* pool, not an unused one — a config with no
+        pool at all is the ordinary fixed-fields case."""
+        valid_config_payload["prompt_pool_ids"] = []
+        valid_config_payload["prompt_pool_counts"] = []
+        valid_config_payload["answer_pool_ids"] = []
+        valid_config_payload["answer_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 201, res.text
+
     def test_only_pool_no_fixed_field_is_valid(
         self, client, existing_deck, config_fields
     ):

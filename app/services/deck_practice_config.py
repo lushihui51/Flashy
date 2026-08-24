@@ -62,6 +62,16 @@ def validate_deck_practice_config(
                 f"answer_pool_counts value {count} out of range 1..{len(answer_pool_ids)}"
             )
 
+    # A pool with no counts draws zero fields per card (generation picks one count from
+    # this array, or 0 when it's empty — app/services/practice_generation.py), so a pool
+    # left uncounted is silently inert. If it's the only prompt source, every card
+    # resolves to zero prompts, every card is skipped, and session start produces a
+    # session with no practice_cards at all — the one state that must never exist.
+    if prompt_pool_ids and not prompt_pool_counts:
+        raise ValueError("prompt_pool_ids requires at least one prompt_pool_counts value")
+    if answer_pool_ids and not answer_pool_counts:
+        raise ValueError("answer_pool_ids requires at least one answer_pool_counts value")
+
     if not prompt_field_ids and not prompt_pool_ids:
         raise ValueError("at least one prompt field or prompt pool id is required")
     if not answer_field_ids and not answer_pool_ids:
