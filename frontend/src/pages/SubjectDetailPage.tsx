@@ -1,10 +1,11 @@
-import { ChevronLeft, Pencil, Play, Plus } from 'lucide-react';
+import { ChevronLeft, Pencil, Play } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
+import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
 
 /** First two field names, `+N` for the rest — computed by count, not measured text,
@@ -47,6 +48,7 @@ export default function SubjectDetailPage() {
   const decks = decksQuery.data;
   const totalCards = (decks ?? []).reduce((sum, deck) => sum + deck.card_count, 0);
   const newDeckState = subject ? { subject: { id: subject.id, name: subject.name, icon: subject.icon } } : undefined;
+  const addDeck = () => navigate('/decks/new', { state: newDeckState });
 
   return (
     <div className="p-4">
@@ -91,16 +93,6 @@ export default function SubjectDetailPage() {
         </button>
         <button
           type="button"
-          aria-label="New deck"
-          onClick={() => navigate('/decks/new', { state: newDeckState })}
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
-        >
-          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-text-muted)">
-            <Plus aria-hidden="true" className="h-4 w-4 text-(--color-text)" />
-          </span>
-        </button>
-        <button
-          type="button"
           aria-label="Edit subject"
           onClick={() => navigate(`/subjects/${subjectId}/edit`)}
           className="flex h-11 w-11 shrink-0 items-center justify-center"
@@ -115,17 +107,16 @@ export default function SubjectDetailPage() {
         {decks && decks.length === 0 ? (
           <div className="flex flex-col items-start gap-3 py-8">
             <p className="text-(--color-text-muted)">No decks in this subject yet.</p>
-            <button
-              type="button"
-              onClick={() => navigate('/decks/new', { state: newDeckState })}
-              className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-            >
-              New deck
-            </button>
+            <AddButton label="Add deck" onClick={addDeck} />
           </div>
         ) : (
           <>
-            <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
+            {/* The add control sits with the collection it adds to, carrying this
+                subject so the deck form opens with it preselected. */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
+              <AddButton label="Add deck" onClick={addDeck} />
+            </div>
             <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
               {(decks ?? []).map((deck) => (
                 <li key={deck.id}>

@@ -224,28 +224,29 @@ describe('SubjectDetailPage', () => {
 
     expect(await screen.findByText('No decks in this subject yet.')).toBeInTheDocument();
     expect(screen.queryByText('Decks')).not.toBeInTheDocument();
-    // two "New deck" controls now: the header's icon-only button and this empty
-    // state's own button — both real, both should be present.
-    expect(screen.getAllByRole('button', { name: 'New deck' })).toHaveLength(2);
+    // The empty state carries the only add control here — the list it would otherwise
+    // sit above does not exist yet.
+    expect(screen.getAllByRole('button', { name: 'Add deck' })).toHaveLength(1);
   });
 
-  it('icon-only action buttons expose accessible names', async () => {
+  it('the header carries subject-level actions only; adding a deck belongs to the deck list', async () => {
     mockSubject();
     renderAtSubjectRoute();
 
     await screen.findByRole('heading', { name: 'Math' });
     expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit subject' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New deck' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
   });
 
-  it('New deck navigates to the deck editor with this subject preselected', async () => {
+  it('Add deck navigates to the deck editor with this subject preselected', async () => {
     mockSubject();
     const user = userEvent.setup();
     renderAtSubjectRoute(<LocationProbe />);
 
     await screen.findByRole('heading', { name: 'Math' });
-    await user.click(screen.getByRole('button', { name: 'New deck' }));
+    await user.click(screen.getByRole('button', { name: 'Add deck' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
     expect(screen.getByTestId('location')).toHaveAttribute(

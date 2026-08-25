@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Pencil, Play, Plus } from 'lucide-react';
+import { ChevronLeft, Pencil, Play } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
@@ -9,6 +9,7 @@ import SubjectIcon from 'src/components/library/SubjectIcon';
 import CardTable from 'src/components/library/CardTable';
 import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
 import type { components } from 'src/api/types';
 
@@ -19,22 +20,6 @@ type Tab = (typeof TABS)[number];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
-}
-
-/** The one add-control shape both tabs use: labeled, inside the collection it adds to.
- * (Guiding principle 1 of plan 005 — entity actions live in the header, collection
- * actions live in the collection.) */
-function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-9 items-center gap-1 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-    >
-      <Plus aria-hidden="true" className="h-4 w-4" />
-      {label}
-    </button>
-  );
 }
 
 export default function DeckDetailPage() {
