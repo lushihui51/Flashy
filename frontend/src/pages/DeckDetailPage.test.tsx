@@ -188,8 +188,9 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     expect(await screen.findByText('No cards in this deck yet.')).toBeInTheDocument();
-    // One creator only: the header's icon button, which follows the active tab.
-    expect(screen.getAllByRole('button', { name: 'New card' })).toHaveLength(1);
+    // The tab's own button, plus the same button in the empty state: both inside the
+    // collection they add to, neither in the header.
+    expect(screen.getAllByRole('button', { name: 'Add card' })).toHaveLength(2);
     // the table (and its field header) is not replaced by the empty state.
     expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
@@ -210,23 +211,25 @@ describe('DeckDetailPage', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(8);
   });
 
-  it('icon-only action buttons expose accessible names', async () => {
+  it('the header carries deck-level actions only — no bare + whose meaning depends on a tab', async () => {
     mockDeck();
     renderAtDeckRoute();
 
     await screen.findByRole('heading', { name: 'Vocab Deck' });
-    expect(screen.getByRole('button', { name: 'New card' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
+    // The add control lives in the tab it acts on, labeled.
+    expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New card' })).not.toBeInTheDocument();
   });
 
-  it('New card navigates to the card creation form with this deck locked', async () => {
+  it('Add card navigates to the card creation form with this deck locked', async () => {
     mockDeck();
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
 
     await screen.findByRole('heading', { name: 'Vocab Deck' });
-    await user.click(screen.getByRole('button', { name: 'New card' }));
+    await user.click(screen.getAllByRole('button', { name: 'Add card' })[0]!);
 
     expect(screen.getByTestId('location')).toHaveTextContent('/cards/new');
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ deckId: 'd1' }));
@@ -330,16 +333,18 @@ describe('DeckDetailPage', () => {
       );
     });
 
-    it('the create button follows the tab: New card, then New configuration', async () => {
+    it('each tab carries its own labeled add button, inside the tab', async () => {
       mockDeck({ configurations: [] });
       const user = userEvent.setup();
       renderAtDeckRoute(<LocationProbe />);
       await screen.findByRole('heading', { name: 'Vocab Deck' });
 
-      expect(screen.getByRole('button', { name: 'New card' })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Add card' }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: 'New configuration' })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('tab', { name: 'Configurations' }));
-      await user.click(screen.getByRole('button', { name: 'New configuration' }));
+      expect(screen.queryByRole('button', { name: 'Add card' })).not.toBeInTheDocument();
+      await user.click(screen.getAllByRole('button', { name: 'New configuration' })[0]!);
 
       expect(screen.getByTestId('location')).toHaveTextContent('/deck-configurations/new');
       expect(screen.getByTestId('location')).toHaveAttribute(
@@ -363,8 +368,8 @@ describe('DeckDetailPage', () => {
       renderAtDeckRoute(null, '/decks/d1?tab=configurations');
 
       expect(await screen.findByText(/No configurations yet/)).toBeInTheDocument();
-      // No second create button — the header's follows the tab.
-      expect(screen.getAllByRole('button', { name: 'New configuration' })).toHaveLength(1);
+      // The tab's own button, plus the same button in the empty state.
+      expect(screen.getAllByRole('button', { name: 'New configuration' })).toHaveLength(2);
     });
 
     it('deleting confirms, promises practices are unaffected, then drops the row', async () => {

@@ -12,7 +12,6 @@ import {
   buildDeckCreatePayload,
   type DeckEditorState,
   type EditorField,
-  type EditorCard,
 } from 'src/lib/deckEditorReducer';
 import { buildDeckBatchEditPayload } from 'src/lib/deckEditorDiff';
 import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
@@ -21,9 +20,7 @@ import PickerCombobox from 'src/components/ui/PickerCombobox';
 import FullScreenDialog from 'src/components/ui/FullScreenDialog';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import { SubjectFormBody } from 'src/components/library/SubjectForm';
-import ListRow from 'src/components/ui/ListRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import CardForm from 'src/components/library/CardForm';
 import type { components } from 'src/api/types';
 
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -254,82 +251,6 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   );
 }
 
-type CardsSectionProps = {
-  fields: EditorField[];
-  cards: EditorCard[];
-  onAdd: () => void;
-  onOpen: (key: string) => void;
-};
-
-/** Phase 7.5: a *saved* card removed from inside the in-editor `CardForm` is staged
- * the same way a saved field is — struck through, no longer opens the form, no
- * control of its own. Only the header's global Undo can bring it back. A brand-new
- * card still deletes outright. Title/subtitle for every row — pending or not — read
- * from the deck's *active* fields only, matching what the row will actually show
- * once a pending field is really gone. */
-function CardsSection({ fields, cards, onAdd, onOpen }: CardsSectionProps) {
-  const activeFields = fields.filter((f) => !f.pendingRemoval);
-  const firstField = activeFields[0];
-  const secondField = activeFields[1];
-
-  return (
-    <section className="mt-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-(--color-text-muted)">{pluralize(cards.length, 'card')}</h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex h-9 items-center gap-1 text-sm font-semibold text-(--color-primary)"
-        >
-          <Plus aria-hidden="true" className="h-4 w-4" />
-          Add card
-        </button>
-      </div>
-      <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated)">
-        {cards.map((card) => {
-          const firstValue = firstField ? (card.values[firstField.key] ?? '').trim() : '';
-          const secondValue = secondField ? (card.values[secondField.key] ?? '').trim() : '';
-
-          if (card.pendingRemoval) {
-            return (
-              <li key={card.key}>
-                <div className="flex min-h-16 items-center gap-3 py-[14px] opacity-50">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] leading-5 text-(--color-text) line-through">
-                      {firstValue === '' ? 'empty' : firstValue}
-                    </span>
-                    {secondValue !== '' && (
-                      <span className="block truncate text-[13px] leading-4 text-(--color-text-secondary)">
-                        {secondValue}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </li>
-            );
-          }
-
-          return (
-            <li key={card.key}>
-              <ListRow
-                title={
-                  firstValue === '' ? (
-                    <span className="italic text-(--color-text-muted)">empty</span>
-                  ) : (
-                    firstValue
-                  )
-                }
-                subtitle={secondValue !== '' ? secondValue : undefined}
-                onClick={() => onOpen(card.key)}
-              />
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 type CreateLocationState = {
   subject?: { id: string; name: string; icon: string };
   /** Set when this editor was opened from the card form's "New deck…" row (Phase 5.5
@@ -337,12 +258,6 @@ type CreateLocationState = {
    * Create mode only — an edit is never entered via that round-trip. */
   returnTo?: string;
 } | null;
-
-// A stable reference for the "adding a new card" case — a fresh `{}` literal on every
-// render would defeat CardForm's render-time resync guard (it compares `initialValues`
-// by reference to detect "a different card was opened") and keep resetting the form
-// back to blank as the user types.
-const EMPTY_CARD_VALUES: Record<string, string> = {};
 
 type DeckEditorProps = {
   mode: 'create' | 'edit';
@@ -405,18 +320,29 @@ type DeckEditorBodyProps = {
 
 /** Phase 7.5 §2: counts what the current changeset would actually delete — the only
  * thing the aggregated save confirm needs, and what decides whether it shows at all. */
-function destructiveCounts(state: DeckEditorState) {
-  const fieldCount = state.fields.filter((f) => f.pendingRemoval).length;
-  const cardCount = state.cards.filter((c) => c.pendingRemoval).length;
-  return { fieldCount, cardCount };
+/** What a deck delete takes with it, and what it leaves. The cascade is ADR 015's:
+ * cards, fields and configurations are deck-owned and go; `review_log` is history and
+ * is never deleted, so mastery survives the deck it was earned on. */
+function deleteDeckSummaryText(deck: DeckDetail | undefined): string {
+  const owned = [
+    ...(deck && deck.cards.length > 0 ? [pluralize(deck.cards.length, 'card')] : []),
+    ...(deck && deck.field_defs.length > 0 ? [pluralize(deck.field_defs.length, 'field')] : []),
+    'its practice configurations',
+  ];
+  const list =
+    owned.length > 1 ? `${owned.slice(0, -1).join(', ')} and ${owned.at(-1)}` : owned[0];
+  return `This also deletes ${list}. Your review history is kept. This can't be undone.`;
 }
 
-/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3). */
-function destructiveSummaryText({ fieldCount, cardCount }: ReturnType<typeof destructiveCounts>): string {
-  const parts: string[] = [];
-  if (fieldCount > 0) parts.push(pluralize(fieldCount, 'field'));
-  if (cardCount > 0) parts.push(pluralize(cardCount, 'card'));
-  return `This deletes ${parts.join(' and ')}. This can't be undone.`;
+function destructiveCounts(state: DeckEditorState) {
+  return { fieldCount: state.fields.filter((f) => f.pendingRemoval).length };
+}
+
+/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3).
+ * Archiving a field keeps its existing card values as inert history (ADR 010), which
+ * is why this says the field goes and not the content behind it. */
+function destructiveSummaryText({ fieldCount }: ReturnType<typeof destructiveCounts>): string {
+  return `This removes ${pluralize(fieldCount, 'field')} from every card in this deck. This can't be undone.`;
 }
 
 function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, returnTo }: DeckEditorBodyProps) {
@@ -441,18 +367,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   const [saveConfirm, setSaveConfirm] = useState<ReturnType<typeof destructiveCounts> | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // 'new' | <card key> | null — TypeScript collapses this to plain `string | null`
-  // ('new' is a subtype of string), so every read site below checks `!== 'new'`
-  // explicitly via `editingCardKey` rather than relying on `typeof`.
-  const [cardFormState, setCardFormState] = useState<string | null>(null);
-  // Bumped on every open so CardForm (mounted for DeckEditor's whole lifetime) gets a
-  // fresh `key` and therefore a fresh remount each time — see CardForm's own comment
-  // for why reusing the same instance across repeated "Add card" opens is unsafe.
-  const [cardFormOpenSeq, setCardFormOpenSeq] = useState(0);
-  const openCardForm = (next: string) => {
-    setCardFormState(next);
-    setCardFormOpenSeq((n) => n + 1);
-  };
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Phase 7.5 §4: a transient "Saved ✓" on the Save control after an edit-mode save.
@@ -571,7 +485,7 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
     if (!canSave) return;
     if (mode === 'edit') {
       const counts = destructiveCounts(state);
-      if (counts.fieldCount > 0 || counts.cardCount > 0) {
+      if (counts.fieldCount > 0) {
         setSaveConfirm(counts);
         return;
       }
@@ -580,13 +494,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   };
 
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
-
-  // A pending field is on its way out — CardForm shouldn't offer an input for it.
-  const cardFormFieldDefs = state.fields
-    .filter((f) => !f.pendingRemoval)
-    .map((f) => ({ key: f.key, name: f.name, type: f.type }));
-  const editingCardKey = cardFormState !== null && cardFormState !== 'new' ? cardFormState : null;
-  const editingCard = editingCardKey ? state.cards.find((c) => c.key === editingCardKey) : undefined;
 
   const subjectDefaultValue: SubjectItem | null =
     mode === 'edit' && subject ? { id: subject.id, name: subject.name, icon: subject.icon } : contextualSubject;
@@ -684,13 +591,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         onAdd={() => dispatch({ type: 'ADD_FIELD' })}
       />
 
-      <CardsSection
-        fields={state.fields}
-        cards={state.cards}
-        onAdd={() => openCardForm('new')}
-        onOpen={(key) => openCardForm(key)}
-      />
-
       {mode === 'edit' && (
         <button
           type="button"
@@ -753,11 +653,10 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         <ConfirmDialog
           open={confirmDeleteOpen}
           title="Delete deck?"
-          description={
-            deck && deck.cards.length > 0
-              ? `This will also delete ${pluralize(deck.cards.length, 'card')}. This can't be undone.`
-              : "This can't be undone."
-          }
+          // Names everything that goes with it (ADR 015: the deck owns its cards,
+          // fields and configurations, and they cascade), and says what does not —
+          // review history is never deleted, so past practice still counts.
+          description={deleteDeckSummaryText(deck)}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void handleDeleteDeck()}
@@ -765,26 +664,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         />
       )}
 
-      <CardForm
-        key={cardFormOpenSeq}
-        open={cardFormState !== null}
-        fieldDefs={cardFormFieldDefs}
-        initialValues={editingCard?.values ?? EMPTY_CARD_VALUES}
-        onSave={(values) => {
-          if (cardFormState === 'new') dispatch({ type: 'ADD_CARD', values });
-          else if (editingCardKey) dispatch({ type: 'UPDATE_CARD', key: editingCardKey, values });
-          setCardFormState(null);
-        }}
-        onDelete={
-          editingCardKey
-            ? () => {
-                dispatch({ type: 'REMOVE_CARD', key: editingCardKey });
-                setCardFormState(null);
-              }
-            : undefined
-        }
-        onClose={() => setCardFormState(null)}
-      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ type FullScreenDialogProps = {
 /** A Radix Dialog that covers the whole viewport rather than sliding up from an edge
  * (BottomSheet) or sitting centered (ConfirmDialog) — for flows that need the same
  * "full-screen modal" chrome as a routed form (SubjectForm) but have no route of
- * their own, e.g. CardForm's in-editor role inside DeckEditor.
+ * their own, e.g. the deck editor's create-a-subject overlay.
  *
  * z-50/z-60, strictly above AppShell's header (z-40) — the opposite of SideDrawer's
  * z-20/z-30, which *deliberately* leaves the header on top so its hamburger button

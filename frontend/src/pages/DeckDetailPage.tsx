@@ -21,6 +21,22 @@ function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
 }
 
+/** The one add-control shape both tabs use: labeled, inside the collection it adds to.
+ * (Guiding principle 1 of plan 005 — entity actions live in the header, collection
+ * actions live in the collection.) */
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 items-center gap-1 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
+    >
+      <Plus aria-hidden="true" className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
 export default function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
@@ -85,10 +101,11 @@ export default function DeckDetailPage() {
     setSearchParams(params, { replace: true });
   };
 
-  const createForTab = () =>
-    tab === 'cards'
-      ? navigate('/cards/new', { state: { deckId: deck.id } })
-      : navigate('/deck-configurations/new', { state: { deckId: deck.id } });
+  // Both carry the deck in router state — the same deck-context wiring the card form
+  // and the configuration builder already read on arrival.
+  const addCard = () => navigate('/cards/new', { state: { deckId: deck.id } });
+  const newConfiguration = () =>
+    navigate('/deck-configurations/new', { state: { deckId: deck.id } });
 
   return (
     <div className="p-4">
@@ -118,16 +135,6 @@ export default function DeckDetailPage() {
         >
           <Play aria-hidden="true" className="h-4 w-4" />
           Practice
-        </button>
-        <button
-          type="button"
-          aria-label={tab === 'cards' ? 'New card' : 'New configuration'}
-          onClick={createForTab}
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
-        >
-          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-text-muted)">
-            <Plus aria-hidden="true" className="h-4 w-4 text-(--color-text)" />
-          </span>
         </button>
         <button
           type="button"
@@ -173,7 +180,12 @@ export default function DeckDetailPage() {
            below it, outside CardTable's own horizontally-scrolling wrapper, so it
            stays put under the frozen first column instead of scrolling away with the
            header (2.5 §1.4). */
-        <div className="mt-4">
+        <div className="mt-2">
+          {/* Inside the tab, and labeled: a control whose meaning depends on which tab
+              is open has no business sitting in the page header. */}
+          <div className="flex justify-end py-2">
+            <AddButton label="Add card" onClick={addCard} />
+          </div>
           {fieldDefs.length > 0 && (
             <CardTable
               deckName={deck.name}
@@ -185,11 +197,16 @@ export default function DeckDetailPage() {
           {deck.cards.length === 0 && (
             <div className="flex flex-col items-start gap-3 px-3 py-8">
               <p className="text-(--color-text-muted)">No cards in this deck yet.</p>
+              <AddButton label="Add card" onClick={addCard} />
             </div>
           )}
         </div>
       ) : (
         <section aria-label="Configurations" className="mt-2">
+          <div className="flex justify-end py-2">
+            <AddButton label="New configuration" onClick={newConfiguration} />
+          </div>
+
           {configurationsQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
               Could not load this deck&apos;s configurations.
@@ -202,6 +219,7 @@ export default function DeckDetailPage() {
                 No configurations yet. One says which of this deck&apos;s fields are prompts
                 and which are answers; a practice is built out of them.
               </p>
+              <AddButton label="New configuration" onClick={newConfiguration} />
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">

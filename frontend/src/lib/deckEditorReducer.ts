@@ -19,20 +19,13 @@ export type EditorField = {
   pendingRemoval?: boolean;
 };
 
-export type EditorCard = {
-  key: string;
-  id?: string;
-  values: Record<string, string>;
-  /** Same staging rule as `EditorField.pendingRemoval`, for a saved card deleted
-   * from inside the in-editor `CardForm`. */
-  pendingRemoval?: boolean;
-};
-
+/** Identity and schema — a deck's name, where it lives, and what a card of it is made
+ * of. Cards are not here: they are routine content, added and edited from the deck's
+ * own card list, not from the form that defines the deck. */
 export type DeckEditorState = {
   name: string;
   subjectId: string | null;
   fields: EditorField[];
-  cards: EditorCard[];
   dirty: boolean;
 };
 
@@ -50,16 +43,13 @@ export function initialDeckEditorState(subjectId: string | null = null): DeckEdi
       { key: makeKey(), name: 'Term', type: 'text' },
       { key: makeKey(), name: 'Definition', type: 'text' },
     ],
-    cards: [],
     dirty: false,
   };
 }
 
-/** Edit mode's starting state (Phase 7) — every pre-existing field and card keeps
- * its real `id`, plus a fresh client-only `key` for reducer/component use exactly
- * like a brand-new one gets. A card's `values` is re-keyed from field _id_ (the
- * DeckDetail shape) to field _key_ (what CardForm's in-editor role and the rest of
- * this reducer address fields by) so both modes share one `EditorCard` shape.
+/** Edit mode's starting state (Phase 7) — every pre-existing field keeps its real
+ * `id`, plus a fresh client-only `key` for reducer/component use exactly like a
+ * brand-new one gets.
  *
  * Call this exactly once per edit session and reuse the same object as both the
  * reducer's initial state and the frozen `original` diffed against at save time —
@@ -73,24 +63,10 @@ export function deckDetailToEditorState(deck: DeckDetail): DeckEditorState {
     name: fieldDef.name,
     type: fieldDef.type,
   }));
-  const keyByFieldId = new Map(fields.map((field) => [field.id!, field.key]));
-
-  const cards: EditorCard[] = deck.cards.map((card) => ({
-    key: makeKey(),
-    id: card.id,
-    values: Object.fromEntries(
-      Object.entries(card.values).flatMap(([fieldId, value]) => {
-        const fieldKey = keyByFieldId.get(fieldId);
-        return fieldKey ? [[fieldKey, value]] : [];
-      }),
-    ),
-  }));
-
   return {
     name: deck.name,
     subjectId: deck.subject_id,
     fields,
-    cards,
     dirty: false,
   };
 }
@@ -103,9 +79,6 @@ export type DeckEditorAction =
   | { type: 'SET_FIELD_TYPE'; key: string; fieldType: FieldType }
   | { type: 'REMOVE_FIELD'; key: string }
   | { type: 'MOVE_FIELD'; key: string; toIndex: number }
-  | { type: 'ADD_CARD'; values: Record<string, string> }
-  | { type: 'UPDATE_CARD'; key: string; values: Record<string, string> }
-  | { type: 'REMOVE_CARD'; key: string }
   /** Phase 7.5: replaces the *entire* state wholesale. Two callers — after a
    * successful edit-mode save, re-run through `deckDetailToEditorState` (real ids
    * for anything created via `client_key`, every pending flag cleared, `dirty`
@@ -160,20 +133,7 @@ export function deckEditorReducer(state: DeckEditorState, action: DeckEditorActi
       }
       // A brand-new field never had server state to stage against — remove it
       // outright, same as before Phase 7.5.
-      return {
-        ...state,
-        fields: state.fields.filter((f) => f.key !== action.key),
-        // Values keyed by a field that no longer exists are just dead weight — strip
-        // them so a card's `values` always reflects live fields only.
-        cards: state.cards.map((c) => {
-          if (!(action.key in c.values)) return c;
-          return {
-            ...c,
-            values: Object.fromEntries(Object.entries(c.values).filter(([key]) => key !== action.key)),
-          };
-        }),
-        dirty: true,
-      };
+      return { ...state, fields: state.fields.filter((f) => f.key !== action.key), dirty: true };
     }
 
     case 'MOVE_FIELD': {
@@ -185,30 +145,6 @@ export function deckEditorReducer(state: DeckEditorState, action: DeckEditorActi
       const [moved] = fields.splice(fromIndex, 1);
       fields.splice(toIndex, 0, moved!);
       return { ...state, fields, dirty: true };
-    }
-
-    case 'ADD_CARD':
-      return { ...state, cards: [...state.cards, { key: makeKey(), values: action.values }], dirty: true };
-
-    case 'UPDATE_CARD':
-      return {
-        ...state,
-        cards: state.cards.map((c) => (c.key === action.key ? { ...c, values: action.values } : c)),
-        dirty: true,
-      };
-
-    case 'REMOVE_CARD': {
-      const card = state.cards.find((c) => c.key === action.key);
-      if (!card) return state;
-      if (card.id) {
-        // A saved card: stage it, same rule as a saved field (Phase 7.5 §1).
-        return {
-          ...state,
-          cards: state.cards.map((c) => (c.key === action.key ? { ...c, pendingRemoval: true } : c)),
-          dirty: true,
-        };
-      }
-      return { ...state, cards: state.cards.filter((c) => c.key !== action.key), dirty: true };
     }
 
     case 'LOAD':
@@ -232,27 +168,14 @@ export function isDeckEditorValid(state: DeckEditorState): boolean {
   return true;
 }
 
-function isBlank(value: string | undefined): boolean {
-  return (value ?? '').trim() === '';
-}
-
-/** §2.2's payload: fields in list order, each card's `values` aligned to that same
- * order (D6 — positional, no client ids in the request body), blanks sent as `null`.
- * A card whose every value is blank is dropped entirely — silent, per §4.7's
- * "Validity" note; the equivalent single-card 422 rule (§2.6) is a different, later
- * code path and deliberately does not apply here. */
+/** §2.2's payload: name, subject, and fields in list order. `cards` is always empty —
+ * a deck is born with a schema and no content, and the first card is added from the
+ * new deck's own card list. */
 export function buildDeckCreatePayload(state: DeckEditorState): DeckCreate {
   return {
     name: state.name.trim(),
     subject_id: state.subjectId!,
     field_defs: state.fields.map((f) => ({ name: f.name.trim(), type: f.type })),
-    cards: state.cards
-      .filter((c) => Object.values(c.values).some((v) => !isBlank(v)))
-      .map((c) => ({
-        values: state.fields.map((f) => {
-          const value = c.values[f.key];
-          return isBlank(value) ? null : value!;
-        }),
-      })),
+    cards: [],
   };
 }

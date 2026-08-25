@@ -4,10 +4,6 @@ import type { DeckEditorState, EditorField } from 'src/lib/deckEditorReducer';
 type DeckBatchEdit = components['schemas']['DeckBatchEdit'];
 type FieldDefBatchUpdate = components['schemas']['FieldDefBatchUpdate'];
 
-function isBlank(value: string | null | undefined): boolean {
-  return (value ?? '').trim() === '';
-}
-
 /** A field's identity in a §2.3 changeset: its real id once it has one, its
  * client-generated `key` (doubling as the request's `client_key`) until then — the
  * same rule the create-mode payload builder uses for `field_defs.order`. */
@@ -19,7 +15,7 @@ function fieldRef(field: EditorField): string {
  * loaded from `deckDetailToEditorState`, never mutated) and its live `current`
  * reducer state — the only two things Phase 7's edit-mode Save needs to produce a
  * `PATCH` body. A key with nothing changed anywhere is omitted entirely, down to the
- * whole `field_defs`/`cards` object — an edit with no changes at all produces `{}`,
+ * whole `field_defs` object — an edit with no changes at all produces `{}`,
  * which the caller uses to skip the request rather than send a no-op `PATCH`. */
 export function buildDeckBatchEditPayload(
   original: DeckEditorState,
@@ -37,14 +33,6 @@ export function buildDeckBatchEditPayload(
 
   const fieldDefsPatch = buildFieldDefsPatch(original.fields, current.fields);
   if (fieldDefsPatch) payload.field_defs = fieldDefsPatch;
-
-  // Pending-removal fields are excluded here too (Phase 7.5): they're going away in
-  // this same request via field_defs.delete, so no card update may reference them.
-  const fieldByKey = new Map(
-    current.fields.filter((field) => !field.pendingRemoval).map((field) => [field.key, field]),
-  );
-  const cardsPatch = buildCardsPatch(original.cards, current.cards, fieldByKey);
-  if (cardsPatch) payload.cards = cardsPatch;
 
   return payload;
 }
@@ -110,74 +98,3 @@ function buildFieldDefsPatch(
   return { create, update, delete: del, order };
 }
 
-function buildCardsPatch(
-  originalCards: DeckEditorState['cards'],
-  currentCards: DeckEditorState['cards'],
-  fieldByKey: Map<string, EditorField>,
-): DeckBatchEdit['cards'] {
-  const originalById = new Map(
-    originalCards
-      .filter((c): c is (typeof originalCards)[number] & { id: string } => !!c.id)
-      .map((c) => [c.id, c]),
-  );
-  // Same staging rule as fields (Phase 7.5): a pending-removal card stays in
-  // `currentCards` until Save, so "surviving" excludes it from create/update.
-  const survivingCards = currentCards.filter((c) => !c.pendingRemoval);
-
-  const create = survivingCards
-    .filter((c) => !c.id)
-    .map((c) => ({ values: remapValues(c.values, fieldByKey) }))
-    .filter((entry) => !Object.values(entry.values).every(isBlank));
-
-  const update: { id: string; values: Record<string, string | null> }[] = [];
-  for (const card of survivingCards) {
-    if (!card.id) continue;
-    const original = originalById.get(card.id);
-    if (!original) continue;
-    const changedValues: Record<string, string | null> = {};
-    const keys = new Set([...Object.keys(card.values), ...Object.keys(original.values)]);
-    for (const key of keys) {
-      const field = fieldByKey.get(key);
-      if (!field) continue; // the field itself was removed in this session
-      const currentValue = card.values[key] ?? '';
-      const originalValue = original.values[key] ?? '';
-      if (currentValue !== originalValue) {
-        changedValues[fieldRef(field)] = currentValue;
-      }
-    }
-    if (Object.keys(changedValues).length > 0) {
-      update.push({ id: card.id, values: changedValues });
-    }
-  }
-
-  const currentByIdCards = new Map(
-    currentCards
-      .filter((c): c is (typeof currentCards)[number] & { id: string } => !!c.id)
-      .map((c) => [c.id, c]),
-  );
-  const del = originalCards
-    .filter((c): c is (typeof originalCards)[number] & { id: string } => !!c.id)
-    .filter((c) => {
-      const now = currentByIdCards.get(c.id);
-      return !now || now.pendingRemoval === true;
-    })
-    .map((c) => c.id);
-
-  if (create.length === 0 && update.length === 0 && del.length === 0) {
-    return undefined;
-  }
-  return { create, update, delete: del };
-}
-
-function remapValues(
-  values: Record<string, string>,
-  fieldByKey: Map<string, EditorField>,
-): Record<string, string | null> {
-  const result: Record<string, string | null> = {};
-  for (const [key, value] of Object.entries(values)) {
-    const field = fieldByKey.get(key);
-    if (!field) continue;
-    result[fieldRef(field)] = value;
-  }
-  return result;
-}
