@@ -8,7 +8,9 @@ Execute **one phase per session**. Do not run ahead. At the end of each phase, s
 
 Work on branch `rewrite/practice-setup`. The follow-up run-flow task will branch as `rewrite/practice-run` off this one once merged. Commit at each phase boundary with the message given in the phase.
 
-Component, route, and hook names below are **descriptive, not prescriptive** — name the actual artifacts according to the project's current frontend conventions. Database and API vocabulary, however, is exact and must match the schema.
+Component, route, and hook names below are **descriptive, not prescriptive** — name the actual artifacts according to the project's current frontend conventions. Database and API vocabulary, however, is exact and must match the schema, and the words shown to a user are fixed by the Canonical vocabulary below.
+
+**This document is the sole source for this task.** It was written from a braindump that is now fully absorbed into it, including the two places the braindump had to be corrected. Do not go back to that braindump for requirements, and do not quote it: where the two would disagree, this wins.
 
 ---
 
@@ -16,7 +18,7 @@ Component, route, and hook names below are **descriptive, not prescriptive** —
 
 These carry over from `001-schema-rewrite.md` or were decided for this task. If an implementation seems to require breaking one, stop and raise it.
 
-1. **`practice_deck` has no config lineage.** There is no `source_config_id` and none may be added. "Which sessions relate to this subject/deck" is answered exclusively through `practice_deck.deck_id → deck → subject`. A session does not know which `deck_practice_config` it came from, by design (schema invariant 5).
+1. **`practice_deck` has no configuration lineage.** There is no `source_config_id` and none may be added. A practice does not know which `deck_practice_config` it came from, by design (schema invariant 5) — so "which practices relate to this subject/deck" is answerable *only* through `practice_deck.deck_id → deck → subject`, and any definition of relevance that starts from a configuration is unimplementable.
 2. **Create = start.** The practice creation page's Create button runs the full Phase 4.2 session-start path: create `practice_session`, snapshot one `practice_deck` per selected configuration, generate all `practice_card` rows. There is no draft state, no deferred generation, no session that exists but has no cards.
 3. **Editing or deleting a `deck_practice_config` never touches any practice** — past or active. The UI must not imply otherwise (no "this will affect N sessions" warnings).
 4. **Fields are referenced by `field_def.id` everywhere.** Names are display strings. The builder's payload contains uuids only.
@@ -30,15 +32,18 @@ These carry over from `001-schema-rewrite.md` or were decided for this task. If 
 
 ## Canonical vocabulary
 
-| Braindump term | UI name | Entity |
+One word per concept. The middle column is what a user reads — in a heading, a button, a
+confirm, or an error; the right column is what the code and the schema call the same thing.
+
+| Concept | Written as | Entity |
 | --- | --- | --- |
-| "practice" / "practice session" | **practice** | `practice_session` |
-| "deck_config" / "deck config" | **deck configuration** | `deck_practice_config` |
-| the snapshot inside a practice | — (never shown as a configuration) | `practice_deck` |
-| "practice_overview page" | **Practice** (the list) | — |
-| "practice creation page" | **New practice** | — |
-| "deck_practice_config creation page" | **New / Edit configuration** | — |
-| "practice_details page" | practice detail | — |
+| one run of practice | **practice** | `practice_session` |
+| a deck's prompt/answer field layout | **deck configuration** (**configuration** where the deck is already the context) | `deck_practice_config` |
+| the copy a practice takes at start | never shown, and never called a configuration | `practice_deck` |
+| the list of practices | **Practice** | — |
+| where a practice is created | **New practice** | — |
+| where a configuration is authored | **New configuration** / **Edit configuration** | — |
+| one practice's own page | practice detail | — |
 
 **Never write "practice config" (corrected 2026-08-24).** A `deck_practice_config` configures a
 **deck** — which of that deck's fields act as prompts and which as answers. It is deck-owned
@@ -51,16 +56,11 @@ those two ideas and makes New practice read as a duplicate.
 The table, models and endpoints keep the name `deck_practice_config` — it is already deck-first
 and accurate. Reasoning: `docs/cc/2026-08-24-deck-configuration-naming.md`.
 
-Two corrections to the braindump, already agreed:
-
-- Its "relevant practices" definition ("practices with at least 1 deck_config …") referenced a lineage from practice back to configuration that does not exist. The implemented definition is in invariant 1 above.
-- Its "deck_config creation page" said "choose name for this practice session" — that page names the **deck configuration** (`deck_practice_config.name`, unique per deck).
-
 ---
 
 ## Phase 0 — Backend verification and gap-fill
 
-**Goal:** confirm what Phase 4.1/4.2 actually shipped, and close the gaps this UI needs. The braindump's "endpoints should be in place, but do check" is this phase.
+**Goal:** confirm what Phase 4.1/4.2 actually shipped, and close the gaps this UI needs. Assume nothing about which endpoints exist; read the code.
 
 **Verify (read the code, do not assume):**
 
@@ -103,7 +103,7 @@ Two corrections to the braindump, already agreed:
 
 1. **Top bar:** Practice item beside Create → overview with no filters.
 2. **Side bar:** same target, same route. (Duplicating a primary action across nav levels is fine practice; keep it literally the same link so there is one code path.)
-3. **Home page launchers:** deferred, per the braindump. Do not build.
+3. **Home page launchers:** deferred. Do not build.
 4. **Subject page Practice button** → overview with `subject` pre-filtered to that subject. **Deck page Practice button** → overview with `deck` (and its subject) pre-filtered. These replace the current "dumb" buttons.
 
 **Acceptance:** overview renders real sessions; subject/deck/status filters compose correctly (verify with a seeded multi-subject fixture containing two same-named decks in different subjects); all four entry points land with the right pre-filters; MSW tests cover the filter logic.
@@ -114,7 +114,7 @@ Two corrections to the braindump, already agreed:
 
 ## Phase 2 — deck configuration builder (create + edit) and configuration management
 
-The braindump's "very important" page. Build it as one surface used for both create and edit (edit loads an existing configuration and pre-populates).
+The centrepiece of this task. Build it as one surface used for both create and edit (edit loads an existing configuration and pre-populates).
 
 **Flow:**
 
@@ -123,7 +123,7 @@ The braindump's "very important" page. Build it as one surface used for both cre
   - arrived with a subject in context → that subject's decks sort first;
   - arrived with a deck in context → that deck **pre-selected**, its subject's other decks sorted first in the dropdown;
   - no context → all decks, grouped or labeled by subject.
-- **Name input** for the configuration, pre-filled with the current local date-time via `formatDate`/`formatDateTime` (ADR 019). On save, a `UNIQUE (deck_id, name)` violation is surfaced inline on this input, not as a toast-and-lose-work.
+- **Name input** naming the **configuration**, not a practice — a practice is named later, on New practice (`deck_practice_config.name`, unique per deck). Pre-filled with the current local date-time via `formatDate`/`formatDateTime` (ADR 019). On save, a `UNIQUE (deck_id, name)` violation is surfaced inline on this input, not as a toast-and-lose-work.
 - Changing the selected deck after fields have been assigned resets the board (with a confirm if any assignment exists).
 
 **The assignment board:**
@@ -180,7 +180,7 @@ _Shipped in `4c32349`, renamed to this vocabulary in `b24b4aa`._
 - **Delete** with confirm (Phase 1's endpoint), also surfaced here; on success, navigate back to the overview.
 - Reachable from overview click-through and as the landing page after creation.
 
-**Wire and verify the full pre-filter chain from the braindump, end to end:**
+**Wire and verify the full pre-filter chain, end to end:**
 
 - Subject page → overview (subject filtered) → New practice (subject filtered) → New configuration (subject's decks prioritized in the picker).
 - Deck page → overview (deck filtered) → New practice (deck filtered) → New configuration (deck pre-selected, same-subject decks prioritized).
@@ -199,4 +199,4 @@ Context rides on URL params/router state established in Phases 1–3; this phase
 - Home page practice launchers.
 - **Restart** ("run again" on practice_details). Design is settled, build is deferred to the run task: create a new session from the old session's own `practice_deck` snapshot rows — never from the saved `deck_practice_config`, which may have changed or been deleted — then delete the old session. One transaction, **creation first**, so a failed restart (e.g. every snapshot field since archived, zero cards survive the 4.2 skip rules) leaves the old session intact. Snapshots with `deck_id` null are unrestartable. The new run regenerates against current mastery, so ordering and prompt/answer combinations will differ from the original — intended.
 - Any "stale" badge on configuration lists (configurations referencing since-archived fields). Session start already handles it, and opening one in the builder silently drops the dead ids; revisit only if users hit the failure state often.
-- Session rename from the UI. Not in the braindump; raise separately if wanted.
+- Session rename from the UI. Out of scope for this task; raise separately if wanted.
