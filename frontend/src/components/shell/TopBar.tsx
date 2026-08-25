@@ -47,7 +47,9 @@ export default function TopBar({
 
       <div className="flex-1" />
 
-      <div className="flex shrink-0 items-center gap-1">
+      {/* One gap value, equal to the bar's own horizontal padding, so the three
+          controls sit evenly spaced from each other and from the edge. */}
+      <div className="flex shrink-0 items-center gap-3">
         {/* Icon-only, like the hamburger: the bar is chrome, and the words cost more
             width than they earn here. The label moves to aria-label so the accessible
             name is unchanged — the drawer still spells both out. */}
@@ -69,8 +71,11 @@ export default function TopBar({
           <Plus aria-hidden="true" className="h-5 w-5" />
         </button>
 
-        {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
-        <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
+        {/* Sized by its content, not padded out to a fixed width: the avatar and the
+            loading placeholder are both 44px like the two buttons beside them, so the
+            row stays even. Only the wider signed-out "Log in" pill differs, and it
+            replaces the placeholder once per load. */}
+        <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">
           <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
         </div>
       </div>
