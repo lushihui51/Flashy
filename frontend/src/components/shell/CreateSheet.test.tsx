@@ -23,14 +23,21 @@ function renderSheet(props: Partial<Parameters<typeof CreateSheet>[0]> = {}) {
 }
 
 describe('CreateSheet', () => {
-  it('renders a drag handle and four rows', () => {
+  it('renders a drag handle and the four things a user makes, in nesting order', () => {
     renderSheet();
 
     expect(screen.getByRole('dialog', { name: 'Create' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Subject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Deck configuration' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
+    // Top to bottom, and no deck configuration: that one belongs to a deck, not here.
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Subject',
+      'Deck',
+      'Card',
+      'Practice',
+    ]);
   });
 
   it('renders nothing when closed', () => {
@@ -61,17 +68,6 @@ describe('CreateSheet', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
   });
 
-  it('closes and navigates to the config builder when Deck configuration is tapped', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    renderSheet({ onClose, hasDecks: true });
-
-    await user.click(screen.getByRole('button', { name: 'Deck configuration' }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('location')).toHaveTextContent('/deck-configurations/new');
-  });
-
   it('closes and navigates to /cards/new when Card is tapped and decks exist', async () => {
     const user = userEvent.setup();
     renderSheet({ hasDecks: true });
@@ -96,6 +92,17 @@ describe('CreateSheet', () => {
     renderSheet({ hasDecks: undefined });
 
     expect(screen.queryByText('Create a deck first')).not.toBeInTheDocument();
+  });
+
+  it('closes and navigates to where a practice is made, not the list of past ones', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderSheet({ onClose });
+
+    await user.click(screen.getByRole('button', { name: 'Practice' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice/new');
   });
 
   it('calls onClose when the scrim is clicked', async () => {
