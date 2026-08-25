@@ -32,8 +32,14 @@ describe('TopBar', () => {
       'false',
     );
     expect(screen.getByRole('link', { name: /flashy home/i })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('button', { name: '+ Create' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('Practice links to the unfiltered overview, the same target as the drawer item', () => {
+    renderTopBar();
+
+    expect(screen.getByRole('link', { name: 'Practice' })).toHaveAttribute('href', '/practice');
   });
 
   it('signed in: renders the avatar instead of Log in', () => {
@@ -76,9 +82,9 @@ describe('TopBar', () => {
       ['/practice'],
     );
 
-    await user.click(screen.getByRole('button', { name: '+ Create' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(onCreateClick).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: '+ Create' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
   });
 });
