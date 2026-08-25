@@ -1,6 +1,6 @@
 # Flashy Practice Setup — Execution Plan
 
-Covers everything up to and including _creating_ a practice session: the overview, config authoring, session creation, and the entry points that lead into them. **Running** a session (showing prompts, rating, requeueing) is the next task on its own branch and is out of scope here — this plan ends when a freshly created session's detail page is on screen.
+Covers everything up to and including _creating_ a practice session: the overview, deck configuration authoring, session creation, and the entry points that lead into them. **Running** a session (showing prompts, rating, requeueing) is the next task on its own branch and is out of scope here — this plan ends when a freshly created session's detail page is on screen.
 
 ## How to use this document
 
@@ -17,12 +17,12 @@ Component, route, and hook names below are **descriptive, not prescriptive** —
 These carry over from `001-schema-rewrite.md` or were decided for this task. If an implementation seems to require breaking one, stop and raise it.
 
 1. **`practice_deck` has no config lineage.** There is no `source_config_id` and none may be added. "Which sessions relate to this subject/deck" is answered exclusively through `practice_deck.deck_id → deck → subject`. A session does not know which `deck_practice_config` it came from, by design (schema invariant 5).
-2. **Create = start.** The practice creation page's Create button runs the full Phase 4.2 session-start path: create `practice_session`, snapshot one `practice_deck` per selected config, generate all `practice_card` rows. There is no draft state, no deferred generation, no session that exists but has no cards.
-3. **Editing or deleting a `deck_practice_config` never touches any session** — past or active. The UI must not imply otherwise (no "this will affect N sessions" warnings).
-4. **Fields are referenced by `field_def.id` everywhere.** Names are display strings. The config builder's payload contains uuids only.
-5. **Archived fields never appear in the config builder.** Not in the drag source, not in any row. (Existing configs that reference since-archived fields are handled by the backend at session start, not by the builder.)
-6. **The four field arrays of a config are pairwise disjoint** — the builder enforces this _by construction_: dragging a field into a row moves it (a field lives in exactly one place: the unassigned box or one row), never copies it.
-7. **One config per deck per session.** `UNIQUE (practice_session_id, deck_id)` backs this; the creation page enforces it in the selection UI and still surfaces the server error if it slips through.
+2. **Create = start.** The practice creation page's Create button runs the full Phase 4.2 session-start path: create `practice_session`, snapshot one `practice_deck` per selected configuration, generate all `practice_card` rows. There is no draft state, no deferred generation, no session that exists but has no cards.
+3. **Editing or deleting a `deck_practice_config` never touches any practice** — past or active. The UI must not imply otherwise (no "this will affect N sessions" warnings).
+4. **Fields are referenced by `field_def.id` everywhere.** Names are display strings. The builder's payload contains uuids only.
+5. **Archived fields never appear in the configuration builder.** Not in the drag source, not in any row. (An existing configuration that references a since-archived field loads without it, and the backend rejects one that has gone stale at session start.)
+6. **The four field arrays of a configuration are pairwise disjoint** — the builder enforces this _by construction_: dragging a field into a row moves it (a field lives in exactly one place: the unassigned box or one row), never copies it.
+7. **One configuration per deck per practice.** `UNIQUE (practice_session_id, deck_id)` backs this; the creation page enforces it in the selection UI and still surfaces the server error if it slips through.
 8. **The default session name is computed on the client**, in the browser's timezone. The server stores whatever string it receives and has no timezone logic. (See Phase 0 for the mechanism.)
 9. **Ownership stays query-scoped** (schema invariant 7). Any endpoint added in Phase 0 takes `user_id` in the query, returning 404 for foreign resources.
 
@@ -30,20 +30,31 @@ These carry over from `001-schema-rewrite.md` or were decided for this task. If 
 
 ## Canonical vocabulary
 
-| Braindump term | Actual entity |
-| --- | --- |
-| "practice" / "practice session" | `practice_session` |
-| "deck_config" / "deck config" / "config" | `deck_practice_config` (the saved, reusable template) |
-| config snapshot inside a session | `practice_deck` (never shown as a "config" in UI) |
-| "practice_overview page" | session list/overview surface |
-| "practice creation page" | session creation surface |
-| "deck_practice_config creation page" | config builder surface |
-| "practice_details page" | session detail surface |
+| Braindump term | UI name | Entity |
+| --- | --- | --- |
+| "practice" / "practice session" | **practice** | `practice_session` |
+| "deck_config" / "deck config" | **deck configuration** | `deck_practice_config` |
+| the snapshot inside a practice | — (never shown as a configuration) | `practice_deck` |
+| "practice_overview page" | **Practice** (the list) | — |
+| "practice creation page" | **New practice** | — |
+| "deck_practice_config creation page" | **New / Edit configuration** | — |
+| "practice_details page" | practice detail | — |
+
+**Never write "practice config" (corrected 2026-08-24).** A `deck_practice_config` configures a
+**deck** — which of that deck's fields act as prompts and which as answers. It is deck-owned
+(`deck_id` cascades, `UNIQUE (deck_id, name)`, and every field id in it must be live on that
+deck), and no practice ever references one: a practice *copies* what it needs at start
+(invariant 1). What configures a practice is the *selection* of deck configurations plus its
+name, which is the New practice surface. Calling the template a "practice config" collapses
+those two ideas and makes New practice read as a duplicate.
+
+The table, models and endpoints keep the name `deck_practice_config` — it is already deck-first
+and accurate. Reasoning: `docs/cc/2026-08-24-deck-configuration-naming.md`.
 
 Two corrections to the braindump, already agreed:
 
-- Its "relevant practices" definition ("practices with at least 1 deck_config …") referenced config lineage that does not exist. The implemented definition is in invariant 1 above.
-- Its config-builder page said "choose name for this practice session" — that page names the **config** (`deck_practice_config.name`, unique per deck).
+- Its "relevant practices" definition ("practices with at least 1 deck_config …") referenced a lineage from practice back to configuration that does not exist. The implemented definition is in invariant 1 above.
+- Its "deck_config creation page" said "choose name for this practice session" — that page names the **deck configuration** (`deck_practice_config.name`, unique per deck).
 
 ---
 
@@ -54,7 +65,7 @@ Two corrections to the braindump, already agreed:
 **Verify (read the code, do not assume):**
 
 - `deck_practice_config` CRUD: create, **update, delete**, and list/get all exist with validation running on create _and_ update, per Phase 4.1.
-- Session start endpoint: exact request shape (does it take a list of config ids? does it re-validate and snapshot per 4.2?), response shape, and the error it returns when a stale config fails validation (e.g. all prompt fields archived since saving) — the creation page needs to render this distinctly.
+- Session start endpoint: exact request shape (does it take a list of configuration ids? does it re-validate and snapshot per 4.2?), response shape, and the error it returns when a stale configuration fails validation (e.g. all prompt fields archived since saving) — the creation page needs to render this distinctly.
 - Pool-count semantics at generation time: how `prompt_pool_counts` with multiple values is consumed (which count is drawn per card). Record the answer in this document's margin or the phase report — the builder's frequency-checkbox help text depends on it. Do not guess.
 - Session list endpoint: exists? pagination style (memory says keyset pagination exists for sessions — confirm scope)?
 
@@ -62,7 +73,7 @@ Two corrections to the braindump, already agreed:
 
 1. **Migration: add `name varchar NOT NULL` to `practice_session`.** The client always sends it. Mechanism for the default: the creation page pre-fills the name input with the current local date-time formatted via `new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })` (browser timezone, user-editable before submit). The server never derives names and never touches timezones. No uniqueness constraint on session names.
 2. **Session list endpoint** returning list-ready rows: `id, name, status, created_at`, plus an embedded deck summary per session: `decks: [{deck_id, deck_name, subject_id, subject_name}]` sourced from `practice_deck → deck → subject`. This is what makes overview filtering possible without client-side joins. Accept optional `subject_id` / `deck_id` query filters (EXISTS over `practice_deck`); given current data volumes client-side filtering would work, but the query params keep the contract honest — implement them.
-3. **Config list endpoint** returning list-ready rows: config fields plus `deck_name, subject_id, subject_name`, filterable by `subject_id` / `deck_id`.
+3. **Deck configuration list endpoint** returning list-ready rows: the configuration's own fields plus `deck_name, subject_id, subject_name`, filterable by `subject_id` / `deck_id`.
 4. **Deck detail for the builder**: an endpoint (likely existing) returning a deck's **live** (`archived_at IS NULL`) `field_def`s with `id, name, type, position`.
 5. Regenerate OpenAPI types after all of the above.
 
@@ -85,7 +96,7 @@ Two corrections to the braindump, already agreed:
   Tab row: All · Active · Completed. Each row shows name, status badge, created date, and deck/subject chips. Clicking any session opens practice_details (Phase 4 defines what details shows per status).
 
 - **Session delete (in scope, decided 2026-08-24):** with `abandoned` gone, user delete is the only way a session ever leaves the list, so it ships now. Backend pre-steps: verify/add `ON DELETE CASCADE` on `practice_card.practice_session_id` and `practice_deck.practice_session_id` (ADR 015 defined deck-delete cascades, not session-delete — a `practice_deck` survives its _deck_ dying but is owned by its _session_), then a DELETE endpoint. `review_log` is untouched: its `practice_card_id` already goes SET NULL and `card_id`/`field_def_id` stay populated, so history and mastery rebuilds are unaffected. UI: delete with confirm from the overview row and from practice_details.
-- **New practice** button → session creation surface, carrying current filters as initial state.
+- **New practice** button → session creation surface, carrying current filters as initial state. Its route (`/practice/new`) has no page until this phase builds one.
 - Filter state lives in the URL (query params), so entry points below can deep-link.
 
 **Entry points:**
@@ -101,9 +112,9 @@ Two corrections to the braindump, already agreed:
 
 ---
 
-## Phase 2 — deck_practice_config builder (create + edit) and config management
+## Phase 2 — deck configuration builder (create + edit) and configuration management
 
-The braindump's "very important" page. Build it as one surface used for both create and edit (edit loads an existing config and pre-populates).
+The braindump's "very important" page. Build it as one surface used for both create and edit (edit loads an existing configuration and pre-populates).
 
 **Flow:**
 
@@ -112,7 +123,7 @@ The braindump's "very important" page. Build it as one surface used for both cre
   - arrived with a subject in context → that subject's decks sort first;
   - arrived with a deck in context → that deck **pre-selected**, its subject's other decks sorted first in the dropdown;
   - no context → all decks, grouped or labeled by subject.
-- **Name input** for the config. On save, a `UNIQUE (deck_id, name)` violation is surfaced inline on this input, not as a toast-and-lose-work.
+- **Name input** for the configuration, pre-filled with the current local date-time via `formatDate`/`formatDateTime` (ADR 019). On save, a `UNIQUE (deck_id, name)` violation is surfaced inline on this input, not as a toast-and-lose-work.
 - Changing the selected deck after fields have been assigned resets the board (with a confirm if any assignment exists).
 
 **The assignment board:**
@@ -131,28 +142,31 @@ The braindump's "very important" page. Build it as one surface used for both cre
 
 Save stays disabled with an inline explanation until valid.
 
-**Config management (in scope, decided):**
+**Configuration management (in scope, decided; revised 2026-08-24):**
 
-- A configs list surface (or section) showing the user's configs with deck/subject context, filterable — reachable at minimum from the session creation page's config list ("edit" affordance per config) and wherever else fits current navigation conventions.
-- Edit → this builder, pre-populated. Delete → plain confirm; copy in the confirm states that existing sessions are unaffected (invariant 3) — no scarier than that.
+- A deck's configurations live **on that deck's own page**, as a `Cards` / `Configurations` tab pair using the same grammar the library uses for Subjects / Decks. There is no cross-deck list: a configuration belongs to exactly one deck, and Phase 3 presents them grouped by deck as part of choosing what to practise. The active tab is a URL param so the builder can navigate away and land back on the list it came from.
+- Routes are `/deck-configurations/new` and `/deck-configurations/:configId/edit`, mirroring `/cards/new` — the other deck-owned thing with both a deck-page entry point and a standalone form that opens on a deck picker.
+- Edit → this builder, pre-populated. Delete → plain confirm; copy in the confirm states that existing practices are unaffected (invariant 3) — no scarier than that.
 
-**Acceptance:** create, edit, and delete round-trip against the real backend; a seeded deck with an archived field never shows it in the builder; frequency pruning verified when dragging fields out of a pool; each backend validation rule has a matching disabled-save state client-side; duplicate-name error renders inline; MSW tests for the payload mapping (drag state → arrays).
+**Acceptance:** create, edit, and delete round-trip against the real backend; a configuration referencing a since-archived field never shows it in the builder; frequency pruning verified when dragging fields out of a pool; each backend validation rule has a matching disabled-save state client-side; duplicate-name error renders inline; MSW tests for the payload mapping (drag state → arrays).
 
 **Commit:** `feat: deck_practice_config builder with drag assignment and config management`
+
+_Shipped in `4c32349`, renamed to this vocabulary in `b24b4aa`._
 
 ---
 
 ## Phase 3 — practice creation (session start)
 
-- **Filters:** subject and deck, same semantics and same component as the overview's (deck narrowed by subject). Relevant configs: all configs whose deck is in the selected subject, or whose deck is the selected deck; no filter → all of the user's configs.
-- **Config list, grouped by deck** (deck name + subject name as the group header — this is where same-named decks in different subjects stay distinguishable). Selection is **radio-per-deck**: at most one config selected within each deck's group (invariant 7), any number of decks. A "New config" button opens the Phase 2 builder carrying the current subject/deck context; on save, return here with the new config selected.
+- **Filters:** subject and deck, same semantics and same component as the overview's (deck narrowed by subject). Relevant configurations: all whose deck is in the selected subject, or whose deck is the selected deck; no filter → all of the user's configurations.
+- **Configuration list, grouped by deck** (deck name + subject name as the group header — this is where same-named decks in different subjects stay distinguishable). Selection is **radio-per-deck**: at most one configuration selected within each deck's group (invariant 7), any number of decks. A "New configuration" button opens the Phase 2 builder carrying the current subject/deck context; on save, return here with the new configuration selected. This list is also the only cross-deck view of configurations there is — Phase 2 put management on each deck's page.
 - **Name input**, pre-filled with the client-side local date-time string (Phase 0 mechanism), editable.
-- **Create button:** enabled when ≥1 config selected. Calls the session-start endpoint with the name and selected config ids. On success → navigate to practice_details for the new session.
-- **Failure states:** stale-config validation failure at start (Phase 0 verified the error shape) renders against the _specific offending config_ in the list — "this config no longer produces any prompts; edit it" — selection preserved, nothing else lost. Also handle the empty states: no configs exist at all (point to New config), and filters that match zero configs (say so; offer to clear filters).
+- **Create button:** enabled when ≥1 configuration selected. Calls the session-start endpoint with the name and selected configuration ids. On success → navigate to practice_details for the new session.
+- **Failure states:** a stale-configuration validation failure at start (Phase 0 verified the error shape: `{code: "stale_config", config_id, message}`) renders against the _specific offending configuration_ in the list — "this configuration no longer produces any prompts; edit it" — selection preserved, nothing else lost. Also handle the empty states: no configurations exist at all (point to New configuration), and filters that match zero (say so; offer to clear filters).
 
-**Acceptance:** integration test — filter, select two configs from two decks, create, land on details, and verify via API that the session has two `practice_deck` snapshot rows and generated `practice_card`s; radio-per-deck enforced in UI and the server's uniqueness error still handled; stale-config failure path exercised with a seeded config whose fields were archived after saving.
+**Acceptance:** integration test — filter, select two configurations from two decks, create, land on details, and verify via API that the session has two `practice_deck` snapshot rows and generated `practice_card`s; radio-per-deck enforced in UI and the server's uniqueness error still handled; stale-configuration failure path exercised with a seeded configuration whose fields were archived after saving.
 
-**Commit:** `feat: practice creation flow with config selection`
+**Commit:** `feat: practice creation flow with configuration selection`
 
 ---
 
@@ -168,8 +182,8 @@ Save stays disabled with an inline explanation until valid.
 
 **Wire and verify the full pre-filter chain from the braindump, end to end:**
 
-- Subject page → overview (subject filtered) → New practice (subject filtered) → New config (subject's decks prioritized in the picker).
-- Deck page → overview (deck filtered) → New practice (deck filtered) → New config (deck pre-selected, same-subject decks prioritized).
+- Subject page → overview (subject filtered) → New practice (subject filtered) → New configuration (subject's decks prioritized in the picker).
+- Deck page → overview (deck filtered) → New practice (deck filtered) → New configuration (deck pre-selected, same-subject decks prioritized).
 
 Context rides on URL params/router state established in Phases 1–3; this phase is where the chain is tested as a whole rather than per page.
 
@@ -184,5 +198,5 @@ Context rides on URL params/router state established in Phases 1–3; this phase
 - The run surface (prompt rendering, rating, requeue display) — next task, `rewrite/practice-run`, which will also decide what a completed session's summary shows.
 - Home page practice launchers.
 - **Restart** ("run again" on practice_details). Design is settled, build is deferred to the run task: create a new session from the old session's own `practice_deck` snapshot rows — never from the saved `deck_practice_config`, which may have changed or been deleted — then delete the old session. One transaction, **creation first**, so a failed restart (e.g. every snapshot field since archived, zero cards survive the 4.2 skip rules) leaves the old session intact. Snapshots with `deck_id` null are unrestartable. The new run regenerates against current mastery, so ordering and prompt/answer combinations will differ from the original — intended.
-- Any "stale config" badge on config lists (configs referencing since-archived fields). Session start already handles it; revisit only if users hit the failure state often.
+- Any "stale" badge on configuration lists (configurations referencing since-archived fields). Session start already handles it, and opening one in the builder silently drops the dead ids; revisit only if users hit the failure state often.
 - Session rename from the UI. Not in the braindump; raise separately if wanted.
