@@ -30,7 +30,7 @@ describe('CreateSheet', () => {
     expect(screen.getByRole('button', { name: 'Subject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Practice config' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deck configuration' })).toBeInTheDocument();
   });
 
   it('renders nothing when closed', () => {
@@ -61,15 +61,15 @@ describe('CreateSheet', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
   });
 
-  it('closes and navigates to the config builder when Practice config is tapped', async () => {
+  it('closes and navigates to the config builder when Deck configuration is tapped', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderSheet({ onClose, hasDecks: true });
 
-    await user.click(screen.getByRole('button', { name: 'Practice config' }));
+    await user.click(screen.getByRole('button', { name: 'Deck configuration' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/configs/new');
+    expect(screen.getByTestId('location')).toHaveTextContent('/deck-configurations/new');
   });
 
   it('closes and navigates to /cards/new when Card is tapped and decks exist', async () => {

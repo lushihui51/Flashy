@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -54,15 +54,37 @@ const subject = {
   created_at: '',
 };
 
+function configuration(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'cfg1',
+    deck_id: 'd1',
+    name: 'Front to Back',
+    created_at: '',
+    prompt_field_ids: ['f1'],
+    answer_field_ids: ['f2'],
+    prompt_pool_ids: [] as string[],
+    prompt_pool_counts: [] as number[],
+    answer_pool_ids: [] as string[],
+    answer_pool_counts: [] as number[],
+    deck_name: 'Vocab Deck',
+    subject_id: 's1',
+    subject_name: 'French',
+    ...overrides,
+  };
+}
+
 function mockDeck({
   deckData = deck,
   deckStatus = 200,
   subjectData = subject,
+  configurations = [],
 }: {
   deckData?: typeof deck;
   deckStatus?: number;
   subjectData?: typeof subject;
+  configurations?: unknown[];
 } = {}) {
+  const configRequests: URLSearchParams[] = [];
   server.use(
     http.get(`${BASE}/api/decks/:id`, () =>
       deckStatus === 200
@@ -70,7 +92,12 @@ function mockDeck({
         : HttpResponse.json({ detail: 'Deck not found' }, { status: deckStatus }),
     ),
     http.get(`${BASE}/api/subjects/:id`, () => HttpResponse.json(subjectData)),
+    http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
+      configRequests.push(new URL(request.url).searchParams);
+      return HttpResponse.json(configurations);
+    }),
   );
+  return configRequests;
 }
 
 function LocationProbe() {
@@ -156,14 +183,13 @@ describe('DeckDetailPage', () => {
     });
   });
 
-  it('shows an empty state with a create button when the deck has no cards, and still renders the field header', async () => {
+  it('shows an empty state when the deck has no cards, and still renders the field header', async () => {
     mockDeck({ deckData: { ...deck, cards: [] } });
     renderAtDeckRoute();
 
     expect(await screen.findByText('No cards in this deck yet.')).toBeInTheDocument();
-    // two "New card" controls now: the header's icon-only button and this empty
-    // state's own button — both real, both should be present.
-    expect(screen.getAllByRole('button', { name: 'New card' })).toHaveLength(2);
+    // One creator only: the header's icon button, which follows the active tab.
+    expect(screen.getAllByRole('button', { name: 'New card' })).toHaveLength(1);
     // the table (and its field header) is not replaced by the empty state.
     expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
@@ -273,5 +299,93 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute(null, '/decks/nope');
 
     expect(await screen.findByText('Deck not found.')).toBeInTheDocument();
+  });
+
+  describe('Configurations tab', () => {
+    it('starts on Cards and switches to this deck\'s configurations', async () => {
+      const configRequests = mockDeck({ configurations: [configuration()] });
+      const user = userEvent.setup();
+      renderAtDeckRoute();
+      await screen.findByRole('heading', { name: 'Vocab Deck' });
+
+      expect(screen.getByRole('tab', { name: 'Cards' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.queryByText('Front to Back')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('tab', { name: 'Configurations' }));
+
+      expect(await screen.findByText('Front to Back')).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Front' })).not.toBeInTheDocument();
+      // Scoped to this deck — a configuration belongs to exactly one.
+      expect(configRequests[0]!.get('deck_id')).toBe('d1');
+    });
+
+    it('opens straight onto the tab named in the URL, so a save can land back on it', async () => {
+      mockDeck({ configurations: [configuration()] });
+      renderAtDeckRoute(null, '/decks/d1?tab=configurations');
+
+      expect(await screen.findByText('Front to Back')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Configurations' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+    });
+
+    it('the create button follows the tab: New card, then New configuration', async () => {
+      mockDeck({ configurations: [] });
+      const user = userEvent.setup();
+      renderAtDeckRoute(<LocationProbe />);
+      await screen.findByRole('heading', { name: 'Vocab Deck' });
+
+      expect(screen.getByRole('button', { name: 'New card' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('tab', { name: 'Configurations' }));
+      await user.click(screen.getByRole('button', { name: 'New configuration' }));
+
+      expect(screen.getByTestId('location')).toHaveTextContent('/deck-configurations/new');
+      expect(screen.getByTestId('location')).toHaveAttribute(
+        'data-state',
+        JSON.stringify({ deckId: 'd1' }),
+      );
+    });
+
+    it('a configuration row opens its builder', async () => {
+      mockDeck({ configurations: [configuration()] });
+      const user = userEvent.setup();
+      renderAtDeckRoute(null, '/decks/d1?tab=configurations');
+
+      const row = await screen.findByRole('link', { name: /Front to Back/ });
+      expect(row).toHaveAttribute('href', '/deck-configurations/cfg1/edit');
+      await user.click(row);
+    });
+
+    it('says what a configuration is when the deck has none', async () => {
+      mockDeck({ configurations: [] });
+      renderAtDeckRoute(null, '/decks/d1?tab=configurations');
+
+      expect(await screen.findByText(/No configurations yet/)).toBeInTheDocument();
+      // No second create button — the header's follows the tab.
+      expect(screen.getAllByRole('button', { name: 'New configuration' })).toHaveLength(1);
+    });
+
+    it('deleting confirms, promises practices are unaffected, then drops the row', async () => {
+      let deleted: string | null = null;
+      mockDeck({ configurations: [configuration()] });
+      server.use(
+        http.delete(`${BASE}/api/deck_practice_configs/:id`, ({ params }) => {
+          deleted = params.id as string;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      const user = userEvent.setup();
+      renderAtDeckRoute(null, '/decks/d1?tab=configurations');
+      await screen.findByText('Front to Back');
+
+      await user.click(screen.getByRole('button', { name: 'Delete Front to Back' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(/practices that already used it are unaffected/i)).toBeInTheDocument();
+      await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+      await waitFor(() => expect(deleted).toBe('cfg1'));
+    });
   });
 });

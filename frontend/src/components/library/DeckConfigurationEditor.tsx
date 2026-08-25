@@ -8,7 +8,7 @@ import {
   readDeckPracticeConfig,
   updateDeckPracticeConfig,
 } from 'src/api/deck_practice_config';
-import FieldAssignmentBoard from 'src/components/practice/FieldAssignmentBoard';
+import FieldAssignmentBoard from 'src/components/library/FieldAssignmentBoard';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import {
@@ -22,7 +22,7 @@ import {
   type BoardSlot,
   type BoardState,
   type PoolSlot,
-} from 'src/lib/practiceConfigBoard';
+} from 'src/lib/deckConfigurationBoard';
 import { formatDateTime } from 'src/lib/datetime';
 import type { components } from 'src/api/types';
 
@@ -53,18 +53,21 @@ function orderedDeckOptions(
   ];
 }
 
-type PracticeConfigEditorProps = {
+type DeckConfigurationEditorProps = {
   mode: 'create' | 'edit';
 };
 
 /**
- * The config builder (§Phase 2), one surface for both create and edit.
+ * The deck configuration builder, one surface for both create and edit.
+ *
+ * A deck configuration says which of *one deck's* fields act as prompts and which as
+ * answers; it is not a practice, and it configures no practice. A practice is assembled
+ * later by choosing configurations (at most one per deck) and naming the run.
  *
  * Like card creation, nothing below the deck picker renders until a deck is chosen and
- * its live fields have loaded: which fields exist *is* the rest of the form, so there is
- * nothing meaningful to show before then.
+ * its live fields have loaded: which fields exist *is* the rest of the form.
  */
-export default function PracticeConfigEditor({ mode }: PracticeConfigEditorProps) {
+export default function DeckConfigurationEditor({ mode }: DeckConfigurationEditorProps) {
   const { configId } = useParams<{ configId: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -78,7 +81,7 @@ export default function PracticeConfigEditor({ mode }: PracticeConfigEditorProps
   if (mode === 'edit' && configQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Practice config not found.</p>
+        <p className="text-(--color-text-muted)">Deck configuration not found.</p>
       </div>
     );
   }
@@ -92,12 +95,12 @@ export default function PracticeConfigEditor({ mode }: PracticeConfigEditorProps
   const state = location.state as { returnTo?: string; deckId?: string } | null;
 
   return (
-    <PracticeConfigEditorBody
+    <DeckConfigurationEditorBody
       mode={mode}
       config={configQuery.data}
       contextSubjectId={searchParams.get('subject')}
       contextDeckId={state?.deckId ?? searchParams.get('deck')}
-      returnTo={state?.returnTo ?? '/practice/configs'}
+      returnTo={state?.returnTo ?? null}
     />
   );
 }
@@ -107,10 +110,12 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  returnTo: string;
+  /** Where Cancel and a successful Save land. Null means "the deck's own page", which
+   * is only knowable once a deck is chosen. */
+  returnTo: string | null;
 };
 
-function PracticeConfigEditorBody({
+function DeckConfigurationEditorBody({
   mode,
   config,
   contextSubjectId,
@@ -178,7 +183,9 @@ function PracticeConfigEditorBody({
         queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] }),
         queryClient.invalidateQueries({ queryKey: ['deck_practice_config', saved.id] }),
       ]);
-      navigate(returnTo, { state: { configId: saved.id } });
+      navigate(returnTo ?? `/decks/${saved.deck_id}?tab=configurations`, {
+        state: { configurationId: saved.id },
+      });
     },
     onError: (error: Error) => {
       // A duplicate name is the one failure the user fixes in place, so it belongs on
@@ -210,13 +217,15 @@ function PracticeConfigEditorBody({
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
         <button
           type="button"
-          onClick={() => navigate(returnTo)}
+          onClick={() =>
+            navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
+          }
           className="text-sm font-medium text-(--color-text-secondary)"
         >
           Cancel
         </button>
         <h1 className="text-base font-semibold text-(--color-text)">
-          {mode === 'edit' ? 'Edit practice config' : 'New practice config'}
+          {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
         </h1>
         <button
           type="button"
@@ -269,7 +278,7 @@ function PracticeConfigEditorBody({
         {deckId && (
           <div className="flex flex-col gap-1">
             <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
-              Config name
+              Name
             </label>
             <input
               id={nameInputId}

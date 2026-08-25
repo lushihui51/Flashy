@@ -9,7 +9,7 @@ import {
   moveField,
   pruneCounts,
   toggleCount,
-} from 'src/lib/practiceConfigBoard';
+} from 'src/lib/deckConfigurationBoard';
 
 const fieldDefs = [
   { id: 'f3', name: 'Reading', type: 'text' as const, position: 2 },

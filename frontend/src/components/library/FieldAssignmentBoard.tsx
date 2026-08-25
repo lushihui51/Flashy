@@ -7,7 +7,7 @@ import {
   type BoardSlot,
   type BoardState,
   type PoolSlot,
-} from 'src/lib/practiceConfigBoard';
+} from 'src/lib/deckConfigurationBoard';
 import type { components } from 'src/api/types';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];

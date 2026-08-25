@@ -4,8 +4,7 @@ import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
-import PracticeConfigsPage from 'src/pages/PracticeConfigsPage';
-import PracticeConfigEditor from 'src/components/practice/PracticeConfigEditor';
+import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
 import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
@@ -21,12 +20,6 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/practice" element={<PracticeOverviewPage />} />
-          <Route path="/practice/configs" element={<PracticeConfigsPage />} />
-          <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
-          <Route
-            path="/practice/configs/:configId/edit"
-            element={<PracticeConfigEditor mode="edit" />}
-          />
           <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
@@ -36,6 +29,11 @@ function App() {
           <Route path="/decks/new" element={<DeckEditor mode="create" />} />
           <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
           <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
+          <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+          <Route
+            path="/deck-configurations/:configId/edit"
+            element={<DeckConfigurationEditor mode="edit" />}
+          />
           <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
         </Route>
       </Routes>

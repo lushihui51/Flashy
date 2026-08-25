@@ -1,15 +1,37 @@
+import { useState } from 'react';
 import { ChevronLeft, Pencil, Play, Plus } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
 import { readSubject } from 'src/api/subject';
+import { deleteDeckPracticeConfig, readDeckPracticeConfigs } from 'src/api/deck_practice_config';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import CardTable from 'src/components/library/CardTable';
+import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
+import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { pluralize } from 'src/lib/pluralize';
+import type { components } from 'src/api/types';
+
+type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummary'];
+
+const TABS = ['cards', 'configurations'] as const;
+type Tab = (typeof TABS)[number];
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as readonly string[]).includes(value);
+}
 
 export default function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  // In the URL rather than component state: the configuration builder navigates away and
+  // back, and landing on the deck's *cards* after saving one would lose the thread.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'cards';
+
+  const [pendingDelete, setPendingDelete] = useState<DeckPracticeConfigSummary | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -24,6 +46,24 @@ export default function DeckDetailPage() {
     enabled: !!deck,
   });
 
+  // Scoped to this deck, because a configuration belongs to exactly one: this is the
+  // whole list there is to show here.
+  const configurationsQuery = useQuery({
+    queryKey: ['deck_practice_configs', null, deckId],
+    queryFn: () => readDeckPracticeConfigs({ deckId: deckId! }),
+    enabled: !!deckId,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteDeckPracticeConfig(id),
+    onSuccess: async () => {
+      setPendingDelete(null);
+      setDeleteError(null);
+      await queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
+    },
+    onError: (error: Error) => setDeleteError(error.message),
+  });
+
   if (deckQuery.isError) {
     return (
       <div className="p-4">
@@ -36,6 +76,19 @@ export default function DeckDetailPage() {
 
   const fieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
   const subject = subjectQuery.data;
+  const configurations = configurationsQuery.data ?? [];
+
+  const setTab = (next: Tab) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'cards') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
+
+  const createForTab = () =>
+    tab === 'cards'
+      ? navigate('/cards/new', { state: { deckId: deck.id } })
+      : navigate('/deck-configurations/new', { state: { deckId: deck.id } });
 
   return (
     <div className="p-4">
@@ -68,8 +121,8 @@ export default function DeckDetailPage() {
         </button>
         <button
           type="button"
-          aria-label="New card"
-          onClick={() => navigate('/cards/new', { state: { deckId: deck.id } })}
+          aria-label={tab === 'cards' ? 'New card' : 'New configuration'}
+          onClick={createForTab}
           className="flex h-11 w-11 shrink-0 items-center justify-center"
         >
           <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-text-muted)">
@@ -88,34 +141,105 @@ export default function DeckDetailPage() {
         </button>
       </div>
 
-      {/* The table (and its header row) renders whenever the deck has any active
-          fields, regardless of card count — a zero-card deck still has a schema, and
-          that's exactly what an empty deck has to show. The empty state is a sibling
-          below it, outside CardTable's own horizontally-scrolling wrapper, so it
-          stays put under the frozen first column instead of scrolling away with the
-          header (2.5 §1.4). */}
-      <div className="mt-4">
-        {fieldDefs.length > 0 && (
-          <CardTable
-            deckName={deck.name}
-            fieldDefs={fieldDefs}
-            cards={deck.cards}
-            cardHref={(cardId) => `/cards/${cardId}/edit`}
-          />
-        )}
-        {deck.cards.length === 0 && (
-          <div className="flex flex-col items-start gap-3 px-3 py-8">
-            <p className="text-(--color-text-muted)">No cards in this deck yet.</p>
-            <button
-              type="button"
-              onClick={() => navigate('/cards/new', { state: { deckId: deck.id } })}
-              className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-            >
-              New card
-            </button>
-          </div>
-        )}
+      {/* This deck's two contents, in the same tab grammar the library uses for subjects
+          and decks — a configuration belongs to this deck exactly as its cards do. */}
+      <div
+        role="tablist"
+        aria-label="Deck contents"
+        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
+      >
+        {TABS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={`h-11 border-b-2 px-1 text-sm font-medium ${
+              tab === t
+                ? 'border-(--color-primary) text-(--color-text)'
+                : 'border-transparent text-(--color-text-muted)'
+            }`}
+          >
+            {t === 'cards' ? 'Cards' : 'Configurations'}
+          </button>
+        ))}
       </div>
+
+      {tab === 'cards' ? (
+        /* The table (and its header row) renders whenever the deck has any active
+           fields, regardless of card count — a zero-card deck still has a schema, and
+           that's exactly what an empty deck has to show. The empty state is a sibling
+           below it, outside CardTable's own horizontally-scrolling wrapper, so it
+           stays put under the frozen first column instead of scrolling away with the
+           header (2.5 §1.4). */
+        <div className="mt-4">
+          {fieldDefs.length > 0 && (
+            <CardTable
+              deckName={deck.name}
+              fieldDefs={fieldDefs}
+              cards={deck.cards}
+              cardHref={(cardId) => `/cards/${cardId}/edit`}
+            />
+          )}
+          {deck.cards.length === 0 && (
+            <div className="flex flex-col items-start gap-3 px-3 py-8">
+              <p className="text-(--color-text-muted)">No cards in this deck yet.</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <section aria-label="Configurations" className="mt-2">
+          {configurationsQuery.isError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              Could not load this deck&apos;s configurations.
+            </p>
+          )}
+
+          {configurationsQuery.data && configurations.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 py-8">
+              <p className="text-(--color-text-muted)">
+                No configurations yet. One says which of this deck&apos;s fields are prompts
+                and which are answers; a practice is built out of them.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+              {configurations.map((configuration) => (
+                <li key={configuration.id}>
+                  <DeckConfigurationRow
+                    configuration={configuration}
+                    onDelete={() => setPendingDelete(configuration)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {deleteError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              {deleteError}
+            </p>
+          )}
+        </section>
+      )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this configuration?"
+        // A practice copied what it needed the moment it started (ADR 013), so nothing
+        // that has already run is affected.
+        description="Practices that already used it are unaffected."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
+        }}
+        onCancel={() => {
+          setPendingDelete(null);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 }

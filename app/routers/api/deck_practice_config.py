@@ -76,7 +76,7 @@ def read_deck_practice_config(
 ):
     config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Practice config not found")
+        raise HTTPException(status_code=404, detail="Deck configuration not found")
     return config
 
 
@@ -89,7 +89,7 @@ def update_deck_practice_config(
 ):
     config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Practice config not found")
+        raise HTTPException(status_code=404, detail="Deck configuration not found")
 
     data = payload.model_dump(exclude_unset=True)
     # Validation always runs against the full resulting config, not just the patched
@@ -109,5 +109,5 @@ def delete_deck_practice_config(
 ):
     config = db_read_deck_practice_config(db, config_id, current_user.id)
     if not config:
-        raise HTTPException(status_code=404, detail="Practice config not found")
+        raise HTTPException(status_code=404, detail="Deck configuration not found")
     db_delete_deck_practice_config(db, config)

@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import PracticeConfigEditor from 'src/components/practice/PracticeConfigEditor';
+import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
 
 const BASE = 'http://localhost:8000';
 
@@ -114,11 +114,11 @@ function LocationStateProbe() {
   );
 }
 
-function renderCreate(path = '/practice/configs/new') {
+function renderCreate(path = '/deck-configurations/new') {
   return renderWithProviders(
     <Routes>
-      <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
-      <Route path="/practice/configs" element={<LocationProbe />} />
+      <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+      <Route path="/decks/:deckId" element={<LocationProbe />} />
     </Routes>,
     [path],
   );
@@ -128,12 +128,12 @@ function renderEdit(configId = 'c1') {
   return renderWithProviders(
     <Routes>
       <Route
-        path="/practice/configs/:configId/edit"
-        element={<PracticeConfigEditor mode="edit" />}
+        path="/deck-configurations/:configId/edit"
+        element={<DeckConfigurationEditor mode="edit" />}
       />
-      <Route path="/practice/configs" element={<LocationProbe />} />
+      <Route path="/decks/:deckId" element={<LocationProbe />} />
     </Routes>,
-    [`/practice/configs/${configId}/edit`],
+    [`/deck-configurations/${configId}/edit`],
   );
 }
 
@@ -152,25 +152,25 @@ afterEach(() => {
   server.resetHandlers();
 });
 
-describe('PracticeConfigEditor — create', () => {
+describe('DeckConfigurationEditor — create', () => {
   it('shows nothing below the deck picker until a deck is chosen', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
 
-    expect(screen.queryByLabelText('Config name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /Alpha Deck/ }));
 
     expect(await screen.findByRole('table')).toBeInTheDocument();
-    expect(screen.getByLabelText('Config name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
   it('starts with every live field unassigned, in deck order', async () => {
     mockLibrary();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
 
     const unassigned = await screen.findByRole('region', { name: 'Unassigned' });
     expect(within(unassigned).getByText('Term')).toBeInTheDocument();
@@ -181,7 +181,7 @@ describe('PracticeConfigEditor — create', () => {
   it("a deck in context is preselected, and its subject's decks sort first", async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?subject=s2');
+    renderCreate('/deck-configurations/new?subject=s2');
 
     await user.click(await screen.findByPlaceholderText('Deck'));
     const options = screen.getAllByRole('option');
@@ -193,9 +193,9 @@ describe('PracticeConfigEditor — create', () => {
     mockLibrary();
     renderWithProviders(
       <Routes>
-        <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
+        <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
       </Routes>,
-      [{ pathname: '/practice/configs/new', state: { deckId: 'd1' } }],
+      [{ pathname: '/deck-configurations/new', state: { deckId: 'd1' } }],
     );
 
     // Straight to the board: the deck came back from the editor, so there is nothing
@@ -209,27 +209,27 @@ describe('PracticeConfigEditor — create', () => {
     const user = userEvent.setup();
     renderWithProviders(
       <Routes>
-        <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
+        <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
         <Route path="/decks/new" element={<LocationStateProbe />} />
       </Routes>,
-      ['/practice/configs/new?subject=s1'],
+      ['/deck-configurations/new?subject=s1'],
     );
 
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
     expect(screen.getByTestId('location-state')).toHaveTextContent(
-      '/practice/configs/new?subject=s1',
+      '/deck-configurations/new?subject=s1',
     );
   });
 
   it('prefills the name with the current local date-time, editable', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
-    const input = screen.getByLabelText('Config name');
+    const input = screen.getByLabelText('Name');
     // Whatever the browser's zone renders, it is a real timestamp, not a placeholder.
     expect((input as HTMLInputElement).value).toMatch(/\d{4}/);
     expect((input as HTMLInputElement).value).not.toBe('');
@@ -242,7 +242,7 @@ describe('PracticeConfigEditor — create', () => {
   it('assigning moves a field rather than copying it', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     await assign(user, 'Term', 'prompt_fields');
@@ -255,7 +255,7 @@ describe('PracticeConfigEditor — create', () => {
   it('frequency reads N/A for the fixed rows and for an empty pool, then lists 1…n', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     expect(screen.getAllByText('N/A')).toHaveLength(4); // all four rows start empty
@@ -271,7 +271,7 @@ describe('PracticeConfigEditor — create', () => {
   it('prunes a checked count that no longer fits when the pool shrinks', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     await assign(user, 'Term', 'prompt_pool');
@@ -288,7 +288,7 @@ describe('PracticeConfigEditor — create', () => {
   it('Save stays disabled with the reason shown, for each rule the backend enforces', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
     const save = screen.getByRole('button', { name: 'Save' });
 
@@ -305,11 +305,11 @@ describe('PracticeConfigEditor — create', () => {
     await user.click(screen.getByRole('checkbox', { name: '1' }));
     expect(save).toBeEnabled(); // the name arrives prefilled, so nothing is left to do
 
-    await user.clear(screen.getByLabelText('Config name'));
+    await user.clear(screen.getByLabelText('Name'));
     expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
     expect(save).toBeDisabled();
 
-    await user.type(screen.getByLabelText('Config name'), 'Recall');
+    await user.type(screen.getByLabelText('Name'), 'Recall');
     expect(save).toBeEnabled();
   });
 
@@ -323,7 +323,7 @@ describe('PracticeConfigEditor — create', () => {
       }),
     );
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     await assign(user, 'Term', 'prompt_fields');
@@ -331,8 +331,8 @@ describe('PracticeConfigEditor — create', () => {
     await assign(user, 'Reading', 'answer_pool');
     await user.click(screen.getByRole('checkbox', { name: '2' }));
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    await user.clear(screen.getByLabelText('Config name'));
-    await user.type(screen.getByLabelText('Config name'), 'Recall');
+    await user.clear(screen.getByLabelText('Name'));
+    await user.type(screen.getByLabelText('Name'), 'Recall');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(sent).not.toBeNull());
@@ -347,7 +347,7 @@ describe('PracticeConfigEditor — create', () => {
       answer_pool_counts: [1, 2],
     });
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/practice/configs'),
+      expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'),
     );
   });
 
@@ -356,24 +356,24 @@ describe('PracticeConfigEditor — create', () => {
     server.use(
       http.post(`${BASE}/api/deck_practice_configs`, () =>
         HttpResponse.json(
-          { detail: 'A practice config with this name already exists for this deck' },
+          { detail: 'A configuration with this name already exists for this deck' },
           { status: 400 },
         ),
       ),
     );
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     await assign(user, 'Term', 'prompt_fields');
     await assign(user, 'Meaning', 'answer_fields');
-    await user.clear(screen.getByLabelText('Config name'));
-    await user.type(screen.getByLabelText('Config name'), 'Recall');
+    await user.clear(screen.getByLabelText('Name'));
+    await user.type(screen.getByLabelText('Name'), 'Recall');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const error = await screen.findByRole('alert');
     expect(error).toHaveTextContent('already exists');
-    expect(screen.getByLabelText('Config name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
     // Still on the form, board intact.
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
@@ -382,7 +382,7 @@ describe('PracticeConfigEditor — create', () => {
   it('changing deck after assigning asks first, and clears the board on confirm', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
     await assign(user, 'Term', 'prompt_fields');
 
@@ -401,7 +401,7 @@ describe('PracticeConfigEditor — create', () => {
   it('cancelling the deck change keeps the deck and the board', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
     await assign(user, 'Term', 'prompt_fields');
 
@@ -416,7 +416,7 @@ describe('PracticeConfigEditor — create', () => {
 
   it('a dropped field lands in the row it was dropped on', async () => {
     mockLibrary();
-    renderCreate('/practice/configs/new?deck=d1');
+    renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('table');
 
     const { fireEvent } = await import('@testing-library/react');
@@ -434,7 +434,7 @@ describe('PracticeConfigEditor — create', () => {
   });
 });
 
-describe('PracticeConfigEditor — edit', () => {
+describe('DeckConfigurationEditor — edit', () => {
   function mockConfig(config = savedConfig) {
     server.use(http.get(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(config)));
   }
@@ -445,7 +445,7 @@ describe('PracticeConfigEditor — edit', () => {
     renderEdit();
 
     await screen.findByRole('table');
-    expect(screen.getByLabelText('Config name')).toHaveValue('Recall');
+    expect(screen.getByLabelText('Name')).toHaveValue('Recall');
     expect(
       within(screen.getByRole('row', { name: /Prompt fields/ })).getByText('Term'),
     ).toBeInTheDocument();
@@ -509,11 +509,11 @@ describe('PracticeConfigEditor — edit', () => {
     mockLibrary();
     server.use(
       http.get(`${BASE}/api/deck_practice_configs/:id`, () =>
-        HttpResponse.json({ detail: 'Practice config not found' }, { status: 404 }),
+        HttpResponse.json({ detail: 'Deck configuration not found' }, { status: 404 }),
       ),
     );
     renderEdit('nope');
 
-    expect(await screen.findByText('Practice config not found.')).toBeInTheDocument();
+    expect(await screen.findByText('Deck configuration not found.')).toBeInTheDocument();
   });
 });

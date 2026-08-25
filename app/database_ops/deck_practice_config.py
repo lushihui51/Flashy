@@ -16,7 +16,7 @@ def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfi
     except IntegrityError:
         db.rollback()
         raise ValueError(
-            "A practice config with this name already exists for this deck"
+            "A configuration with this name already exists for this deck"
         ) from None
     db.refresh(config)
     return config
@@ -102,7 +102,7 @@ def db_update_deck_practice_config(
     except IntegrityError:
         db.rollback()
         raise ValueError(
-            "A practice config with this name already exists for this deck"
+            "A configuration with this name already exists for this deck"
         ) from None
     db.refresh(config)
     return config

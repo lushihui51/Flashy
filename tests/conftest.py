@@ -136,7 +136,7 @@ def existing_card(client, existing_deck, existing_field_defs):
 
 @pytest.fixture
 def multi_subject_library(client):
-    """Two subjects, each owning a deck with the *same name* and one practice config.
+    """Two subjects, each owning a deck with the *same name* and one deck configuration.
 
     Two decks can share a name across subjects (uniqueness is per `(subject_id, name)`),
     which is exactly why the practice filters key on deck **id** with the subject
