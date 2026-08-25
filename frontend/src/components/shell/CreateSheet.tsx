@@ -1,5 +1,5 @@
 import { type RefObject } from 'react';
-import { Folder, Layers, CreditCard } from 'lucide-react';
+import { Folder, Layers, CreditCard, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomSheet from 'src/components/ui/BottomSheet';
 
@@ -45,6 +45,21 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
           >
             <Layers aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
             <span className="font-medium text-(--color-text)">Deck</span>
+          </button>
+        </li>
+        <li>
+          {/* The config builder's home in the app's own "create a thing" surface — the
+              practice overview links to the configs list too, but a template is a thing
+              you make, so this is where someone looks for it first. */}
+          {/* No "create a deck first" subline like the Card row: the builder opens on a
+              deck picker that offers "New deck…" itself, so there is nothing to gate. */}
+          <button
+            type="button"
+            onClick={() => go('/practice/configs/new')}
+            className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
+          >
+            <SlidersHorizontal aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
+            <span className="font-medium text-(--color-text)">Practice config</span>
           </button>
         </li>
         <li>

@@ -23,13 +23,14 @@ function renderSheet(props: Partial<Parameters<typeof CreateSheet>[0]> = {}) {
 }
 
 describe('CreateSheet', () => {
-  it('renders a drag handle and three rows', () => {
+  it('renders a drag handle and four rows', () => {
     renderSheet();
 
     expect(screen.getByRole('dialog', { name: 'Create' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Subject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Practice config' })).toBeInTheDocument();
   });
 
   it('renders nothing when closed', () => {
@@ -58,6 +59,17 @@ describe('CreateSheet', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
+  });
+
+  it('closes and navigates to the config builder when Practice config is tapped', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderSheet({ onClose, hasDecks: true });
+
+    await user.click(screen.getByRole('button', { name: 'Practice config' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice/configs/new');
   });
 
   it('closes and navigates to /cards/new when Card is tapped and decks exist', async () => {

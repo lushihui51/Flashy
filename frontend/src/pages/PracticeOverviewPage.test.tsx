@@ -108,6 +108,7 @@ function renderOverview(initialPath = '/practice') {
     <Routes>
       <Route path="/practice" element={<PracticeOverviewPage />} />
       <Route path="/practice/new" element={<LocationProbe />} />
+      <Route path="/practice/configs" element={<LocationProbe />} />
       <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
     </Routes>,
     [initialPath],
@@ -246,6 +247,16 @@ describe('PracticeOverviewPage', () => {
 
     await user.click(await screen.findByText('Alpha run'));
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
+  });
+
+  it('Configs opens the config list, keeping the current filters', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderOverview('/practice?subject=s1');
+    await screen.findByText('Alpha run');
+
+    await user.click(screen.getByRole('button', { name: 'Configs' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice/configs?subject=s1');
   });
 
   it('New practice carries the current filters into the creation surface', async () => {
