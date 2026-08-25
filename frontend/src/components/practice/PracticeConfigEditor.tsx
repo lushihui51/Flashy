@@ -23,6 +23,7 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/practiceConfigBoard';
+import { formatDateTime } from 'src/lib/datetime';
 import type { components } from 'src/api/types';
 
 type DeckSummary = components['schemas']['DeckSummary'];
@@ -124,7 +125,11 @@ function PracticeConfigEditorBody({
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
   const [deckId, setDeckId] = useState<string | null>(config?.deck_id ?? contextDeckId);
-  const [name, setName] = useState(config?.name ?? '');
+  // Prefilled with the moment it was opened, in the browser's zone (ADR 019 — the one
+  // sanctioned formatter). A config name only has to be unique per deck, and a timestamp
+  // is both unique and better than "Untitled" for someone who never renames it. Computed
+  // once, at mount: it names when the config was built, not when it was last re-rendered.
+  const [name, setName] = useState(() => config?.name ?? formatDateTime(new Date()));
   const [board, setBoard] = useState<BoardState | null>(null);
   const [pendingDeck, setPendingDeck] = useState<DeckOption | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);

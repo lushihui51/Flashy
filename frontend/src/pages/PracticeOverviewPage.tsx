@@ -155,21 +155,14 @@ export default function PracticeOverviewPage() {
           <p className="text-(--color-text-muted)">
             {filtered ? 'No practice sessions match these filters.' : 'No practice sessions yet.'}
           </p>
-          {filtered ? (
+          {/* No New practice button here — the header's is always on screen. */}
+          {filtered && (
             <button
               type="button"
               onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
               className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
             >
               Clear filters
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/practice/new')}
-              className="h-9 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-            >
-              New practice
             </button>
           )}
         </div>

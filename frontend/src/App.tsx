@@ -4,7 +4,6 @@ import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
-import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import PracticeConfigsPage from 'src/pages/PracticeConfigsPage';
 import PracticeConfigEditor from 'src/components/practice/PracticeConfigEditor';
 import NotificationsPage from 'src/pages/NotificationsPage';
@@ -22,7 +21,6 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/practice" element={<PracticeOverviewPage />} />
-          <Route path="/practice/new" element={<PracticeCreatePage />} />
           <Route path="/practice/configs" element={<PracticeConfigsPage />} />
           <Route path="/practice/configs/new" element={<PracticeConfigEditor mode="create" />} />
           <Route

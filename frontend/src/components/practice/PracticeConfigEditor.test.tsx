@@ -223,6 +223,22 @@ describe('PracticeConfigEditor — create', () => {
     );
   });
 
+  it('prefills the name with the current local date-time, editable', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/practice/configs/new?deck=d1');
+    await screen.findByRole('table');
+
+    const input = screen.getByLabelText('Config name');
+    // Whatever the browser's zone renders, it is a real timestamp, not a placeholder.
+    expect((input as HTMLInputElement).value).toMatch(/\d{4}/);
+    expect((input as HTMLInputElement).value).not.toBe('');
+
+    await user.clear(input);
+    await user.type(input, 'Recall');
+    expect(input).toHaveValue('Recall');
+  });
+
   it('assigning moves a field rather than copying it', async () => {
     mockLibrary();
     const user = userEvent.setup();
@@ -287,6 +303,9 @@ describe('PracticeConfigEditor — create', () => {
     expect(save).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
+    expect(save).toBeEnabled(); // the name arrives prefilled, so nothing is left to do
+
+    await user.clear(screen.getByLabelText('Config name'));
     expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
     expect(save).toBeDisabled();
 
@@ -312,6 +331,7 @@ describe('PracticeConfigEditor — create', () => {
     await assign(user, 'Reading', 'answer_pool');
     await user.click(screen.getByRole('checkbox', { name: '2' }));
     await user.click(screen.getByRole('checkbox', { name: '1' }));
+    await user.clear(screen.getByLabelText('Config name'));
     await user.type(screen.getByLabelText('Config name'), 'Recall');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -347,6 +367,7 @@ describe('PracticeConfigEditor — create', () => {
 
     await assign(user, 'Term', 'prompt_fields');
     await assign(user, 'Meaning', 'answer_fields');
+    await user.clear(screen.getByLabelText('Config name'));
     await user.type(screen.getByLabelText('Config name'), 'Recall');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
