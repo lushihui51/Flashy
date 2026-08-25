@@ -48,24 +48,25 @@ export default function TopBar({
       <div className="flex-1" />
 
       <div className="flex shrink-0 items-center gap-1">
-        {/* Practice sits beside Create because it is the other thing the app is for.
-            Same destination as the drawer's own Practice item, from the same constant. */}
+        {/* Icon-only, like the hamburger: the bar is chrome, and the words cost more
+            width than they earn here. The label moves to aria-label so the accessible
+            name is unchanged — the drawer still spells both out. */}
         <Link
           to={PRACTICE_NAV.to}
-          className="flex h-11 shrink-0 items-center gap-1 px-2 text-sm font-medium text-(--color-text)"
+          aria-label={PRACTICE_NAV.label}
+          className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text)"
         >
-          <PRACTICE_NAV.icon aria-hidden="true" className="h-4 w-4" />
-          {PRACTICE_NAV.label}
+          <PRACTICE_NAV.icon aria-hidden="true" className="h-5 w-5" />
         </Link>
 
         <button
           ref={createButtonRef}
           type="button"
           onClick={onCreateClick}
-          className="flex h-11 shrink-0 items-center gap-1 px-2 text-sm font-medium text-(--color-text)"
+          aria-label="Create"
+          className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text)"
         >
-          <Plus aria-hidden="true" className="h-4 w-4" />
-          Create
+          <Plus aria-hidden="true" className="h-5 w-5" />
         </button>
 
         {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
