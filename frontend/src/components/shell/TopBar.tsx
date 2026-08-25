@@ -47,34 +47,35 @@ export default function TopBar({
 
       <div className="flex-1" />
 
-      {/* One gap value, equal to the bar's own horizontal padding, so the three
-          controls sit evenly spaced from each other and from the edge. */}
+      {/* Evenly spaced by what the eye actually sees. The avatar fills its 44px circle
+          while an icon is only 20px inside a 44px hit box, so equal *boxes* read as
+          unequal gaps — the icons sit in 20px-wide boxes instead, and one gap equal to
+          the bar's own padding puts the same 12px between each glyph, the avatar, and
+          the edge. The hit area is put back with an inset pseudo-element, which enlarges
+          the target without taking part in the layout. */}
       <div className="flex shrink-0 items-center gap-3">
-        {/* Icon-only, like the hamburger: the bar is chrome, and the words cost more
-            width than they earn here. The label moves to aria-label so the accessible
-            name is unchanged — the drawer still spells both out. */}
-        <Link
-          to={PRACTICE_NAV.to}
-          aria-label={PRACTICE_NAV.label}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text)"
-        >
-          <PRACTICE_NAV.icon aria-hidden="true" className="h-5 w-5" />
-        </Link>
-
         <button
           ref={createButtonRef}
           type="button"
           onClick={onCreateClick}
           aria-label="Create"
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text)"
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
         >
           <Plus aria-hidden="true" className="h-5 w-5" />
         </button>
 
-        {/* Sized by its content, not padded out to a fixed width: the avatar and the
-            loading placeholder are both 44px like the two buttons beside them, so the
-            row stays even. Only the wider signed-out "Log in" pill differs, and it
-            replaces the placeholder once per load. */}
+        {/* Same destination as the drawer's own Practice item, from the same constant. */}
+        <Link
+          to={PRACTICE_NAV.to}
+          aria-label={PRACTICE_NAV.label}
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
+        >
+          <PRACTICE_NAV.icon aria-hidden="true" className="h-5 w-5" />
+        </Link>
+
+        {/* Sized by its content, not padded out to a fixed width — that padding was
+            what put ~50px of dead space between Create and the avatar. Only the wider
+            signed-out "Log in" pill breaks the rhythm, once per load. */}
         <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">
           <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
         </div>
