@@ -2,20 +2,25 @@
 
 Covers the remaining work up to and including creating a practice: the rebuilt deck configuration board, the New practice page, the practice detail page, and the pre-filter chain. Running a session stays out of scope (next task, branch `rewrite/practice-run`).
 
-Branch: `rewrite/practice-setup`. Execute one task per /build session; stop and report against "Done when" before the next. This file supersedes the pre-workflow task files 004-frontend-rebuild-practice-setup.md and 005-004-phase-2-fix.md (deleted; per D5 the /plan conversation of 2026-08-25 took priority over both; their content survives in git history under `docs/plans/`).
+Branch: `rewrite/practice-setup`. Execute one task per /build session; stop and report against "Done when" before the next. This file supersedes the pre-workflow task files 004-frontend-rebuild-practice-setup.md and 005-004-phase-2-fix.md (deleted; per MD-2 the /plan conversation of 2026-08-25 took priority over both; their content survives in git history under `docs/plans/`).
 
-Already shipped on this branch (history, not tasks): backend endpoints + `name` column (`f304e7a`, verified in `docs/cc/2026-08-24-practice-setup-phase-0-backend.md`), practice overview with filters/tabs/entry points (`6fe4ec0`), the drag-table builder now condemned by D1–D2 (`4c32349`, renamed `b24b4aa`), deck/subject action scoping (`f4afa9a`, `6a288a0`).
+Already shipped on this branch (history, not tasks): backend endpoints + `name` column (`f304e7a`, verified in `docs/cc/2026-08-24-practice-setup-phase-0-backend.md`), practice overview with filters/tabs/entry points (`6fe4ec0`), the drag-table builder now condemned by ADR 020 (`4c32349`, renamed `b24b4aa`), deck/subject action scoping (`f4afa9a`, `6a288a0`).
 
-## Decisions (pending /justify)
+## ADRs
 
-- **D1 — Destination picker is the existing `BottomSheet` primitive at every viewport.** One code path, no new dependency, matches AccountSheet/CreateSheet precedent (ADR 016). Rejected: the sheet/popover viewport fork (new `@radix-ui/react-popover` dependency, doubled test surface) and a no-overlay tap-chip-then-tap-section model (too novel for a surface that already shipped broken once).
-- **D2 — The board is side-major.** A "Prompt side" card and an "Answer side" card, each with an _Always shown_ area and a _Random draw_ area whose frequency checkboxes sit directly under the chips they govern; "Not used" holds the rest, at the top. Tapping a chip opens the D1 sheet with the other four destinations. The existing `BoardState`/`moveField` layer is reused with relabeled slots; payload mapping and structural disjointness unchanged. Rejected: five flat sections (frequency appears as a footer side-effect, taxonomy must be decoded up front) and per-field rows with assignment badges (configuration readable only by scanning badges).
-- **D3 — User-facing vocabulary:** _Prompt side / Answer side_, _Always shown / Random draw_, _Not used_, counts as "Each card shows [1] [2] … of these". "Pool" and raw section names never appear in the UI; they were the schema leaking through.
-- **D4 — This file is the sole governing document for practice setup.** The old 004/005 pair claimed the same work with contradictory status; their unique content (test replacement, grep acceptance, deferred cleanup, guiding principles) is folded in here or handed to /justify.
-- **D5 — Replaces D4's mechanics** (fold-in-place amendment plus deletion by the user's hand): this file is authored fresh from the /plan conversation as sole truth, and the old 004/005 were deleted at decompose time. They were written pre-workflow and are input material, not decompose-authored task files.
-- **D6 — `GET /api/practice_sessions/{id}` returns the summary shape** (`PracticeSessionSummary`: the session plus `decks` and `deleted_deck_count`) instead of the bare `PracticeSessionRead`. The detail page needs deck/subject chips; API-first beats a client-side join of the list endpoint (the recorded Phase 7 lesson).
-- **D7 — The api layer surfaces structured errors via a typed error.** `unwrap` throws `ApiDetailError` (an `Error` subclass carrying the raw `detail` object) whenever `detail` is an object with `code` and `message`; before this, the structured session-start detail was flattened to a string and the creation page could not attribute a failure to a configuration row. Existing callers are unaffected — the message they catch is unchanged.
-- **D8 — On New practice, selections survive filter changes.** Filters are a browse aid; a configuration selected and then hidden by a filter stays selected, and a "N selected" count next to Create keeps hidden selections visible. Rejected: clearing hidden selections (turns browsing into destructive editing).
+Decisions this file implements; full context and rejected alternatives live in the ADRs.
+
+- **ADR 020 — Tap-to-assign side-major board for the deck configuration builder**: `BottomSheet` destination picker at every viewport; Prompt side / Answer side cards, each with Always shown and Random draw areas, frequency checkboxes inside the Random draw area they govern, "Not used" on top; all HTML5 drag removed — drag may only ever return as an enhancement on the same `BoardState`.
+- **ADR 021 — User-facing vocabulary is a contract and never exposes schema terms**: the canonical word set lives in this file's Contracts; "pool" and slot names never reach the UI.
+- **ADR 022 — unwrap throws a typed ApiDetailError for structured error details**: shape-aware callers `instanceof`-check and read `.detail`; every other caller still catches a plain `Error` with an unchanged message.
+- **ADR 023 — Entity actions in the header, collection actions in the collection, no card entry in deck forms** (the already-shipped rule from old 005's Fixes 1/1b, `f4afa9a`/`6a288a0`): placement rules binding for every surface.
+
+## Minor decisions
+
+- **MD-1**: this file is the sole governing document for practice setup; the old 004/005 pair claimed the same work with contradictory status and is superseded.
+- **MD-2**: this file was authored fresh from the 2026-08-25 /plan conversation as sole truth, and the pre-workflow 004/005 were deleted at decompose time — they were input material, not decompose-authored task files; their content survives in git history under `docs/plans/`.
+- **MD-3**: `GET /api/practice_sessions/{id}` returns the summary shape (`PracticeSessionSummary` with `decks` and `deleted_deck_count`) — API-first beats a client-side join of the list endpoint.
+- **MD-4**: on New practice, selections survive filter changes; an "N selected" count next to Create keeps hidden selections visible. Rejected: clearing hidden selections (turns browsing into destructive editing).
 
 ## Contracts
 
@@ -54,7 +59,7 @@ One word per concept. Middle column is what a user reads; right column is what c
 
 - `POST /api/practice_sessions` `{name, deck_practice_config_ids}` → 201 `PracticeSessionRead`. Errors carry `detail: {code, message, config_id}`: `config_not_found` (404), `duplicate_deck` (400, `config_id` is the second config), `stale_config` (400, config no longer validates — e.g. a referenced field was archived).
 - `GET /api/practice_sessions?subject_id&deck_id` → `PracticeSessionSummary[]`, newest first: `id, name, status, created_at, decks: [{deck_id, deck_name, subject_id, subject_name}], deleted_deck_count`. Filters AND-compose via EXISTS over `practice_deck`.
-- `GET /api/practice_sessions/{id}` → today `PracticeSessionRead`; **T1 changes it to `PracticeSessionSummary` (D6)**. 404 for foreign/missing.
+- `GET /api/practice_sessions/{id}` → today `PracticeSessionRead`; **T1 changes it to `PracticeSessionSummary` (MD-3)**. 404 for foreign/missing.
 - `DELETE /api/practice_sessions/{id}` → 204. `review_log` survives (its `practice_card_id` goes SET NULL).
 - `GET /api/deck_practice_configs?subject_id&deck_id` → `DeckPracticeConfigSummary[]` (config + `deck_name, subject_id, subject_name`), ordered subject → deck → name.
 - `GET /api/decks/{deck_id}` → includes live-only `field_defs` `{id, name, type, position}`, position-ordered.
@@ -63,8 +68,8 @@ One word per concept. Middle column is what a user reads; right column is what c
 
 ### Frontend contracts
 
-- **`ApiDetailError` (D7, created by T1)** in `frontend/src/api/unwrap.ts`: `class ApiDetailError extends Error { detail: { code: string; message: string; config_id?: string } }`. Thrown by `unwrap`/`unwrapVoid` when `detail` is an object with string `code` and `message`; `Error.message` stays what `formatError` produces today. No side effects in the api layer (ADR 006 rule unchanged).
-- **Board slot ↔ UI mapping (D2/D3)** — `BoardState` in `frontend/src/lib/deckConfigurationBoard.ts` is unchanged structurally:
+- **`ApiDetailError` (ADR 022, created by T1)** in `frontend/src/api/unwrap.ts`: `class ApiDetailError extends Error { detail: { code: string; message: string; config_id?: string } }`. Thrown by `unwrap`/`unwrapVoid` when `detail` is an object with string `code` and `message`; `Error.message` stays what `formatError` produces today. No side effects in the api layer (ADR 006 rule unchanged).
+- **Board slot ↔ UI mapping (ADR 020 / ADR 021)** — `BoardState` in `frontend/src/lib/deckConfigurationBoard.ts` is unchanged structurally:
 
   | Slot            | Renders in                               |
   | --------------- | ---------------------------------------- |
@@ -83,9 +88,9 @@ One word per concept. Middle column is what a user reads; right column is what c
 
 ### T1 — Session detail shape and typed start errors
 
-- [ ] **Goal:** ship the two API-layer changes (D6, D7) the creation and detail pages consume.
+- [ ] **Goal:** ship the two API-layer changes (MD-3, ADR 022) the creation and detail pages consume.
 - **Files:** `app/routers/api/practice_session.py`, `app/database_ops/practice_session.py`, `tests/api_tests/test_practice_session.py`, `frontend/src/api/unwrap.ts`, `frontend/src/api/practice_session.ts`, `frontend/src/test/unwrap.test.ts` (new or existing), `frontend/src/api/types.ts` (via `npm run gen:api`).
-- **Details:** Per D6, change `read_practice_session`'s `response_model` to `PracticeSessionSummary` and back it with a single-session variant of the existing two-query read (`db_read_practice_sessions_with_decks`) rather than a per-row loop. Per D7, add `ApiDetailError` to `unwrap.ts` exactly as the contract states and throw it from `unwrap`/`unwrapVoid` when the shape matches; `createPracticeSession` needs no change beyond the regenerated types. No new endpoint, no schema migration.
+- **Details:** Per MD-3, change `read_practice_session`'s `response_model` to `PracticeSessionSummary` and back it with a single-session variant of the existing two-query read (`db_read_practice_sessions_with_decks`) rather than a per-row loop. Per ADR 022, add `ApiDetailError` to `unwrap.ts` exactly as the contract states and throw it from `unwrap`/`unwrapVoid` when the shape matches; `createPracticeSession` needs no change beyond the regenerated types. No new endpoint, no schema migration.
 - **Out of scope:** any UI consuming these (T3/T4); pagination; changing the list endpoint.
 - **Done when:** `pytest` passes with new assertions — detail response carries `decks` and `deleted_deck_count` (including a session whose deck was deleted), foreign-user id 404s; `npx vitest run` passes with a test asserting `unwrap` throws `ApiDetailError` exposing `detail.code`/`detail.config_id` for a structured error and plain `Error` otherwise; `npm run gen:api` diff committed; `npm run lint` and `npm run build` clean.
 - **Commit:** `feat: session detail carries deck chips, typed api detail errors`
@@ -93,14 +98,14 @@ One word per concept. Middle column is what a user reads; right column is what c
 
 ### T2 — Side-major tap-to-assign board (replaces the shipped drag-table)
 
-- [ ] **Goal:** rebuild the assignment board per D1–D3: side-major layout, whole-chip tap targets, BottomSheet destination picker, no drag code.
+- [ ] **Goal:** rebuild the assignment board per ADR 020 and ADR 021: side-major layout, whole-chip tap targets, BottomSheet destination picker, no drag code.
 - **Files:** `frontend/src/components/library/FieldAssignmentBoard.tsx` (rewrite), `frontend/src/lib/deckConfigurationBoard.ts` (labels and validation strings only), `frontend/src/components/library/DeckConfigurationEditor.tsx` (drop the page-bottom explanation paragraph), `frontend/src/components/library/DeckConfigurationEditor.test.tsx`.
 - **Details:**
-  - Layout per D2's mapping table, one layout at every viewport: Not used, then the Prompt side card (Always shown area, Random draw area), then the Answer side card.
+  - Layout per the contract's slot ↔ UI mapping table (ADR 020), one layout at every viewport: Not used, then the Prompt side card (Always shown area, Random draw area), then the Answer side card.
   - Each chip is a single `<button>` whose accessible name is the field name, with `aria-haspopup="dialog"`. Tapping sets it as the sheet trigger (one shared ref, assigned on tap, passed as `BottomSheet`'s `triggerRef` so focus returns to the chip on close) and opens the sheet titled `Move "<field name>" to…` with the four destination rows per the contract. Choosing calls the existing `onMove` and closes; scrim-tap/Esc dismisses (no Cancel row).
   - Frequency: inside each Random draw area, below its chips, only when the area has ≥1 field: the text "Each card shows", checkboxes labeled 1…n, the text "of these". Wire to the existing `toggleCount`; pruning stays in `moveField`, untouched.
   - Empty-area copy, exactly: Not used empty → "Every field is assigned."; an empty Always shown or Random draw area → "None yet."
-  - Update `SLOT_LABELS` to the D3 words and reword `boardValidationError`'s four strings to: "Check how many random prompt fields each card shows." / "Check how many random answer fields each card shows." / "The prompt side needs at least one field — always shown or random draw." / "The answer side needs at least one field — always shown or random draw."
+  - Update `SLOT_LABELS` to the ADR 021 words and reword `boardValidationError`'s four strings to: "Check how many random prompt fields each card shows." / "Check how many random answer fields each card shows." / "The prompt side needs at least one field — always shown or random draw." / "The answer side needs at least one field — always shown or random draw."
   - Delete all HTML5 DnD code (`draggable`, `onDragStart`, `dropProps`, drag-over state) and the per-chip `<select>`; delete their tests and replace the simulated dragstart→drop test with tap-path tests.
 - **Out of scope:** dnd-kit or any drag enhancement; changes to `BoardState`, `moveField`, `boardToPayload`, `boardFromConfig`; deck picker, name input, save flow.
 - **Done when:** `grep -rn "draggable\|onDragStart\|onDrop" frontend/src/components/library/` returns nothing; `npx vitest run` passes with tests covering: tap chip → sheet → choose destination → chip renders in the target area; counts pruned when the last checked count exceeds the shrunk n; frequency row absent when a Random draw area is empty; existing payload-mapping tests still green; every assignment reachable by click/tap alone; `npm run lint` and `npm run build` clean.
@@ -114,15 +119,14 @@ One word per concept. Middle column is what a user reads; right column is what c
 - **Details:**
   - Route `/practice/new` reads `?subject=` / `?deck=` (the overview's New practice button and the Create sheet already navigate here carrying them).
   - Reuse `PracticeFilterBar` with the same props/semantics as the overview; the page fetches subjects and decks and passes them down, filter state lives in the URL.
-  - Configurations from `readDeckPracticeConfigs({subjectId, deckId})`, grouped by deck; group header is "deck name · subject name". `ConfigurationPickList` takes groups, selection, per-config error text, and `onSelect` as props — it does not fetch. Selection is a radio per deck group (invariant 7), any number of decks; per D8, selections survive filter changes and "N selected" renders next to Create.
+  - Configurations from `readDeckPracticeConfigs({subjectId, deckId})`, grouped by deck; group header is "deck name · subject name". `ConfigurationPickList` takes groups, selection, per-config error text, and `onSelect` as props — it does not fetch. Selection is a radio per deck group (invariant 7), any number of decks; per MD-4, selections survive filter changes and "N selected" renders next to Create.
   - Name input prefilled `formatDateTime(new Date())` — the same call `DeckConfigurationEditor.tsx:137` makes — editable, sent verbatim (invariant 8).
   - "New configuration" button navigates to `/deck-configurations/new` carrying the current `subject`/`deck` params and state `{returnTo: current pathname+search}`; on return, `location.state.configurationId` auto-selects that configuration's radio.
   - Create enabled when ≥1 selected and name non-blank, else disabled with the unmet condition as inline text (same pattern as the builder's Save). On success navigate to `/practice/<id>`.
-  - Errors, per the D7 contract: `stale_config` → the message "This configuration no longer produces any prompts — edit it." rendered on the offending row (`detail.config_id`), selection preserved; `config_not_found` → top-of-list message "A selected configuration no longer exists." and refetch the list; `duplicate_deck` (unreachable through the radio UI) and any other error → `error.message` rendered above Create. No toasts.
-  - Empty states: no configurations at all → "No deck configurations yet." + New configuration button; filters match zero → "No configurations match these filters."
-    - a Clear filters button that empties both params.
+  - Errors, per the ADR 022 contract: `stale_config` → the message "This configuration no longer produces any prompts — edit it." rendered on the offending row (`detail.config_id`), selection preserved; `config_not_found` → top-of-list message "A selected configuration no longer exists." and refetch the list; `duplicate_deck` (unreachable through the radio UI) and any other error → `error.message` rendered above Create. No toasts.
+  - Empty states: no configurations at all → "No deck configurations yet." plus the New configuration button; filters match zero → "No configurations match these filters." plus a Clear filters button that empties both params.
 - **Out of scope:** the practice detail page itself (T4); builder changes; a cross-deck configuration management list (each deck's page owns management).
-- **Done when:** MSW tests cover — grouping with two same-named decks in different subjects stays disambiguated; radio-per-deck enforced; successful create posts `{name, deck_practice_config_ids}` and navigates to `/practice/<returned id>`; `stale_config` renders on the right row with selection intact; both empty states; D8 count updates when a selected group is filtered out; `npx vitest run`, `npm run lint`, `npm run build` clean.
+- **Done when:** MSW tests cover — grouping with two same-named decks in different subjects stays disambiguated; radio-per-deck enforced; successful create posts `{name, deck_practice_config_ids}` and navigates to `/practice/<returned id>`; `stale_config` renders on the right row with selection intact; both empty states; the MD-4 count updates when a selected group is filtered out; `npx vitest run`, `npm run lint`, `npm run build` clean.
 - **Commit:** `feat: practice creation flow with configuration selection`
 - Notes:
 
@@ -159,4 +163,4 @@ One word per concept. Middle column is what a user reads; right column is what c
 - Any "stale" badge on configuration lists; session start handles staleness and the builder silently drops dead ids.
 - Session rename from the UI.
 - Removing the deck-create contract's `cards` array (the client now always sends it empty) — API cleanup plus `npm run gen:api`, carried from old 005.
-- Pointer-based drag (dnd-kit) as a wide-viewport enhancement layered on the same board state — only ever in addition to tap-to-assign, never replacing it (D1/D2).
+- Pointer-based drag (dnd-kit) as a wide-viewport enhancement layered on the same board state — only ever in addition to tap-to-assign, never replacing it (ADR 020).
