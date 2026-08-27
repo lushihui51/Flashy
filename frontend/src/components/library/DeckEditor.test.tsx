@@ -717,3 +717,57 @@ describe('DeckEditor — edit mode', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
   });
 });
+
+describe('DeckEditor — primary field marker (ADR 032)', () => {
+  it('the first field carries the Primary marker, and no other field does', async () => {
+    mockSubjects();
+    renderEditor();
+
+    await screen.findByDisplayValue('Term');
+    const pills = screen.getAllByText('Primary');
+    expect(pills).toHaveLength(1);
+    expect(within(pills[0]!.closest('li')!).getByDisplayValue('Term')).toBeInTheDocument();
+  });
+
+  it('shows an explanatory line about the primary field under the Fields heading', async () => {
+    mockSubjects();
+    renderEditor();
+
+    await screen.findByDisplayValue('Term');
+    expect(
+      screen.getByText('The first field identifies this card in lists and summaries.'),
+    ).toBeInTheDocument();
+  });
+
+  it('reordering a field to the top moves the Primary marker with it', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await screen.findByDisplayValue('Term');
+    expect(
+      within(screen.getByText('Primary').closest('li')!).getByDisplayValue('Term'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reorder Definition' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Move up' }));
+
+    const pills = screen.getAllByText('Primary');
+    expect(pills).toHaveLength(1);
+    expect(within(pills[0]!.closest('li')!).getByDisplayValue('Definition')).toBeInTheDocument();
+  });
+
+  it('a field staged for removal at the top is skipped — the marker lands on the next active field', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Add field' })); // Front, Back, <new> = 3 active
+    await user.click(screen.getByRole('button', { name: 'Remove Front' })); // stages Front, still at index 0
+
+    const pills = screen.getAllByText('Primary');
+    expect(pills).toHaveLength(1);
+    expect(within(pills[0]!.closest('li')!).getByDisplayValue('Back')).toBeInTheDocument();
+  });
+});
