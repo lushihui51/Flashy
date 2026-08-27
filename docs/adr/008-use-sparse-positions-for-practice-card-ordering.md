@@ -44,18 +44,6 @@ Costs:
 
 ## Amendment (2026-08-19, Phase 7 QA)
 
-This ADR describes `x` — how many cards later a failed card should reappear — as
-"calculated internally," but never defines how. As shipped, `x` is not computed at
-all: `_insertion_position` (`app/services/practice_session.py`) does a pure
-mastery-ascending merge-insertion of the failed card against the session's current
-pending cards, with no minimum-gap floor. In practice this means a card whose post-fail
-mastery becomes the session-wide minimum — common for a card that was already weak
-enough to fail — is inserted immediately before whatever was next in the queue, making
-it literally the very next card served (`x = 0`), not "after x cards" in any spaced
-sense.
+This ADR describes `x` — how many cards later a failed card should reappear — as "calculated internally," but never defines how. As shipped, `x` is not computed at all: `_insertion_position` (`app/services/practice_session.py`) does a pure mastery-ascending merge-insertion of the failed card against the session's current pending cards, with no minimum-gap floor. In practice this means a card whose post-fail mastery becomes the session-wide minimum — common for a card that was already weak enough to fail — is inserted immediately before whatever was next in the queue, making it literally the very next card served (`x = 0`), not "after x cards" in any spaced sense.
 
-This was surfaced during manual Phase 7 testing (a small deck produced a tight loop of
-2 repeating cards) and confirmed by tracing the code rather than assumed. Defining a
-real `x` — and whatever minimum-gap guarantee should back it — is deferred to a
-follow-up change; `_insertion_position`/`_requeue_failed_card` in the same file is what
-that change will replace or extend.
+This was surfaced during manual Phase 7 testing (a small deck produced a tight loop of 2 repeating cards) and confirmed by tracing the code rather than assumed. Defining a real `x` — and whatever minimum-gap guarantee should back it — is deferred to a follow-up change; `_insertion_position`/`_requeue_failed_card` in the same file is what that change will replace or extend.

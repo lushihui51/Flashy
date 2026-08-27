@@ -28,18 +28,7 @@ Openapi-generator will not only generate the types, but also an entire runtime c
 
 ### Error normalization
 
-Each `src/api/*.ts` call site normalizes the `{ data, error }` shape
-openapi-fetch returns via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`): `unwrap`
-throws a formatted `Error` if `error` is set, otherwise returns `data`;
-`unwrapVoid` does the same with no return value, for `DELETE` endpoints with no
-body. An earlier `displayError` helper lived in `client.ts` and did this
-formatting *and* `console.error`'d as a forced side effect — a presentation
-concern that didn't belong in the data layer (every caller got a console dump
-whether or not it wanted one, and it assumed a UI to display into that isn't
-universal — e.g. a background refetch). `unwrap`/`unwrapVoid` keep only the
-formatting; display is left to the UI edge (TanStack Query's `onError`, a
-`QueryCache`/`MutationCache` global handler, or an error boundary — not yet
-wired up).
+Each `src/api/*.ts` call site normalizes the `{ data, error }` shape openapi-fetch returns via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`): `unwrap` throws a formatted `Error` if `error` is set, otherwise returns `data`; `unwrapVoid` does the same with no return value, for `DELETE` endpoints with no body. An earlier `displayError` helper lived in `client.ts` and did this formatting _and_ `console.error`'d as a forced side effect — a presentation concern that didn't belong in the data layer (every caller got a console dump whether or not it wanted one, and it assumed a UI to display into that isn't universal — e.g. a background refetch). `unwrap`/`unwrapVoid` keep only the formatting; display is left to the UI edge (TanStack Query's `onError`, a `QueryCache`/`MutationCache` global handler, or an error boundary — not yet wired up).
 
 ## Consequences
 

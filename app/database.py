@@ -13,7 +13,15 @@ SQLModel.metadata.naming_convention = {
     "pk": "pk_%(table_name)s",
 }
 
-engine = create_engine(settings.database_url, echo=False)
+# ADR 019: pin every connection's session TimeZone to UTC. Postgres returns a
+# `timestamptz` in whatever zone the session is set to — by default the server's own
+# local zone — so without this the same instant is emitted as `...-04:00` on one deploy
+# host and `...+00:00` on another. The instant is identical either way, but pinning it
+# keeps the API's representation deterministic and stops a host's local zone from
+# leaking into responses. The user's zone is applied at render time, never here.
+_CONNECT_ARGS = {"options": "-c timezone=utc"}
+
+engine = create_engine(settings.database_url, echo=False, connect_args=_CONNECT_ARGS)
 
 
 def init_db():

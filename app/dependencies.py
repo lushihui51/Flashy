@@ -8,7 +8,8 @@ from sqlmodel import select
 
 from app.config import settings
 from app.database import SessionDep
-from app.models.app_user import AppUser
+from app.models.app_user import DEFAULT_TIMEZONE, AppUser
+from app.services.timezone import normalize_timezone
 from app.verify_clerk_session import verify_clerk_session
 
 logger = logging.getLogger(__name__)
@@ -36,11 +37,30 @@ def _extract_bearer_token(authorization: str | None) -> str:
     return authorization.removeprefix("Bearer ").strip()
 
 
+def _sync_timezone(db: SessionDep, user: AppUser, header_value: str | None) -> AppUser:
+    """ADR 019: the client is the sole source of the user's IANA zone, and it rides
+    every request rather than a one-off sign-in call, so a user who travels or changes
+    their machine's zone starts rendering in the new one with no manual step. A missing
+    or unresolvable header leaves the stored zone alone — it is never a reason to
+    downgrade a known-good value back to UTC."""
+    zone = normalize_timezone(header_value)
+    if zone is None or zone == user.timezone:
+        return user
+    user.timezone = zone
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def get_current_app_user(
-    db: SessionDep, authorization: Annotated[str | None, Header()] = None
+    db: SessionDep,
+    authorization: Annotated[str | None, Header()] = None,
+    x_timezone: Annotated[str | None, Header()] = None,
 ) -> AppUser:
     """Verifies the Clerk session token on every request and returns the app_user row,
-    creating it on first sight of a clerk_user_id (lazy, same idea as mastery rows)."""
+    creating it on first sight of a clerk_user_id (lazy, same idea as mastery rows).
+    Also keeps `app_user.timezone` in step with the client's X-Timezone header."""
     if _DEV_AUTH_BYPASS_ENABLED:
         clerk_user_id = _DEV_AUTH_USER_ID
     else:
@@ -53,9 +73,11 @@ def get_current_app_user(
 
     user = db.exec(select(AppUser).where(AppUser.clerk_user_id == clerk_user_id)).first()
     if user is not None:
-        return user
+        return _sync_timezone(db, user, x_timezone)
 
-    user = AppUser(clerk_user_id=clerk_user_id)
+    user = AppUser(
+        clerk_user_id=clerk_user_id, timezone=normalize_timezone(x_timezone) or DEFAULT_TIMEZONE
+    )
     db.add(user)
     try:
         db.commit()
@@ -64,6 +86,7 @@ def get_current_app_user(
         db.rollback()
         user = db.exec(select(AppUser).where(AppUser.clerk_user_id == clerk_user_id)).first()
         assert user is not None, "IntegrityError on clerk_user_id implies a row exists"
+        return _sync_timezone(db, user, x_timezone)
     else:
         db.refresh(user)
     return user

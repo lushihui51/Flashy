@@ -4,7 +4,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 import { renderWithRouter } from 'src/test/testUtils';
-import ListRow from 'src/components/library/ListRow';
+import ListRow from 'src/components/ui/ListRow';
 
 function LocationProbe() {
   const location = useLocation();

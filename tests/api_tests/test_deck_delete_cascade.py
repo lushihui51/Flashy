@@ -22,7 +22,7 @@ class TestDeckDeleteCascade:
     immutable session snapshot, not deck-owned state. See the 'deck-delete cascade'
     migration and AGENTS.md's card_field_value entry."""
 
-    def _setup(self, db, client, existing_deck, rate=True):
+    def _setup(self, db, client, existing_deck, rate=True, extra_cards=0):
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
         )
@@ -42,6 +42,18 @@ class TestDeckDeleteCascade:
         assert card.status_code == 201, card.text
         card_id = card.json()["id"]
 
+        # extra_cards > 0 gives the session more than one pending practice_card, which is
+        # what distinguishes "the queue moves on" from "nothing remains".
+        for i in range(extra_cards):
+            extra = client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {prompt_id: f"Bonsoir {i}", answer_id: f"Good evening {i}"},
+                },
+            )
+            assert extra.status_code == 201, extra.text
+
         config = client.post(
             "/api/deck_practice_configs",
             json={
@@ -58,7 +70,8 @@ class TestDeckDeleteCascade:
         assert config.status_code == 201, config.text
 
         session = client.post(
-            "/api/practice_sessions", json={"deck_practice_config_ids": [config.json()["id"]]}
+            "/api/practice_sessions",
+            json={"name": "Cascade run", "deck_practice_config_ids": [config.json()["id"]]},
         )
         assert session.status_code == 201, session.text
         session_id = session.json()["id"]
@@ -198,13 +211,15 @@ class TestDeckDeleteCascade:
         )
         assert rate_response.status_code == 404, rate_response.text
 
-    def test_current_card_read_abandons_session_when_nothing_remains(
+    def test_current_card_read_completes_session_when_nothing_remains(
         self, db, client, existing_deck
     ):
         """The read path, not the rate path: once the deck (and with it every pending
         practice_card) is gone, the next GET of current_card finds nothing and — since
-        the session was still active — transitions it to abandoned instead of leaving
-        it active forever against an endpoint that will only ever 404."""
+        the session was still active — transitions it to completed instead of leaving
+        it active forever against an endpoint that will only ever 404. There is no
+        `abandoned` to land in (ADR 015 as amended); the session's "deleted deck" chips are what
+        tell this apart from one the user finished."""
         ids = self._setup(db, client, existing_deck, rate=False)
 
         response = client.delete(f"/api/decks/{existing_deck['id']}")
@@ -217,4 +232,33 @@ class TestDeckDeleteCascade:
 
         session = client.get(f"/api/practice_sessions/{ids['session_id']}")
         assert session.status_code == 200, session.text
-        assert session.json()["status"] == SessionStatus.abandoned.value
+        assert session.json()["status"] == SessionStatus.completed.value
+
+    def test_deleting_the_card_being_practiced_serves_the_next_pending_card(
+        self, db, client, existing_deck
+    ):
+        """The other half of the case above: cards remain, so the session must simply
+        move on. There is no stored cursor to fix up — the current card is derived
+        (`status='pending' ORDER BY position LIMIT 1`, db_read_current_practice_card), so
+        the cascade-deleted row stops matching and the next one is served with no write
+        anywhere. The session stays active."""
+        ids = self._setup(db, client, existing_deck, rate=False, extra_cards=1)
+
+        current = client.get(f"/api/practice_sessions/{ids['session_id']}/current_card")
+        assert current.status_code == 200, current.text
+        served = current.json()
+
+        # Delete whichever card is actually being practiced, rather than assuming which
+        # of the two the ordering put first.
+        deleted = client.delete(f"/api/cards/{served['card_id']}")
+        assert deleted.status_code == 204, deleted.text
+        assert db.get(PracticeCard, uuid.UUID(served["id"])) is None
+
+        next_current = client.get(f"/api/practice_sessions/{ids['session_id']}/current_card")
+        assert next_current.status_code == 200, next_current.text
+        assert next_current.json()["id"] != served["id"]
+        assert next_current.json()["card_id"] != served["card_id"]
+        assert next_current.json()["status"] == "pending"
+
+        session = client.get(f"/api/practice_sessions/{ids['session_id']}")
+        assert session.json()["status"] == SessionStatus.active.value

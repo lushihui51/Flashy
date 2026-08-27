@@ -30,7 +30,8 @@ def owned(client, existing_subject, existing_deck, existing_field_defs, existing
     config = config_res.json()
 
     session_res = client.post(
-        "/api/practice_sessions", json={"deck_practice_config_ids": [config["id"]]}
+        "/api/practice_sessions",
+        json={"name": "Scoping run", "deck_practice_config_ids": [config["id"]]},
     )
     assert session_res.status_code == 201, session_res.text
     session = session_res.json()
@@ -163,7 +164,8 @@ class TestForeignResourcesAreNotFound:
 
         assert (
             client.post(
-                "/api/practice_sessions", json={"deck_practice_config_ids": [config_id]}
+                "/api/practice_sessions",
+                json={"name": "Scoping run", "deck_practice_config_ids": [config_id]},
             ).status_code
             == 404
         )

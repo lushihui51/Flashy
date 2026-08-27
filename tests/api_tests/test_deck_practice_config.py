@@ -138,6 +138,38 @@ class TestDeckPracticeConfigValidation:
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
 
+    def test_pool_ids_without_counts_rejected(self, client, valid_config_payload):
+        """A pool with no counts draws zero fields per card, so the pool is inert and a
+        config resting on it alone generates a session with no cards at all."""
+        valid_config_payload["prompt_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 400
+        assert "prompt_pool_counts" in res.json()["detail"]
+
+    def test_answer_pool_ids_without_counts_rejected(self, client, valid_config_payload):
+        valid_config_payload["answer_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 400
+        assert "answer_pool_counts" in res.json()["detail"]
+
+    def test_update_emptying_pool_counts_rejected(self, client, existing_config):
+        res = client.patch(
+            f"/api/deck_practice_configs/{existing_config['id']}",
+            json={"prompt_pool_counts": []},
+        )
+        assert res.status_code == 400
+        assert "prompt_pool_counts" in res.json()["detail"]
+
+    def test_empty_pool_with_empty_counts_is_valid(self, client, valid_config_payload):
+        """The rule is about an *uncounted* pool, not an unused one — a config with no
+        pool at all is the ordinary fixed-fields case."""
+        valid_config_payload["prompt_pool_ids"] = []
+        valid_config_payload["prompt_pool_counts"] = []
+        valid_config_payload["answer_pool_ids"] = []
+        valid_config_payload["answer_pool_counts"] = []
+        res = client.post("/api/deck_practice_configs", json=valid_config_payload)
+        assert res.status_code == 201, res.text
+
     def test_only_pool_no_fixed_field_is_valid(
         self, client, existing_deck, config_fields
     ):
@@ -174,3 +206,60 @@ class TestDeckPracticeConfigValidation:
             json={"prompt_pool_counts": [1, 2, 3]},  # existing pool only has 2 ids
         )
         assert res.status_code == 400
+
+
+class TestDeckPracticeConfigList:
+    """GET /api/deck_practice_configs — the config picker's read. Rows carry their deck
+    and subject so the picker can group by deck without a client-side join, and so two
+    same-named decks in different subjects stay distinguishable."""
+
+    def test_lists_every_config_with_deck_and_subject_context(
+        self, client, multi_subject_library
+    ):
+        lib = multi_subject_library
+        rows = client.get("/api/deck_practice_configs").json()
+
+        assert [row["name"] for row in rows] == ["Config A", "Config B"]
+        assert rows[0]["deck_id"] == lib["decks"]["a"]["id"]
+        assert rows[0]["deck_name"] == "Shared Deck Name"
+        assert rows[0]["subject_id"] == lib["subjects"]["a"]["id"]
+        assert rows[0]["subject_name"] == "Alpha"
+        assert rows[0]["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
+
+    def test_subject_filter(self, client, multi_subject_library):
+        lib = multi_subject_library
+        rows = client.get(
+            "/api/deck_practice_configs", params={"subject_id": lib["subjects"]["b"]["id"]}
+        ).json()
+        assert [row["name"] for row in rows] == ["Config B"]
+
+    def test_deck_filter_disambiguates_same_named_decks(self, client, multi_subject_library):
+        lib = multi_subject_library
+        rows = client.get(
+            "/api/deck_practice_configs", params={"deck_id": lib["decks"]["a"]["id"]}
+        ).json()
+        assert [row["name"] for row in rows] == ["Config A"]
+
+    def test_filters_combine_with_and(self, client, multi_subject_library):
+        lib = multi_subject_library
+        rows = client.get(
+            "/api/deck_practice_configs",
+            params={
+                "subject_id": lib["subjects"]["a"]["id"],
+                "deck_id": lib["decks"]["b"]["id"],
+            },
+        ).json()
+        assert rows == []
+
+    def test_another_users_configs_are_invisible(
+        self, client, act_as, other_user, multi_subject_library
+    ):
+        lib = multi_subject_library
+        act_as(other_user)
+        assert client.get("/api/deck_practice_configs").json() == []
+        assert (
+            client.get(
+                "/api/deck_practice_configs", params={"deck_id": lib["decks"]["a"]["id"]}
+            ).json()
+            == []
+        )

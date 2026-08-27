@@ -11,8 +11,22 @@ import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
 const BASE = 'http://localhost:8000';
 
 const decks = [
-  { id: 'd1', subject_id: 's1', name: 'French Vocab', created_at: '', card_count: 1, field_names: ['Front', 'Back'] },
-  { id: 'd2', subject_id: 's1', name: 'Spanish Vocab', created_at: '', card_count: 0, field_names: ['Word'] },
+  {
+    id: 'd1',
+    subject_id: 's1',
+    name: 'French Vocab',
+    created_at: '',
+    card_count: 1,
+    field_names: ['Front', 'Back'],
+  },
+  {
+    id: 'd2',
+    subject_id: 's1',
+    name: 'Spanish Vocab',
+    created_at: '',
+    card_count: 0,
+    field_names: ['Word'],
+  },
 ];
 
 const deckD1 = {
@@ -56,7 +70,11 @@ function mockAll() {
 function LocationProbe() {
   const location = useLocation();
   return (
-    <span data-testid="location" data-state={JSON.stringify(location.state)}>
+    <span
+      data-testid="location"
+      data-state={JSON.stringify(location.state)}
+      data-search={location.search}
+    >
       {location.pathname}
     </span>
   );
@@ -93,8 +111,13 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
+    // ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams, not
+    // compared as an encoded string literal.
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/new'));
-    expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ returnTo: '/cards/new' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+    const locationEl = screen.getByTestId('location');
+    const params = new URLSearchParams(locationEl.dataset.search);
+    expect(params.get('returnTo')).toBe('/cards/new');
   });
 
   it('deck is preselected but still an editable combobox when opened with a deckId in location state', async () => {
@@ -120,7 +143,10 @@ describe('CardStandaloneForm — create mode', () => {
         const body = (await request.json()) as { deck_id: string; values: Record<string, string> };
         expect(body.deck_id).toBe('d1');
         expect(body.values).toEqual({ f1: 'Bonjour', f2: 'Hello' });
-        return HttpResponse.json({ id: 'new-card', deck_id: 'd1', created_at: '', values: body.values }, { status: 201 });
+        return HttpResponse.json(
+          { id: 'new-card', deck_id: 'd1', created_at: '', values: body.values },
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -275,7 +301,9 @@ describe('CardStandaloneForm — edit mode', () => {
   it('shows a not-found message instead of crashing for a missing card', async () => {
     server.use(
       http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
-      http.get(`${BASE}/api/cards/:id`, () => HttpResponse.json({ detail: 'Card not found' }, { status: 404 })),
+      http.get(`${BASE}/api/cards/:id`, () =>
+        HttpResponse.json({ detail: 'Card not found' }, { status: 404 }),
+      ),
     );
     renderForm('/cards/nope/edit');
 

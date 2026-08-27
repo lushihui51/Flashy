@@ -1,7 +1,7 @@
 import { type RefObject } from 'react';
-import { Folder, Layers, CreditCard } from 'lucide-react';
+import { Folder, Layers, CreditCard, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BottomSheet from 'src/components/shell/BottomSheet';
+import BottomSheet from 'src/components/ui/BottomSheet';
 
 type CreateSheetProps = {
   open: boolean;
@@ -13,9 +13,13 @@ type CreateSheetProps = {
   hasDecks: boolean | undefined;
 };
 
-// TODO(defer:icon-picker) Deck and Card rows link to placeholder routes until
-// Phase 4 (deck) and Phase 5 (card) build the real forms. Subject is wired to the
-// real form as of Phase 3.
+/** The four things a user makes, in the order they nest: a subject holds decks, a deck
+ * holds cards, and a practice is run over them.
+ *
+ * A deck configuration is deliberately absent. It is not a top-level resource — it
+ * belongs to one deck and only means anything beside that deck's fields, so it is made
+ * from the deck's own Configurations tab, or from New practice while choosing what to
+ * practise. */
 export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: CreateSheetProps) {
   const navigate = useNavigate();
 
@@ -60,6 +64,18 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
                 <span className="text-sm text-(--color-text-muted)">Create a deck first</span>
               )}
             </span>
+          </button>
+        </li>
+        <li>
+          {/* Straight to where a practice is made — choosing configurations and naming
+              the run — not to the list of past ones. */}
+          <button
+            type="button"
+            onClick={() => go('/practice/new')}
+            className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
+          >
+            <Zap aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
+            <span className="font-medium text-(--color-text)">Practice</span>
           </button>
         </li>
       </ul>

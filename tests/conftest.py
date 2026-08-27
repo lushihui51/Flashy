@@ -12,11 +12,11 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
-from app.database import get_session
+from app.database import _CONNECT_ARGS, get_session
 from app.dependencies import get_current_app_user
 from app.main import app
 
-engine = create_engine(settings.test_database_url, echo=False)
+engine = create_engine(settings.test_database_url, echo=False, connect_args=_CONNECT_ARGS)
 
 
 def override_get_session():
@@ -132,3 +132,60 @@ def existing_card(client, existing_deck, existing_field_defs):
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+@pytest.fixture
+def multi_subject_library(client):
+    """Two subjects, each owning a deck with the *same name* and one deck configuration.
+
+    Two decks can share a name across subjects (uniqueness is per `(subject_id, name)`),
+    which is exactly why the practice filters key on deck **id** with the subject
+    alongside for disambiguation. Every list/filter test needs that collision to be real
+    rather than assumed, so it lives here."""
+    library = {"subjects": {}, "decks": {}, "fields": {}, "configs": {}}
+
+    for key, subject_name in (("a", "Alpha"), ("b", "Beta")):
+        subject_res = client.post("/api/subjects", json={"name": subject_name})
+        assert subject_res.status_code == 201, subject_res.text
+        subject = subject_res.json()
+
+        deck_res = client.post(
+            "/api/decks",
+            json={
+                "name": "Shared Deck Name",
+                "subject_id": subject["id"],
+                "field_defs": [
+                    {"name": "front", "type": "text"},
+                    {"name": "back", "type": "text"},
+                ],
+                "cards": [
+                    {"values": ["q1", "a1"]},
+                    {"values": ["q2", "a2"]},
+                ],
+            },
+        )
+        assert deck_res.status_code == 201, deck_res.text
+        deck = deck_res.json()
+        fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+
+        config_res = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": deck["id"],
+                "name": f"Config {key.upper()}",
+                "prompt_field_ids": [fields["front"]],
+                "answer_field_ids": [fields["back"]],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert config_res.status_code == 201, config_res.text
+
+        library["subjects"][key] = subject
+        library["decks"][key] = deck
+        library["fields"][key] = fields
+        library["configs"][key] = config_res.json()
+
+    return library

@@ -120,7 +120,7 @@ def copy_deck(
         except IntegrityError:
             db.rollback()
             raise ValueError(
-                f"A practice config named {config.name!r} already exists on the new deck"
+                f"A configuration named {config.name!r} already exists on the new deck"
             ) from None
 
     db.commit()

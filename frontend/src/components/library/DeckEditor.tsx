@@ -1,9 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MoreVertical, Plus, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
-import { readSubject } from 'src/api/subject';
+import { readSubject, readSubjects } from 'src/api/subject';
 import {
   deckEditorReducer,
   initialDeckEditorState,
@@ -12,19 +12,26 @@ import {
   buildDeckCreatePayload,
   type DeckEditorState,
   type EditorField,
-  type EditorCard,
 } from 'src/lib/deckEditorReducer';
 import { buildDeckBatchEditPayload } from 'src/lib/deckEditorDiff';
 import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
 import { pluralize } from 'src/lib/pluralize';
-import SubjectPicker from 'src/components/library/SubjectPicker';
-import ListRow from 'src/components/library/ListRow';
-import ConfirmDialog from 'src/components/library/ConfirmDialog';
-import CardForm from 'src/components/library/CardForm';
+import PickerCombobox from 'src/components/ui/PickerCombobox';
+import FullScreenDialog from 'src/components/ui/FullScreenDialog';
+import SubjectIcon from 'src/components/library/SubjectIcon';
+import { SubjectFormBody } from 'src/components/library/SubjectForm';
+import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
+
+/** Only what the subject combobox displays — satisfied by SubjectSummary (the list
+ * from readSubjects), SubjectRead (what createSubject returns), or the `{id, name,
+ * icon}` a contextual entry point hands over in router state. Deliberately narrower
+ * than any of them so none needs reshaping to pass through. */
+type SubjectItem = { id: string; name: string; icon?: string | null };
 
 function FieldOverflowMenu({
   fieldName,
@@ -162,7 +169,10 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     disabled
                     className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40"
                   >
-                    <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+                    <MoreVertical
+                      aria-hidden="true"
+                      className="h-4 w-4 text-(--color-text-muted)"
+                    />
                   </button>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40">
                     <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
@@ -245,95 +255,9 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   );
 }
 
-type CardsSectionProps = {
-  fields: EditorField[];
-  cards: EditorCard[];
-  onAdd: () => void;
-  onOpen: (key: string) => void;
-};
-
-/** Phase 7.5: a *saved* card removed from inside the in-editor `CardForm` is staged
- * the same way a saved field is — struck through, no longer opens the form, no
- * control of its own. Only the header's global Undo can bring it back. A brand-new
- * card still deletes outright. Title/subtitle for every row — pending or not — read
- * from the deck's *active* fields only, matching what the row will actually show
- * once a pending field is really gone. */
-function CardsSection({ fields, cards, onAdd, onOpen }: CardsSectionProps) {
-  const activeFields = fields.filter((f) => !f.pendingRemoval);
-  const firstField = activeFields[0];
-  const secondField = activeFields[1];
-
-  return (
-    <section className="mt-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-(--color-text-muted)">{pluralize(cards.length, 'card')}</h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex h-9 items-center gap-1 text-sm font-semibold text-(--color-primary)"
-        >
-          <Plus aria-hidden="true" className="h-4 w-4" />
-          Add card
-        </button>
-      </div>
-      <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated)">
-        {cards.map((card) => {
-          const firstValue = firstField ? (card.values[firstField.key] ?? '').trim() : '';
-          const secondValue = secondField ? (card.values[secondField.key] ?? '').trim() : '';
-
-          if (card.pendingRemoval) {
-            return (
-              <li key={card.key}>
-                <div className="flex min-h-16 items-center gap-3 py-[14px] opacity-50">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] leading-5 text-(--color-text) line-through">
-                      {firstValue === '' ? 'empty' : firstValue}
-                    </span>
-                    {secondValue !== '' && (
-                      <span className="block truncate text-[13px] leading-4 text-(--color-text-secondary)">
-                        {secondValue}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </li>
-            );
-          }
-
-          return (
-            <li key={card.key}>
-              <ListRow
-                title={
-                  firstValue === '' ? (
-                    <span className="italic text-(--color-text-muted)">empty</span>
-                  ) : (
-                    firstValue
-                  )
-                }
-                subtitle={secondValue !== '' ? secondValue : undefined}
-                onClick={() => onOpen(card.key)}
-              />
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 type CreateLocationState = {
   subject?: { id: string; name: string; icon: string };
-  /** Set when this editor was opened from a DeckPicker's "New deck…" row (Phase 5.5
-   * §4) — where to go back to, and with what, once this deck is saved or abandoned.
-   * Create mode only — an edit is never entered via that round-trip. */
-  returnTo?: string;
 } | null;
-
-// A stable reference for the "adding a new card" case — a fresh `{}` literal on every
-// render would defeat CardForm's render-time resync guard (it compares `initialValues`
-// by reference to detect "a different card was opened") and keep resetting the form
-// back to blank as the user types.
-const EMPTY_CARD_VALUES: Record<string, string> = {};
 
 type DeckEditorProps = {
   mode: 'create' | 'edit';
@@ -341,12 +265,13 @@ type DeckEditorProps = {
 
 /** Full-screen route page (§4.7). Mode is derived from the route (`/decks/new` vs.
  * `/decks/:deckId/edit`, App.tsx), same pattern as `SubjectForm`/`CardStandaloneForm`.
- * Edit mode (Phase 7) loads the existing `DeckDetail` — and its subject, since
- * `SubjectPicker` needs the full `{id, name, icon}` object, not just an id — before
+ * Edit mode (Phase 7) loads the existing `DeckDetail` — and its subject, since the
+ * subject combobox needs the full `{id, name, icon}` object, not just an id — before
  * mounting the body, gated the same way `CardStandaloneForm` gates on its deck. */
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -380,7 +305,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       deck={mode === 'edit' ? deckQuery.data : undefined}
       subject={mode === 'edit' ? subjectQuery.data : undefined}
       contextualSubject={createLocationState?.subject ?? null}
-      returnTo={createLocationState?.returnTo}
+      // ADR 024: returnTo rides the URL, not state — create mode only; an edit is
+      // never entered via a "New deck…" round-trip.
+      returnTo={mode === 'create' ? internalReturnTo(searchParams) : null}
     />
   );
 }
@@ -391,31 +318,49 @@ type DeckEditorBodyProps = {
   deck: DeckDetail | undefined;
   subject: SubjectRead | undefined;
   contextualSubject: { id: string; name: string; icon: string } | null;
-  returnTo: string | undefined;
+  returnTo: string | null;
 };
 
 /** Phase 7.5 §2: counts what the current changeset would actually delete — the only
  * thing the aggregated save confirm needs, and what decides whether it shows at all. */
+/** What a deck delete takes with it, and what it leaves. The cascade is ADR 015's:
+ * cards, fields and configurations are deck-owned and go; `review_log` is history and
+ * is never deleted, so mastery survives the deck it was earned on. */
+function deleteDeckSummaryText(deck: DeckDetail | undefined): string {
+  const owned = [
+    ...(deck && deck.cards.length > 0 ? [pluralize(deck.cards.length, 'card')] : []),
+    ...(deck && deck.field_defs.length > 0 ? [pluralize(deck.field_defs.length, 'field')] : []),
+    'its practice configurations',
+  ];
+  const list = owned.length > 1 ? `${owned.slice(0, -1).join(', ')} and ${owned.at(-1)}` : owned[0];
+  return `This also deletes ${list}. Your review history is kept. This can't be undone.`;
+}
+
 function destructiveCounts(state: DeckEditorState) {
-  const fieldCount = state.fields.filter((f) => f.pendingRemoval).length;
-  const cardCount = state.cards.filter((c) => c.pendingRemoval).length;
-  return { fieldCount, cardCount };
+  return { fieldCount: state.fields.filter((f) => f.pendingRemoval).length };
 }
 
-/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3). */
-function destructiveSummaryText({ fieldCount, cardCount }: ReturnType<typeof destructiveCounts>): string {
-  const parts: string[] = [];
-  if (fieldCount > 0) parts.push(pluralize(fieldCount, 'field'));
-  if (cardCount > 0) parts.push(pluralize(cardCount, 'card'));
-  return `This deletes ${parts.join(' and ')}. This can't be undone.`;
+/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3).
+ * Archiving a field keeps its existing card values as inert history (ADR 010), which
+ * is why this says the field goes and not the content behind it. */
+function destructiveSummaryText({ fieldCount }: ReturnType<typeof destructiveCounts>): string {
+  return `This removes ${pluralize(fieldCount, 'field')} from every card in this deck. This can't be undone.`;
 }
 
-function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, returnTo }: DeckEditorBodyProps) {
+function DeckEditorBody({
+  mode,
+  deckId,
+  deck,
+  subject,
+  contextualSubject,
+  returnTo,
+}: DeckEditorBodyProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
-  // Computed once, at mount — the same rule as SubjectPicker/DeckPicker's own
-  // `defaultValue`. `original` doubles as the frozen baseline the edit-mode diff
+  // Computed once, at mount — the same rule as the subject combobox's own initial
+  // selection below. `original` doubles as the frozen baseline the edit-mode diff
   // compares against: deckDetailToEditorState mints a fresh client `key` per field
   // and card, and calling it twice would mint two different sets of keys for the
   // same rows, breaking every id-based comparison in buildDeckBatchEditPayload.
@@ -423,7 +368,9 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   // Phase 7.5 rebases it after every successful edit-mode save (§4), and the global
   // Undo (§2) reverts to it directly.
   const [original, setOriginal] = useState<DeckEditorState>(() =>
-    mode === 'edit' && deck ? deckDetailToEditorState(deck) : initialDeckEditorState(contextualSubject?.id ?? null),
+    mode === 'edit' && deck
+      ? deckDetailToEditorState(deck)
+      : initialDeckEditorState(contextualSubject?.id ?? null),
   );
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
@@ -431,18 +378,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   const [saveConfirm, setSaveConfirm] = useState<ReturnType<typeof destructiveCounts> | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // 'new' | <card key> | null — TypeScript collapses this to plain `string | null`
-  // ('new' is a subtype of string), so every read site below checks `!== 'new'`
-  // explicitly via `editingCardKey` rather than relying on `typeof`.
-  const [cardFormState, setCardFormState] = useState<string | null>(null);
-  // Bumped on every open so CardForm (mounted for DeckEditor's whole lifetime) gets a
-  // fresh `key` and therefore a fresh remount each time — see CardForm's own comment
-  // for why reusing the same instance across repeated "Add card" opens is unsafe.
-  const [cardFormOpenSeq, setCardFormOpenSeq] = useState(0);
-  const openCardForm = (next: string) => {
-    setCardFormState(next);
-    setCardFormOpenSeq((n) => n + 1);
-  };
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Phase 7.5 §4: a transient "Saved ✓" on the Save control after an edit-mode save.
@@ -460,7 +395,7 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
-  // Create mode opened via a DeckPicker's "New deck…" round-trip → both Save and
+  // Create mode opened via the card form's "New deck…" round-trip → both Save and
   // Cancel go back to wherever that picker lives. Edit mode always returns to the
   // deck's own detail page — there's no round-trip to return to.
   const goBack = () => navigate(mode === 'edit' ? `/decks/${deckId}` : (returnTo ?? '/library'));
@@ -561,7 +496,7 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
     if (!canSave) return;
     if (mode === 'edit') {
       const counts = destructiveCounts(state);
-      if (counts.fieldCount > 0 || counts.cardCount > 0) {
+      if (counts.fieldCount > 0) {
         setSaveConfirm(counts);
         return;
       }
@@ -571,15 +506,24 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
 
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
 
-  // A pending field is on its way out — CardForm shouldn't offer an input for it.
-  const cardFormFieldDefs = state.fields
-    .filter((f) => !f.pendingRemoval)
-    .map((f) => ({ key: f.key, name: f.name, type: f.type }));
-  const editingCardKey = cardFormState !== null && cardFormState !== 'new' ? cardFormState : null;
-  const editingCard = editingCardKey ? state.cards.find((c) => c.key === editingCardKey) : undefined;
+  const subjectDefaultValue: SubjectItem | null =
+    mode === 'edit' && subject
+      ? { id: subject.id, name: subject.name, icon: subject.icon }
+      : contextualSubject;
 
-  const subjectDefaultValue =
-    mode === 'edit' && subject ? { id: subject.id, name: subject.name, icon: subject.icon } : contextualSubject;
+  // The subject combobox is wired here rather than behind a picker component of its own:
+  // the fetch has to live in a page-level component (shared components take their data as
+  // props), and once it does, the wrapper is only holding this selection and the create
+  // overlay — both of which belong to the one screen that uses them.
+  //
+  // `selectedSubject` is owned here, not read straight off `subjectDefaultValue`:
+  // PickerCombobox compares its displayed text against the selected item's name to decide
+  // whether reopening shows the full list or a filtered one, so a selection that never
+  // advanced past the initial default would leave that comparison pointing at the wrong
+  // name.
+  const [selectedSubject, setSelectedSubject] = useState<SubjectItem | null>(subjectDefaultValue);
+  const [subjectOverlayOpen, setSubjectOverlayOpen] = useState(false);
+  const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // §4: "Done" once the editor has nothing unsaved to lose, "Cancel" while it does —
   // create mode never has a "clean, already saved" state to return to, so it always
@@ -596,7 +540,9 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         >
           {showDone ? 'Done' : 'Cancel'}
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">{mode === 'edit' ? 'Edit deck' : 'New deck'}</h1>
+        <h1 className="text-base font-semibold text-(--color-text)">
+          {mode === 'edit' ? 'Edit deck' : 'New deck'}
+        </h1>
         <div className="flex items-center gap-3">
           {mode === 'edit' && (
             <button
@@ -637,9 +583,18 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
             className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
           />
         </label>
-        <SubjectPicker
-          defaultValue={subjectDefaultValue}
-          onChange={(subjectId) => dispatch({ type: 'SET_SUBJECT', subjectId })}
+        <PickerCombobox<SubjectItem>
+          items={subjectsQuery.data ?? []}
+          selected={selectedSubject}
+          onSelect={(item) => {
+            setSelectedSubject(item);
+            dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
+          }}
+          onSelectCreate={() => setSubjectOverlayOpen(true)}
+          createLabel="New subject…"
+          placeholder="Subject"
+          renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
+          inputRef={subjectInputRef}
         />
       </div>
 
@@ -649,13 +604,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         onMove={(key, toIndex) => dispatch({ type: 'MOVE_FIELD', key, toIndex })}
         onRemove={handleRemoveField}
         onAdd={() => dispatch({ type: 'ADD_FIELD' })}
-      />
-
-      <CardsSection
-        fields={state.fields}
-        cards={state.cards}
-        onAdd={() => openCardForm('new')}
-        onOpen={(key) => openCardForm(key)}
       />
 
       {mode === 'edit' && (
@@ -668,6 +616,30 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
           Delete deck
         </button>
       )}
+
+      {/* Creating a subject from the combobox's create row happens *over* this editor
+          rather than navigating away — unlike "New deck…" in the card form, there is
+          nothing heavy to nest here and everything typed so far would otherwise be lost. */}
+      <FullScreenDialog
+        open={subjectOverlayOpen}
+        onClose={() => setSubjectOverlayOpen(false)}
+        ariaLabel="New subject"
+        triggerRef={subjectInputRef}
+      >
+        <SubjectFormBody
+          mode="create"
+          subjectId={undefined}
+          original={undefined}
+          deckCount={0}
+          onSuccess={(subject) => {
+            void queryClient.invalidateQueries({ queryKey: ['subjects'] });
+            setSelectedSubject(subject);
+            dispatch({ type: 'SET_SUBJECT', subjectId: subject.id });
+            setSubjectOverlayOpen(false);
+          }}
+          onCancel={() => setSubjectOverlayOpen(false)}
+        />
+      </FullScreenDialog>
 
       <ConfirmDialog
         open={confirmCancelOpen}
@@ -696,38 +668,16 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         <ConfirmDialog
           open={confirmDeleteOpen}
           title="Delete deck?"
-          description={
-            deck && deck.cards.length > 0
-              ? `This will also delete ${pluralize(deck.cards.length, 'card')}. This can't be undone.`
-              : "This can't be undone."
-          }
+          // Names everything that goes with it (ADR 015: the deck owns its cards,
+          // fields and configurations, and they cascade), and says what does not —
+          // review history is never deleted, so past practice still counts.
+          description={deleteDeckSummaryText(deck)}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void handleDeleteDeck()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}
-
-      <CardForm
-        key={cardFormOpenSeq}
-        open={cardFormState !== null}
-        fieldDefs={cardFormFieldDefs}
-        initialValues={editingCard?.values ?? EMPTY_CARD_VALUES}
-        onSave={(values) => {
-          if (cardFormState === 'new') dispatch({ type: 'ADD_CARD', values });
-          else if (editingCardKey) dispatch({ type: 'UPDATE_CARD', key: editingCardKey, values });
-          setCardFormState(null);
-        }}
-        onDelete={
-          editingCardKey
-            ? () => {
-                dispatch({ type: 'REMOVE_CARD', key: editingCardKey });
-                setCardFormState(null);
-              }
-            : undefined
-        }
-        onClose={() => setCardFormState(null)}
-      />
     </div>
   );
 }

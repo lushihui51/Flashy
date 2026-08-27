@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PickerCombobox from 'src/components/library/PickerCombobox';
+import PickerCombobox from 'src/components/ui/PickerCombobox';
 
 const items = Array.from({ length: 11 }, (_, i) => ({ id: `d${i}`, name: `Deck ${i}` }));
 
@@ -116,5 +116,91 @@ describe('PickerCombobox', () => {
       />,
     );
     expect(screen.getByTestId('leading-d0')).toBeInTheDocument();
+  });
+
+  describe('purpose="filter"', () => {
+    it('offers a clear row first, and no create row', async () => {
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox
+          purpose="filter"
+          items={items.slice(0, 3)}
+          selected={null}
+          onSelect={() => {}}
+          clearLabel="All decks"
+          onClear={() => {}}
+          placeholder="Deck"
+        />,
+      );
+      await user.click(screen.getByRole('combobox'));
+
+      const options = screen.getAllByRole('option');
+      expect(options[0]).toHaveTextContent('All decks');
+      expect(options).toHaveLength(4); // clear + 3 items, no create row
+      expect(screen.queryByRole('option', { name: /New/ })).not.toBeInTheDocument();
+    });
+
+    it('choosing the clear row calls onClear and empties the input', async () => {
+      const onClear = vi.fn();
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox
+          purpose="filter"
+          items={items}
+          selected={items[3]!}
+          onSelect={onSelect}
+          clearLabel="All decks"
+          onClear={onClear}
+          placeholder="Deck"
+        />,
+      );
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', { name: 'All decks' }));
+
+      expect(onClear).toHaveBeenCalledTimes(1);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(screen.getByRole('combobox')).toHaveValue('');
+    });
+
+    it('selecting an item still reports the item, not the row above it', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox
+          purpose="filter"
+          items={items}
+          selected={null}
+          onSelect={onSelect}
+          clearLabel="All decks"
+          onClear={() => {}}
+          placeholder="Deck"
+        />,
+      );
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', { name: 'Deck 2' }));
+
+      expect(onSelect).toHaveBeenCalledWith(items[2]);
+    });
+
+    it('the clear row is the first keyboard stop, ahead of the items', async () => {
+      const onClear = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox
+          purpose="filter"
+          items={items}
+          selected={null}
+          onSelect={() => {}}
+          clearLabel="All decks"
+          onClear={onClear}
+          placeholder="Deck"
+        />,
+      );
+      await user.click(screen.getByRole('combobox'));
+      await user.keyboard('{Enter}');
+
+      expect(onClear).toHaveBeenCalledTimes(1);
+    });
   });
 });

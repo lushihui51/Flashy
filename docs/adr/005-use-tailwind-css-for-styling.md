@@ -14,14 +14,7 @@ Use Tailwind CSS (v4) with utility classes applied directly in components.
 
 ### Colour tokens
 
-Colours are centralized as CSS custom properties in one `@theme` block in
-`src/index.css` (`--color-surface`, `--color-surface-elevated`, `--color-text`,
-`--color-text-muted`, `--color-primary`, `--color-primary-contrast`,
-`--color-scrim`), referenced via Tailwind v4's canonical `bg-(--color-x)`
-shorthand (not the older `bg-[var(--color-x)]` arbitrary-value syntax), so a
-future palette swap is a one-file edit. The current values are a placeholder —
-`/* TODO(defer:colors) */` marks the block — no real brand palette or
-dark/light mode exists yet.
+Colours are centralized as CSS custom properties in one `@theme` block in `src/index.css` (`--color-surface`, `--color-surface-elevated`, `--color-text`, `--color-text-muted`, `--color-primary`, `--color-primary-contrast`, `--color-scrim`), referenced via Tailwind v4's canonical `bg-(--color-x)` shorthand (not the older `bg-[var(--color-x)]` arbitrary-value syntax), so a future palette swap is a one-file edit. The current values are a placeholder — `/* TODO(defer:colors) */` marks the block — no real brand palette or dark/light mode exists yet.
 
 ## Consequences
 

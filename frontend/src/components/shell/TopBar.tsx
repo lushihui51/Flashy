@@ -1,7 +1,9 @@
 import { type Ref } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Logo from 'src/components/shell/Logo';
 import AuthSlot from 'src/components/shell/AuthSlot';
+import { PRACTICE_NAV } from 'src/components/shell/navItems';
 
 type TopBarProps = {
   onMenuClick: () => void;
@@ -45,18 +47,36 @@ export default function TopBar({
 
       <div className="flex-1" />
 
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Evenly spaced by what the eye actually sees. The avatar fills its 44px circle
+          while an icon is only 20px inside a 44px hit box, so equal *boxes* read as
+          unequal gaps — the icons sit in 20px-wide boxes instead, and one gap equal to
+          the bar's own padding puts the same 12px between each glyph, the avatar, and
+          the edge. The hit area is put back with an inset pseudo-element, which enlarges
+          the target without taking part in the layout. */}
+      <div className="flex shrink-0 items-center gap-3">
         <button
           ref={createButtonRef}
           type="button"
           onClick={onCreateClick}
-          className="h-11 shrink-0 px-3 text-sm font-medium text-(--color-text)"
+          aria-label="Create"
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
         >
-          + Create
+          <Plus aria-hidden="true" className="h-5 w-5" />
         </button>
 
-        {/* Fixed-width so swapping Log in <-> avatar never shifts layout. */}
-        <div data-testid="auth-slot" className="flex h-11 w-24 shrink-0 items-center justify-end">
+        {/* Same destination as the drawer's own Practice item, from the same constant. */}
+        <Link
+          to={PRACTICE_NAV.to}
+          aria-label={PRACTICE_NAV.label}
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
+        >
+          <PRACTICE_NAV.icon aria-hidden="true" className="h-5 w-5" />
+        </Link>
+
+        {/* Sized by its content, not padded out to a fixed width — that padding was
+            what put ~50px of dead space between Create and the avatar. Only the wider
+            signed-out "Log in" pill breaks the rhythm, once per load. */}
+        <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">
           <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
         </div>
       </div>

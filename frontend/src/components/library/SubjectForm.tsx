@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
-import ConfirmDialog from 'src/components/library/ConfirmDialog';
+import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { pluralize } from 'src/lib/pluralize';
 import type { components } from 'src/api/types';
 
@@ -12,7 +12,7 @@ type SubjectFormProps = {
 };
 
 /** Routed-page wrapper (Phase 3) — thin: it owns navigation only. `SubjectFormBody`
- * (below) is the actual form, shared with SubjectPicker's create-overlay (Phase 5.5
+ * (below) is the actual form, shared with the deck editor's create-a-subject overlay (Phase 5.5
  * §3), which wraps the same body in a FullScreenDialog instead of a route. */
 export default function SubjectForm({ mode }: SubjectFormProps) {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -61,7 +61,7 @@ export type SubjectFormBodyProps = {
   subjectId: string | undefined;
   original: components['schemas']['SubjectRead'] | undefined;
   /** Only meaningful in edit mode — names the count in the delete confirm. The
-   * create-overlay caller (SubjectPicker) never renders that branch, so it can pass
+   * create-overlay caller (DeckEditor) never renders that branch, so it can pass
    * 0 without fetching anything. */
   deckCount: number;
   /** Create succeeded, or edit was saved (possibly a no-op save with nothing
@@ -76,7 +76,7 @@ export type SubjectFormBodyProps = {
 
 /** Create and edit share one form (D1) — mode only changes what's prefilled, the
  * submit target, and whether Delete is offered. No navigation of its own: the two
- * callers (the routed page above, and SubjectPicker's create-overlay) decide what
+ * callers (the routed page above, and DeckEditor's create-overlay) decide what
  * "done" means for them. */
 export function SubjectFormBody({
   mode,

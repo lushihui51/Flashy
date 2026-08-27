@@ -1,7 +1,7 @@
 import { useId, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, useClerk } from '@clerk/react';
-import BottomSheet from 'src/components/shell/BottomSheet';
+import BottomSheet from 'src/components/ui/BottomSheet';
 
 type AccountSheetProps = {
   open: boolean;

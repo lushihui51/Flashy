@@ -33,6 +33,16 @@ class DeckPracticeConfigRead(DeckPracticeConfigBase):
     created_at: datetime
 
 
+class DeckPracticeConfigSummary(DeckPracticeConfigRead):
+    """A list row for the config picker and the config management surface: the config
+    plus where it lives. Two decks in different subjects may share a name, so a row is
+    only unambiguous with its subject alongside its deck."""
+
+    deck_name: str
+    subject_id: uuid.UUID
+    subject_name: str
+
+
 class DeckPracticeConfigUpdate(AppModel):
     name: str | None = None
     prompt_field_ids: list[uuid.UUID] | None = None

@@ -35,13 +35,16 @@
 - Diagnostic reports, investigation traces, and plan-mode findings go in `docs/cc/`, never `~/.claude/plans/` or any path outside the repository. If plan mode wrote a file elsewhere, copy it into `docs/cc/` before ending the session and reference the repo path in your summary
 - Never write findings only into a chat summary. If an investigation produced a trace worth referencing later, it goes in `docs/cc/` as a file
 - `cc` is the only directory under `docs/` that you may create or edit files in without asking, everything else needs explicit permissions
+- Timestamps are server-stamped UTC instants; the user's timezone is a **rendering** input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, and never store, order, or compare instants in anything but UTC — `reviewed_at` is `rebuild_mastery`'s replay ordering key on an append-only log, so a skewed or DST-ambiguous value is permanent corruption. The user's IANA zone rides every request as the `X-Timezone` header and is stored on `app_user.timezone`; every user-facing date (display, "today", day-bucketing, streaks) is computed in it at read time. The one sanctioned exception is offline capture, and it is not built
 - Never bulk-delete rows from the local dev database as "cleanup" after seeding data for a live browser check (e.g. deleting every subject/deck currently present). The dev database can hold real data at any time, and a delete-everything cleanup can't tell that apart from what was just seeded. Leave seeded data in place once a browser check is done instead of removing it
 
 ## Conventions
 
+- Frontend date formatting goes through `formatDate`/`formatDateTime` in `frontend/src/lib/datetime.ts`, which pins `timeZone` explicitly — never `toLocaleDateString`/`toLocaleString`/`toLocaleTimeString` or a hand-built `Intl.DateTimeFormat`. An ESLint `no-restricted-syntax` rule blocks those outside that one file; a zone-less formatter looks correct on a developer machine sitting in the user's zone and is silently wrong everywhere else
 - Frontend server fetch through TanStack Query, no raw fetch in components
 - Reusable components do not fetch, all data are passed down as props
-- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`
+- When a new surface needs something close to an existing component, extend that component with props (e.g. a prop saying whether a picker is being used to filter or to create) rather than forking a near-duplicate — one interaction layer, one set of bugs. If a genuinely new component is warranted, name it for the purpose it serves (`SubjectFilterCombobox`), never a generic name that leaves two similar components indistinguishable at the import site
+- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`. The one non-area directory is `ui/`: domain-free primitives every area may import (PickerCombobox, ConfirmDialog, FullScreenDialog, BottomSheet, ListRow). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
 - Modals/sheets: use Radix Dialog primitives (`@radix-ui/react-dialog`, ADR 016), not a hand-rolled focus trap/scroll-lock. If the trigger button isn't a `Dialog.Trigger` descendant (e.g. it lives in a sibling component), thread a `triggerRef` for `onCloseAutoFocus`-based focus restoration and give the trigger an inline `pointerEvents: 'auto'` + a matching `onPointerDownOutside` exemption, or Radix's `disableOutsidePointerEvents` silently blocks it while the dialog is open (see `SideDrawer.tsx`)
 - API layer error handling: `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`), never side-effect (no `console.error`, no toast) — display is a UI-edge concern, not the data layer's (ADR 006)
 - `// TODO(defer:<tag>)` marks deliberately-deferred skeleton work; `grep -r "TODO(defer:" frontend/src/` before considering a phase/PR done — every deferred item must be tagged, nothing untagged
@@ -69,7 +72,11 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
 `deck_schema`, per-card `fields` dicts, or any other pre-rewrite shape.
 
 - `app_user` — the authenticated end user (keyed by `clerk_user_id`); root of every
-  per-user ownership chain.
+  per-user ownership chain. `timezone` is the user's IANA zone name (default `UTC`,
+  `DEFAULT_TIMEZONE`), kept in step with the client's `X-Timezone` header by
+  `get_current_app_user` and used solely to render dates back in the user's local zone
+  (ADR 019). A missing or unresolvable header leaves the stored value alone rather than
+  downgrading it.
 - `subject` — a user's top-level grouping of decks (e.g. a course or topic); owns
   `deck` rows, unique per `(user_id, name)`, and deleting a subject cascades every
   deck it owns (and, transitively, everything the deck-delete cascade below already
@@ -125,22 +132,29 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   `review_log` (ADR 011, ADR 012).
 - `deck_practice_config` — a saved, named template describing which fields are
   prompts/answers and pool-sampling rules; mutable.
-- `practice_session` — one user's practice run (`active`/`completed`/`abandoned`);
-  spans one or more `practice_deck`s. Status is never inferred except on the
+- `practice_session` — one user's practice run, `active` or `completed`. There is no
+  third status: `abandoned` was dropped because nothing could set it reliably (ADR 015,
+  amended). Spans one or more `practice_deck`s. Status is never inferred except on the
   current-card read path: `get_current_practice_card` transitions an `active` session
-  to `abandoned` if no pending `practice_card` remains, whether because the user
+  to `completed` if no pending `practice_card` remains, whether because the user
   genuinely finished or because cascade-deleted cards stranded it — that distinction
-  isn't tracked (ADR 015).
+  isn't tracked. The session list surfaces `deleted_deck_count` (its `practice_deck`
+  rows whose `deck_id` has gone null) so the UI can render "deleted deck" chips, which
+  is the only thing distinguishing the second case; nothing new is stored for it.
+  Deleting a session is a user action and the only way one leaves the list.
 - `practice_deck` — an immutable snapshot of a `deck_practice_config`, copied at
   session start; editing or deleting the source config never affects it (ADR 013).
   `deck_id` is nullable with `ON DELETE SET NULL` — the snapshot survives deleting the
   source deck too, since it copies the config's field/pool ids into its own arrays
-  rather than referencing the deck live (ADR 015).
+  rather than referencing the deck live (ADR 015). It does **not** survive its own
+  session: `practice_session_id` is `ON DELETE CASCADE`, because a snapshot of a session
+  that no longer exists is history nobody can read.
 - `practice_card` — one generated card instance within a session
   (`pending`/`passed`/`failed`); a failed card is requeued as a new row, never
   mutated in place. `card_id` is `NOT NULL` with `ON DELETE CASCADE` — a practice_card
   without a card is meaningless, so deleting the card deletes it too, rather than
   leaving a nullable reference every reader would have to guard against (ADR 015).
+  `practice_session_id` cascades too: the row is session-owned state, not history.
 
 ## Context
 

@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import SubjectIcon from 'src/components/library/SubjectIcon';
-import ListRow from 'src/components/library/ListRow';
+import ListRow from 'src/components/ui/ListRow';
 import { pluralize } from 'src/lib/pluralize';
 
-type Tab = 'subjects' | 'decks';
+const TABS = ['subjects', 'decks'] as const;
+type Tab = (typeof TABS)[number];
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && (TABS as readonly string[]).includes(value);
+}
 
 function CreateButton({ label, to }: { label: string; to: string }) {
   const navigate = useNavigate();
@@ -22,7 +26,15 @@ function CreateButton({ label, to }: { label: string; to: string }) {
   );
 }
 
-function EmptyState({ copy, createLabel, createTo }: { copy: string; createLabel: string; createTo: string }) {
+function EmptyState({
+  copy,
+  createLabel,
+  createTo,
+}: {
+  copy: string;
+  createLabel: string;
+  createTo: string;
+}) {
   return (
     <div className="flex flex-col items-start gap-3 py-8">
       <p className="text-(--color-text-muted)">{copy}</p>
@@ -32,7 +44,17 @@ function EmptyState({ copy, createLabel, createTo }: { copy: string; createLabel
 }
 
 export default function LibraryPage() {
-  const [tab, setTab] = useState<Tab>('subjects');
+  // In the URL rather than component state (ADR 025): a return to the library — via
+  // browser back or the deck page's crumb — should restore whichever tab was open.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'subjects';
+
+  const setTab = (next: Tab) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'subjects') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
@@ -43,7 +65,11 @@ export default function LibraryPage() {
     <div className="p-4">
       <h1 className="text-xl font-semibold text-(--color-text)">Your library</h1>
 
-      <div role="tablist" aria-label="Library" className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)">
+      <div
+        role="tablist"
+        aria-label="Library"
+        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
+      >
         {(['subjects', 'decks'] as const).map((t) => (
           <button
             key={t}
@@ -112,7 +138,10 @@ export default function LibraryPage() {
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
-                  <Link to={`/decks/${deck.id}`} className="flex min-h-14 flex-col justify-center py-2">
+                  <Link
+                    to={`/decks/${deck.id}`}
+                    className="flex min-h-14 flex-col justify-center py-2"
+                  >
                     <span className="font-medium text-(--color-text)">{deck.name}</span>
                     {subjectNameById.get(deck.subject_id) && (
                       <span className="text-sm text-(--color-text-muted)">

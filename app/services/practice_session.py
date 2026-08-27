@@ -47,6 +47,30 @@ _POSITION_GAP = 1000
 _POSITION_CONSTRAINT = "uq_practice_card_practice_session_id"
 
 
+class SessionStartError(Exception):
+    """A session-start failure that names the config responsible.
+
+    The creation page lists several configs at once and must render a failure against
+    the offending row rather than as a bare toast — a stale config (a field archived
+    since it was saved) is fixable, but only if the user is told *which* one to fix. A
+    plain message string can't carry that, so the id travels on the exception and is
+    serialized into the error body by the router."""
+
+    def __init__(self, code: str, message: str, config_id: uuid.UUID | None = None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.config_id = config_id
+
+    @property
+    def detail(self) -> dict:
+        return {
+            "code": self.code,
+            "message": self.message,
+            "config_id": str(self.config_id) if self.config_id else None,
+        }
+
+
 def _config_field_ids(config) -> list[uuid.UUID]:
     return list(
         set(config.prompt_field_ids)
@@ -60,44 +84,60 @@ def start_practice_session(
     db: Session,
     strategy: MasteryStrategy,
     user_id: uuid.UUID,
+    name: str,
     deck_practice_config_ids: list[uuid.UUID],
     rng: random.Random | None = None,
 ) -> PracticeSession:
     """One explicit transaction: the session, one practice_deck per config (a
     revalidated, immutable snapshot — invariant 5), and the generated practice_cards,
     ordered unseen-first-then-ascending-mastery per deck with sparse positions
-    (ADR-008). Raises LookupError for an unknown config id, ValueError for two configs
-    naming the same deck or a config that's gone stale since it was saved."""
+    (ADR-008). `name` is stored verbatim; the client formats it. Raises
+    SessionStartError — `config_not_found` for an unknown config id, `duplicate_deck`
+    for two configs naming the same deck, `stale_config` for a config that no longer
+    validates against its deck's live fields."""
     rng = rng or random.Random()
 
     configs = []
     for config_id in deck_practice_config_ids:
         config = db_read_deck_practice_config(db, config_id, user_id)
         if not config:
-            raise LookupError(f"deck_practice_config {config_id} not found")
+            raise SessionStartError(
+                "config_not_found",
+                f"deck_practice_config {config_id} not found",
+                config_id,
+            )
         configs.append(config)
 
-    deck_ids = [c.deck_id for c in configs]
-    if len(set(deck_ids)) != len(deck_ids):
-        raise ValueError("cannot start a session with two configs for the same deck")
+    seen_deck_ids: set[uuid.UUID] = set()
+    for config in configs:
+        if config.deck_id in seen_deck_ids:
+            raise SessionStartError(
+                "duplicate_deck",
+                "cannot start a session with two configs for the same deck",
+                config.id,
+            )
+        seen_deck_ids.add(config.deck_id)
 
-    session = db_create_practice_session(db, user_id)
+    session = db_create_practice_session(db, user_id, name)
 
     next_position = 0
     for config in configs:
         # Session start is the second of the two call sites that must validate — a
         # config can go stale (a field archived) between template save and now, and
         # the snapshot about to become immutable must be valid at the moment it's cut.
-        validate_deck_practice_config(
-            db,
-            config.deck_id,
-            config.prompt_field_ids,
-            config.answer_field_ids,
-            config.prompt_pool_ids,
-            config.prompt_pool_counts,
-            config.answer_pool_ids,
-            config.answer_pool_counts,
-        )
+        try:
+            validate_deck_practice_config(
+                db,
+                config.deck_id,
+                config.prompt_field_ids,
+                config.answer_field_ids,
+                config.prompt_pool_ids,
+                config.prompt_pool_counts,
+                config.answer_pool_ids,
+                config.answer_pool_counts,
+            )
+        except ValueError as e:
+            raise SessionStartError("stale_config", str(e), config.id) from e
 
         practice_deck = db_create_practice_deck(
             db,
@@ -154,15 +194,17 @@ def get_current_practice_card(
 ) -> PracticeCard | None:
     """The derived current card — never stored, always this query (invariant, see
     PracticeSession's docstring). If none remain for a still-active session, it
-    transitions to abandoned rather than leaving the caller to 404 against it forever.
+    transitions to completed rather than leaving the caller to 404 against it forever.
     This doesn't distinguish *why* nothing remains — genuine completion and
     practice_card rows cascade-deleted out from under the session by a card deletion
-    look the same here, and that's fine: either way there's nothing left to practice."""
+    look the same here. ADR 015 as amended accepts that blur rather than tracking a third status
+    nothing could set reliably; the client tells the second case apart by the session's
+    "deleted deck" chips."""
     card = db_read_current_practice_card(db, practice_session_id, user_id)
     if card is None:
         session = db_read_practice_session(db, practice_session_id, user_id)
         if session is not None and session.status == SessionStatus.active:
-            db_update_practice_session_status(db, session, SessionStatus.abandoned)
+            db_update_practice_session_status(db, session, SessionStatus.completed)
     return card
 
 

@@ -14,7 +14,11 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     __table_args__ = (UniqueConstraint("practice_session_id", "deck_id"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    practice_session_id: uuid.UUID = Field(foreign_key="practice_session.id")
+    # ON DELETE CASCADE — a snapshot outlives its *deck* (see deck_id below) but not
+    # its session, which owns it outright (ADR 015 as amended).
+    practice_session_id: uuid.UUID = Field(
+        foreign_key="practice_session.id", ondelete="CASCADE"
+    )
     # Nullable with ON DELETE SET NULL — a snapshot is immutable, self-contained
     # session history (see class docstring); deleting the source deck must not erase
     # it, same reasoning as review_log.card_id.

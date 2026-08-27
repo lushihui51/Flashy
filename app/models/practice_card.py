@@ -33,7 +33,13 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    practice_session_id: uuid.UUID = Field(foreign_key="practice_session.id")
+    # ON DELETE CASCADE — a practice_card belongs to its session outright (ADR 015 as amended).
+    # ADR 015 made the *card* side cascade; this is the session side, which deleting a
+    # session needs. review_log is unaffected: its practice_card_id already goes SET
+    # NULL, and card_id/field_def_id stay populated, so mastery replays identically.
+    practice_session_id: uuid.UUID = Field(
+        foreign_key="practice_session.id", ondelete="CASCADE"
+    )
     # NOT NULL, ON DELETE CASCADE — a practice_card without a card is meaningless, so
     # it can't exist. review_log (not this) is the durable historical record that
     # outlives a deleted card; this row is operational session state, not history.
