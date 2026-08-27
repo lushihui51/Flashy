@@ -22,9 +22,9 @@ In `FieldsSection` (`DeckEditor.tsx`), the primary field is the first entry of `
 
 ### T1 — Primary field marker in the deck editor (ADR 032, MD-1)
 
-- [ ] **Goal:** the field currently at position 0 is visibly labeled "Primary" in `DeckEditor`'s field list, and stays correctly labeled as the user reorders or removes fields.
+- [x] **Goal:** the field currently at position 0 is visibly labeled "Primary" in `DeckEditor`'s field list, and stays correctly labeled as the user reorders or removes fields.
 - **Files:** `frontend/src/components/library/DeckEditor.tsx`, `frontend/src/components/library/DeckEditor.test.tsx`.
 - **Details:** Implement the Primary-field row contract above, inside `FieldsSection`. The primary index is computed once per render as `fields.findIndex(f => !f.pendingRemoval)`; only that row (when not itself the pending-removal branch) renders the pill. No change to `onMove`, `onRename`, `onRemove`, or the reducer — this is presentational only, derived from existing state.
 - **Out of scope:** any change to `CardSummaryRow.tsx` or `CardTable.tsx` (MD-1); a confirmation step when a reorder would change which field is primary; touching `CardFieldsForm.tsx`/`CardStandaloneForm.tsx` (card-content entry, not field ordering); persisting "primary" anywhere — it is never stored, only derived.
 - **Done when:** tests cover — the first non-pending-removal field renders the "Primary" pill and no other field does; moving a different field to the top (via the Move up/down menu) moves the pill to match, verified by simulating the move and re-querying; a field staged pending-removal at index 0 does not carry the pill, and the pill instead lands on the next non-removed field; the static explanatory line renders under the "Fields" heading; `npx vitest run`, `npm run lint`, `npm run build` clean.
-- Notes:
+- Notes: none — built exactly to spec. 4 new tests added to `DeckEditor.test.tsx` under a new `describe('DeckEditor — primary field marker (ADR 032)')` block, reusing the existing `renderEditor`/`renderEditDeck`/`mockSubjects`/`mockEditDeck` helpers rather than adding new ones. Full suite: `npx vitest run` 378/378 passed, `npm run lint` clean, `npm run build` clean.

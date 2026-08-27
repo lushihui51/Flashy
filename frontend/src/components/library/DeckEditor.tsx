@@ -132,10 +132,18 @@ type FieldsSectionProps = {
  * against. */
 function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
   const activeCount = fields.filter((f) => !f.pendingRemoval).length;
+  // ADR 032: the primary field is the first field still active (not staged for
+  // removal), in array order — array index doubles as position here, exactly what
+  // the Move up/down handlers below already reorder. Derived on every render, never
+  // stored, and never landing on a row about to disappear.
+  const primaryIndex = fields.findIndex((f) => !f.pendingRemoval);
 
   return (
     <section className="mt-6">
       <h2 className="text-sm font-medium text-(--color-text-muted)">Fields</h2>
+      <p className="text-[13px] text-(--color-text-muted)">
+        The first field identifies this card in lists and summaries.
+      </p>
       <ul className="mt-1 flex flex-col">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
@@ -205,6 +213,12 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     className="h-9 w-full rounded-lg border border-(--color-surface-elevated) px-2 text-(--color-text)"
                   />
                 </div>
+
+                {index === primaryIndex && (
+                  <span className="shrink-0 rounded-full bg-(--color-surface-elevated) px-2 py-0.5 text-[11px] font-medium text-(--color-text-muted)">
+                    Primary
+                  </span>
+                )}
 
                 <select
                   aria-label="Field type"
