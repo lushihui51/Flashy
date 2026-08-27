@@ -597,6 +597,57 @@ class TestPracticeSessionDelete:
         assert act_as_owner.status_code == 404  # still acting as other_user
 
 
+class TestPracticeSessionDetailShape:
+    """GET /api/practice_sessions/{id} (T1, MD-3): the detail page needs the same deck
+    chips the list already carries, so the single-session read returns
+    PracticeSessionSummary too — not a client-side join of the list endpoint."""
+
+    def test_detail_carries_decks_and_deleted_deck_count(self, client, multi_subject_library):
+        lib = multi_subject_library
+        created = _start(
+            client,
+            "Both decks",
+            [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]],
+        )
+
+        deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        res = client.get(f"/api/practice_sessions/{created['id']}")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["name"] == "Both decks"
+        assert [deck["subject_name"] for deck in data["decks"]] == ["Beta"]
+        assert data["deleted_deck_count"] == 1
+
+    def test_detail_with_every_deck_intact_counts_zero(self, client, multi_subject_library):
+        created = _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
+
+        res = client.get(f"/api/practice_sessions/{created['id']}")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["deleted_deck_count"] == 0
+        assert data["decks"] == [
+            {
+                "deck_id": multi_subject_library["decks"]["a"]["id"],
+                "deck_name": "Shared Deck Name",
+                "subject_id": multi_subject_library["subjects"]["a"]["id"],
+                "subject_name": "Alpha",
+            }
+        ]
+
+    def test_detail_for_a_foreign_session_404s(
+        self, client, act_as, other_user, multi_subject_library
+    ):
+        created = _start(client, "Not yours", [multi_subject_library["configs"]["a"]["id"]])
+
+        act_as(other_user)
+        assert client.get(f"/api/practice_sessions/{created['id']}").status_code == 404
+
+    def test_detail_for_missing_session_404s(self, client):
+        assert client.get(f"/api/practice_sessions/{uuid.uuid4()}").status_code == 404
+
+
 class TestDeletedDeckChips:
     def test_a_snapshot_whose_deck_was_deleted_is_counted_not_listed(
         self, client, multi_subject_library

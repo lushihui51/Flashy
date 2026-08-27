@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
@@ -146,6 +146,47 @@ describe('DeckDetailPage', () => {
     expect(crumb).not.toHaveTextContent('languages');
   });
 
+  it('renders a two-link breadcrumb chain: library then subject, both in one row', async () => {
+    mockDeck();
+    renderAtDeckRoute();
+
+    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
+    const subjectLink = await screen.findByRole('link', { name: /French/ });
+    expect(libraryLink).toHaveAttribute('href', '/library');
+    expect(subjectLink).toHaveAttribute('href', '/subjects/s1');
+    // Same row: a shared ancestor no further out than the crumb container itself.
+    expect(libraryLink.parentElement).toBe(subjectLink.parentElement);
+  });
+
+  it('the library crumb link carries no ?tab — a structural link goes to the place, not a remembered view', async () => {
+    mockDeck();
+    renderAtDeckRoute();
+
+    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
+    expect(libraryLink).toHaveAttribute('href', '/library');
+  });
+
+  it('the library link is present even before the subject query resolves', async () => {
+    server.use(
+      http.get(`${BASE}/api/decks/:id`, () => HttpResponse.json(deck)),
+      http.get(`${BASE}/api/subjects/:id`, async () => {
+        await delay(50);
+        return HttpResponse.json(subject);
+      }),
+      http.get(`${BASE}/api/deck_practice_configs`, () => HttpResponse.json([])),
+    );
+    renderAtDeckRoute();
+
+    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
+    expect(libraryLink).toHaveAttribute('href', '/library');
+    expect(screen.queryByRole('link', { name: /French/ })).not.toBeInTheDocument();
+
+    expect(await screen.findByRole('link', { name: /French/ })).toHaveAttribute(
+      'href',
+      '/subjects/s1',
+    );
+  });
+
   it('still renders an icon without crashing when the subject has no icon set', async () => {
     mockDeck({ subjectData: { ...subject, icon: '' } });
     renderAtDeckRoute();
@@ -232,7 +273,10 @@ describe('DeckDetailPage', () => {
     await user.click(screen.getAllByRole('button', { name: 'Add card' })[0]!);
 
     expect(screen.getByTestId('location')).toHaveTextContent('/cards/new');
-    expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ deckId: 'd1' }));
+    expect(screen.getByTestId('location')).toHaveAttribute(
+      'data-state',
+      JSON.stringify({ deckId: 'd1' }),
+    );
   });
 
   it('Practice opens the overview pre-filtered to this deck and its subject', async () => {
@@ -305,7 +349,7 @@ describe('DeckDetailPage', () => {
   });
 
   describe('Configurations tab', () => {
-    it('starts on Cards and switches to this deck\'s configurations', async () => {
+    it("starts on Cards and switches to this deck's configurations", async () => {
       const configRequests = mockDeck({ configurations: [configuration()] });
       const user = userEvent.setup();
       renderAtDeckRoute();
@@ -387,7 +431,9 @@ describe('DeckDetailPage', () => {
 
       await user.click(screen.getByRole('button', { name: 'Delete Front to Back' }));
       const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText(/practices that already used it are unaffected/i)).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(/practices that already used it are unaffected/i),
+      ).toBeInTheDocument();
       await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
       await waitFor(() => expect(deleted).toBe('cfg1'));

@@ -22,12 +22,15 @@ export function isPoolSlot(slot: BoardSlot): slot is PoolSlot {
   return slot === 'prompt_pool' || slot === 'answer_pool';
 }
 
+// ADR 021: user-facing vocabulary is a contract — these are the exact words from the
+// governing task file's "Board slot ↔ UI mapping" table. Never "pool", never a raw
+// slot name.
 export const SLOT_LABELS: Record<BoardSlot, string> = {
-  unassigned: 'Unassigned',
-  prompt_fields: 'Prompt fields',
-  answer_fields: 'Answer fields',
-  prompt_pool: 'Prompt pool',
-  answer_pool: 'Answer pool',
+  unassigned: 'Not used',
+  prompt_fields: 'Prompt side · Always shown',
+  answer_fields: 'Answer side · Always shown',
+  prompt_pool: 'Prompt side · Random draw',
+  answer_pool: 'Answer side · Random draw',
 };
 
 /**
@@ -172,16 +175,16 @@ export function boardValidationError(state: BoardState): string | null {
   const answerPool = fieldsIn(state, 'answer_pool');
 
   if (promptPool.length > 0 && state.counts.prompt_pool.length === 0) {
-    return 'Choose how many prompt pool fields each card should draw.';
+    return 'Check how many random prompt fields each card shows.';
   }
   if (answerPool.length > 0 && state.counts.answer_pool.length === 0) {
-    return 'Choose how many answer pool fields each card should draw.';
+    return 'Check how many random answer fields each card shows.';
   }
   if (promptFields.length === 0 && promptPool.length === 0) {
-    return 'Add at least one prompt field, or fields to the prompt pool.';
+    return 'The prompt side needs at least one field — always shown or random draw.';
   }
   if (answerFields.length === 0 && answerPool.length === 0) {
-    return 'Add at least one answer field, or fields to the answer pool.';
+    return 'The answer side needs at least one field — always shown or random draw.';
   }
   return null;
 }

@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import BottomSheet from 'src/components/ui/BottomSheet';
 import {
-  BOARD_SLOTS,
-  SLOT_LABELS,
   fieldsIn,
-  isPoolSlot,
+  SLOT_LABELS,
   type BoardSlot,
   type BoardState,
   type PoolSlot,
@@ -11,8 +10,6 @@ import {
 import type { components } from 'src/api/types';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
-
-const ROW_SLOTS = ['prompt_fields', 'answer_fields', 'prompt_pool', 'answer_pool'] as const;
 
 type FieldAssignmentBoardProps = {
   /** The deck's **live** fields, already fetched by the page — archived fields never
@@ -23,15 +20,32 @@ type FieldAssignmentBoardProps = {
   onToggleCount: (slot: PoolSlot, count: number) => void;
 };
 
+/** The sheet's five possible destinations, in the fixed order the ADR 020 contract
+ * specifies. A field's own current slot is filtered out at render time, so the sheet
+ * always offers exactly the other four. */
+const DESTINATIONS: { slot: BoardSlot; label: string }[] = [
+  { slot: 'prompt_fields', label: 'Prompt · always shown' },
+  { slot: 'prompt_pool', label: 'Prompt · random draw' },
+  { slot: 'answer_fields', label: 'Answer · always shown' },
+  { slot: 'answer_pool', label: 'Answer · random draw' },
+  { slot: 'unassigned', label: 'Not used' },
+];
+
+const RANDOM_DRAW_LEGEND: Record<PoolSlot, string> = {
+  prompt_pool: 'How many random prompt fields each card shows',
+  answer_pool: 'How many random answer fields each card shows',
+};
+
 /**
- * The assignment board: an unassigned box over a four-row table, where every field sits
- * in exactly one place.
+ * The assignment board (ADR 020): a "Not used" area on top, then a Prompt side card
+ * and an Answer side card, each holding an Always shown area and a Random draw area
+ * whose frequency checkboxes sit directly beneath the chips they govern.
  *
- * Assignment has two paths on purpose. Dragging is the fast one, but HTML5 drag events
- * never fire on touch, and a hand-rolled pointer-drag would be code that can't be
- * verified on a real device — so each chip also carries a plain `<select>` of
- * destinations, which works with touch, keyboard and a screen reader alike. Both paths
- * call the same `onMove`.
+ * Every chip is a single button; tapping it opens a `BottomSheet` listing the other
+ * four destinations, and choosing one calls `onMove`. This is the board's only
+ * interaction path — HTML5 drag never fires on touch and there is no device here to
+ * verify a hand-rolled gesture, so tap-to-assign is what ships (ADR 020's rejected
+ * alternatives cover why the other shapes lost).
  */
 export default function FieldAssignmentBoard({
   fieldDefs,
@@ -39,134 +53,130 @@ export default function FieldAssignmentBoard({
   onMove,
   onToggleCount,
 }: FieldAssignmentBoardProps) {
-  const [dragOver, setDragOver] = useState<BoardSlot | null>(null);
   const nameById = new Map(fieldDefs.map((field) => [field.id, field.name]));
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  // One shared trigger ref, reassigned to whichever chip was tapped most recently, so
+  // BottomSheet's onCloseAutoFocus returns focus to that exact chip (ADR 020's Costs).
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const titleId = useId();
 
-  const dropProps = (slot: BoardSlot) => ({
-    onDragOver: (event: React.DragEvent) => {
-      event.preventDefault();
-      setDragOver(slot);
-    },
-    onDragLeave: () => setDragOver((current) => (current === slot ? null : current)),
-    onDrop: (event: React.DragEvent) => {
-      event.preventDefault();
-      setDragOver(null);
-      const fieldId = event.dataTransfer.getData('text/plain');
-      if (fieldId) onMove(fieldId, slot);
-    },
-  });
+  const closeSheet = () => setActiveFieldId(null);
 
-  const chips = (slot: BoardSlot) =>
-    fieldsIn(state, slot).map((fieldId) => (
-      <span
-        key={fieldId}
-        draggable
-        onDragStart={(event) => event.dataTransfer.setData('text/plain', fieldId)}
-        className="flex items-center gap-1 rounded-full bg-(--color-surface-elevated) py-1 pr-1 pl-3 text-sm text-(--color-text)"
+  const chipButton = (fieldId: string) => (
+    <button
+      key={fieldId}
+      type="button"
+      aria-haspopup="dialog"
+      onClick={(event) => {
+        triggerRef.current = event.currentTarget;
+        setActiveFieldId(fieldId);
+      }}
+      className="min-h-9 truncate rounded-full bg-(--color-surface-elevated) px-3 py-1.5 text-sm text-(--color-text)"
+    >
+      {nameById.get(fieldId) ?? fieldId}
+    </button>
+  );
+
+  const area = (slot: BoardSlot, emptyText: string) => {
+    const ids = fieldsIn(state, slot);
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {ids.length > 0 ? (
+          ids.map(chipButton)
+        ) : (
+          <span className="text-sm text-(--color-text-muted)">{emptyText}</span>
+        )}
+      </div>
+    );
+  };
+
+  const frequencyRow = (slot: PoolSlot) => {
+    const size = fieldsIn(state, slot).length;
+    if (size === 0) return null;
+    return (
+      <fieldset className="flex flex-wrap items-center gap-2 text-sm text-(--color-text)">
+        <legend className="sr-only">{RANDOM_DRAW_LEGEND[slot]}</legend>
+        <span>Each card shows</span>
+        {Array.from({ length: size }, (_, i) => i + 1).map((count) => (
+          <label key={count} className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={state.counts[slot].includes(count)}
+              onChange={() => onToggleCount(slot, count)}
+            />
+            {count}
+          </label>
+        ))}
+        <span>of these</span>
+      </fieldset>
+    );
+  };
+
+  const sideCard = (side: 'prompt' | 'answer') => {
+    const alwaysSlot: BoardSlot = side === 'prompt' ? 'prompt_fields' : 'answer_fields';
+    const randomSlot: PoolSlot = side === 'prompt' ? 'prompt_pool' : 'answer_pool';
+    return (
+      <div
+        key={side}
+        className="flex flex-col gap-3 rounded-lg border border-(--color-surface-elevated) p-3"
       >
-        <span className="truncate">{nameById.get(fieldId) ?? fieldId}</span>
-        <select
-          aria-label={`Move ${nameById.get(fieldId) ?? fieldId}`}
-          value={slot}
-          onChange={(event) => onMove(fieldId, event.target.value as BoardSlot)}
-          className="h-7 rounded-full bg-transparent px-1 text-xs text-(--color-text-secondary)"
-        >
-          {BOARD_SLOTS.map((target) => (
-            <option key={target} value={target}>
-              {SLOT_LABELS[target]}
-            </option>
-          ))}
-        </select>
-      </span>
-    ));
+        <h2 className="text-sm font-medium text-(--color-text)">
+          {side === 'prompt' ? 'Prompt side' : 'Answer side'}
+        </h2>
+        <section aria-label={SLOT_LABELS[alwaysSlot]} className="flex flex-col gap-1">
+          <h3 className="text-sm text-(--color-text-muted)">Always shown</h3>
+          {area(alwaysSlot, 'None yet.')}
+        </section>
+        <section aria-label={SLOT_LABELS[randomSlot]} className="flex flex-col gap-1">
+          <h3 className="text-sm text-(--color-text-muted)">Random draw</h3>
+          {area(randomSlot, 'None yet.')}
+          {frequencyRow(randomSlot)}
+        </section>
+      </div>
+    );
+  };
 
-  const zoneClass = (slot: BoardSlot) =>
-    `flex min-h-11 flex-wrap items-center gap-2 rounded-lg border border-dashed p-2 ${
-      dragOver === slot ? 'border-(--color-primary)' : 'border-(--color-surface-elevated)'
-    }`;
+  const activeSlot = activeFieldId ? state.slots[activeFieldId] : null;
+  const activeName = activeFieldId ? (nameById.get(activeFieldId) ?? activeFieldId) : '';
 
   return (
     <div className="flex flex-col gap-4">
-      <section aria-label={SLOT_LABELS.unassigned}>
-        <h2 className="pb-1 text-sm font-medium text-(--color-text-muted)">
-          {SLOT_LABELS.unassigned}
-        </h2>
-        <div {...dropProps('unassigned')} className={zoneClass('unassigned')}>
-          {chips('unassigned').length > 0 ? (
-            chips('unassigned')
-          ) : (
-            <span className="px-1 text-sm text-(--color-text-muted)">Every field is assigned.</span>
-          )}
-        </div>
+      <section aria-label={SLOT_LABELS.unassigned} className="flex flex-col gap-1">
+        <h2 className="text-sm font-medium text-(--color-text-muted)">{SLOT_LABELS.unassigned}</h2>
+        {area('unassigned', 'Every field is assigned.')}
       </section>
 
-      <table className="w-full table-fixed border-collapse">
-        <thead>
-          <tr className="text-left text-sm text-(--color-text-muted)">
-            <th scope="col" className="w-28 pb-1 font-medium">
-              <span className="sr-only">Row</span>
-            </th>
-            <th scope="col" className="pb-1 font-medium">
-              Fields
-            </th>
-            <th scope="col" className="w-40 pb-1 font-medium">
-              Frequency
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {ROW_SLOTS.map((slot) => {
-            const size = fieldsIn(state, slot).length;
-            const pool = isPoolSlot(slot);
-            return (
-              <tr key={slot} className="align-top">
-                <th
-                  scope="row"
-                  className="py-1 pr-2 text-left text-sm font-medium text-(--color-text)"
-                >
-                  {SLOT_LABELS[slot]}
-                </th>
-                <td className="py-1 pr-2">
-                  <div {...dropProps(slot)} className={zoneClass(slot)}>
-                    {chips(slot)}
-                  </div>
-                </td>
-                <td className="py-1">
-                  {/* Frequency only means something for a pool: the fixed rows are always
-                      shown in full, so there is no count to choose. */}
-                  {!pool || size === 0 ? (
-                    <span className="text-sm text-(--color-text-muted)">N/A</span>
-                  ) : (
-                    <fieldset className="flex flex-wrap items-center gap-2">
-                      <legend className="sr-only">
-                        How many {SLOT_LABELS[slot]} fields to draw per card
-                      </legend>
-                      {Array.from({ length: size }, (_, i) => i + 1).map((count) => (
-                        <label
-                          key={count}
-                          className="flex items-center gap-1 text-sm text-(--color-text)"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={state.counts[slot as PoolSlot].includes(count)}
-                            onChange={() => onToggleCount(slot as PoolSlot, count)}
-                          />
-                          {count}
-                        </label>
-                      ))}
-                    </fieldset>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {sideCard('prompt')}
+      {sideCard('answer')}
 
-      <p className="text-[13px] text-(--color-text-muted)">
-        A pool draws one of its checked counts at random for each card — checking 1 and 3 means some
-        cards show one of these fields and others show three.
-      </p>
+      <BottomSheet
+        open={activeFieldId !== null}
+        onClose={closeSheet}
+        triggerRef={triggerRef}
+        ariaLabelledBy={titleId}
+      >
+        <h2 id={titleId} className="text-base font-semibold text-(--color-text)">
+          Move "{activeName}" to…
+        </h2>
+        <ul className="flex flex-col">
+          {DESTINATIONS.filter((destination) => destination.slot !== activeSlot).map(
+            (destination) => (
+              <li key={destination.slot}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeFieldId) onMove(activeFieldId, destination.slot);
+                    closeSheet();
+                  }}
+                  className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
+                >
+                  {destination.label}
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      </BottomSheet>
     </div>
   );
 }

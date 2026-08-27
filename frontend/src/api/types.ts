@@ -281,7 +281,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read Practice Session */
+        /**
+         * Read Practice Session
+         * @description MD-3: the detail page needs the same deck chips the list already renders, so this
+         *     answers with PracticeSessionSummary rather than the bare PracticeSessionRead — API-
+         *     first beats a client-side join of the list endpoint.
+         */
         get: operations["read_practice_session_api_practice_sessions__practice_session_id__get"];
         put?: never;
         post?: never;
@@ -2097,7 +2102,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionRead"];
+                    "application/json": components["schemas"]["PracticeSessionSummary"];
                 };
             };
             /** @description Validation Error */

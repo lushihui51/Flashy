@@ -202,7 +202,7 @@ describe('boardValidationError', () => {
       ['f1', 'prompt_pool'],
       ['f2', 'answer_fields'],
     ]);
-    expect(boardValidationError(board)).toMatch(/how many prompt pool fields/);
+    expect(boardValidationError(board)).toMatch(/how many random prompt fields/);
   });
 
   it('rejects an answer pool with fields but no checked counts', () => {
@@ -210,15 +210,15 @@ describe('boardValidationError', () => {
       ['f1', 'prompt_fields'],
       ['f2', 'answer_pool'],
     ]);
-    expect(boardValidationError(board)).toMatch(/how many answer pool fields/);
+    expect(boardValidationError(board)).toMatch(/how many random answer fields/);
   });
 
   it('rejects a side with nothing on it at all', () => {
     expect(boardValidationError(boardWith([['f2', 'answer_fields']]))).toMatch(
-      /at least one prompt field/,
+      /prompt side needs at least one field/,
     );
     expect(boardValidationError(boardWith([['f1', 'prompt_fields']]))).toMatch(
-      /at least one answer field/,
+      /answer side needs at least one field/,
     );
   });
 

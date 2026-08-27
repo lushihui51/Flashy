@@ -24,6 +24,7 @@ import {
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
 import { formatDateTime } from 'src/lib/datetime';
+import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 
 type DeckSummary = components['schemas']['DeckSummary'];
@@ -90,9 +91,10 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
   if (mode === 'edit' && !configQuery.data) return null;
 
   // `deckId` in router state is a deck just created through the "New deck…" round-trip
-  // (DeckEditor navigates back with it); `?deck=` is the pre-filter chain's context. Both
-  // mean "start on this deck", so the fresher one wins.
-  const state = location.state as { returnTo?: string; deckId?: string } | null;
+  // (DeckEditor navigates back with it) — a one-shot result, so it stays in state
+  // (ADR 024). `?deck=` is the pre-filter chain's context. Both mean "start on this
+  // deck", so the fresher one wins.
+  const state = location.state as { deckId?: string } | null;
 
   return (
     <DeckConfigurationEditorBody
@@ -100,7 +102,7 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
       config={configQuery.data}
       contextSubjectId={searchParams.get('subject')}
       contextDeckId={state?.deckId ?? searchParams.get('deck')}
-      returnTo={state?.returnTo ?? null}
+      returnTo={internalReturnTo(searchParams)}
     />
   );
 }
@@ -259,11 +261,14 @@ function DeckConfigurationEditorBody({
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              onSelectCreate={() =>
-                navigate('/decks/new', {
-                  state: { returnTo: `${location.pathname}${location.search}` },
-                })
-              }
+              // returnTo itself rides the URL (ADR 024), not state: this page's own
+              // full location already contains whatever returnTo it was opened with,
+              // so a nested round trip survives with nothing extra to forward by hand.
+              onSelectCreate={() => {
+                const params = new URLSearchParams();
+                params.set('returnTo', `${location.pathname}${location.search}`);
+                navigate({ pathname: '/decks/new', search: params.toString() });
+              }}
               createLabel="New deck…"
               placeholder="Deck"
               renderLeading={(item) => (
@@ -293,7 +298,11 @@ function DeckConfigurationEditorBody({
               className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
             />
             {nameError && (
-              <span id={`${nameInputId}-error`} role="alert" className="text-sm text-(--color-danger)">
+              <span
+                id={`${nameInputId}-error`}
+                role="alert"
+                className="text-sm text-(--color-danger)"
+              >
                 {nameError}
               </span>
             )}

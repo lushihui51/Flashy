@@ -94,16 +94,21 @@ export default function DeckDetailPage() {
 
   return (
     <div className="p-4">
-      {subject && (
-        <Link
-          to={`/subjects/${subject.id}`}
-          className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-        >
-          <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-          <SubjectIcon icon={subject.icon} className="h-[15px] w-[15px]" />
-          {subject.name}
-        </Link>
-      )}
+      <div className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)">
+        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
+        <Link to="/library">Your library</Link>
+        {subject && (
+          <>
+            <span aria-hidden="true" className="text-(--color-text-muted)">
+              ›
+            </span>
+            <Link to={`/subjects/${subject.id}`} className="inline-flex items-center gap-1">
+              <SubjectIcon icon={subject.icon} className="h-[15px] w-[15px]" />
+              {subject.name}
+            </Link>
+          </>
+        )}
+      </div>
 
       <h1 className="mt-1 text-[22px] font-medium text-(--color-text)">{deck.name}</h1>
       <p className="text-[13px] text-(--color-text-muted)">
@@ -201,8 +206,8 @@ export default function DeckDetailPage() {
           {configurationsQuery.data && configurations.length === 0 ? (
             <div className="flex flex-col items-start gap-3 py-8">
               <p className="text-(--color-text-muted)">
-                No configurations yet. One says which of this deck&apos;s fields are prompts
-                and which are answers; a practice is built out of them.
+                No configurations yet. One says which of this deck&apos;s fields are prompts and
+                which are answers; a practice is built out of them.
               </p>
               <AddButton label="New configuration" onClick={newConfiguration} />
             </div>

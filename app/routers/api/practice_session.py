@@ -6,6 +6,7 @@ from app.database import SessionDep
 from app.database_ops.practice_session import (
     db_delete_practice_session,
     db_read_practice_session,
+    db_read_practice_session_with_decks,
     db_read_practice_sessions_with_decks,
 )
 from app.dependencies import CurrentUserDep
@@ -64,13 +65,16 @@ def read_practice_sessions(
 
 @router.get(
     "/practice_sessions/{practice_session_id}",
-    response_model=PracticeSessionRead,
+    response_model=PracticeSessionSummary,
     status_code=200,
 )
 def read_practice_session(
     db: SessionDep, current_user: CurrentUserDep, practice_session_id: uuid.UUID
 ):
-    session = db_read_practice_session(db, practice_session_id, current_user.id)
+    """MD-3: the detail page needs the same deck chips the list already renders, so this
+    answers with PracticeSessionSummary rather than the bare PracticeSessionRead — API-
+    first beats a client-side join of the list endpoint."""
+    session = db_read_practice_session_with_decks(db, practice_session_id, current_user.id)
     if not session:
         raise HTTPException(status_code=404, detail="Practice session not found")
     return session

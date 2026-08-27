@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
@@ -105,13 +105,11 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
-function LocationStateProbe() {
-  const location = useLocation();
-  return (
-    <span data-testid="location-state">
-      {(location.state as { returnTo?: string } | null)?.returnTo ?? ''}
-    </span>
-  );
+// ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams.get(),
+// never compared as an encoded string literal.
+function ReturnToProbe() {
+  const [searchParams] = useSearchParams();
+  return <span data-testid="return-to">{searchParams.get('returnTo') ?? ''}</span>;
 }
 
 function renderCreate(path = '/deck-configurations/new') {
@@ -137,10 +135,21 @@ function renderEdit(configId = 'c1') {
   );
 }
 
-/** Both assignment paths exist (drag for a mouse, the select for touch/keyboard); the
- * select is the one every device has, so it's what the tests drive. */
+// The board's one interaction path (ADR 020): tap the chip, then tap a destination row
+// in the sheet it opens. Sheet rows only ever offer the field's *other* four slots, so
+// every call below must target a slot the field isn't already in.
+const DESTINATION_LABELS: Record<string, string> = {
+  prompt_fields: 'Prompt · always shown',
+  prompt_pool: 'Prompt · random draw',
+  answer_fields: 'Answer · always shown',
+  answer_pool: 'Answer · random draw',
+  unassigned: 'Not used',
+};
+
 async function assign(user: ReturnType<typeof userEvent.setup>, fieldName: string, slot: string) {
-  await user.selectOptions(screen.getByLabelText(`Move ${fieldName}`), slot);
+  await user.click(screen.getByRole('button', { name: fieldName }));
+  const sheet = await screen.findByRole('dialog');
+  await user.click(within(sheet).getByRole('button', { name: DESTINATION_LABELS[slot] }));
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -159,12 +168,12 @@ describe('DeckConfigurationEditor — create', () => {
     renderCreate();
 
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Not used' })).not.toBeInTheDocument();
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /Alpha Deck/ }));
 
-    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
@@ -172,10 +181,10 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     renderCreate('/deck-configurations/new?deck=d1');
 
-    const unassigned = await screen.findByRole('region', { name: 'Unassigned' });
-    expect(within(unassigned).getByText('Term')).toBeInTheDocument();
-    expect(within(unassigned).getByText('Meaning')).toBeInTheDocument();
-    expect(within(unassigned).getByText('Reading')).toBeInTheDocument();
+    const unused = await screen.findByRole('region', { name: 'Not used' });
+    expect(within(unused).getByText('Term')).toBeInTheDocument();
+    expect(within(unused).getByText('Meaning')).toBeInTheDocument();
+    expect(within(unused).getByText('Reading')).toBeInTheDocument();
   });
 
   it("a deck in context is preselected, and its subject's decks sort first", async () => {
@@ -193,14 +202,17 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     renderWithProviders(
       <Routes>
-        <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+        <Route
+          path="/deck-configurations/new"
+          element={<DeckConfigurationEditor mode="create" />}
+        />
       </Routes>,
       [{ pathname: '/deck-configurations/new', state: { deckId: 'd1' } }],
     );
 
     // Straight to the board: the deck came back from the editor, so there is nothing
     // left to pick.
-    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Deck')).toHaveValue('Alpha Deck');
   });
 
@@ -209,8 +221,11 @@ describe('DeckConfigurationEditor — create', () => {
     const user = userEvent.setup();
     renderWithProviders(
       <Routes>
-        <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
-        <Route path="/decks/new" element={<LocationStateProbe />} />
+        <Route
+          path="/deck-configurations/new"
+          element={<DeckConfigurationEditor mode="create" />}
+        />
+        <Route path="/decks/new" element={<ReturnToProbe />} />
       </Routes>,
       ['/deck-configurations/new?subject=s1'],
     );
@@ -218,16 +233,44 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    expect(screen.getByTestId('location-state')).toHaveTextContent(
+    expect(screen.getByTestId('return-to')).toHaveTextContent(
       '/deck-configurations/new?subject=s1',
     );
+  });
+
+  it('a returnTo the builder was entered with rides along when it opens "New deck…" (nested round trip)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    // The builder itself was opened with a returnTo (e.g. from New practice) — its own
+    // full location, not just the context params, is what must survive the next hop.
+    const practiceReturnTo = '/practice/new?subject=s1';
+    const builderParams = new URLSearchParams({ subject: 's1', returnTo: practiceReturnTo });
+    const builderPath = `/deck-configurations/new?${builderParams.toString()}`;
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/deck-configurations/new"
+          element={<DeckConfigurationEditor mode="create" />}
+        />
+        <Route path="/decks/new" element={<ReturnToProbe />} />
+      </Routes>,
+      [builderPath],
+    );
+
+    await user.click(await screen.findByPlaceholderText('Deck'));
+    await user.click(await screen.findByRole('option', { name: /New deck…/ }));
+
+    // Decoded via URLSearchParams.get() (ADR 024): the deck editor's own returnTo is
+    // the builder's exact location, nested returnTo and all — nothing was dropped, and
+    // nothing had to be hand-encoded or forwarded explicitly to make that true.
+    expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
 
   it('prefills the name with the current local date-time, editable', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     const input = screen.getByLabelText('Name');
     // Whatever the browser's zone renders, it is a real timestamp, not a placeholder.
@@ -243,36 +286,55 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     await assign(user, 'Term', 'prompt_fields');
 
-    const unassigned = screen.getByRole('region', { name: 'Unassigned' });
-    expect(within(unassigned).queryByText('Term')).not.toBeInTheDocument();
+    const unused = screen.getByRole('region', { name: 'Not used' });
+    expect(within(unused).queryByText('Term')).not.toBeInTheDocument();
     expect(screen.getAllByText('Term')).toHaveLength(1);
   });
 
-  it('frequency reads N/A for the fixed rows and for an empty pool, then lists 1…n', async () => {
+  it('tapping a chip opens a sheet offering the other four slots; choosing one moves it there', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
-    expect(screen.getAllByText('N/A')).toHaveLength(4); // all four rows start empty
+    await user.click(screen.getByRole('button', { name: 'Term' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Move "Term" to…' });
+    expect(within(sheet).getAllByRole('button')).toHaveLength(4);
+
+    await user.click(within(sheet).getByRole('button', { name: 'Prompt · always shown' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const promptAlways = screen.getByRole('region', { name: 'Prompt side · Always shown' });
+    expect(within(promptAlways).getByRole('button', { name: 'Term' })).toBeInTheDocument();
+  });
+
+  it('the random draw frequency row appears only once its area has a field, then lists 1…n', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    const promptRandom = screen.getByRole('region', { name: 'Prompt side · Random draw' });
+    expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();
+    expect(within(promptRandom).queryByText('Each card shows')).not.toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_pool');
-    await assign(user, 'Meaning', 'prompt_pool');
+    expect(within(promptRandom).getByText('Each card shows')).toBeInTheDocument();
+    expect(within(promptRandom).getByRole('checkbox', { name: '1' })).toBeInTheDocument();
 
-    expect(screen.getByRole('checkbox', { name: '1' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: '2' })).toBeInTheDocument();
-    expect(screen.getAllByText('N/A')).toHaveLength(3);
+    await assign(user, 'Meaning', 'prompt_pool');
+    expect(within(promptRandom).getByRole('checkbox', { name: '2' })).toBeInTheDocument();
   });
 
   it('prunes a checked count that no longer fits when the pool shrinks', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     await assign(user, 'Term', 'prompt_pool');
     await assign(user, 'Meaning', 'prompt_pool');
@@ -289,17 +351,17 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     const save = screen.getByRole('button', { name: 'Save' });
 
     expect(save).toBeDisabled();
-    expect(screen.getByText(/at least one prompt field/)).toBeInTheDocument();
+    expect(screen.getByText(/prompt side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_fields');
-    expect(screen.getByText(/at least one answer field/)).toBeInTheDocument();
+    expect(screen.getByText(/answer side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Meaning', 'answer_pool');
-    expect(screen.getByText(/how many answer pool fields/)).toBeInTheDocument();
+    expect(screen.getByText(/how many random answer fields/)).toBeInTheDocument();
     expect(save).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
@@ -324,7 +386,7 @@ describe('DeckConfigurationEditor — create', () => {
     );
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     await assign(user, 'Term', 'prompt_fields');
     await assign(user, 'Meaning', 'answer_pool');
@@ -346,9 +408,7 @@ describe('DeckConfigurationEditor — create', () => {
       answer_pool_ids: ['f2', 'f3'],
       answer_pool_counts: [1, 2],
     });
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'),
-    );
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
   it('renders a duplicate-name rejection on the name input, keeping the board', async () => {
@@ -363,7 +423,7 @@ describe('DeckConfigurationEditor — create', () => {
     );
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     await assign(user, 'Term', 'prompt_fields');
     await assign(user, 'Meaning', 'answer_fields');
@@ -375,7 +435,7 @@ describe('DeckConfigurationEditor — create', () => {
     expect(error).toHaveTextContent('already exists');
     expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
     // Still on the form, board intact.
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
   });
 
@@ -383,7 +443,7 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     await assign(user, 'Term', 'prompt_fields');
 
     await user.click(screen.getByPlaceholderText('Deck'));
@@ -393,8 +453,8 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Change deck' }));
 
     await waitFor(() => {
-      const unassigned = screen.getByRole('region', { name: 'Unassigned' });
-      expect(within(unassigned).getByText('Term')).toBeInTheDocument();
+      const unused = screen.getByRole('region', { name: 'Not used' });
+      expect(within(unused).getByText('Term')).toBeInTheDocument();
     });
   });
 
@@ -402,7 +462,7 @@ describe('DeckConfigurationEditor — create', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     await assign(user, 'Term', 'prompt_fields');
 
     await user.click(screen.getByPlaceholderText('Deck'));
@@ -410,27 +470,8 @@ describe('DeckConfigurationEditor — create', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    const unassigned = screen.getByRole('region', { name: 'Unassigned' });
-    expect(within(unassigned).queryByText('Term')).not.toBeInTheDocument();
-  });
-
-  it('a dropped field lands in the row it was dropped on', async () => {
-    mockLibrary();
-    renderCreate('/deck-configurations/new?deck=d1');
-    await screen.findByRole('table');
-
-    const { fireEvent } = await import('@testing-library/react');
-    const data = new Map<string, string>();
-    const dataTransfer = {
-      setData: (type: string, value: string) => data.set(type, value),
-      getData: (type: string) => data.get(type) ?? '',
-    };
-
-    fireEvent.dragStart(screen.getByText('Term').closest('span[draggable]')!, { dataTransfer });
-    const promptRow = screen.getByRole('row', { name: /Prompt fields/ });
-    fireEvent.drop(within(promptRow).getAllByRole('cell')[0]!.firstElementChild!, { dataTransfer });
-
-    expect(within(promptRow).getByText('Term')).toBeInTheDocument();
+    const unused = screen.getByRole('region', { name: 'Not used' });
+    expect(within(unused).queryByText('Term')).not.toBeInTheDocument();
   });
 });
 
@@ -444,16 +485,18 @@ describe('DeckConfigurationEditor — edit', () => {
     mockConfig();
     renderEdit();
 
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
     expect(
-      within(screen.getByRole('row', { name: /Prompt fields/ })).getByText('Term'),
+      within(screen.getByRole('region', { name: 'Prompt side · Always shown' })).getByText('Term'),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole('row', { name: /Answer fields/ })).getByText('Meaning'),
+      within(screen.getByRole('region', { name: 'Answer side · Always shown' })).getByText(
+        'Meaning',
+      ),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'Unassigned' })).getByText('Reading'),
+      within(screen.getByRole('region', { name: 'Not used' })).getByText('Reading'),
     ).toBeInTheDocument();
   });
 
@@ -462,11 +505,12 @@ describe('DeckConfigurationEditor — edit', () => {
     mockConfig({ ...savedConfig, prompt_pool_ids: ['archived-field'], prompt_pool_counts: [1] });
     renderEdit();
 
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     expect(screen.queryByText('archived-field')).not.toBeInTheDocument();
-    // The pool row is empty, so its frequency has nothing to offer either.
-    const poolRow = screen.getByRole('row', { name: /Prompt pool/ });
-    expect(within(poolRow).getByText('N/A')).toBeInTheDocument();
+    // The pool area is empty, so its frequency row has nothing to offer either.
+    const promptRandom = screen.getByRole('region', { name: 'Prompt side · Random draw' });
+    expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();
+    expect(within(promptRandom).queryByText('Each card shows')).not.toBeInTheDocument();
   });
 
   it('pins the deck — a config cannot move between decks', async () => {
@@ -474,7 +518,7 @@ describe('DeckConfigurationEditor — edit', () => {
     mockConfig();
     renderEdit();
 
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
     expect(screen.queryByPlaceholderText('Deck')).not.toBeInTheDocument();
     expect(screen.getByText('Alpha · Alpha Deck')).toBeInTheDocument();
   });
@@ -491,7 +535,7 @@ describe('DeckConfigurationEditor — edit', () => {
     );
     const user = userEvent.setup();
     renderEdit();
-    await screen.findByRole('table');
+    await screen.findByRole('region', { name: 'Not used' });
 
     await assign(user, 'Reading', 'answer_fields');
     await user.click(screen.getByRole('button', { name: 'Save' }));

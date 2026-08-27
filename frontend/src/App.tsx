@@ -3,7 +3,9 @@ import AppShell from 'src/components/shell/AppShell';
 import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
+import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
+import PracticeRunPage from 'src/pages/PracticeRunPage';
 import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
 import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
@@ -20,7 +22,9 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/practice" element={<PracticeOverviewPage />} />
+          <Route path="/practice/new" element={<PracticeCreatePage />} />
           <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
+          <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
           <Route path="/decks/:deckId" element={<DeckDetailPage />} />
@@ -29,7 +33,10 @@ function App() {
           <Route path="/decks/new" element={<DeckEditor mode="create" />} />
           <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
           <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
-          <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+          <Route
+            path="/deck-configurations/new"
+            element={<DeckConfigurationEditor mode="create" />}
+          />
           <Route
             path="/deck-configurations/:configId/edit"
             element={<DeckConfigurationEditor mode="edit" />}

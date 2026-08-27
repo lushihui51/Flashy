@@ -67,7 +67,12 @@ type CardStandaloneFormBodyProps = {
   initialDeckId: string | null;
 };
 
-function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardStandaloneFormBodyProps) {
+function CardStandaloneFormBody({
+  mode,
+  cardId,
+  original,
+  initialDeckId,
+}: CardStandaloneFormBodyProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -139,7 +144,10 @@ function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardS
   };
 
   const goToCreateDeck = () => {
-    navigate('/decks/new', { state: { returnTo: location.pathname } });
+    // ADR 024: returnTo rides the URL, not state.
+    const params = new URLSearchParams();
+    params.set('returnTo', `${location.pathname}${location.search}`);
+    navigate({ pathname: '/decks/new', search: params.toString() });
   };
 
   const handleCreateNewDeck = () => {
@@ -206,10 +214,16 @@ function CardStandaloneFormBody({ mode, cardId, original, initialDeckId }: CardS
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
-        <button type="button" onClick={handleCancel} className="text-sm font-medium text-(--color-text-secondary)">
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="text-sm font-medium text-(--color-text-secondary)"
+        >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">{mode === 'create' ? 'New card' : 'Edit card'}</h1>
+        <h1 className="text-base font-semibold text-(--color-text)">
+          {mode === 'create' ? 'New card' : 'Edit card'}
+        </h1>
         <span aria-hidden="true" className="w-[42px]" />
       </div>
 

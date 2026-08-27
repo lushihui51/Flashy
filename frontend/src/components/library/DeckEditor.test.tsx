@@ -11,7 +11,15 @@ import DeckEditor from 'src/components/library/DeckEditor';
 const BASE = 'http://localhost:8000';
 
 const subjects = [
-  { id: 's1', name: 'Math', icon: 'brain', description: '', user_id: 'u1', created_at: '', deck_count: 1 },
+  {
+    id: 's1',
+    name: 'Math',
+    icon: 'brain',
+    description: '',
+    user_id: 'u1',
+    created_at: '',
+    deck_count: 1,
+  },
 ];
 
 function mockSubjects() {
@@ -39,7 +47,12 @@ const deckDetail = {
     { id: 'back-id', name: 'Back', type: 'text', position: 1 },
   ],
   cards: [
-    { id: 'card-1', deck_id: 'd1', created_at: '', values: { 'front-id': 'Bonjour', 'back-id': 'Hello' } },
+    {
+      id: 'card-1',
+      deck_id: 'd1',
+      created_at: '',
+      values: { 'front-id': 'Bonjour', 'back-id': 'Hello' },
+    },
   ],
 };
 
@@ -229,7 +242,14 @@ describe('DeckEditor — create mode', () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
-          { id: 's3', name: 'History', icon: 'book-open', description: '', user_id: 'u1', created_at: '' },
+          {
+            id: 's3',
+            name: 'History',
+            icon: 'book-open',
+            description: '',
+            user_id: 'u1',
+            created_at: '',
+          },
           { status: 201 },
         ),
       ),
@@ -250,14 +270,17 @@ describe('DeckEditor — create mode', () => {
 
   it('opened via a "New deck…" round-trip: Save navigates back to returnTo with the new deck id', async () => {
     mockSubjects();
-    server.use(http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })));
+    server.use(
+      http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
+    );
     const user = userEvent.setup();
     renderWithProviders(
       <Routes>
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      [{ pathname: '/decks/new', state: { returnTo: '/cards/new' } }],
+      // ADR 024: returnTo rides the URL, not state.
+      ['/decks/new?returnTo=%2Fcards%2Fnew'],
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
@@ -266,7 +289,10 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
-    expect(screen.getByTestId('location')).toHaveAttribute('data-state', JSON.stringify({ deckId: 'd9' }));
+    expect(screen.getByTestId('location')).toHaveAttribute(
+      'data-state',
+      JSON.stringify({ deckId: 'd9' }),
+    );
   });
 
   it('opened via a "New deck…" round-trip: Cancel with no changes navigates back to returnTo with no state', async () => {
@@ -277,7 +303,7 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      [{ pathname: '/decks/new', state: { returnTo: '/cards/new' } }],
+      ['/decks/new?returnTo=%2Fcards%2Fnew'],
     );
 
     await screen.findByDisplayValue('Term');
@@ -285,6 +311,23 @@ describe('DeckEditor — create mode', () => {
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+  });
+
+  it('a non-internal returnTo is treated as absent — Cancel falls back to /library', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+        <Route path="/library" element={<LocationProbe />} />
+      </Routes>,
+      ['/decks/new?returnTo=https%3A%2F%2Fevil.com'],
+    );
+
+    await screen.findByDisplayValue('Term');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 
   it('saves name, subject and fields — no cards — and lands on the new deck', async () => {
@@ -373,7 +416,11 @@ describe('DeckEditor — edit mode', () => {
   });
 
   it('shows a not-found message instead of crashing for a missing deck', async () => {
-    server.use(http.get(`${BASE}/api/decks/:id`, () => HttpResponse.json({ detail: 'Deck not found' }, { status: 404 })));
+    server.use(
+      http.get(`${BASE}/api/decks/:id`, () =>
+        HttpResponse.json({ detail: 'Deck not found' }, { status: 404 }),
+      ),
+    );
     renderEditDeck();
 
     expect(await screen.findByText('Deck not found.')).toBeInTheDocument();
@@ -601,7 +648,9 @@ describe('DeckEditor — edit mode', () => {
       // query would hit if that query were invalidated on delete, which it must
       // not be (see the comment on handleDeleteDeck).
       http.get(`${BASE}/api/decks/:id`, () =>
-        deleted ? HttpResponse.json({ detail: 'Deck not found' }, { status: 404 }) : HttpResponse.json(deckDetail),
+        deleted
+          ? HttpResponse.json({ detail: 'Deck not found' }, { status: 404 })
+          : HttpResponse.json(deckDetail),
       ),
     );
     const user = userEvent.setup();
@@ -651,7 +700,9 @@ describe('DeckEditor — edit mode', () => {
         return new HttpResponse(null, { status: 204 });
       }),
       http.get(`${BASE}/api/decks/:id`, () =>
-        deleted ? HttpResponse.json({ detail: 'Deck not found' }, { status: 404 }) : HttpResponse.json(deckDetail),
+        deleted
+          ? HttpResponse.json({ detail: 'Deck not found' }, { status: 404 })
+          : HttpResponse.json(deckDetail),
       ),
     );
     const user = userEvent.setup();

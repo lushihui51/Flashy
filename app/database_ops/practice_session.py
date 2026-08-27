@@ -32,36 +32,12 @@ def db_read_practice_session(
     ).first()
 
 
-def db_read_practice_sessions_with_decks(
-    db: Session,
-    user_id: uuid.UUID,
-    subject_id: uuid.UUID | None = None,
-    deck_id: uuid.UUID | None = None,
+def _summaries_for_sessions(
+    db: Session, sessions: list[PracticeSession]
 ) -> list[PracticeSessionSummary]:
-    """The user's sessions, newest first, each with the decks it snapshotted — two
-    queries regardless of how many sessions there are, never one per session (the same
-    shape as db_read_decks_with_summary).
-
-    `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
-    matches if *any* of its snapshots points at a matching deck. That join is inner, so
-    a snapshot whose deck was deleted (deck_id NULL, ADR 015) neither matches a filter
-    nor contributes a chip."""
-    query = select(PracticeSession).where(PracticeSession.user_id == user_id)
-
-    if subject_id is not None or deck_id is not None:
-        matching = (
-            select(PracticeDeck.id)
-            .join(Deck, Deck.id == PracticeDeck.deck_id)
-            .where(PracticeDeck.practice_session_id == PracticeSession.id)
-        )
-        if subject_id is not None:
-            matching = matching.where(Deck.subject_id == subject_id)
-        if deck_id is not None:
-            matching = matching.where(PracticeDeck.deck_id == deck_id)
-        query = query.where(matching.exists())
-
-    query = query.order_by(col(PracticeSession.created_at).desc(), col(PracticeSession.id))
-    sessions = list(db.exec(query).all())
+    """Two queries regardless of how many sessions are passed in — shared by the list
+    read and the single-session read below, so a detail fetch is a narrowed instance of
+    the same read rather than a per-row loop over it."""
     if not sessions:
         return []
 
@@ -119,6 +95,51 @@ def db_read_practice_sessions_with_decks(
         )
         for session in sessions
     ]
+
+
+def db_read_practice_sessions_with_decks(
+    db: Session,
+    user_id: uuid.UUID,
+    subject_id: uuid.UUID | None = None,
+    deck_id: uuid.UUID | None = None,
+) -> list[PracticeSessionSummary]:
+    """The user's sessions, newest first, each with the decks it snapshotted — two
+    queries regardless of how many sessions there are, never one per session (the same
+    shape as db_read_decks_with_summary).
+
+    `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
+    matches if *any* of its snapshots points at a matching deck. That join is inner, so
+    a snapshot whose deck was deleted (deck_id NULL, ADR 015) neither matches a filter
+    nor contributes a chip."""
+    query = select(PracticeSession).where(PracticeSession.user_id == user_id)
+
+    if subject_id is not None or deck_id is not None:
+        matching = (
+            select(PracticeDeck.id)
+            .join(Deck, Deck.id == PracticeDeck.deck_id)
+            .where(PracticeDeck.practice_session_id == PracticeSession.id)
+        )
+        if subject_id is not None:
+            matching = matching.where(Deck.subject_id == subject_id)
+        if deck_id is not None:
+            matching = matching.where(PracticeDeck.deck_id == deck_id)
+        query = query.where(matching.exists())
+
+    query = query.order_by(col(PracticeSession.created_at).desc(), col(PracticeSession.id))
+    sessions = list(db.exec(query).all())
+    return _summaries_for_sessions(db, sessions)
+
+
+def db_read_practice_session_with_decks(
+    db: Session, practice_session_id: uuid.UUID, user_id: uuid.UUID
+) -> PracticeSessionSummary | None:
+    """The detail read (MD-3): the same summary shape as the list, narrowed to one
+    session via the existing ownership-scoped lookup. None for a missing or foreign
+    session, same as db_read_practice_session."""
+    session = db_read_practice_session(db, practice_session_id, user_id)
+    if session is None:
+        return None
+    return _summaries_for_sessions(db, [session])[0]
 
 
 def db_delete_practice_session(db: Session, session: PracticeSession) -> None:

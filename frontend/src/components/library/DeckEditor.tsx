@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MoreVertical, Plus, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
@@ -21,6 +21,7 @@ import FullScreenDialog from 'src/components/ui/FullScreenDialog';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -168,7 +169,10 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     disabled
                     className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40"
                   >
-                    <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+                    <MoreVertical
+                      aria-hidden="true"
+                      className="h-4 w-4 text-(--color-text-muted)"
+                    />
                   </button>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40">
                     <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
@@ -253,10 +257,6 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
 
 type CreateLocationState = {
   subject?: { id: string; name: string; icon: string };
-  /** Set when this editor was opened from the card form's "New deck…" row (Phase 5.5
-   * §4) — where to go back to, and with what, once this deck is saved or abandoned.
-   * Create mode only — an edit is never entered via that round-trip. */
-  returnTo?: string;
 } | null;
 
 type DeckEditorProps = {
@@ -271,6 +271,7 @@ type DeckEditorProps = {
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -304,7 +305,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       deck={mode === 'edit' ? deckQuery.data : undefined}
       subject={mode === 'edit' ? subjectQuery.data : undefined}
       contextualSubject={createLocationState?.subject ?? null}
-      returnTo={createLocationState?.returnTo}
+      // ADR 024: returnTo rides the URL, not state — create mode only; an edit is
+      // never entered via a "New deck…" round-trip.
+      returnTo={mode === 'create' ? internalReturnTo(searchParams) : null}
     />
   );
 }
@@ -315,7 +318,7 @@ type DeckEditorBodyProps = {
   deck: DeckDetail | undefined;
   subject: SubjectRead | undefined;
   contextualSubject: { id: string; name: string; icon: string } | null;
-  returnTo: string | undefined;
+  returnTo: string | null;
 };
 
 /** Phase 7.5 §2: counts what the current changeset would actually delete — the only
@@ -329,8 +332,7 @@ function deleteDeckSummaryText(deck: DeckDetail | undefined): string {
     ...(deck && deck.field_defs.length > 0 ? [pluralize(deck.field_defs.length, 'field')] : []),
     'its practice configurations',
   ];
-  const list =
-    owned.length > 1 ? `${owned.slice(0, -1).join(', ')} and ${owned.at(-1)}` : owned[0];
+  const list = owned.length > 1 ? `${owned.slice(0, -1).join(', ')} and ${owned.at(-1)}` : owned[0];
   return `This also deletes ${list}. Your review history is kept. This can't be undone.`;
 }
 
@@ -345,7 +347,14 @@ function destructiveSummaryText({ fieldCount }: ReturnType<typeof destructiveCou
   return `This removes ${pluralize(fieldCount, 'field')} from every card in this deck. This can't be undone.`;
 }
 
-function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, returnTo }: DeckEditorBodyProps) {
+function DeckEditorBody({
+  mode,
+  deckId,
+  deck,
+  subject,
+  contextualSubject,
+  returnTo,
+}: DeckEditorBodyProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
@@ -359,7 +368,9 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   // Phase 7.5 rebases it after every successful edit-mode save (§4), and the global
   // Undo (§2) reverts to it directly.
   const [original, setOriginal] = useState<DeckEditorState>(() =>
-    mode === 'edit' && deck ? deckDetailToEditorState(deck) : initialDeckEditorState(contextualSubject?.id ?? null),
+    mode === 'edit' && deck
+      ? deckDetailToEditorState(deck)
+      : initialDeckEditorState(contextualSubject?.id ?? null),
   );
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
@@ -496,7 +507,9 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
 
   const subjectDefaultValue: SubjectItem | null =
-    mode === 'edit' && subject ? { id: subject.id, name: subject.name, icon: subject.icon } : contextualSubject;
+    mode === 'edit' && subject
+      ? { id: subject.id, name: subject.name, icon: subject.icon }
+      : contextualSubject;
 
   // The subject combobox is wired here rather than behind a picker component of its own:
   // the fetch has to live in a page-level component (shared components take their data as
@@ -527,7 +540,9 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
         >
           {showDone ? 'Done' : 'Cancel'}
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">{mode === 'edit' ? 'Edit deck' : 'New deck'}</h1>
+        <h1 className="text-base font-semibold text-(--color-text)">
+          {mode === 'edit' ? 'Edit deck' : 'New deck'}
+        </h1>
         <div className="flex items-center gap-3">
           {mode === 'edit' && (
             <button
@@ -663,7 +678,6 @@ function DeckEditorBody({ mode, deckId, deck, subject, contextualSubject, return
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}
-
     </div>
   );
 }

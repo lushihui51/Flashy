@@ -2355,6 +2355,7 @@
           "Practice"
         ],
         "summary": "Read Practice Session",
+        "description": "MD-3: the detail page needs the same deck chips the list already renders, so this\nanswers with PracticeSessionSummary rather than the bare PracticeSessionRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
         "operationId": "read_practice_session_api_practice_sessions__practice_session_id__get",
         "parameters": [
           {
@@ -2406,7 +2407,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeSessionRead"
+                  "$ref": "#/components/schemas/PracticeSessionSummary"
                 }
               }
             }

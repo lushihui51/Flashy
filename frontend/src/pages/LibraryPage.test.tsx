@@ -12,7 +12,11 @@ const BASE = 'http://localhost:8000';
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return (
+    <span data-testid="location" data-search={location.search}>
+      {location.pathname}
+    </span>
+  );
 }
 
 const subjects = [
@@ -77,6 +81,42 @@ describe('LibraryPage', () => {
 
     expect(await screen.findByText('Algebra')).toBeInTheDocument();
     expect(screen.getByText('Cells')).toBeInTheDocument();
+  });
+
+  it('opens straight onto the Decks tab when ?tab=decks is in the URL', async () => {
+    mockLibrary();
+    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+
+    expect(await screen.findByText('Algebra')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Decks' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('falls back to Subjects for an unrecognized ?tab= value', async () => {
+    mockLibrary();
+    renderWithProviders(<LibraryPage />, ['/library?tab=bogus']);
+
+    expect(await screen.findByText('Math')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Subjects' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('writes and clears ?tab= as the tab changes, mirroring DeckDetailPage.setTab', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <LibraryPage />
+        <LocationProbe />
+      </>,
+    );
+
+    await screen.findByText('Math');
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '');
+
+    await user.click(screen.getByRole('tab', { name: 'Decks' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?tab=decks');
+
+    await user.click(screen.getByRole('tab', { name: 'Subjects' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '');
   });
 
   it('tapping a subject row links to its detail page', async () => {
