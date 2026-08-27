@@ -40,13 +40,16 @@
 
 ## Conventions
 
+- Backend layering (ADR 034): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table, `db_*` prefix, ownership scoped in the query); a service exists only where a flow spans multiple operations — a one-query handler calls its `db_*` function directly
 - Frontend date formatting goes through `formatDate`/`formatDateTime` in `frontend/src/lib/datetime.ts`, which pins `timeZone` explicitly — never `toLocaleDateString`/`toLocaleString`/`toLocaleTimeString` or a hand-built `Intl.DateTimeFormat`. An ESLint `no-restricted-syntax` rule blocks those outside that one file; a zone-less formatter looks correct on a developer machine sitting in the user's zone and is silently wrong everywhere else
-- Frontend server fetch through TanStack Query, no raw fetch in components
+- Frontend server fetch through TanStack Query (ADR 033), no raw fetch in components; server data lives in the query cache, never copied into long-lived component state
 - Reusable components do not fetch, all data are passed down as props
 - When a new surface needs something close to an existing component, extend that component with props (e.g. a prop saying whether a picker is being used to filter or to create) rather than forking a near-duplicate — one interaction layer, one set of bugs. If a genuinely new component is warranted, name it for the purpose it serves (`SubjectFilterCombobox`), never a generic name that leaves two similar components indistinguishable at the import site
-- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`. The one non-area directory is `ui/`: domain-free primitives every area may import (PickerCombobox, ConfirmDialog, FullScreenDialog, BottomSheet, ListRow). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
+- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (`SubjectForm`, `DeckEditor`, `CardStandaloneForm`, `DeckConfigurationEditor` — see `App.tsx`). The one non-area directory is `ui/`: domain-free primitives every area may import (PickerCombobox, ConfirmDialog, FullScreenDialog, BottomSheet, ListRow). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
+- Imports are absolute from `src/` (alias in `vite.config.ts` and `tsconfig.app.json`), never relative `../..` chains
 - Modals/sheets: use Radix Dialog primitives (`@radix-ui/react-dialog`, ADR 016), not a hand-rolled focus trap/scroll-lock. If the trigger button isn't a `Dialog.Trigger` descendant (e.g. it lives in a sibling component), thread a `triggerRef` for `onCloseAutoFocus`-based focus restoration and give the trigger an inline `pointerEvents: 'auto'` + a matching `onPointerDownOutside` exemption, or Radix's `disableOutsidePointerEvents` silently blocks it while the dialog is open (see `SideDrawer.tsx`)
 - API layer error handling: `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`), never side-effect (no `console.error`, no toast) — display is a UI-edge concern, not the data layer's (ADR 006)
+- Error display: inline at the call site — a failed query renders a banner in place of its content, a failed mutation renders its message next to the triggering control; no ErrorBoundary, no global QueryCache/MutationCache handlers, no toasts (ADR 035)
 - `// TODO(defer:<tag>)` marks deliberately-deferred skeleton work; `grep -r "TODO(defer:" frontend/src/` before considering a phase/PR done — every deferred item must be tagged, nothing untagged
 - Component tests: default Vitest environment is `node`; a test needing a DOM opts in per-file with a `// @vitest-environment jsdom` docblock at the top, not a global config change (ADR 017). Reuse `frontend/src/test/testUtils.tsx` (`renderWithRouter`, `renderWithProviders`) and `frontend/src/test/mocks/clerk.ts` (mocks `@clerk/react`'s `useUser`/`useClerk`) rather than re-mocking per file. RTL doesn't auto-cleanup here (only fires under Vitest's `globals: true`, which this repo doesn't set) — `test/setup.ts`'s `afterEach(() => cleanup())` does it instead; don't remove it
 - For files written to `docs/cc/`:
@@ -94,9 +97,9 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   and `deck_practice_config` rows, unique per `(subject_id, name)`. Deleting a deck
   cascades all three — and, transitively, `card_field_value`, `card_field_mastery`,
   and `practice_card` — but never touches `review_log` or `practice_deck`, which
-  outlive it (ADR 015). Always has **≥2 active `field_def` rows** (D3 in the creation-
-  flows plan) — a practice session needs at least one prompt field and one answer
-  field, and a field is one or the other, never both, so fewer than two makes a deck
+  outlive it (ADR 015). Always has **≥2 active `field_def` rows** (task 003's D3) — a
+  practice session needs at least one prompt field and one answer field, and a field
+  is one or the other, never both, so fewer than two makes a deck
   unpractisable. Enforced on create, on the batch-edit endpoint, and on archiving a
   field (archiving counts as removing for this purpose). `last_activity_at` is the
   same sort-key mechanism as `subject`'s — bumps on the deck's own edits and on any
@@ -108,10 +111,11 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
 - `card_field_value` — a card's actual per-field content: exactly one row per
   `(card_id, field_def_id)` for every field_def **active** on the card's deck — dense,
   never sparse. An unfilled field stores `""`, not a missing row, so "does this card
-  have a value for field X" is never ambiguous between empty and never-written. A card
-  whose values are all blank is dropped at create time rather than persisted with
-  all-`""` rows — that's a different concern (not persisting a card the user never
-  filled in) from the density invariant. Whatever creates or edits a deck's fields is
+  have a value for field X" is never ambiguous between empty and never-written. An
+  all-blank card is never persisted — `POST /api/cards` rejects it (422) and a
+  batch-edit `cards.create` entry with no values is dropped silently — a different
+  concern (not persisting a card the user never filled in) from the density
+  invariant. Whatever creates or edits a deck's fields is
   responsible for keeping this true over time: adding a field backfills a `""` row for
   every existing card in the same transaction; archiving a field is not a field-set
   change the invariant tracks (below), and deleting a field's row via FK cascade

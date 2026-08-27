@@ -6,6 +6,16 @@ Branch: `refactor/schema-rewrite`, merged via PR #10. **Status: every task below
 
 Execution protocol (as run): one task per session, in order, never running ahead; at the end of each task, stop and report against "Done when" and wait for confirmation. The database was empty — no data to preserve, no backward compatibility to maintain; the correct shape was always preferred over the compatible one. Commits at each task boundary with the message given in the task.
 
+## Superseded since (sync 2026-08-27)
+
+Later cycles changed parts of what Contracts records; the sections below are left as written, with current truth here:
+
+- **`SessionStatus` is two values** — `active`, `completed`. `abandoned` was never built; the enum, its CHECK constraint, and everything task 004 onward built assume two values (`app/models/practice_session.py`).
+- **`review_log`'s FKs are nullable `ON DELETE SET NULL`** — `card_id`, `field_def_id`, and `practice_card_id` all survive their target's deletion as NULLs per ADR 015, not the plain FKs the T3 schema block shows.
+- **Columns added after the schema block was written**: `app_user.timezone` (ADR 019), `subject.last_activity_at` and `deck.last_activity_at` (ADR 018), `practice_session.name` (task 004).
+- **Field hard-delete gates on less than "Field lifecycle" asks**: the shipped endpoint (`app/routers/api/field_def.py`) requires archived-first plus zero `card_field_value` rows only. Mastery rows go via FK cascade and `review_log` via SET NULL (ADRs 010/015), and a config array may keep a dangling id — which config validation already rejects as stale at session start (task 004's `stale_config`).
+- **`MasteryStrategy` outgrew the Contracts block**: a fifth method `expand(group)`, `apply_review(current, update: MasteryUpdate)` — no `ReviewEvent` type exists, `app/mastery/types.py` has `ReviewGroup`/`MasteryUpdate` — and `field_score` returns `float | None`. T4's Notes record the post-merge fix; `app/mastery/strategy.py` is authoritative.
+
 ## ADRs
 
 Recorded by T10 (commit `b701fb1`) plus later amendments. The invariants these ADRs record are restated in full under Contracts, because every task references them.

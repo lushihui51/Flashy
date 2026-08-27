@@ -6,6 +6,15 @@ Branch: `rewrite/frontend-shell`, merged via PR #11. **Status: every task below 
 
 Execution protocol (as run): one PR per task, each independently reviewable and mergeable, in dependency order.
 
+## Superseded since (sync 2026-08-27)
+
+Later work changed what parts of this file describe; contracts and checked boxes are left as written, with current truth here:
+
+- **§1.1's Create no-op (and P5's "Create is clickable and does nothing" box)**: superseded by task 003 Phase 2 — Create opens `CreateSheet` (`AppShell.tsx`) and its `TODO(defer:nav-targets)` tag is gone. The checked box records what P5 verified at the time.
+- **§2's provider nesting shipped inverted**: `main.tsx` has `QueryClientProvider` outermost, then `ClerkProvider`, then the router. Neither depends on the other; the diagram's order was never load-bearing.
+- **§2's colour-token list has grown**: `index.css` also defines `--color-text-secondary`, `--color-danger`, `--color-danger-contrast`, with more arriving with task 006.
+- **§3.8's `PracticePage.tsx`**: replaced by `PracticeOverviewPage.tsx` in task 004; `/practice` routes there (`App.tsx`). The other three placeholder pages kept their names.
+
 ## ADRs
 
 Recorded post-execution by `12a9aa2` ("record app-shell rebuild decisions in ADRs, AGENTS.md, and plan 002"):

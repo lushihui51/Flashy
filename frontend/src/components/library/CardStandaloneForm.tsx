@@ -14,14 +14,11 @@ type CardStandaloneFormProps = {
 
 type LocationState = { deckId?: string } | null;
 
-/** CardForm's standalone modes (§4.6) — its own routes (`/cards/new`,
- * `/cards/:cardId/edit`), real API calls, real navigation. A sibling to `CardForm.tsx`
- * (the in-editor role used inside DeckEditor), not a variant of it: that one is a
- * Radix Dialog controlled entirely by props with no network calls of its own, while
- * this one is a routed page like SubjectForm — different enough responsibilities
- * that sharing one component would mean branching most of its body on which world
- * it's in. They already share the one piece that's actually identical:
- * CardFieldsForm. */
+/** Standalone card create/edit (task 003 §4.6) — its own routes (`/cards/new`,
+ * `/cards/:cardId/edit`), real API calls, real navigation, a routed page like
+ * SubjectForm. The in-editor `CardForm.tsx` dialog it was originally a sibling to
+ * was deleted along with DeckEditor's card entry (ADR 023); the piece they shared
+ * survives as CardFieldsForm. */
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
