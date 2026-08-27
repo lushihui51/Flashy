@@ -6,6 +6,15 @@ Branch: `rewrite/frontend-crud`, merged via PR #12 (squash `4b9cf23`). **Status:
 
 Working protocol (as run): tasks are gated — each ends with a "Done when" gate: run the automated checks, print the browser-check list verbatim for the reviewer to walk through on a device or narrow viewport, then end the turn and wait for a go-ahead. On a reported failure, fix within the current task and return to the gate. One PR per task; backend and frontend tasks are separate PRs even when small. Mobile viewport (360–430px) is the design target; desktop must not be broken but gets no layout work except where a task says otherwise. Deferred items carry `// TODO(defer:<tag>)` — tags introduced here: `field-types`, `icon-picker`, `draft-persistence`, `desktop-grid`, `paste-import`; existing tags from the shell rebuild still apply. **Do not invent endpoints.** The API contract is in Contracts §2; if something is missing from it, stop and ask.
 
+## Superseded since (sync 2026-08-27)
+
+Later refactors changed what parts of this file describe; sections are left as written, with current truth here:
+
+- **§4.3 `SubjectPicker` and §4.4 `DeckPicker` no longer exist.** Both fetched their own data against the props-only convention and each had exactly one consumer, so commit `39211ad` deleted them: `DeckEditor` and `CardStandaloneForm` (and later surfaces) render the shared `ui/PickerCombobox` directly and own their queries. AGENTS.md's `ui/` entry records the convention.
+- **§4.6's `CardForm` survives only as `CardStandaloneForm.tsx`.** The in-editor dialog role is gone (next bullet); the shared field inputs live in `CardFieldsForm.tsx`.
+- **§4.7's Cards section, and Phase 7.5's `EditorCard` staging, were removed from `DeckEditor`** by commit `f4afa9a`, recorded as ADR 023 rule 3: a deck form is identity + schema; cards are routine content managed from the deck's own card list. The editor state (`deckEditorReducer.ts`) holds fields only, and the batch-edit diff emits no `cards` key.
+- **The create contract no longer has a `cards` field at all** (task 008 T2, executing ADR 023's Consequences-deferred cleanup; MD-2 there). The previous bullet's "vestigial `cards: []`" is gone: `POST /api/decks` accepts `{name, subject_id, field_defs}` only — `DeckCardCreate` is deleted, and `buildDeckCreatePayload` sends no `cards` key. Card creation exists solely via `POST /api/cards` and the batch-edit endpoint.
+
 ## ADRs
 
 - **ADR 015 — deck deletion cascades owned rows, preserves history via SET NULL.** Records **D12** (deletion policy), implemented in Phase 1.5.

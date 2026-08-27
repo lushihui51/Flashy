@@ -2899,30 +2899,6 @@
         "title": "DeckBatchEdit",
         "description": "`PATCH /api/decks/{id}` body (\u00a72.3, Phase 6). Every top-level key is optional \u2014\na request can touch just `name`, just `field_defs`, or any combination \u2014 but the\nwhole thing is applied as one transaction: a failure anywhere rolls back\neverything, including an already-changed `name`."
       },
-      "DeckCardCreate": {
-        "properties": {
-          "values": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Values"
-          }
-        },
-        "type": "object",
-        "required": [
-          "values"
-        ],
-        "title": "DeckCardCreate",
-        "description": "One card in an atomic deck-create payload: `values[i]` belongs to\n`field_defs[i]` by position (D6) \u2014 no client-side field ids yet to key by."
-      },
       "DeckCreate": {
         "properties": {
           "name": {
@@ -2940,21 +2916,13 @@
             },
             "type": "array",
             "title": "Field Defs"
-          },
-          "cards": {
-            "items": {
-              "$ref": "#/components/schemas/DeckCardCreate"
-            },
-            "type": "array",
-            "title": "Cards"
           }
         },
         "type": "object",
         "required": [
           "name",
           "subject_id",
-          "field_defs",
-          "cards"
+          "field_defs"
         ],
         "title": "DeckCreate"
       },

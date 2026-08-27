@@ -158,15 +158,20 @@ def multi_subject_library(client):
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
                 ],
-                "cards": [
-                    {"values": ["q1", "a1"]},
-                    {"values": ["q2", "a2"]},
-                ],
             },
         )
         assert deck_res.status_code == 201, deck_res.text
         deck = deck_res.json()
         fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+        for front_value, back_value in (("q1", "a1"), ("q2", "a2")):
+            card_res = client.post(
+                "/api/cards",
+                json={
+                    "deck_id": deck["id"],
+                    "values": {fields["front"]: front_value, fields["back"]: back_value},
+                },
+            )
+            assert card_res.status_code == 201, card_res.text
 
         config_res = client.post(
             "/api/deck_practice_configs",

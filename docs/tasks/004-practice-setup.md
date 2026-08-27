@@ -67,7 +67,7 @@ One word per concept. Middle column is what a user reads; right column is what c
 - `GET /api/deck_practice_configs?subject_id&deck_id` → `DeckPracticeConfigSummary[]` (config + `deck_name, subject_id, subject_name`), ordered subject → deck → name.
 - `GET /api/decks/{deck_id}` → includes live-only `field_defs` `{id, name, type, position}`, position-ordered.
 - `SessionStatus` is two values: `active`, `completed`.
-- Pool-draw semantics: per card and per side, **one** of the checked counts is drawn uniformly at random, then that many fields are sampled (mastery-weighted) from the Random draw set. `[1, 3]` means some cards show one, others three.
+- Pool-draw semantics: per card and per side, **one** of the checked counts is drawn uniformly at random, then that many fields are sampled (mastery-weighted) from the Random draw set. `[1, 3]` means some cards show one, others three. The drawn count is clamped to the candidates that survive filtering (archived ids in a stale snapshot are dropped — `min(k, len(candidates))` in `app/services/practice_generation.py`), so a card can show fewer than the drawn number. _(Clamp wording added by sync 2026-08-27; 006 T1 will add blank-valued fields to the same filter, ADR 026.)_
 
 ### Frontend contracts
 
@@ -91,7 +91,7 @@ One word per concept. Middle column is what a user reads; right column is what c
   - Returns: Save → `navigate(returnTo, {state: {deckId}})` (DeckEditor) / `navigate(returnTo, {state: {configurationId}})` (DeckConfigurationEditor); Cancel → `navigate(returnTo)`, no state. Absent/invalid param → today's fallbacks, unchanged (DeckEditor → `/library`; DeckConfigurationEditor → `/decks/{deckId}?tab=configurations` or `/library`).
   - Router state carries only one-shot results: `{deckId}` (deck-editor save-return, and "start on this deck" into the builder), `{configurationId}` (builder save-return).
   - Per MD-6, `PracticeCreatePage`'s deck→configuration selection is not part of this contract and does not survive a round trip through it.
-- **URL params:** overview and New practice share `subject` and `deck`; the overview alone adds `status`. Entry points already emit these (`SubjectDetailPage.tsx:88`, `DeckDetailPage.tsx:118`).
+- **URL params:** overview and New practice share `subject` and `deck`; the overview alone adds `status`. Entry points already emit these (`SubjectDetailPage.tsx:88`, `DeckDetailPage.tsx:123`).
 
 ## Tasks
 
@@ -131,7 +131,7 @@ _Built against the pre-ADR-024 state-based `returnTo` contract; T4 migrates its 
   - Route `/practice/new` reads `?subject=` / `?deck=` (the overview's New practice button and the Create sheet already navigate here carrying them).
   - Reuse `PracticeFilterBar` with the same props/semantics as the overview; the page fetches subjects and decks and passes them down, filter state lives in the URL.
   - Configurations from `readDeckPracticeConfigs({subjectId, deckId})`, grouped by deck; group header is "deck name · subject name". `ConfigurationPickList` takes groups, selection, per-config error text, and `onSelect` as props — it does not fetch. Selection is a radio per deck group (invariant 7), any number of decks; per MD-4, selections survive filter changes and "N selected" renders next to Create.
-  - Name input prefilled `formatDateTime(new Date())` — the same call `DeckConfigurationEditor.tsx:137` makes — editable, sent verbatim (invariant 8).
+  - Name input prefilled `formatDateTime(new Date())` — the same call `DeckConfigurationEditor.tsx:139` makes — editable, sent verbatim (invariant 8).
   - "New configuration" button navigates to `/deck-configurations/new` carrying the current `subject`/`deck` params and state `{returnTo: current pathname+search}`; on return, `location.state.configurationId` auto-selects that configuration's radio.
   - Create enabled when ≥1 selected and name non-blank, else disabled with the unmet condition as inline text (same pattern as the builder's Save). On success navigate to `/practice/<id>`.
   - Errors, per the ADR 022 contract: `stale_config` → the message "This configuration no longer produces any prompts — edit it." rendered on the offending row (`detail.config_id`), selection preserved; `config_not_found` → top-of-list message "A selected configuration no longer exists." and refetch the list; `duplicate_deck` (unreachable through the radio UI) and any other error → `error.message` rendered above Create. No toasts.
@@ -167,7 +167,7 @@ _Built against the pre-ADR-024 state-based `returnTo` contract; T4 migrates its 
   - Active → a "Start practice" button, pure navigation (invariant 2) to `/practice/:practiceSessionId/run`; add that route rendering `PracticeRunPage`, a stub marked `// TODO(defer:practice-run)` with heading "Practice run" and body "Coming soon."
   - Completed → no Start button; body text "A summary of this practice is coming later."
   - Delete button opens the same `ConfirmDialog` copy the overview uses; on success navigate to `/practice`. Render the mutation's `error.message` inline in the dialog on failure, dialog stays open.
-  - Query error (404 / foreign id) → "Practice session not found." — the `SubjectDetailPage.tsx:39-42` pattern.
+  - Query error (404 / foreign id) → "Practice session not found." — the `SubjectDetailPage.tsx:39-45` pattern.
 - **Out of scope:** stats, restart, rename, anything on the run surface beyond the stub.
 - **Done when:** tests cover — active session shows Start and it navigates to the run stub; completed session hides Start and shows the summary line; deleted-deck count renders; delete confirm calls the API and navigates to `/practice`; not-found state renders; `grep -r "TODO(defer:" frontend/src/` shows the run stub tagged; `npx vitest run`, `npm run lint`, `npm run build` clean.
 - **Commit:** `feat: practice detail page and run stub`

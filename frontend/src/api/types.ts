@@ -462,15 +462,6 @@ export interface components {
             field_defs?: components["schemas"]["FieldDefBatchOps"] | null;
             cards?: components["schemas"]["CardBatchOps"] | null;
         };
-        /**
-         * DeckCardCreate
-         * @description One card in an atomic deck-create payload: `values[i]` belongs to
-         *     `field_defs[i]` by position (D6) — no client-side field ids yet to key by.
-         */
-        DeckCardCreate: {
-            /** Values */
-            values: (string | null)[];
-        };
         /** DeckCreate */
         DeckCreate: {
             /** Name */
@@ -482,8 +473,6 @@ export interface components {
             subject_id: string;
             /** Field Defs */
             field_defs: components["schemas"]["FieldDefCreate"][];
-            /** Cards */
-            cards: components["schemas"]["DeckCardCreate"][];
         };
         /** DeckDetail */
         DeckDetail: {
