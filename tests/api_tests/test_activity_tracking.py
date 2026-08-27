@@ -24,7 +24,6 @@ class TestTimestampsOnInsert:
                 "name": "Fresh Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         )
         data = response.json()
@@ -46,7 +45,6 @@ class TestOwnColumnEditBumpsBoth:
                 "name": "Original Name",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         ).json()
 
@@ -68,7 +66,6 @@ class TestDeckLifecycleBubblesToSubject:
                 "name": "New Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         )
         subject = client.get(f"/api/subjects/{existing_subject['id']}").json()
@@ -81,7 +78,6 @@ class TestDeckLifecycleBubblesToSubject:
                 "name": "Doomed Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         ).json()
         after_create = client.get(f"/api/subjects/{existing_subject['id']}").json()
@@ -99,7 +95,6 @@ class TestDeckLifecycleBubblesToSubject:
                 "name": "Movable Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         ).json()
         before_source = client.get(f"/api/subjects/{existing_subject['id']}").json()
@@ -123,7 +118,6 @@ class TestFieldWritesTouchDeck:
                 "name": f"Field Test Deck {uuid.uuid4()}",
                 "subject_id": existing_subject["id"],
                 "field_defs": field_defs,
-                "cards": [],
             },
         ).json()
 
@@ -179,7 +173,6 @@ class TestCardWritesTouchDeck:
                 "name": f"Card Test Deck {uuid.uuid4()}",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         ).json()
         return deck, deck["field_defs"][0]["id"], deck["field_defs"][1]["id"]
@@ -251,7 +244,6 @@ class TestRecencyOrdering:
             "name": name,
             "subject_id": existing_subject["id"],
             "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-            "cards": [],
         }
         first = client.post("/api/decks", json=payload("First Deck")).json()
         second = client.post("/api/decks", json=payload("Second Deck")).json()
@@ -266,7 +258,6 @@ class TestRecencyOrdering:
             "name": name,
             "subject_id": existing_subject["id"],
             "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-            "cards": [],
         }
         first = client.post("/api/decks", json=payload("First Deck")).json()
         second = client.post("/api/decks", json=payload("Second Deck")).json()

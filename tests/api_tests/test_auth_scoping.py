@@ -79,7 +79,6 @@ class TestForeignResourcesAreNotFound:
                 "subject_id": owned["subject"]["id"],
                 "name": "Intruder",
                 "field_defs": [{"name": "Front", "type": "text"}],
-                "cards": [],
             },
         )
         assert response.status_code == 422

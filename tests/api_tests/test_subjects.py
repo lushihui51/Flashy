@@ -66,7 +66,6 @@ class TestSubjectsCRUD:
                 "name": "Deck A",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         )
         client.post(
@@ -75,7 +74,6 @@ class TestSubjectsCRUD:
                 "name": "Deck B",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [],
             },
         )
 
@@ -112,16 +110,23 @@ class TestSubjectsCRUD:
                 "name": "Deck to cascade",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
-                "cards": [{"values": ["hi", "there"]}],
             },
         )
-        deck_id = deck_response.json()["id"]
+        deck = deck_response.json()
+        fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+        card_response = client.post(
+            "/api/cards",
+            json={"deck_id": deck["id"], "values": {fields["Front"]: "hi", fields["Back"]: "there"}},
+        )
+        card_id = card_response.json()["id"]
 
         response = client.delete(f"/api/subjects/{existing_subject['id']}")
         assert response.status_code == 204
 
-        get_deck_response = client.get(f"/api/decks/{deck_id}")
+        get_deck_response = client.get(f"/api/decks/{deck['id']}")
         assert get_deck_response.status_code == 404
+        get_card_response = client.get(f"/api/cards/{card_id}")
+        assert get_card_response.status_code == 404
 
     def test_duplicate_name_for_same_user_rejected(self, client, existing_user, existing_subject):
         response = client.post(

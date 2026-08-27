@@ -67,7 +67,6 @@ def create_deck(db: SessionDep, current_user: CurrentUserDep, payload: DeckCreat
             payload.name,
             payload.subject_id,
             payload.field_defs,
-            payload.cards,
         )
     except DeckCreateValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e

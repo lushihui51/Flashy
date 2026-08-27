@@ -288,7 +288,6 @@ class TestCopyDeckPracticeConfig:
                 "subject_id": target_subject["id"],
                 "name": "Unrelated Deck",
                 "field_defs": [{"name": "seed", "type": "text"}, {"name": "seed2", "type": "text"}],
-                "cards": [],
             },
         )
         assert other_deck.status_code == 201, other_deck.text
@@ -359,7 +358,6 @@ class TestCopyDeckErrors:
                 "subject_id": target_subject["id"],
                 "name": source_setup["deck"]["name"],
                 "field_defs": [{"name": "seed", "type": "text"}, {"name": "seed2", "type": "text"}],
-                "cards": [],
             },
         )
         assert collide.status_code == 201, collide.text

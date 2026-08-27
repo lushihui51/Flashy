@@ -330,7 +330,7 @@ describe('DeckEditor — create mode', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 
-  it('saves name, subject and fields — no cards — and lands on the new deck', async () => {
+  it('saves name, subject and fields — no cards field at all — and lands on the new deck', async () => {
     mockSubjects();
     server.use(
       http.post(`${BASE}/api/decks`, async ({ request }) => {
@@ -338,7 +338,6 @@ describe('DeckEditor — create mode', () => {
           name: string;
           subject_id: string;
           field_defs: { name: string; type: string }[];
-          cards: { values: (string | null)[] }[];
         };
         expect(body.name).toBe('Spanish Basics');
         expect(body.subject_id).toBe('s1');
@@ -347,8 +346,9 @@ describe('DeckEditor — create mode', () => {
           { name: 'Definition', type: 'text' },
         ]);
         // A deck is born with a schema and no content — the first card is added from
-        // the new deck's own card list.
-        expect(body.cards).toEqual([]);
+        // the new deck's own card list (ADR 023). The create contract has no `cards`
+        // field at all (task 008 T2).
+        expect(body).not.toHaveProperty('cards');
         return HttpResponse.json({ id: 'd1' }, { status: 201 });
       }),
     );

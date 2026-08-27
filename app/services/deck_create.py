@@ -4,9 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.database_ops.subject import db_read_subject
-from app.models.card import Card
-from app.models.card_field_value import CardFieldValue
-from app.models.deck import Deck, DeckCardCreate
+from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldDefCreate
 from app.services.activity import touch
 
@@ -16,21 +14,17 @@ class DeckCreateValidationError(ValueError):
     the offending item, per the API contract, and maps to a 422 in the router."""
 
 
-def _is_blank(value: str | None) -> bool:
-    return value is None or value.strip() == ""
-
-
 def create_deck_atomic(
     db: Session,
     user_id: uuid.UUID,
     name: str,
     subject_id: uuid.UUID,
     field_defs: list[FieldDefCreate],
-    cards: list[DeckCardCreate],
 ) -> Deck:
-    """Builds a deck, its field_defs, and its cards in one transaction (D2). Every
-    validation rule runs before any row is added, so a failure anywhere — including a
-    late card — leaves nothing persisted; there's no partial write to roll back."""
+    """Builds a deck and its field_defs in one transaction. Every validation rule runs
+    before any row is added, so a failure anywhere leaves nothing persisted; there's no
+    partial write to roll back. A deck is born with a schema and no content — cards are
+    added afterward via POST /api/cards or the batch-edit endpoint (ADR 023)."""
     name = name.strip()
     if not name:
         raise DeckCreateValidationError("name must not be empty")
@@ -56,13 +50,6 @@ def create_deck_atomic(
         seen_names.add(key)
         trimmed_names.append(field_name)
 
-    for j, card in enumerate(cards):
-        if len(card.values) != len(field_defs):
-            raise DeckCreateValidationError(
-                f"cards[{j}].values must have exactly {len(field_defs)} entries, "
-                f"one per field_def"
-            )
-
     deck = Deck(subject_id=subject_id, name=name)
     db.add(deck)
     try:
@@ -73,33 +60,9 @@ def create_deck_atomic(
             f"a deck named {name!r} already exists in this subject"
         ) from None
 
-    new_field_defs: list[FieldDef] = []
     for position, (field_def, field_name) in enumerate(zip(field_defs, trimmed_names)):
-        row = FieldDef(deck_id=deck.id, name=field_name, type=field_def.type, position=position)
-        db.add(row)
-        new_field_defs.append(row)
+        db.add(FieldDef(deck_id=deck.id, name=field_name, type=field_def.type, position=position))
     db.flush()
-
-    for card in cards:
-        if all(_is_blank(value) for value in card.values):
-            continue  # all-empty card is dropped, not rejected — a different concern
-            # from the row-per-field invariant below: this is about not persisting a
-            # card the user never filled in at all.
-        new_card = Card(deck_id=deck.id)
-        db.add(new_card)
-        db.flush()
-        for field_def, value in zip(new_field_defs, card.values):
-            # Every field gets a row, "" when blank — a card's values are dense over
-            # the deck's active fields, never sparse (see AGENTS.md's card_field_value
-            # entry). Sparse writes make "does this card have a value for field X"
-            # ambiguous between "empty" and "never written."
-            db.add(
-                CardFieldValue(
-                    card_id=new_card.id,
-                    field_def_id=field_def.id,
-                    value="" if _is_blank(value) else value,
-                )
-            )
 
     # D13: the deck's own last_activity_at is set at insert (server_default=now(),
     # same as created_at) — only the subject needs an explicit touch.
