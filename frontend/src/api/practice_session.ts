@@ -36,9 +36,23 @@ export const deletePracticeSession = async (practiceSessionId: string) =>
     }),
   );
 
-export const readCurrentPracticeCard = async (practiceSessionId: string) =>
+export const readPracticeRunState = async (practiceSessionId: string) =>
   unwrap(
-    await client.GET('/api/practice_sessions/{practice_session_id}/current_card', {
+    await client.GET('/api/practice_sessions/{practice_session_id}/run', {
+      params: { path: { practice_session_id: practiceSessionId } },
+    }),
+  );
+
+export const readPracticeSessionBreakdown = async (practiceSessionId: string) =>
+  unwrap(
+    await client.GET('/api/practice_sessions/{practice_session_id}/breakdown', {
+      params: { path: { practice_session_id: practiceSessionId } },
+    }),
+  );
+
+export const rerunPracticeSession = async (practiceSessionId: string) =>
+  unwrap(
+    await client.POST('/api/practice_sessions/{practice_session_id}/rerun', {
       params: { path: { practice_session_id: practiceSessionId } },
     }),
   );

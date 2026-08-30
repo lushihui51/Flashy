@@ -11,15 +11,24 @@ from app.database_ops.practice_session import (
 )
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
-from app.models.practice_card import PracticeCardRead, RatingSubmission, RatingSubmissionResult
+from app.models.practice_card import (
+    PracticeRunState,
+    PracticeSessionBreakdown,
+    RatingSubmission,
+    RatingSubmissionResult,
+)
 from app.models.practice_session import (
     PracticeSessionCreate,
     PracticeSessionRead,
     PracticeSessionSummary,
 )
 from app.services.practice_session import (
+    RerunError,
+    SessionActiveError,
     SessionStartError,
-    get_current_practice_card,
+    get_practice_run_state,
+    get_practice_session_breakdown,
+    rerun_practice_session,
     start_practice_session,
     submit_rating,
 )
@@ -93,19 +102,59 @@ def delete_practice_session(
 
 
 @router.get(
-    "/practice_sessions/{practice_session_id}/current_card",
-    response_model=PracticeCardRead,
+    "/practice_sessions/{practice_session_id}/run",
+    response_model=PracticeRunState,
     status_code=200,
 )
-def read_current_practice_card(
+def read_practice_run_state(
     db: SessionDep, current_user: CurrentUserDep, practice_session_id: uuid.UUID
 ):
-    if not db_read_practice_session(db, practice_session_id, current_user.id):
+    """ADR 031: one server-composed payload, replacing the old bare-id `current_card`
+    endpoint. 404 for an unknown or foreign session; `current_card: null` once nothing
+    is pending, at which point `session_status` already reads "completed"."""
+    state = get_practice_run_state(db, practice_session_id, current_user.id)
+    if not state:
         raise HTTPException(status_code=404, detail="Practice session not found")
-    card = get_current_practice_card(db, practice_session_id, current_user.id)
-    if not card:
-        raise HTTPException(status_code=404, detail="No pending practice card")
-    return card
+    return state
+
+
+@router.get(
+    "/practice_sessions/{practice_session_id}/breakdown",
+    response_model=PracticeSessionBreakdown,
+    status_code=200,
+)
+def read_practice_session_breakdown(
+    db: SessionDep, current_user: CurrentUserDep, practice_session_id: uuid.UUID
+):
+    """ADR 029/031: the completion dataset behind the retrospective view. 409 while the
+    session is still active — the bucket refinement only makes sense once nothing is
+    pending; 404 for an unknown or foreign session."""
+    try:
+        breakdown = get_practice_session_breakdown(db, practice_session_id, current_user.id)
+    except SessionActiveError as e:
+        raise HTTPException(status_code=409, detail=e.detail) from e
+    if not breakdown:
+        raise HTTPException(status_code=404, detail="Practice session not found")
+    return breakdown
+
+
+@router.post(
+    "/practice_sessions/{practice_session_id}/rerun",
+    response_model=PracticeSessionRead,
+    status_code=201,
+)
+def rerun_session(db: SessionDep, current_user: CurrentUserDep, practice_session_id: uuid.UUID):
+    """ADR 030: recreates a completed session from its own frozen practice_deck
+    snapshots and deletes the original, in one transaction. 404 for an unknown or
+    foreign session; 400 `session_active` if it hasn't completed; 400
+    `nothing_to_rerun` if every snapshot has since gone stale or lost its deck."""
+    strategy = get_mastery_strategy()
+    try:
+        return rerun_practice_session(db, strategy, current_user.id, practice_session_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except RerunError as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
 
 
 @router.post(

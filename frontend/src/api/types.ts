@@ -301,17 +301,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/{practice_session_id}/current_card": {
+    "/api/practice_sessions/{practice_session_id}/run": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Current Practice Card */
-        get: operations["read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get"];
+        /**
+         * Read Practice Run State
+         * @description ADR 031: one server-composed payload, replacing the old bare-id `current_card`
+         *     endpoint. 404 for an unknown or foreign session; `current_card: null` once nothing
+         *     is pending, at which point `session_status` already reads "completed".
+         */
+        get: operations["read_practice_run_state_api_practice_sessions__practice_session_id__run_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practice_sessions/{practice_session_id}/breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Practice Session Breakdown
+         * @description ADR 029/031: the completion dataset behind the retrospective view. 409 while the
+         *     session is still active — the bucket refinement only makes sense once nothing is
+         *     pending; 404 for an unknown or foreign session.
+         */
+        get: operations["read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practice_sessions/{practice_session_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun Session
+         * @description ADR 030: recreates a completed session from its own frozen practice_deck
+         *     snapshots and deletes the original, in one transaction. 404 for an unknown or
+         *     foreign session; 400 `session_active` if it hasn't completed; 400
+         *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck.
+         */
+        post: operations["rerun_session_api_practice_sessions__practice_session_id__rerun_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -356,6 +406,53 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BreakdownAttempt */
+        BreakdownAttempt: {
+            /**
+             * Practice Card Id
+             * Format: uuid
+             */
+            practice_card_id: string;
+            status: components["schemas"]["PracticeCardStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Prompts */
+            prompts: components["schemas"]["ResolvedFieldValue"][];
+            /** Answers */
+            answers: components["schemas"]["RatedFieldValue"][];
+        };
+        /**
+         * BreakdownBucket
+         * @description The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`
+         *     splits by chain length so the breakdown can distinguish a card that took retries
+         *     from one that didn't; `still_failed` — a chain whose last row is `failed` with no
+         *     successor, the ADR 013 stale-snapshot case — is unaffected by length and stays one
+         *     bucket, displayed to the user as "Abandoned".
+         * @enum {string}
+         */
+        BreakdownBucket: "passed_first_try" | "passed_after_one_fail" | "passed_after_many_fails" | "still_failed";
+        /**
+         * BreakdownCard
+         * @description One card's whole outcome chain for the completion breakdown (ADR 029):
+         *     `attempts` is chronological, so `attempts[-1]` is the determining attempt that
+         *     decided `bucket`.
+         */
+        BreakdownCard: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            bucket: components["schemas"]["BreakdownBucket"];
+            /** Attempt Count */
+            attempt_count: number;
+            primary_field: components["schemas"]["ResolvedFieldValue"];
+            /** Attempts */
+            attempts: components["schemas"]["BreakdownAttempt"][];
+        };
         /**
          * CardBatchCreate
          * @description `values` is keyed by a real field_def id or a same-request `client_key`
@@ -446,6 +543,25 @@ export interface components {
             values: {
                 [key: string]: string;
             };
+        };
+        /** CurrentRunCard */
+        CurrentRunCard: {
+            /**
+             * Practice Card Id
+             * Format: uuid
+             */
+            practice_card_id: string;
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Attempt */
+            attempt: number;
+            /** Prompts */
+            prompts: components["schemas"]["ResolvedFieldValue"][];
+            /** Answers */
+            answers: components["schemas"]["ResolvedFieldValue"][];
         };
         /**
          * DeckBatchEdit
@@ -786,6 +902,40 @@ export interface components {
          * @enum {string}
          */
         PracticeCardStatus: "pending" | "passed" | "failed";
+        /**
+         * PracticeRunState
+         * @description The whole `GET .../run` payload (ADR 031) — everything the run page needs to
+         *     render one screen, in one round trip. `current_card` is None once nothing is
+         *     pending, which is also exactly when `session_status` reads `completed`.
+         */
+        PracticeRunState: {
+            /** Session Name */
+            session_name: string;
+            session_status: components["schemas"]["SessionStatus"];
+            progress: components["schemas"]["SessionProgress"];
+            current_card: components["schemas"]["CurrentRunCard"] | null;
+        };
+        /**
+         * PracticeSessionBreakdown
+         * @description The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and
+         *     every card's full resolved history, so the completion screen's row-tap detail needs
+         *     no second request. Only ever built for a completed session (ADR 029) — the router
+         *     409s an active one before this is composed.
+         */
+        PracticeSessionBreakdown: {
+            /** Total Cards */
+            total_cards: number;
+            /** Passed First Try */
+            passed_first_try: number;
+            /** Passed After One Fail */
+            passed_after_one_fail: number;
+            /** Passed After Many Fails */
+            passed_after_many_fails: number;
+            /** Still Failed */
+            still_failed: number;
+            /** Cards */
+            cards: components["schemas"]["BreakdownCard"][];
+        };
         /** PracticeSessionCreate */
         PracticeSessionCreate: {
             /** Name */
@@ -876,6 +1026,29 @@ export interface components {
             /** Deleted Deck Count */
             deleted_deck_count: number;
         };
+        /**
+         * RatedFieldValue
+         * @description A resolved answer field plus the rating it was given, joined from `review_log`
+         *     on `review_group_id == practice_card.id` and `field_def_id`. `None` only if that
+         *     `review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a
+         *     hard delete) — never for a row that simply hasn't been rated, since a `passed`/
+         *     `failed` practice_card was rated on every one of its answer fields by construction
+         *     (`submit_rating`).
+         */
+        RatedFieldValue: {
+            /**
+             * Field Def Id
+             * Format: uuid
+             */
+            field_def_id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+            /** Value */
+            value: string;
+            /** Rating */
+            rating: number | null;
+        };
         /** RatingSubmission */
         RatingSubmission: {
             /** Ratings */
@@ -887,6 +1060,46 @@ export interface components {
         RatingSubmissionResult: {
             rated_practice_card: components["schemas"]["PracticeCardRead"];
             requeued_practice_card: components["schemas"]["PracticeCardRead"] | null;
+        };
+        /**
+         * ResolvedFieldValue
+         * @description One prompt/answer field id from a practice_card's `prompts`/`answers` array,
+         *     joined against its field_def (name, type) and this card's current value — the
+         *     server-side resolution ADR 031 replaces bare-id responses with. `value` is `""`
+         *     when no card_field_value row exists for this (card, field) pair; it is passed
+         *     through as-is even if blank, since a value can go blank *after* the practice_card
+         *     was generated (ADR 026 only governs generation-time candidacy, not later edits).
+         */
+        ResolvedFieldValue: {
+            /**
+             * Field Def Id
+             * Format: uuid
+             */
+            field_def_id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+            /** Value */
+            value: string;
+        };
+        /**
+         * SessionProgress
+         * @description The ADR 028 live-progress counts: `total_cards` is fixed at session start
+         *     (distinct card_ids that received a practice_card row then) and never changes, so
+         *     the other four counts — a partition of it by chain-fold bucket — only ever
+         *     redistribute, never grow the denominator mid-session.
+         */
+        SessionProgress: {
+            /** Total Cards */
+            total_cards: number;
+            /** Unseen */
+            unseen: number;
+            /** Retry Pending */
+            retry_pending: number;
+            /** Passed */
+            passed: number;
+            /** Still Failed */
+            still_failed: number;
         };
         /**
          * SessionStatus
@@ -2137,7 +2350,7 @@ export interface operations {
             };
         };
     };
-    read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get: {
+    read_practice_run_state_api_practice_sessions__practice_session_id__run_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2157,7 +2370,75 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeCardRead"];
+                    "application/json": components["schemas"]["PracticeRunState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSessionBreakdown"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_session_api_practice_sessions__practice_session_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSessionRead"];
                 };
             };
             /** @description Validation Error */

@@ -12,4 +12,9 @@
   --color-danger: #d33a3a;
   --color-danger-contrast: #ffffff;
   --color-scrim: rgb(0 0 0 / 0.5);
+  --color-success: #2e9e44;
+  --color-warning: #d9a514;
+  --color-pending: #a0a0ad;
+  --color-rating-hard: #e08a2e;
+  --color-rating-good: #9ec32f;
 }

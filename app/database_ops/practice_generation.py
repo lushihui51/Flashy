@@ -28,7 +28,9 @@ def db_fetch_generation_candidates(
         .select_from(FieldDef)
         .join(
             CardFieldValue,
-            (CardFieldValue.field_def_id == FieldDef.id) & (CardFieldValue.card_id == card_id),
+            (CardFieldValue.field_def_id == FieldDef.id)
+            & (CardFieldValue.card_id == card_id)
+            & (CardFieldValue.value != ""),
         )
         .outerjoin(
             CardFieldMastery,
