@@ -26,6 +26,10 @@ This alternative avoids vendor dependencies, however it's rejected for the costs
 
 The frontend package is `@clerk/react` (not `@clerk/clerk-react`, which an earlier planning doc — `docs/plans/002` — assumed). `@clerk/react` has no `<SignedIn>`/`<SignedOut>` components; the frontend branches on `useUser()`'s `isLoaded`/`isSignedIn` fields directly instead (`AuthSlot.tsx`). Sign-in uses `useClerk().openSignIn()`; sign-out uses `useClerk().signOut()`.
 
+### Implementation note — backend token verification (added 2026-08-27)
+
+Verification uses PyJWT (`pyjwt[crypto]`) with a module-cached `PyJWKClient` pointed at `{clerk_fapi_url}/.well-known/jwks.json` (`app/verify_clerk_session.py`): RS256 only, required claims `azp`/`sub`/`iss`, issuer checked against `clerk_fapi_url`, and `azp` checked against `permitted_origins`. Signing keys are cached and refetched on an unknown `kid`. Any failure raises a `jwt.PyJWTError` subclass, which callers map to 401.
+
 ## Consequences
 
 Benefits:

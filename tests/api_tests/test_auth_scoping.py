@@ -36,9 +36,10 @@ def owned(client, existing_subject, existing_deck, existing_field_defs, existing
     assert session_res.status_code == 201, session_res.text
     session = session_res.json()
 
-    current_card_res = client.get(f"/api/practice_sessions/{session['id']}/current_card")
-    assert current_card_res.status_code == 200, current_card_res.text
-    current_card = current_card_res.json()
+    run_res = client.get(f"/api/practice_sessions/{session['id']}/run")
+    assert run_res.status_code == 200, run_res.text
+    current_card = run_res.json()["current_card"]
+    assert current_card is not None
 
     return {
         "subject": existing_subject,
@@ -79,7 +80,6 @@ class TestForeignResourcesAreNotFound:
                 "subject_id": owned["subject"]["id"],
                 "name": "Intruder",
                 "field_defs": [{"name": "Front", "type": "text"}],
-                "cards": [],
             },
         )
         assert response.status_code == 422
@@ -159,7 +159,7 @@ class TestForeignResourcesAreNotFound:
     def test_practice_session_endpoints(self, client, other_user, act_as, owned):
         config_id = owned["config"]["id"]
         session_id = owned["session"]["id"]
-        current_card_id = owned["current_card"]["id"]
+        current_card_id = owned["current_card"]["practice_card_id"]
         act_as(other_user)
 
         assert (
@@ -171,7 +171,7 @@ class TestForeignResourcesAreNotFound:
         )
         assert client.get(f"/api/practice_sessions/{session_id}").status_code == 404
         assert (
-            client.get(f"/api/practice_sessions/{session_id}/current_card").status_code
+            client.get(f"/api/practice_sessions/{session_id}/run").status_code
             == 404
         )
         assert (

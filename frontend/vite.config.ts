@@ -12,6 +12,11 @@ export default defineConfig({
     },
   },
   server: {
+    // `localhost` resolves IPv6-only ([::1]) in some dev environments, which leaves
+    // nothing listening on 127.0.0.1 — SSH/VS Code port forwarding that targets IPv4
+    // then can't connect even though the server is up. Binding explicitly to all
+    // interfaces sidesteps that resolution entirely.
+    host: true,
     proxy: {
       '/api': {
         // Proxy API requests to the backend server

@@ -353,7 +353,6 @@ class TestForeignAndUnknownIdsRejected:
                 "name": "Other Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "A", "type": "text"}, {"name": "B", "type": "text"}],
-                "cards": [],
             },
         ).json()
         other_field_id = other_deck["field_defs"][0]["id"]
@@ -387,10 +386,16 @@ class TestForeignAndUnknownIdsRejected:
                 "name": "Other Deck",
                 "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "A", "type": "text"}, {"name": "B", "type": "text"}],
-                "cards": [{"values": ["x", "y"]}],
             },
         ).json()
-        [other_card] = other_deck["cards"]
+        other_fields = {fd["name"]: fd["id"] for fd in other_deck["field_defs"]}
+        other_card = client.post(
+            "/api/cards",
+            json={
+                "deck_id": other_deck["id"],
+                "values": {other_fields["A"]: "x", other_fields["B"]: "y"},
+            },
+        ).json()
 
         response = client.patch(
             f"/api/decks/{existing_deck['id']}",

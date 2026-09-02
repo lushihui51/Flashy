@@ -2492,13 +2492,14 @@
         }
       }
     },
-    "/api/practice_sessions/{practice_session_id}/current_card": {
+    "/api/practice_sessions/{practice_session_id}/run": {
       "get": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Current Practice Card",
-        "operationId": "read_current_practice_card_api_practice_sessions__practice_session_id__current_card_get",
+        "summary": "Read Practice Run State",
+        "description": "ADR 031: one server-composed payload, replacing the old bare-id `current_card`\nendpoint. 404 for an unknown or foreign session; `current_card: null` once nothing\nis pending, at which point `session_status` already reads \"completed\".",
+        "operationId": "read_practice_run_state_api_practice_sessions__practice_session_id__run_get",
         "parameters": [
           {
             "name": "practice_session_id",
@@ -2549,7 +2550,159 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeCardRead"
+                  "$ref": "#/components/schemas/PracticeRunState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practice_sessions/{practice_session_id}/breakdown": {
+      "get": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Read Practice Session Breakdown",
+        "description": "ADR 029/031: the completion dataset behind the retrospective view. 409 while the\nsession is still active \u2014 the bucket refinement only makes sense once nothing is\npending; 404 for an unknown or foreign session.",
+        "operationId": "read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get",
+        "parameters": [
+          {
+            "name": "practice_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSessionBreakdown"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practice_sessions/{practice_session_id}/rerun": {
+      "post": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Rerun Session",
+        "description": "ADR 030: recreates a completed session from its own frozen practice_deck\nsnapshots and deletes the original, in one transaction. 404 for an unknown or\nforeign session; 400 `session_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
+        "operationId": "rerun_session_api_practice_sessions__practice_session_id__rerun_post",
+        "parameters": [
+          {
+            "name": "practice_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSessionRead"
                 }
               }
             }
@@ -2671,6 +2824,93 @@
   },
   "components": {
     "schemas": {
+      "BreakdownAttempt": {
+        "properties": {
+          "practice_card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Card Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PracticeCardStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedFieldValue"
+            },
+            "type": "array",
+            "title": "Prompts"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/RatedFieldValue"
+            },
+            "type": "array",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "practice_card_id",
+          "status",
+          "created_at",
+          "prompts",
+          "answers"
+        ],
+        "title": "BreakdownAttempt"
+      },
+      "BreakdownBucket": {
+        "type": "string",
+        "enum": [
+          "passed_first_try",
+          "passed_after_one_fail",
+          "passed_after_many_fails",
+          "still_failed"
+        ],
+        "title": "BreakdownBucket",
+        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Abandoned\"."
+      },
+      "BreakdownCard": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Card Id"
+          },
+          "bucket": {
+            "$ref": "#/components/schemas/BreakdownBucket"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "title": "Attempt Count"
+          },
+          "primary_field": {
+            "$ref": "#/components/schemas/ResolvedFieldValue"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownAttempt"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "bucket",
+          "attempt_count",
+          "primary_field",
+          "attempts"
+        ],
+        "title": "BreakdownCard",
+        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`."
+      },
       "CardBatchCreate": {
         "properties": {
           "values": {
@@ -2849,6 +3089,47 @@
         ],
         "title": "CardUpdate"
       },
+      "CurrentRunCard": {
+        "properties": {
+          "practice_card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Card Id"
+          },
+          "card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Card Id"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedFieldValue"
+            },
+            "type": "array",
+            "title": "Prompts"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedFieldValue"
+            },
+            "type": "array",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "practice_card_id",
+          "card_id",
+          "attempt",
+          "prompts",
+          "answers"
+        ],
+        "title": "CurrentRunCard"
+      },
       "DeckBatchEdit": {
         "properties": {
           "name": {
@@ -2899,30 +3180,6 @@
         "title": "DeckBatchEdit",
         "description": "`PATCH /api/decks/{id}` body (\u00a72.3, Phase 6). Every top-level key is optional \u2014\na request can touch just `name`, just `field_defs`, or any combination \u2014 but the\nwhole thing is applied as one transaction: a failure anywhere rolls back\neverything, including an already-changed `name`."
       },
-      "DeckCardCreate": {
-        "properties": {
-          "values": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Values"
-          }
-        },
-        "type": "object",
-        "required": [
-          "values"
-        ],
-        "title": "DeckCardCreate",
-        "description": "One card in an atomic deck-create payload: `values[i]` belongs to\n`field_defs[i]` by position (D6) \u2014 no client-side field ids yet to key by."
-      },
       "DeckCreate": {
         "properties": {
           "name": {
@@ -2940,21 +3197,13 @@
             },
             "type": "array",
             "title": "Field Defs"
-          },
-          "cards": {
-            "items": {
-              "$ref": "#/components/schemas/DeckCardCreate"
-            },
-            "type": "array",
-            "title": "Cards"
           }
         },
         "type": "object",
         "required": [
           "name",
           "subject_id",
-          "field_defs",
-          "cards"
+          "field_defs"
         ],
         "title": "DeckCreate"
       },
@@ -3729,6 +3978,81 @@
         ],
         "title": "PracticeCardStatus"
       },
+      "PracticeRunState": {
+        "properties": {
+          "session_name": {
+            "type": "string",
+            "title": "Session Name"
+          },
+          "session_status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/SessionProgress"
+          },
+          "current_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentRunCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_name",
+          "session_status",
+          "progress",
+          "current_card"
+        ],
+        "title": "PracticeRunState",
+        "description": "The whole `GET .../run` payload (ADR 031) \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
+      },
+      "PracticeSessionBreakdown": {
+        "properties": {
+          "total_cards": {
+            "type": "integer",
+            "title": "Total Cards"
+          },
+          "passed_first_try": {
+            "type": "integer",
+            "title": "Passed First Try"
+          },
+          "passed_after_one_fail": {
+            "type": "integer",
+            "title": "Passed After One Fail"
+          },
+          "passed_after_many_fails": {
+            "type": "integer",
+            "title": "Passed After Many Fails"
+          },
+          "still_failed": {
+            "type": "integer",
+            "title": "Still Failed"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cards",
+          "passed_first_try",
+          "passed_after_one_fail",
+          "passed_after_many_fails",
+          "still_failed",
+          "cards"
+        ],
+        "title": "PracticeSessionBreakdown",
+        "description": "The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and\nevery card's full resolved history, so the completion screen's row-tap detail needs\nno second request. Only ever built for a completed session (ADR 029) \u2014 the router\n409s an active one before this is composed."
+      },
       "PracticeSessionCreate": {
         "properties": {
           "name": {
@@ -3866,6 +4190,47 @@
         "title": "PracticeSessionSummary",
         "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter. Those snapshots are counted in `deleted_deck_count`\ninstead, so the client can render them as \"deleted deck\" chips: with `abandoned`\ngone, a session stranded by a deck deletion reads as Completed, and the chip is the\nonly thing that tells the two apart (ADR 015 as amended)."
       },
+      "RatedFieldValue": {
+        "properties": {
+          "field_def_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Field Def Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_def_id",
+          "name",
+          "type",
+          "value",
+          "rating"
+        ],
+        "title": "RatedFieldValue",
+        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. `None` only if that\n`review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a\nhard delete) \u2014 never for a row that simply hasn't been rated, since a `passed`/\n`failed` practice_card was rated on every one of its answer fields by construction\n(`submit_rating`)."
+      },
       "RatingSubmission": {
         "properties": {
           "ratings": {
@@ -3907,6 +4272,69 @@
           "requeued_practice_card"
         ],
         "title": "RatingSubmissionResult"
+      },
+      "ResolvedFieldValue": {
+        "properties": {
+          "field_def_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Field Def Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_def_id",
+          "name",
+          "type",
+          "value"
+        ],
+        "title": "ResolvedFieldValue",
+        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution ADR 031 replaces bare-id responses with. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (ADR 026 only governs generation-time candidacy, not later edits)."
+      },
+      "SessionProgress": {
+        "properties": {
+          "total_cards": {
+            "type": "integer",
+            "title": "Total Cards"
+          },
+          "unseen": {
+            "type": "integer",
+            "title": "Unseen"
+          },
+          "retry_pending": {
+            "type": "integer",
+            "title": "Retry Pending"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "still_failed": {
+            "type": "integer",
+            "title": "Still Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cards",
+          "unseen",
+          "retry_pending",
+          "passed",
+          "still_failed"
+        ],
+        "title": "SessionProgress",
+        "description": "The ADR 028 live-progress counts: `total_cards` is fixed at session start\n(distinct card_ids that received a practice_card row then) and never changes, so\nthe other four counts \u2014 a partition of it by chain-fold bucket \u2014 only ever\nredistribute, never grow the denominator mid-session."
       },
       "SessionStatus": {
         "type": "string",

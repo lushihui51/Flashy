@@ -22,3 +22,18 @@ def db_read_practice_deck_for_deck(
             PracticeDeck.deck_id == deck_id,
         )
     ).first()
+
+
+def db_read_practice_decks_for_session(
+    db: Session, practice_session_id: uuid.UUID
+) -> list[PracticeDeck]:
+    """Every snapshot a session took at start (ADR 013) — the re-run path's only
+    source material (ADR 030), since practice_deck has no source_config_id to look up
+    a live deck_practice_config from. Unscoped by user, like
+    db_read_practice_cards_for_session — the caller reaches this session through an
+    ownership-checked lookup first."""
+    return list(
+        db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_session_id == practice_session_id)
+        ).all()
+    )

@@ -106,18 +106,10 @@ class DeckBatchEdit(AppModel):
     cards: CardBatchOps | None = None
 
 
-class DeckCardCreate(AppModel):
-    """One card in an atomic deck-create payload: `values[i]` belongs to
-    `field_defs[i]` by position (D6) — no client-side field ids yet to key by."""
-
-    values: list[str | None]
-
-
 class DeckCreate(AppModel):
     name: str
     subject_id: uuid.UUID
     field_defs: list[FieldDefCreate]
-    cards: list[DeckCardCreate]
 
 
 class DeckFieldDefRead(AppModel):

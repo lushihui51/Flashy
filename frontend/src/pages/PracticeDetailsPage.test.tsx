@@ -33,6 +33,42 @@ function mockSession(data: Record<string, unknown> | null = session()) {
   );
 }
 
+function breakdown(overrides: Record<string, unknown> = {}) {
+  return {
+    total_cards: 1,
+    passed_first_try: 1,
+    passed_after_one_fail: 0,
+    passed_after_many_fails: 0,
+    still_failed: 0,
+    cards: [
+      {
+        card_id: 'card1',
+        bucket: 'passed_first_try',
+        attempt_count: 1,
+        primary_field: { field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' },
+        attempts: [
+          {
+            practice_card_id: 'pc1',
+            status: 'passed',
+            created_at: '2026-01-01T00:00:00Z',
+            prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' }],
+            answers: [
+              { field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
+            ],
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function mockBreakdown(data: Record<string, unknown> = breakdown()) {
+  server.use(
+    http.get(`${BASE}/api/practice_sessions/:id/breakdown`, () => HttpResponse.json(data)),
+  );
+}
+
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="location">{location.pathname}</span>;
@@ -94,14 +130,19 @@ describe('PracticeDetailsPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1/run');
   });
 
-  it('a completed session hides Start practice and shows the summary line instead', async () => {
+  it('a completed session hides Start practice and shows its breakdown instead', async () => {
     mockSession(session({ status: 'completed' }));
+    mockBreakdown();
     renderDetails();
 
     await screen.findByRole('heading', { name: 'Alpha run' });
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start practice' })).not.toBeInTheDocument();
-    expect(screen.getByText('A summary of this practice is coming later.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('A summary of this practice is coming later.'),
+    ).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Front: Bonjour' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'First try (1)' })).toBeInTheDocument();
   });
 
   it('states deleted decks as a proportion of the session, not a bare count', async () => {
@@ -186,5 +227,112 @@ describe('PracticeDetailsPage', () => {
 
     expect(await screen.findByText('Practice session not found.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
+  });
+});
+
+describe('PracticeDetailsPage re-run (T9)', () => {
+  it('hides the Re-run button on an active session', async () => {
+    mockSession(session({ status: 'active' }));
+    renderDetails();
+
+    await screen.findByRole('heading', { name: 'Alpha run' });
+    expect(screen.queryByRole('button', { name: 'Re-run Alpha run' })).not.toBeInTheDocument();
+  });
+
+  it('shows the Re-run button on a completed session', async () => {
+    mockSession(session({ status: 'completed' }));
+    mockBreakdown();
+    renderDetails();
+
+    expect(await screen.findByRole('button', { name: 'Re-run Alpha run' })).toBeInTheDocument();
+  });
+
+  it('confirming re-run posts to the old session and navigates to the new one', async () => {
+    let rerunRequestedId: string | null = null;
+    mockSession(session({ status: 'completed' }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_sessions/:id/rerun`, ({ params }) => {
+        rerunRequestedId = params.id as string;
+        return HttpResponse.json(
+          {
+            id: 'ps2',
+            user_id: 'u1',
+            name: 'Alpha run',
+            status: 'active',
+            created_at: '2026-08-28T00:00:00Z',
+          },
+          { status: 201 },
+        );
+      }),
+      http.get(`${BASE}/api/practice_sessions/ps2`, () =>
+        HttpResponse.json(session({ id: 'ps2', name: 'Alpha run (new)', status: 'active' })),
+      ),
+    );
+    const user = userEvent.setup();
+    renderDetails();
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Re-run this practice?');
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
+
+    await waitFor(() => expect(rerunRequestedId).toBe('ps1'));
+    // Navigated to the new session's own detail route — its distinct name proves it.
+    expect(await screen.findByRole('heading', { name: 'Alpha run (new)' })).toBeInTheDocument();
+  });
+
+  it('cancelling the re-run confirm leaves the session alone', async () => {
+    let rerunCalls = 0;
+    mockSession(session({ status: 'completed' }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_sessions/:id/rerun`, () => {
+        rerunCalls += 1;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderDetails();
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(rerunCalls).toBe(0);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
+  });
+
+  it('a nothing_to_rerun failure closes the dialog, shows the message, and leaves the old session on screen', async () => {
+    mockSession(session({ status: 'completed' }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_sessions/:id/rerun`, () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'nothing_to_rerun',
+              message: 'no deck from this session still has a live, valid snapshot to rerun',
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderDetails();
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'no deck from this session still has a live, valid snapshot to rerun',
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Still on ps1 — nothing navigated away, the old session is unchanged.
+    expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
+    expect(screen.getByText('Completed')).toBeInTheDocument();
   });
 });

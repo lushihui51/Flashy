@@ -87,7 +87,10 @@ export type DeckEditorAction =
    * removals — in one step. */
   | { type: 'LOAD'; state: DeckEditorState };
 
-export function deckEditorReducer(state: DeckEditorState, action: DeckEditorAction): DeckEditorState {
+export function deckEditorReducer(
+  state: DeckEditorState,
+  action: DeckEditorAction,
+): DeckEditorState {
   switch (action.type) {
     case 'SET_NAME':
       return { ...state, name: action.name, dirty: true };
@@ -110,7 +113,9 @@ export function deckEditorReducer(state: DeckEditorState, action: DeckEditorActi
     case 'SET_FIELD_TYPE':
       return {
         ...state,
-        fields: state.fields.map((f) => (f.key === action.key ? { ...f, type: action.fieldType } : f)),
+        fields: state.fields.map((f) =>
+          f.key === action.key ? { ...f, type: action.fieldType } : f,
+        ),
         dirty: true,
       };
 
@@ -127,7 +132,9 @@ export function deckEditorReducer(state: DeckEditorState, action: DeckEditorActi
         // global Undo can bring it back.
         return {
           ...state,
-          fields: state.fields.map((f) => (f.key === action.key ? { ...f, pendingRemoval: true } : f)),
+          fields: state.fields.map((f) =>
+            f.key === action.key ? { ...f, pendingRemoval: true } : f,
+          ),
           dirty: true,
         };
       }
@@ -168,14 +175,13 @@ export function isDeckEditorValid(state: DeckEditorState): boolean {
   return true;
 }
 
-/** §2.2's payload: name, subject, and fields in list order. `cards` is always empty —
- * a deck is born with a schema and no content, and the first card is added from the
- * new deck's own card list. */
+/** The create payload: name, subject, and fields in list order. A deck is born with a
+ * schema and no content — the first card is added from the new deck's own card list
+ * (ADR 023); the create contract has no `cards` field at all (task 008 T2). */
 export function buildDeckCreatePayload(state: DeckEditorState): DeckCreate {
   return {
     name: state.name.trim(),
     subject_id: state.subjectId!,
     field_defs: state.fields.map((f) => ({ name: f.name.trim(), type: f.type })),
-    cards: [],
   };
 }

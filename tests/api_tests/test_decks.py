@@ -65,13 +65,22 @@ class TestDeckCRUD:
                     {"name": "Back", "type": "text"},
                     {"name": "Notes", "type": "text"},
                 ],
-                "cards": [
-                    {"values": ["Bonjour", "Hello", "greeting"]},
-                    {"values": ["Merci", "Thank you", None]},
-                ],
             },
         ).json()
-        front_id = next(fd["id"] for fd in deck["field_defs"] if fd["name"] == "Front")
+        fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+        for values in (
+            {"Front": "Bonjour", "Back": "Hello", "Notes": "greeting"},
+            {"Front": "Merci", "Back": "Thank you"},
+        ):
+            card_res = client.post(
+                "/api/cards",
+                json={
+                    "deck_id": deck["id"],
+                    "values": {fields[name]: value for name, value in values.items()},
+                },
+            )
+            assert card_res.status_code == 201, card_res.text
+        front_id = fields["Front"]
         client.delete(f"/api/fields/{front_id}")  # archived — must not appear below
 
         response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
@@ -105,8 +114,10 @@ class TestDeckCRUD:
 
 
 class TestDeckCreateAtomic:
-    """POST /api/decks per plan §2.2 — deck, field_defs, and cards created together
-    in one transaction."""
+    """POST /api/decks — deck and field_defs created together in one transaction.
+    Cards are no longer part of this contract (ADR 023, task 008 T2): a deck is born
+    with a schema and no content; cards come afterward via POST /api/cards or the
+    batch-edit endpoint (see test_cards.py and test_deck_batch_edit.py)."""
 
     def _payload(self, subject_id, **overrides):
         payload = {
@@ -115,11 +126,6 @@ class TestDeckCreateAtomic:
             "field_defs": [
                 {"name": "Front", "type": "text"},
                 {"name": "Back", "type": "text"},
-            ],
-            "cards": [
-                {"values": ["Bonjour", "Hello"]},
-                {"values": ["Merci", "Thank you"]},
-                {"values": [None, None]},
             ],
         }
         payload.update(overrides)
@@ -137,15 +143,7 @@ class TestDeckCreateAtomic:
         assert [fd["position"] for fd in field_defs] == [0, 1]
         assert [fd["name"] for fd in field_defs] == ["Front", "Back"]
         assert all(fd["type"] == "text" for fd in field_defs)
-        front_id, back_id = field_defs[0]["id"], field_defs[1]["id"]
-
-        # the all-empty third card is dropped, not persisted
-        assert len(data["cards"]) == 2
-        # every persisted card is dense: a row for every field_def, never sparse
-        assert all(len(card["values"]) == len(field_defs) for card in data["cards"])
-        found = {frozenset(card["values"].items()) for card in data["cards"]}
-        assert frozenset({(front_id, "Bonjour"), (back_id, "Hello")}) in found
-        assert frozenset({(front_id, "Merci"), (back_id, "Thank you")}) in found
+        assert data["cards"] == []
 
         get_response = client.get(f"/api/decks/{data['id']}")
         assert get_response.status_code == 200
@@ -156,9 +154,7 @@ class TestDeckCreateAtomic:
         assert {fd["id"]: fd for fd in got["field_defs"]} == {
             fd["id"]: fd for fd in data["field_defs"]
         }
-        assert {c["id"]: c["values"] for c in got["cards"]} == {
-            c["id"]: c["values"] for c in data["cards"]
-        }
+        assert got["cards"] == []
 
     def test_subject_not_found(self, client):
         response = client.post("/api/decks", json=self._payload(str(uuid.uuid4())))
@@ -168,7 +164,7 @@ class TestDeckCreateAtomic:
     def test_fewer_than_two_fields_rejected(self, client, existing_subject):
         response = client.post(
             "/api/decks",
-            json=self._payload(existing_subject["id"], field_defs=[], cards=[]),
+            json=self._payload(existing_subject["id"], field_defs=[]),
         )
         assert response.status_code == 422
         assert "at least two fields" in response.json()["detail"]
@@ -181,7 +177,6 @@ class TestDeckCreateAtomic:
             json=self._payload(
                 existing_subject["id"],
                 field_defs=[{"name": "Front", "type": "text"}],
-                cards=[],
             ),
         )
         assert response.status_code == 422
@@ -196,54 +191,7 @@ class TestDeckCreateAtomic:
                     {"name": "Front", "type": "text"},
                     {"name": "front", "type": "text"},
                 ],
-                cards=[],
             ),
         )
         assert response.status_code == 422
         assert "duplicate" in response.json()["detail"].lower()
-
-    def test_misaligned_card_values_rejected(self, client, existing_subject):
-        response = client.post(
-            "/api/decks",
-            json=self._payload(existing_subject["id"], cards=[{"values": ["only one"]}]),
-        )
-        assert response.status_code == 422
-        assert "cards[0]" in response.json()["detail"]
-
-    def test_card_values_are_dense_over_field_defs(self, client, existing_subject):
-        """A card's values are one row per field_def, never sparse (AGENTS.md) — a
-        blank value still gets a row, stored as "". Distinct from the all-empty-card
-        drop rule above: that's about not persisting a card the user never filled in."""
-        response = client.post(
-            "/api/decks",
-            json=self._payload(
-                existing_subject["id"], cards=[{"values": ["Bonjour", None]}]
-            ),
-        )
-        assert response.status_code == 201, response.text
-        data = response.json()
-        assert len(data["cards"]) == 1
-        front_id = next(fd["id"] for fd in data["field_defs"] if fd["name"] == "Front")
-        back_id = next(fd["id"] for fd in data["field_defs"] if fd["name"] == "Back")
-        values = data["cards"][0]["values"]
-        assert len(values) == len(data["field_defs"])
-        assert values == {front_id: "Bonjour", back_id: ""}
-
-    def test_rollback_on_later_card_failure(self, client, existing_subject):
-        response = client.post(
-            "/api/decks",
-            json=self._payload(
-                existing_subject["id"],
-                cards=[
-                    {"values": ["Bonjour", "Hello"]},
-                    {"values": ["only one"]},
-                ],
-            ),
-        )
-        assert response.status_code == 422
-
-        decks_response = client.get(
-            "/api/decks", params={"subject_id": existing_subject["id"]}
-        )
-        assert decks_response.status_code == 200
-        assert decks_response.json() == []
