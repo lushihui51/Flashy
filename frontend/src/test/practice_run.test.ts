@@ -312,18 +312,18 @@ describe('readPracticeRunBreakdown', () => {
       ),
     );
 
-    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow(
-      'Practice session not found',
-    );
+    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow('Practice session not found');
   });
 });
 
 describe('rerunPracticeRun', () => {
-  it('posts to the right session and returns the new session', async () => {
+  it('posts the name to the right session and returns the new session', async () => {
     let requestedSessionId: string | readonly string[] | undefined;
+    let requestedBody: { name?: string } | undefined;
     server.use(
-      http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, ({ params }) => {
+      http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, async ({ params, request }) => {
         requestedSessionId = params.practice_run_id;
+        requestedBody = (await request.json()) as { name?: string };
         return HttpResponse.json(
           {
             id: '00000000-0000-0000-0000-000000000403',
@@ -337,9 +337,10 @@ describe('rerunPracticeRun', () => {
       }),
     );
 
-    const result = await rerunPracticeRun('ps_7');
+    const result = await rerunPracticeRun('ps_7', 'Evening run');
 
     expect(requestedSessionId).toBe('ps_7');
+    expect(requestedBody).toEqual({ name: 'Evening run' });
     expect(result).toEqual({
       id: '00000000-0000-0000-0000-000000000403',
       user_id: '00000000-0000-0000-0000-000000000001',
@@ -364,7 +365,7 @@ describe('rerunPracticeRun', () => {
       ),
     );
 
-    await expect(rerunPracticeRun('ps_7')).rejects.toThrow(
+    await expect(rerunPracticeRun('ps_7', 'Evening run')).rejects.toThrow(
       'no deck from this session still has a live, valid snapshot to rerun',
     );
   });
@@ -376,7 +377,9 @@ describe('rerunPracticeRun', () => {
       ),
     );
 
-    await expect(rerunPracticeRun('ps_7')).rejects.toThrow('Practice session not found');
+    await expect(rerunPracticeRun('ps_7', 'Evening run')).rejects.toThrow(
+      'Practice session not found',
+    );
   });
 });
 

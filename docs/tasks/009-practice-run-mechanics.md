@@ -111,12 +111,12 @@ In the deck_practice_config update service: before applying the update, compare 
 
 ### T5 — Rerun keeps the original run (ADR 039) — after T2; rewrites 006 T4/T9 behavior
 
-- [ ] **Goal:** rerun creates a new run with a client-supplied name and the original run survives.
+- [x] **Goal:** rerun creates a new run with a client-supplied name and the original run survives.
 - **Files:** `app/models/practice_run.py` (`PracticeRunRerun`), `app/services/practice_run.py`, `app/routers/api/practice_run.py`, `tests/api_tests/test_practice_run.py`, `frontend/src/api/practice_run.ts`, `frontend/src/pages/PracticeDetailsPage.tsx` + `.test.tsx`, regenerated API files.
 - **Details:** Per the rerun contract. The service drops the delete call and gains the `name` parameter; the router accepts the body; the dialog copy, name generation, invalidation, and navigation per contract. Existing tests asserting the original session is gone are rewritten to assert it survives — that reversal is this task's point, not a regression.
 - **Out of scope:** `source_config_id` (T6, except that the copy hook lands there); rerun from the overview list; any archive/soft-delete mechanism (explicitly parked in /plan).
 - **Done when:** tests cover — 201 with the posted name and `active` status; the original run still returns 200 and still appears in the list; `nothing_to_rerun` and `run_active` unchanged; frontend tests assert the request body carries the generated name and navigation targets the new id; dialog copy matches the contract string exactly; full suites + `npm run gen:api` clean.
-- Notes:
+- Notes: implemented as specified. `db_delete_practice_run` stays (the plain Delete action still uses it) — only the rerun path stopped calling it, per the contract's parenthetical. The `_ARRAY_FIELDS`/`array_values` copy mechanism T6 needs for `source_config_id` was already in place before this task (untouched), so no separate "hook" commit was needed. Remaining ADR 030 references in the touched files' docstrings/comments (this endpoint's own behavior description, not other ADR 030 content) were updated to ADR 039 for consistency while in there. Full suites clean: `pytest` 258 passed, `npx vitest run` 415 passed, `npm run lint` clean, `npm run build` clean, `npm run gen:api` run. This session shared the working tree with a concurrent session executing T3 (touches `app/services/practice_generation.py` and different functions in `app/services/practice_run.py`) — verified no overlap in the diffs before committing only this task's files.
 
 ### T6 — Config lineage on snapshots (ADR 040) — after T5 (touches the same service)
 

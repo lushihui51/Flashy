@@ -2650,7 +2650,7 @@
           "Practice"
         ],
         "summary": "Rerun Run",
-        "description": "ADR 030: recreates a completed session from its own frozen practice_deck\nsnapshots and deletes the original, in one transaction. 404 for an unknown or\nforeign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
+        "description": "ADR 039: creates a new run from the completed run's own frozen practice_deck\nsnapshots, named verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
         "operationId": "rerun_run_api_practice_runs__practice_run_id__rerun_post",
         "parameters": [
           {
@@ -2696,6 +2696,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeRunRerun"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -4107,6 +4117,20 @@
           "created_at"
         ],
         "title": "PracticeRunRead"
+      },
+      "PracticeRunRerun": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PracticeRunRerun",
+        "description": "Body of POST .../rerun (ADR 039): the client-formatted name for the new run,\nthe same way PracticeRunCreate.name is \u2014 the server derives nothing."
       },
       "PracticeRunState": {
         "properties": {

@@ -64,9 +64,7 @@ function breakdown(overrides: Record<string, unknown> = {}) {
 }
 
 function mockBreakdown(data: Record<string, unknown> = breakdown()) {
-  server.use(
-    http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)),
-  );
+  server.use(http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)));
 }
 
 function LocationProbe() {
@@ -247,18 +245,21 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     expect(await screen.findByRole('button', { name: 'Re-run Alpha run' })).toBeInTheDocument();
   });
 
-  it('confirming re-run posts to the old session and navigates to the new one', async () => {
+  it('confirming re-run posts the generated name to the old session and navigates to the new one', async () => {
     let rerunRequestedId: string | null = null;
+    const rerunRequestedBodies: { name?: string }[] = [];
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
-      http.post(`${BASE}/api/practice_runs/:id/rerun`, ({ params }) => {
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, async ({ params, request }) => {
         rerunRequestedId = params.id as string;
+        const body = (await request.json()) as { name?: string };
+        rerunRequestedBodies.push(body);
         return HttpResponse.json(
           {
             id: 'ps2',
             user_id: 'u1',
-            name: 'Alpha run',
+            name: body.name,
             status: 'active',
             created_at: '2026-08-28T00:00:00Z',
           },
@@ -275,9 +276,15 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Re-run this practice?');
+    expect(dialog).toHaveTextContent(
+      'A new practice with the same decks is created. This practice and its reviews stay on record.',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
     await waitFor(() => expect(rerunRequestedId).toBe('ps1'));
+    // The client formats the new run's name itself (ADR 039), the same way the
+    // creation page pre-fills its own name field — never left blank or server-derived.
+    expect(rerunRequestedBodies[0]?.name).toBeTruthy();
     // Navigated to the new session's own detail route — its distinct name proves it.
     expect(await screen.findByRole('heading', { name: 'Alpha run (new)' })).toBeInTheDocument();
   });

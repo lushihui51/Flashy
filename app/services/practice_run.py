@@ -26,7 +26,6 @@ from app.database_ops.practice_deck import (
 )
 from app.database_ops.practice_run import (
     db_create_practice_run,
-    db_delete_practice_run,
     db_read_practice_run,
     db_update_practice_run_status,
 )
@@ -108,7 +107,7 @@ class RunActiveError(Exception):
 
 
 class RerunError(Exception):
-    """A re-run failure (ADR 030), detail = `{code, message}`: `run_active` when
+    """A re-run failure (ADR 039), detail = `{code, message}`: `run_active` when
     the session hasn't completed yet; `nothing_to_rerun` when every one of its
     practice_deck snapshots was dropped (a deleted deck, or field ids no longer live)
     and nothing survived to rebuild a session from."""
@@ -146,7 +145,7 @@ def _snapshot_and_generate_deck(
     practice_cards ordered unseen-first-then-ascending-mastery with sparse positions
     starting at `next_position` (ADR-008). Returns the position to continue from for
     the next deck. Shared by start_practice_run (fed from a live
-    deck_practice_config) and the re-run path (ADR 030, fed from a completed session's
+    deck_practice_config) and the re-run path (ADR 039, fed from a completed session's
     own frozen practice_deck arrays) — both need exactly this step, just from different
     sources."""
     practice_deck = db_create_practice_deck(
@@ -266,21 +265,21 @@ def rerun_practice_run(
     strategy: MasteryStrategy,
     user_id: uuid.UUID,
     practice_run_id: uuid.UUID,
+    name: str,
     rng: random.Random | None = None,
 ) -> PracticeRun:
-    """ADR 030: recreates a completed session from its own frozen practice_deck
-    snapshots — never a deck_practice_config lookup (practice_deck has no
-    source_config_id by design, ADR 013). Per snapshot: dropped if its deck was
+    """ADR 039: creates a new run from the completed run's own frozen practice_deck
+    snapshots — never a deck_practice_config lookup (practice_deck has no behavioral
+    coupling to its source config, ADR 013). Per snapshot: dropped if its deck was
     deleted (deck_id null) or its field ids no longer validate against the deck's live
-    fields; the rest are re-snapshotted and regenerated exactly like session start,
-    via the same _snapshot_and_generate_deck helper. Raises LookupError for an
-    unknown/foreign session (the router 404s); RerunError('run_active') if the
-    session hasn't completed; RerunError('nothing_to_rerun') if every snapshot was
-    dropped. One transaction: the new session is created and populated first, and the
-    old one is deleted only once that has fully succeeded — db_delete_practice_run's
-    own commit is the single commit for both halves, so a failure partway through
-    leaves the original session untouched rather than deleting it first and risking
-    ending up with neither (ADR 030)."""
+    fields; the rest are re-snapshotted and regenerated exactly like session start, via
+    the same _snapshot_and_generate_deck helper. `name` is stored verbatim on the new
+    run — the client formats it, same as start_practice_run. Raises LookupError for an
+    unknown/foreign session (the router 404s); RerunError('run_active') if the session
+    hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped. A
+    plain create: the original run is never touched, so there is nothing to order
+    against a delete — one explicit commit at the end, same shape as
+    start_practice_run."""
     rng = rng or random.Random()
 
     session = db_read_practice_run(db, practice_run_id, user_id)
@@ -306,7 +305,7 @@ def rerun_practice_run(
             "no deck from this session still has a live, valid snapshot to rerun",
         )
 
-    new_session = db_create_practice_run(db, user_id, session.name)
+    new_session = db_create_practice_run(db, user_id, name)
 
     next_position = 0
     for deck_id, array_values in surviving_decks:
@@ -314,7 +313,7 @@ def rerun_practice_run(
             db, strategy, new_session.id, deck_id, array_values, rng, next_position
         )
 
-    db_delete_practice_run(db, session)
+    db.commit()
     db.refresh(new_session)
     return new_session
 

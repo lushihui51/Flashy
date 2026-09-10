@@ -1410,28 +1410,42 @@ class TestBreakdown:
         assert client.get(f"/api/practice_runs/{session['id']}/breakdown").status_code == 404
 
 
-class TestRerun:
-    """POST .../rerun (ADR 030) — recreates a completed session from its own frozen
-    practice_deck snapshots, never a deck_practice_config lookup."""
+def _rerun(client, session_id, name):
+    return client.post(f"/api/practice_runs/{session_id}/rerun", json={"name": name})
 
-    def test_rerun_creates_new_session_and_deletes_old(
+
+class TestRerun:
+    """POST .../rerun (ADR 039) — creates a new run from a completed run's own frozen
+    practice_deck snapshots, never a deck_practice_config lookup. The original run is
+    never deleted (that's the point of ADR 039, superseding ADR 030's delete half)."""
+
+    def test_rerun_creates_new_run_with_posted_name_and_keeps_the_original(
         self, client, db, existing_user, session_cards, session_config
     ):
         session = _start(client, "Original run", [session_config["id"]])
         _finish_session(client, session["id"])
         assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "completed"
 
-        res = client.post(f"/api/practice_runs/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Original run (rerun)")
         assert res.status_code == 201, res.text
         new_session = res.json()
-        assert new_session["name"] == "Original run"
+        # The client-supplied name is stored verbatim, not copied from the original.
+        assert new_session["name"] == "Original run (rerun)"
         assert new_session["status"] == "active"
         assert new_session["id"] != session["id"]
 
-        # The old session is gone...
-        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 404
+        # The original run is untouched: still readable, still completed...
+        original = client.get(f"/api/practice_runs/{session['id']}")
+        assert original.status_code == 200, original.text
+        assert original.json()["status"] == "completed"
+        assert original.json()["name"] == "Original run"
 
-        # ...and the new one has fresh, pending practice_cards.
+        # ...and still appears in the list, alongside the new run.
+        listed_ids = {row["id"] for row in client.get("/api/practice_runs").json()}
+        assert session["id"] in listed_ids
+        assert new_session["id"] in listed_ids
+
+        # The new run has fresh, pending practice_cards of its own.
         new_cards = db.exec(
             select(PracticeCard).where(
                 PracticeCard.practice_run_id == uuid.UUID(new_session["id"])
@@ -1450,7 +1464,7 @@ class TestRerun:
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        res = client.post(f"/api/practice_runs/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Both decks (rerun)")
         assert res.status_code == 201, res.text
         new_session_id = uuid.UUID(res.json()["id"])
 
@@ -1459,7 +1473,8 @@ class TestRerun:
         ).all()
         assert {d.deck_id for d in new_decks} == {uuid.UUID(lib["decks"]["b"]["id"])}
 
-        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 404
+        # Dropping a stale deck from the new snapshot never touches the original run.
+        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db, existing_subject):
         # Deck A: three fields so `answer` can be archived afterward without hitting
@@ -1544,7 +1559,7 @@ class TestRerun:
         archived = client.delete(f"/api/fields/{fields_a['answer']}")
         assert archived.status_code == 200, archived.text
 
-        res = client.post(f"/api/practice_runs/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Two healthy decks (rerun)")
         assert res.status_code == 201, res.text
         new_session_id = uuid.UUID(res.json()["id"])
 
@@ -1562,24 +1577,24 @@ class TestRerun:
         deleted = client.delete(f"/api/decks/{existing_deck['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        res = client.post(f"/api/practice_runs/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Doomed run (rerun)")
         assert res.status_code == 400, res.text
         assert res.json()["detail"]["code"] == "nothing_to_rerun"
 
-        # Refusal never deletes the original.
+        # Refusal never touches the original.
         assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_refuses_active_session(self, client, session_cards, session_config):
         session = _start(client, "Still going", [session_config["id"]])
 
-        res = client.post(f"/api/practice_runs/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Still going (rerun)")
         assert res.status_code == 400, res.text
         assert res.json()["detail"]["code"] == "run_active"
 
         assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "active"
 
     def test_404_for_unknown_session(self, client):
-        assert client.post(f"/api/practice_runs/{uuid.uuid4()}/rerun").status_code == 404
+        assert _rerun(client, uuid.uuid4(), "Rerun").status_code == 404
 
     def test_404_for_foreign_session(
         self, client, act_as, other_user, session_cards, session_config
@@ -1588,4 +1603,4 @@ class TestRerun:
         _finish_session(client, session["id"])
 
         act_as(other_user)
-        assert client.post(f"/api/practice_runs/{session['id']}/rerun").status_code == 404
+        assert _rerun(client, session["id"], "Rerun").status_code == 404

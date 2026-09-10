@@ -20,6 +20,7 @@ from app.models.practice_card import (
 from app.models.practice_run import (
     PracticeRunCreate,
     PracticeRunRead,
+    PracticeRunRerun,
     PracticeRunSummary,
 )
 from app.services.practice_run import (
@@ -143,14 +144,19 @@ def read_practice_run_breakdown(
     response_model=PracticeRunRead,
     status_code=201,
 )
-def rerun_run(db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID):
-    """ADR 030: recreates a completed session from its own frozen practice_deck
-    snapshots and deletes the original, in one transaction. 404 for an unknown or
-    foreign session; 400 `run_active` if it hasn't completed; 400
+def rerun_run(
+    db: SessionDep,
+    current_user: CurrentUserDep,
+    practice_run_id: uuid.UUID,
+    payload: PracticeRunRerun,
+):
+    """ADR 039: creates a new run from the completed run's own frozen practice_deck
+    snapshots, named verbatim from the request body; the original run is untouched.
+    404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck."""
     strategy = get_mastery_strategy()
     try:
-        return rerun_practice_run(db, strategy, current_user.id, practice_run_id)
+        return rerun_practice_run(db, strategy, current_user.id, practice_run_id, payload.name)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except RerunError as e:

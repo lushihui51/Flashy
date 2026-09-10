@@ -44,6 +44,13 @@ class PracticeRunCreate(AppModel):
     deck_practice_config_ids: list[uuid.UUID]
 
 
+class PracticeRunRerun(AppModel):
+    """Body of POST .../rerun (ADR 039): the client-formatted name for the new run,
+    the same way PracticeRunCreate.name is — the server derives nothing."""
+
+    name: str
+
+
 class PracticeRunRead(AppModel):
     id: uuid.UUID
     user_id: uuid.UUID

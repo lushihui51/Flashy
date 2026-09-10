@@ -20,7 +20,7 @@ type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 /**
  * One practice's own page: name, status, when it was created, which decks it covers,
  * and — while it's still active — the way into it. Delete and, once completed,
- * Re-run (ADR 030) are the entity actions and so live in the header (ADR 023); create
+ * Re-run (ADR 039) are the entity actions and so live in the header (ADR 023); create
  * is start (invariant 2), so there is nothing to edit beyond that.
  *
  * The body is a separate component, gated on the session actually being loaded — same
@@ -75,7 +75,9 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
   });
 
   const rerunMutation = useMutation({
-    mutationFn: () => rerunPracticeRun(session.id),
+    // Named the same way the creation page pre-fills its own name field (ADR 019's
+    // one sanctioned formatter) — generated fresh at click time, not cached from mount.
+    mutationFn: () => rerunPracticeRun(session.id, formatDateTime(new Date())),
     onSuccess: async (newSession) => {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate(`/practice/${newSession.id}`);
@@ -185,7 +187,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
       <ConfirmDialog
         open={confirmRerunOpen}
         title="Re-run this practice?"
-        description="A new practice with the same decks is created, and this one is deleted. Reviews already logged stay on record."
+        description="A new practice with the same decks is created. This practice and its reviews stay on record."
         confirmLabel="Re-run"
         onConfirm={() => {
           setRerunError(null);

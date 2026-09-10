@@ -356,9 +356,9 @@ export interface paths {
         put?: never;
         /**
          * Rerun Run
-         * @description ADR 030: recreates a completed session from its own frozen practice_deck
-         *     snapshots and deletes the original, in one transaction. 404 for an unknown or
-         *     foreign session; 400 `run_active` if it hasn't completed; 400
+         * @description ADR 039: creates a new run from the completed run's own frozen practice_deck
+         *     snapshots, named verbatim from the request body; the original run is untouched.
+         *     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
          *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck.
          */
         post: operations["rerun_run_api_practice_runs__practice_run_id__rerun_post"];
@@ -974,6 +974,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * PracticeRunRerun
+         * @description Body of POST .../rerun (ADR 039): the client-formatted name for the new run,
+         *     the same way PracticeRunCreate.name is — the server derives nothing.
+         */
+        PracticeRunRerun: {
+            /** Name */
+            name: string;
         };
         /**
          * PracticeRunState
@@ -2430,7 +2439,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeRunRerun"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {

@@ -6,9 +6,8 @@ import type { components } from 'src/api/types';
  * the only relation between a session and a deck (a session has no config lineage). */
 export type PracticeRunFilters = { subjectId?: string; deckId?: string };
 
-export const createPracticeRun = async (
-  payload: components['schemas']['PracticeRunCreate'],
-) => unwrap(await client.POST('/api/practice_runs', { body: payload }));
+export const createPracticeRun = async (payload: components['schemas']['PracticeRunCreate']) =>
+  unwrap(await client.POST('/api/practice_runs', { body: payload }));
 
 export const readPracticeRuns = async (filters: PracticeRunFilters = {}) =>
   unwrap(
@@ -50,10 +49,11 @@ export const readPracticeRunBreakdown = async (practiceSessionId: string) =>
     }),
   );
 
-export const rerunPracticeRun = async (practiceSessionId: string) =>
+export const rerunPracticeRun = async (practiceSessionId: string, name: string) =>
   unwrap(
     await client.POST('/api/practice_runs/{practice_run_id}/rerun', {
       params: { path: { practice_run_id: practiceSessionId } },
+      body: { name },
     }),
   );
 
