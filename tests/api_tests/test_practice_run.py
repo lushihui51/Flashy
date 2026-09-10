@@ -1932,3 +1932,80 @@ class TestRerun:
 
         act_as(other_user)
         assert _rerun(client, session["id"], "Rerun").status_code == 404
+
+
+class TestConfigLineage:
+    """practice_deck.source_config_id (ADR 040) — attribution-only: written at run
+    start, copied through rerun verbatim, nulled (snapshot untouched) if the source
+    config is later deleted. Never read by generation, validation, or rerun logic, and
+    not exposed on any payload here — these tests reach it straight off the ORM row."""
+
+    def test_start_writes_the_configs_id_onto_the_snapshot(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        assert snapshot.source_config_id == uuid.UUID(session_config["id"])
+
+    def test_rerun_copies_the_old_snapshots_source_config_id_verbatim(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+        _finish_session(client, session["id"])
+
+        res = _rerun(client, session["id"], "Lineage run (rerun)")
+        assert res.status_code == 201, res.text
+        new_session_id = uuid.UUID(res.json()["id"])
+
+        new_snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
+        ).one()
+        assert new_snapshot.source_config_id == uuid.UUID(session_config["id"])
+
+    def test_deleting_the_config_nulls_the_link_but_the_snapshot_survives(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+        session_id = uuid.UUID(session["id"])
+        deck_id = uuid.UUID(session_config["deck_id"])
+
+        deleted = client.delete(f"/api/deck_practice_configs/{session_config['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == session_id)
+        ).one()
+        assert snapshot.source_config_id is None
+        # The snapshot itself, and the run it belongs to, are untouched — deleting the
+        # config's own FK is a SET NULL on this one column, nothing cascades from it.
+        assert snapshot.deck_id == deck_id
+        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
+
+    def test_a_run_started_without_source_config_id_still_reruns_with_it_null(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        """Covers rerun's "possibly already null" case (contract): a snapshot with no
+        lineage of its own (simulating a config deleted before this session's own
+        first completion, or a future internally-generated session) must still copy
+        that null through rather than backfilling anything."""
+        session = _start(client, "No lineage", [session_config["id"]])
+        session_id = uuid.UUID(session["id"])
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == session_id)
+        ).one()
+        snapshot.source_config_id = None
+        db.add(snapshot)
+        db.commit()
+
+        _finish_session(client, session["id"])
+        res = _rerun(client, session["id"], "No lineage (rerun)")
+        assert res.status_code == 201, res.text
+        new_session_id = uuid.UUID(res.json()["id"])
+
+        new_snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
+        ).one()
+        assert new_snapshot.source_config_id is None

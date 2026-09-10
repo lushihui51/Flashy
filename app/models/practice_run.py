@@ -62,9 +62,10 @@ class PracticeRunRead(AppModel):
 class PracticeRunDeckSummary(AppModel):
     """One deck a session touches, resolved through `practice_deck → deck → subject`.
 
-    This chain is the *only* link between a session and a subject/deck — `practice_deck`
-    has no `source_config_id` and never will (schema invariant 5), so "which sessions
-    relate to this deck" can only be asked this way."""
+    This chain is the only link this payload exposes between a session and a
+    subject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is
+    attribution-only, unread by any query in this cycle, and not surfaced on any API
+    payload — so "which sessions relate to this deck" is still only askable this way."""
 
     deck_id: uuid.UUID
     deck_name: str
