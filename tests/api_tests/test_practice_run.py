@@ -268,6 +268,151 @@ class TestPracticeRunAcceptance:
         assert set(original.answers) == original_answers
 
 
+class TestForcedFailedAnswerFields:
+    """ADR 036: the retry of a failed card force-includes every answer field rated
+    "Again" that is still live and non-blank, ahead of pool sampling. With the fixture's
+    answer_pool_counts=[1], the forced fields fill (or overflow) the whole draw, so
+    every assertion here is deterministic for any rng seed — the seed never gets a
+    chance to make the test pass by luck."""
+
+    def _start_and_first_pending(self, db, existing_user, config_id, seed):
+        strategy = EmaStrategy()
+        session = start_practice_run(
+            db,
+            strategy,
+            existing_user.id,
+            "Forced-fields run",
+            [uuid.UUID(config_id)],
+            rng=random.Random(seed),
+        )
+        db.commit()
+        card = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert card is not None
+        return strategy, card
+
+    def test_failed_pool_answer_field_is_reasked(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        fixed = session_fields["answer1"]
+        [failed_pool] = [fid for fid in original.answers if fid != fixed]
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 4, failed_pool: 1},
+            rng=random.Random(2),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # The drawn count is 1 and the forced field fills it, so the answer side is
+        # exactly fixed + forced — no sampled remainder for the seed to vary.
+        assert requeued.answers == [fixed, failed_pool]
+
+    def test_two_failed_pool_fields_both_reasked_when_count_is_one(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        f = session_fields
+        # Craft a prior appearance carrying two pool answers even though this
+        # snapshot's drawn count is 1 — the state a chained retry can reach — to hit
+        # the overflow rule: forced fields exceed the draw and dropping one is never
+        # permitted (ADR 036).
+        original.answers = [f["answer1"], f["pool_a1"], f["pool_a2"]]
+        db.add(original)
+        db.commit()
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {f["answer1"]: 4, f["pool_a1"]: 1, f["pool_a2"]: 1},
+            rng=random.Random(5),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # Both forced (in answer_pool_ids order), zero sampled: max(0, 1 - 2) slots.
+        assert requeued.answers == [f["answer1"], f["pool_a1"], f["pool_a2"]]
+
+    def test_failed_fixed_answer_field_still_reasked(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        f = session_fields
+        fixed = f["answer1"]
+        [pool_field] = [fid for fid in original.answers if fid != fixed]
+
+        # Fail only the fixed field; the pool field passes.
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 1, pool_field: 4},
+            rng=random.Random(11),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # A fixed field was never at risk — always included — but guard that the
+        # forcing change didn't disturb it, and that a failed fixed field is not
+        # double-included by the forced-pool path (it's fixed, not pool): exactly one
+        # fixed slot plus the one drawn pool slot.
+        assert requeued.answers[0] == fixed
+        assert len(requeued.answers) == 2
+        assert requeued.answers[1] in {f["pool_a1"], f["pool_a2"], f["pool_a3"]}
+
+    def test_archived_failed_pool_field_drops_out_and_card_still_requeues(
+        self, db, client, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        fixed = session_fields["answer1"]
+        [failed_pool] = [fid for fid in original.answers if fid != fixed]
+
+        archived = client.delete(f"/api/fields/{failed_pool}")
+        assert archived.status_code == 200, archived.text
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 4, failed_pool: 1},
+            rng=random.Random(4),
+        )
+        db.commit()
+
+        assert requeued is not None
+        assert failed_pool not in requeued.answers
+        # The card still generates: the fixed answer survives, and the pool draw fills
+        # its one slot from the two remaining live pool fields.
+        assert requeued.answers[0] == fixed
+        assert len(requeued.answers) == 2
+        assert requeued.answers[1] in {
+            fid for name, fid in session_fields.items() if name.startswith("pool_a")
+        } - {failed_pool}
+
+
 class TestPositionCollisionFallback:
     def test_renumber_and_retry_on_collision(
         self, db, existing_user, session_cards, session_config, monkeypatch

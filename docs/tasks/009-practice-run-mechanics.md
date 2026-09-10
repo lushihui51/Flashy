@@ -93,12 +93,12 @@ In the deck_practice_config update service: before applying the update, compare 
 
 ### T3 — Forced failed answer fields on requeue (ADR 036) — after T2
 
-- [ ] **Goal:** the retry of a failed card always re-asks every still-askable answer field the user rated "Again".
+- [x] **Goal:** the retry of a failed card always re-asks every still-askable answer field the user rated "Again".
 - **Files:** `app/services/practice_generation.py`, `app/services/practice_run.py`, `tests/api_tests/test_practice_run.py`.
 - **Details:** Per the requeue answer resolution contract. `submit_rating` derives `failed_field_ids` from the ratings dict and passes them to `_requeue_failed_card`, which passes them to `generate_practice_card_fields`. Session start and rerun generation pass nothing and are behaviorally untouched.
 - **Out of scope:** prompt-side forcing; any change to the weighting formula; retry positioning (T4).
 - **Done when:** tests (driving `submit_rating` with a seeded `random.Random`) cover — a failed pool answer field appears in the requeued row's `answers`; two failed pool fields both appear when the drawn count is 1 (overflow rule); a failed _fixed_ answer field still appears (regression guard); a failed pool field archived before the requeue is absent and the card still requeues from its remaining fields; `pytest` clean.
-- Notes:
+- Notes: implemented per contract; two small implementation choices. (1) The shared helper `resolve_prompts_or_answers` gained the pass-through parameter under the side-agnostic name `forced_pool_ids` (its whole signature is side-agnostic); the contract's `forced_answer_pool_ids` name sits on `generate_practice_card_fields`, which only ever forwards it to the answer-side call. (2) The overflow test can't reach its state naturally in one hop — a snapshot with `answer_pool_counts=[1]` never deals two pool answers — so it writes a two-pool-answer `answers` array onto the pending row directly (the state a chained retry can reach) before rating both "Again". Tests were additionally verified to go red without the implementation (the two forcing tests fail on stashed sources; the two guards pass by design, since they assert preserved behavior). All four Done-when cases pass; full `pytest` 262 green.
 
 ### T4 — Retry spacing floor (ADR 037) — after T3 (same functions)
 

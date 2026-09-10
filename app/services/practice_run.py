@@ -1,5 +1,6 @@
 import random
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import text
@@ -594,12 +595,17 @@ def _requeue_failed_card(
     old_card: PracticeCard,
     practice_deck: PracticeDeck,
     rng: random.Random,
+    failed_field_ids: Sequence[uuid.UUID] = (),
 ) -> PracticeCard | None:
     """Inserts a fresh practice_card row for the same card_id — never mutates
     old_card, which stays 'failed'. Position reflects the card's mastery *after* this
-    submission's blend, so a badly-missed card resurfaces sooner. Returns None if the
-    card can no longer be generated at all (e.g. every remaining field archived since
-    the snapshot was cut) — nothing to requeue with, same as at session start."""
+    submission's blend, so a badly-missed card resurfaces sooner. `failed_field_ids`
+    (the answer fields rated "Again", ADR 036) are forced into the new row's answer
+    set ahead of pool sampling, so the retry always re-asks what was missed — a failed
+    field archived or blanked since drops out of the generation filters like any other.
+    Returns None if the card can no longer be generated at all (e.g. every remaining
+    field archived since the snapshot was cut) — nothing to requeue with, same as at
+    session start."""
     resolved = generate_practice_card_fields(
         db,
         strategy,
@@ -611,6 +617,7 @@ def _requeue_failed_card(
         practice_deck.answer_pool_ids,
         practice_deck.answer_pool_counts,
         rng,
+        forced_answer_pool_ids=failed_field_ids,
     )
     if resolved is None:
         return None
@@ -699,13 +706,16 @@ def submit_rating(
 
     requeued = None
     if failed:
+        failed_field_ids = [fid for fid, r in ratings.items() if r == 1]
         card = db_read_card(db, practice_card.card_id, user_id)
         assert card is not None, "the practice_card fetch above already confirmed ownership"
         practice_deck = db_read_practice_deck_for_deck(
             db, practice_card.practice_run_id, card.deck_id
         )
         assert practice_deck is not None, "every deck used in a session has a snapshot"
-        requeued = _requeue_failed_card(db, strategy, practice_card, practice_deck, rng)
+        requeued = _requeue_failed_card(
+            db, strategy, practice_card, practice_deck, rng, failed_field_ids
+        )
 
     db.commit()
     db.refresh(practice_card)
