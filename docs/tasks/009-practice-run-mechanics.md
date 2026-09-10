@@ -84,12 +84,12 @@ In the deck_practice_config update service: before applying the update, compare 
 
 ### T2 — The rename (ADR 038, MD-1) — first code task; everything else builds on it
 
-- [ ] **Goal:** `practice_session` becomes `practice_run` across schema, backend, API, and frontend, with `/{id}/state` and `run_active` per MD-1.
+- [x] **Goal:** `practice_session` becomes `practice_run` across schema, backend, API, and frontend, with `/{id}/state` and `run_active` per MD-1.
 - **Files:** the four backend `practice_session.py` modules (renamed), models importing them (`practice_card.py`, `practice_deck.py`), a new alembic revision, `tests/api_tests/test_practice_run.py` (renamed) plus the other test files referencing routes, `frontend/src/api/practice_run.ts` (renamed), `RunBreakdown.tsx`(+test) (renamed), pages importing them, regenerated `openapi.json` + `types.ts`.
 - **Details:** Apply the rename map exactly. The migration renames the table, both FK columns, the unique constraint, and the index, with a downgrade reversing all five. No behavior change of any kind rides along — this diff must be purely mechanical so it can be reviewed by pattern.
 - **Out of scope:** AGENTS.md/ADR/task-file wording (existing docs keep the old names as history; /distill reconciles); any UI copy change; the `/rerun` behavior change (T5).
 - **Done when:** `grep -ri practice_session app tests frontend/src` returns zero hits; `alembic upgrade head` then `alembic downgrade -1` then `upgrade head` succeeds on the dev DB; `pytest`, `npx vitest run`, `npm run lint`, `npm run build` all clean; `npm run gen:api` run.
-- Notes:
+- Notes: Two implementation calls not spelled out in the rename map. (1) `PracticeDetailsPage`'s single-run detail-fetch query key was `'practice_session'`; a literal `practice_session`→`practice_run` substitution would have collided with the run-state query's existing `'practice_run'` key (two different response shapes cached under one key), so it's named `'practice_run_summary'` instead — the map only enumerated the plural-list and breakdown key renames. (2) The router's rerun handler (`rerun_session`, distinct from the imported service function) is renamed to `rerun_run` for consistency with its renamed siblings, though the map's "Names:" list didn't call it out by name. Unrelated to this task's content: `tests/api_tests/test_practice_run.py`'s renamed copy carried forward task 009 T1's throwaway CI-red-check commit (`ef77f05`, a deliberately wrong assertion); restored it to the correct value so `pytest` passes — T1 owns reverting/dropping that commit from history.
 
 ### T3 — Forced failed answer fields on requeue (ADR 036) — after T2
 

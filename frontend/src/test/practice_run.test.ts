@@ -2,28 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from 'src/test/server';
 import {
-  createPracticeSession,
-  readPracticeSessions,
-  readPracticeSession,
+  createPracticeRun,
+  readPracticeRuns,
+  readPracticeRun,
   readPracticeRunState,
-  readPracticeSessionBreakdown,
-  rerunPracticeSession,
+  readPracticeRunBreakdown,
+  rerunPracticeRun,
   ratePracticeCard,
-} from 'src/api/practice_session';
+} from 'src/api/practice_run';
 import type { components } from 'src/api/types';
 
 const BASE = 'http://localhost:8000';
 
-describe('createPracticeSession', () => {
+describe('createPracticeRun', () => {
   it('sends the payload and returns the created practice session', async () => {
-    const payload: components['schemas']['PracticeSessionCreate'] = {
+    const payload: components['schemas']['PracticeRunCreate'] = {
       name: 'Aug 24, 2026, 2:15 PM',
       deck_practice_config_ids: ['00000000-0000-0000-0000-000000000401'],
     };
     let sentBody: unknown;
 
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, async ({ request }) => {
+      http.post(`${BASE}/api/practice_runs`, async ({ request }) => {
         sentBody = await request.json();
         return HttpResponse.json(
           {
@@ -38,7 +38,7 @@ describe('createPracticeSession', () => {
       }),
     );
 
-    const created = await createPracticeSession(payload);
+    const created = await createPracticeRun(payload);
     expect(sentBody).toEqual(payload);
     expect(created).toEqual({
       id: '00000000-0000-0000-0000-000000000402',
@@ -51,7 +51,7 @@ describe('createPracticeSession', () => {
 
   it('throws a formatted message on a 422 validation error', async () => {
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, () =>
+      http.post(`${BASE}/api/practice_runs`, () =>
         HttpResponse.json(
           {
             detail: [
@@ -68,7 +68,7 @@ describe('createPracticeSession', () => {
     );
 
     await expect(
-      createPracticeSession({
+      createPracticeRun({
         name: 'Run',
         deck_practice_config_ids: [],
       }),
@@ -77,7 +77,7 @@ describe('createPracticeSession', () => {
 
   it("throws the message out of a stale-config error's object detail", async () => {
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, () =>
+      http.post(`${BASE}/api/practice_runs`, () =>
         HttpResponse.json(
           {
             detail: {
@@ -92,7 +92,7 @@ describe('createPracticeSession', () => {
     );
 
     await expect(
-      createPracticeSession({
+      createPracticeRun({
         name: 'Run',
         deck_practice_config_ids: ['00000000-0000-0000-0000-000000000401'],
       }),
@@ -100,7 +100,7 @@ describe('createPracticeSession', () => {
   });
 });
 
-describe('readPracticeSessions', () => {
+describe('readPracticeRuns', () => {
   const summary = {
     id: '00000000-0000-0000-0000-000000000402',
     user_id: '00000000-0000-0000-0000-000000000001',
@@ -120,26 +120,26 @@ describe('readPracticeSessions', () => {
   it('sends no query params when unfiltered', async () => {
     let search = '';
     server.use(
-      http.get(`${BASE}/api/practice_sessions`, ({ request }) => {
+      http.get(`${BASE}/api/practice_runs`, ({ request }) => {
         search = new URL(request.url).search;
         return HttpResponse.json([summary]);
       }),
     );
 
-    await expect(readPracticeSessions()).resolves.toEqual([summary]);
+    await expect(readPracticeRuns()).resolves.toEqual([summary]);
     expect(search).toBe('');
   });
 
   it('sends the subject and deck filters', async () => {
     let search = '';
     server.use(
-      http.get(`${BASE}/api/practice_sessions`, ({ request }) => {
+      http.get(`${BASE}/api/practice_runs`, ({ request }) => {
         search = new URL(request.url).search;
         return HttpResponse.json([]);
       }),
     );
 
-    await readPracticeSessions({ subjectId: 'subject_1', deckId: 'deck_1' });
+    await readPracticeRuns({ subjectId: 'subject_1', deckId: 'deck_1' });
 
     const params = new URLSearchParams(search);
     expect(params.get('subject_id')).toBe('subject_1');
@@ -147,12 +147,12 @@ describe('readPracticeSessions', () => {
   });
 });
 
-describe('readPracticeSession', () => {
+describe('readPracticeRun', () => {
   it('requests the right id and returns the practice session', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id`, ({ params }) =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id`, ({ params }) =>
         HttpResponse.json({
-          id: params.practice_session_id,
+          id: params.practice_run_id,
           user_id: '00000000-0000-0000-0000-000000000001',
           name: 'Alpha run',
           status: 'active',
@@ -161,7 +161,7 @@ describe('readPracticeSession', () => {
       ),
     );
 
-    await expect(readPracticeSession('ps_42')).resolves.toEqual({
+    await expect(readPracticeRun('ps_42')).resolves.toEqual({
       id: 'ps_42',
       user_id: '00000000-0000-0000-0000-000000000001',
       name: 'Alpha run',
@@ -172,12 +172,12 @@ describe('readPracticeSession', () => {
 
   it('throws the detail string on a 404', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id`, () =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id`, () =>
         HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
       ),
     );
 
-    await expect(readPracticeSession('nope')).rejects.toThrow('Practice session not found');
+    await expect(readPracticeRun('nope')).rejects.toThrow('Practice session not found');
   });
 });
 
@@ -185,8 +185,8 @@ describe('readPracticeRunState', () => {
   it('requests the right session and returns the resolved run state', async () => {
     let requestedSessionId: string | readonly string[] | undefined;
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/run`, ({ params }) => {
-        requestedSessionId = params.practice_session_id;
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/state`, ({ params }) => {
+        requestedSessionId = params.practice_run_id;
         return HttpResponse.json({
           session_name: 'Evening run',
           session_status: 'active',
@@ -221,7 +221,7 @@ describe('readPracticeRunState', () => {
 
   it('returns a null current_card once the session has completed', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/run`, () =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/state`, () =>
         HttpResponse.json({
           session_name: 'Evening run',
           session_status: 'completed',
@@ -238,7 +238,7 @@ describe('readPracticeRunState', () => {
 
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/run`, () =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/state`, () =>
         HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
       ),
     );
@@ -247,7 +247,7 @@ describe('readPracticeRunState', () => {
   });
 });
 
-describe('readPracticeSessionBreakdown', () => {
+describe('readPracticeRunBreakdown', () => {
   it('requests the right session and returns the resolved breakdown', async () => {
     let requestedSessionId: string | readonly string[] | undefined;
     const breakdown = {
@@ -278,13 +278,13 @@ describe('readPracticeSessionBreakdown', () => {
     };
 
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/breakdown`, ({ params }) => {
-        requestedSessionId = params.practice_session_id;
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/breakdown`, ({ params }) => {
+        requestedSessionId = params.practice_run_id;
         return HttpResponse.json(breakdown);
       }),
     );
 
-    const result = await readPracticeSessionBreakdown('ps_7');
+    const result = await readPracticeRunBreakdown('ps_7');
 
     expect(requestedSessionId).toBe('ps_7');
     expect(result).toEqual(breakdown);
@@ -292,38 +292,38 @@ describe('readPracticeSessionBreakdown', () => {
 
   it('throws the structured message and code on a 409 while the session is active', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/breakdown`, () =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/breakdown`, () =>
         HttpResponse.json(
-          { detail: { code: 'session_active', message: 'practice_session ps_7 is still active' } },
+          { detail: { code: 'run_active', message: 'practice_run ps_7 is still active' } },
           { status: 409 },
         ),
       ),
     );
 
-    await expect(readPracticeSessionBreakdown('ps_7')).rejects.toThrow(
-      'practice_session ps_7 is still active',
+    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow(
+      'practice_run ps_7 is still active',
     );
   });
 
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:practice_session_id/breakdown`, () =>
+      http.get(`${BASE}/api/practice_runs/:practice_run_id/breakdown`, () =>
         HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
       ),
     );
 
-    await expect(readPracticeSessionBreakdown('ps_7')).rejects.toThrow(
+    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow(
       'Practice session not found',
     );
   });
 });
 
-describe('rerunPracticeSession', () => {
+describe('rerunPracticeRun', () => {
   it('posts to the right session and returns the new session', async () => {
     let requestedSessionId: string | readonly string[] | undefined;
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:practice_session_id/rerun`, ({ params }) => {
-        requestedSessionId = params.practice_session_id;
+      http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, ({ params }) => {
+        requestedSessionId = params.practice_run_id;
         return HttpResponse.json(
           {
             id: '00000000-0000-0000-0000-000000000403',
@@ -337,7 +337,7 @@ describe('rerunPracticeSession', () => {
       }),
     );
 
-    const result = await rerunPracticeSession('ps_7');
+    const result = await rerunPracticeRun('ps_7');
 
     expect(requestedSessionId).toBe('ps_7');
     expect(result).toEqual({
@@ -351,7 +351,7 @@ describe('rerunPracticeSession', () => {
 
   it('throws the message out of a nothing_to_rerun error', async () => {
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:practice_session_id/rerun`, () =>
+      http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, () =>
         HttpResponse.json(
           {
             detail: {
@@ -364,19 +364,19 @@ describe('rerunPracticeSession', () => {
       ),
     );
 
-    await expect(rerunPracticeSession('ps_7')).rejects.toThrow(
+    await expect(rerunPracticeRun('ps_7')).rejects.toThrow(
       'no deck from this session still has a live, valid snapshot to rerun',
     );
   });
 
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:practice_session_id/rerun`, () =>
+      http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, () =>
         HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
       ),
     );
 
-    await expect(rerunPracticeSession('ps_7')).rejects.toThrow('Practice session not found');
+    await expect(rerunPracticeRun('ps_7')).rejects.toThrow('Practice session not found');
   });
 });
 
@@ -395,7 +395,7 @@ describe('ratePracticeCard', () => {
           return HttpResponse.json({
             rated_practice_card: {
               id: params.practice_card_id,
-              practice_session_id: 'ps_7',
+              practice_run_id: 'ps_7',
               card_id: 'card_1',
               position: 1,
               prompts: ['front'],

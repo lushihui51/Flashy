@@ -11,7 +11,7 @@ import pytest
 def owned(client, existing_subject, existing_deck, existing_field_defs, existing_card):
     """A full resource tree built as existing_user (the default client identity):
     subject -> deck -> field_defs -> card, plus a deck_practice_config and a started
-    practice_session with a rateable current card."""
+    practice_run with a rateable current card."""
     field_ids = [fd["id"] for fd in existing_field_defs]
     config_res = client.post(
         "/api/deck_practice_configs",
@@ -30,13 +30,13 @@ def owned(client, existing_subject, existing_deck, existing_field_defs, existing
     config = config_res.json()
 
     session_res = client.post(
-        "/api/practice_sessions",
+        "/api/practice_runs",
         json={"name": "Scoping run", "deck_practice_config_ids": [config["id"]]},
     )
     assert session_res.status_code == 201, session_res.text
     session = session_res.json()
 
-    run_res = client.get(f"/api/practice_sessions/{session['id']}/run")
+    run_res = client.get(f"/api/practice_runs/{session['id']}/state")
     assert run_res.status_code == 200, run_res.text
     current_card = run_res.json()["current_card"]
     assert current_card is not None
@@ -156,7 +156,7 @@ class TestForeignResourcesAreNotFound:
         )
         assert client.delete(f"/api/deck_practice_configs/{config_id}").status_code == 404
 
-    def test_practice_session_endpoints(self, client, other_user, act_as, owned):
+    def test_practice_run_endpoints(self, client, other_user, act_as, owned):
         config_id = owned["config"]["id"]
         session_id = owned["session"]["id"]
         current_card_id = owned["current_card"]["practice_card_id"]
@@ -164,14 +164,14 @@ class TestForeignResourcesAreNotFound:
 
         assert (
             client.post(
-                "/api/practice_sessions",
+                "/api/practice_runs",
                 json={"name": "Scoping run", "deck_practice_config_ids": [config_id]},
             ).status_code
             == 404
         )
-        assert client.get(f"/api/practice_sessions/{session_id}").status_code == 404
+        assert client.get(f"/api/practice_runs/{session_id}").status_code == 404
         assert (
-            client.get(f"/api/practice_sessions/{session_id}/run").status_code
+            client.get(f"/api/practice_runs/{session_id}/state").status_code
             == 404
         )
         assert (
@@ -202,7 +202,7 @@ class TestOwnerStillHasAccess:
             client.get(f"/api/deck_practice_configs/{owned['config']['id']}").status_code
             == 200
         )
-        assert client.get(f"/api/practice_sessions/{owned['session']['id']}").status_code == 200
+        assert client.get(f"/api/practice_runs/{owned['session']['id']}").status_code == 200
 
 
 def test_unauthenticated_request_is_rejected(client):

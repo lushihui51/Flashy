@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { readDeckPracticeConfigs } from 'src/api/deck_practice_config';
-import { createPracticeSession } from 'src/api/practice_session';
+import { createPracticeRun } from 'src/api/practice_run';
 import { ApiDetailError } from 'src/api/unwrap';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import ConfigurationPickList from 'src/components/practice/ConfigurationPickList';
@@ -74,12 +74,12 @@ export default function PracticeCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      createPracticeSession({
+      createPracticeRun({
         name: name.trim(),
         deck_practice_config_ids: Object.values(selection),
       }),
     onSuccess: async (session) => {
-      await queryClient.invalidateQueries({ queryKey: ['practice_sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate(`/practice/${session.id}`);
     },
     onError: (error: Error) => {

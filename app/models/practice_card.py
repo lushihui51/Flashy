@@ -7,7 +7,7 @@ from sqlmodel import Column, Field, String, UniqueConstraint
 
 from app.models.base import AppModel, TimestampMixin
 from app.models.field_def import FieldType
-from app.models.practice_session import SessionStatus
+from app.models.practice_run import RunStatus
 
 
 class PracticeCardStatus(str, Enum):
@@ -23,11 +23,11 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
         # intermediate states that collide with not-yet-updated rows. Checked only at
         # COMMIT, same reasoning as field_def's position constraint.
         UniqueConstraint(
-            "practice_session_id", "position", deferrable=True, initially="DEFERRED"
+            "practice_run_id", "position", deferrable=True, initially="DEFERRED"
         ),
         Index(
-            "ix_practice_card_session_status_position",
-            "practice_session_id",
+            "ix_practice_card_run_status_position",
+            "practice_run_id",
             "status",
             "position",
         ),
@@ -39,8 +39,8 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
     # ADR 015 made the *card* side cascade; this is the session side, which deleting a
     # session needs. review_log is unaffected: its practice_card_id already goes SET
     # NULL, and card_id/field_def_id stay populated, so mastery replays identically.
-    practice_session_id: uuid.UUID = Field(
-        foreign_key="practice_session.id", ondelete="CASCADE"
+    practice_run_id: uuid.UUID = Field(
+        foreign_key="practice_run.id", ondelete="CASCADE"
     )
     # NOT NULL, ON DELETE CASCADE — a practice_card without a card is meaningless, so
     # it can't exist. review_log (not this) is the durable historical record that
@@ -56,7 +56,7 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
 
 class PracticeCardRead(AppModel):
     id: uuid.UUID
-    practice_session_id: uuid.UUID
+    practice_run_id: uuid.UUID
     card_id: uuid.UUID
     position: int
     prompts: list[uuid.UUID]
@@ -88,7 +88,7 @@ class ResolvedFieldValue(AppModel):
     value: str
 
 
-class SessionProgress(AppModel):
+class RunProgress(AppModel):
     """The ADR 028 live-progress counts: `total_cards` is fixed at session start
     (distinct card_ids that received a practice_card row then) and never changes, so
     the other four counts — a partition of it by chain-fold bucket — only ever
@@ -110,13 +110,13 @@ class CurrentRunCard(AppModel):
 
 
 class PracticeRunState(AppModel):
-    """The whole `GET .../run` payload (ADR 031) — everything the run page needs to
+    """The whole `GET .../state` payload (ADR 031) — everything the run page needs to
     render one screen, in one round trip. `current_card` is None once nothing is
     pending, which is also exactly when `session_status` reads `completed`."""
 
     session_name: str
-    session_status: SessionStatus
-    progress: SessionProgress
+    session_status: RunStatus
+    progress: RunProgress
     current_card: CurrentRunCard | None
 
 
@@ -164,7 +164,7 @@ class BreakdownCard(AppModel):
     attempts: list[BreakdownAttempt]
 
 
-class PracticeSessionBreakdown(AppModel):
+class PracticeRunBreakdown(AppModel):
     """The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and
     every card's full resolved history, so the completion screen's row-tap detail needs
     no second request. Only ever built for a completed session (ADR 029) — the router

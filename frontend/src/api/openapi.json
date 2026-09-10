@@ -2171,14 +2171,14 @@
         }
       }
     },
-    "/api/practice_sessions": {
+    "/api/practice_runs": {
       "post": {
         "tags": [
           "Practice"
         ],
-        "summary": "Create Practice Session",
+        "summary": "Create Practice Run",
         "description": "Create *is* start: the session, its snapshots, and every practice_card are\nwritten in one transaction. There is no draft session and no deferred generation.",
-        "operationId": "create_practice_session_api_practice_sessions_post",
+        "operationId": "create_practice_run_api_practice_runs_post",
         "parameters": [
           {
             "name": "authorization",
@@ -2218,7 +2218,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PracticeSessionCreate"
+                "$ref": "#/components/schemas/PracticeRunCreate"
               }
             }
           }
@@ -2229,7 +2229,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeSessionRead"
+                  "$ref": "#/components/schemas/PracticeRunRead"
                 }
               }
             }
@@ -2250,9 +2250,9 @@
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Sessions",
+        "summary": "Read Practice Runs",
         "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (schema invariant 5\n\u2014 there is no config lineage to filter on).",
-        "operationId": "read_practice_sessions_api_practice_sessions_get",
+        "operationId": "read_practice_runs_api_practice_runs_get",
         "parameters": [
           {
             "name": "subject_id",
@@ -2329,9 +2329,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PracticeSessionSummary"
+                    "$ref": "#/components/schemas/PracticeRunSummary"
                   },
-                  "title": "Response Read Practice Sessions Api Practice Sessions Get"
+                  "title": "Response Read Practice Runs Api Practice Runs Get"
                 }
               }
             }
@@ -2349,23 +2349,23 @@
         }
       }
     },
-    "/api/practice_sessions/{practice_session_id}": {
+    "/api/practice_runs/{practice_run_id}": {
       "get": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Session",
-        "description": "MD-3: the detail page needs the same deck chips the list already renders, so this\nanswers with PracticeSessionSummary rather than the bare PracticeSessionRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
-        "operationId": "read_practice_session_api_practice_sessions__practice_session_id__get",
+        "summary": "Read Practice Run",
+        "description": "MD-3: the detail page needs the same deck chips the list already renders, so this\nanswers with PracticeRunSummary rather than the bare PracticeRunRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
+        "operationId": "read_practice_run_api_practice_runs__practice_run_id__get",
         "parameters": [
           {
-            "name": "practice_session_id",
+            "name": "practice_run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Session Id"
+              "title": "Practice Run Id"
             }
           },
           {
@@ -2407,7 +2407,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeSessionSummary"
+                  "$ref": "#/components/schemas/PracticeRunSummary"
                 }
               }
             }
@@ -2428,18 +2428,18 @@
         "tags": [
           "Practice"
         ],
-        "summary": "Delete Practice Session",
+        "summary": "Delete Practice Run",
         "description": "User delete is the only way a session leaves the list \u2014 there is no `abandoned`\nstatus for one to fall out of view into (ADR 015 as amended).",
-        "operationId": "delete_practice_session_api_practice_sessions__practice_session_id__delete",
+        "operationId": "delete_practice_run_api_practice_runs__practice_run_id__delete",
         "parameters": [
           {
-            "name": "practice_session_id",
+            "name": "practice_run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Session Id"
+              "title": "Practice Run Id"
             }
           },
           {
@@ -2492,23 +2492,23 @@
         }
       }
     },
-    "/api/practice_sessions/{practice_session_id}/run": {
+    "/api/practice_runs/{practice_run_id}/state": {
       "get": {
         "tags": [
           "Practice"
         ],
         "summary": "Read Practice Run State",
         "description": "ADR 031: one server-composed payload, replacing the old bare-id `current_card`\nendpoint. 404 for an unknown or foreign session; `current_card: null` once nothing\nis pending, at which point `session_status` already reads \"completed\".",
-        "operationId": "read_practice_run_state_api_practice_sessions__practice_session_id__run_get",
+        "operationId": "read_practice_run_state_api_practice_runs__practice_run_id__state_get",
         "parameters": [
           {
-            "name": "practice_session_id",
+            "name": "practice_run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Session Id"
+              "title": "Practice Run Id"
             }
           },
           {
@@ -2568,23 +2568,23 @@
         }
       }
     },
-    "/api/practice_sessions/{practice_session_id}/breakdown": {
+    "/api/practice_runs/{practice_run_id}/breakdown": {
       "get": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Session Breakdown",
+        "summary": "Read Practice Run Breakdown",
         "description": "ADR 029/031: the completion dataset behind the retrospective view. 409 while the\nsession is still active \u2014 the bucket refinement only makes sense once nothing is\npending; 404 for an unknown or foreign session.",
-        "operationId": "read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get",
+        "operationId": "read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get",
         "parameters": [
           {
-            "name": "practice_session_id",
+            "name": "practice_run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Session Id"
+              "title": "Practice Run Id"
             }
           },
           {
@@ -2626,7 +2626,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeSessionBreakdown"
+                  "$ref": "#/components/schemas/PracticeRunBreakdown"
                 }
               }
             }
@@ -2644,23 +2644,23 @@
         }
       }
     },
-    "/api/practice_sessions/{practice_session_id}/rerun": {
+    "/api/practice_runs/{practice_run_id}/rerun": {
       "post": {
         "tags": [
           "Practice"
         ],
-        "summary": "Rerun Session",
-        "description": "ADR 030: recreates a completed session from its own frozen practice_deck\nsnapshots and deletes the original, in one transaction. 404 for an unknown or\nforeign session; 400 `session_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
-        "operationId": "rerun_session_api_practice_sessions__practice_session_id__rerun_post",
+        "summary": "Rerun Run",
+        "description": "ADR 030: recreates a completed session from its own frozen practice_deck\nsnapshots and deletes the original, in one transaction. 404 for an unknown or\nforeign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
+        "operationId": "rerun_run_api_practice_runs__practice_run_id__rerun_post",
         "parameters": [
           {
-            "name": "practice_session_id",
+            "name": "practice_run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Session Id"
+              "title": "Practice Run Id"
             }
           },
           {
@@ -2702,7 +2702,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeSessionRead"
+                  "$ref": "#/components/schemas/PracticeRunRead"
                 }
               }
             }
@@ -3917,10 +3917,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "practice_session_id": {
+          "practice_run_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Practice Session Id"
+            "title": "Practice Run Id"
           },
           "card_id": {
             "type": "string",
@@ -3959,7 +3959,7 @@
         "type": "object",
         "required": [
           "id",
-          "practice_session_id",
+          "practice_run_id",
           "card_id",
           "position",
           "prompts",
@@ -3978,40 +3978,7 @@
         ],
         "title": "PracticeCardStatus"
       },
-      "PracticeRunState": {
-        "properties": {
-          "session_name": {
-            "type": "string",
-            "title": "Session Name"
-          },
-          "session_status": {
-            "$ref": "#/components/schemas/SessionStatus"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/SessionProgress"
-          },
-          "current_card": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CurrentRunCard"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "session_name",
-          "session_status",
-          "progress",
-          "current_card"
-        ],
-        "title": "PracticeRunState",
-        "description": "The whole `GET .../run` payload (ADR 031) \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
-      },
-      "PracticeSessionBreakdown": {
+      "PracticeRunBreakdown": {
         "properties": {
           "total_cards": {
             "type": "integer",
@@ -4050,10 +4017,10 @@
           "still_failed",
           "cards"
         ],
-        "title": "PracticeSessionBreakdown",
+        "title": "PracticeRunBreakdown",
         "description": "The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and\nevery card's full resolved history, so the completion screen's row-tap detail needs\nno second request. Only ever built for a completed session (ADR 029) \u2014 the router\n409s an active one before this is composed."
       },
-      "PracticeSessionCreate": {
+      "PracticeRunCreate": {
         "properties": {
           "name": {
             "type": "string",
@@ -4073,9 +4040,9 @@
           "name",
           "deck_practice_config_ids"
         ],
-        "title": "PracticeSessionCreate"
+        "title": "PracticeRunCreate"
       },
-      "PracticeSessionDeckSummary": {
+      "PracticeRunDeckSummary": {
         "properties": {
           "deck_id": {
             "type": "string",
@@ -4103,10 +4070,10 @@
           "subject_id",
           "subject_name"
         ],
-        "title": "PracticeSessionDeckSummary",
+        "title": "PracticeRunDeckSummary",
         "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the *only* link between a session and a subject/deck \u2014 `practice_deck`\nhas no `source_config_id` and never will (schema invariant 5), so \"which sessions\nrelate to this deck\" can only be asked this way."
       },
-      "PracticeSessionRead": {
+      "PracticeRunRead": {
         "properties": {
           "id": {
             "type": "string",
@@ -4123,7 +4090,7 @@
             "title": "Name"
           },
           "status": {
-            "$ref": "#/components/schemas/SessionStatus"
+            "$ref": "#/components/schemas/RunStatus"
           },
           "created_at": {
             "type": "string",
@@ -4139,9 +4106,42 @@
           "status",
           "created_at"
         ],
-        "title": "PracticeSessionRead"
+        "title": "PracticeRunRead"
       },
-      "PracticeSessionSummary": {
+      "PracticeRunState": {
+        "properties": {
+          "session_name": {
+            "type": "string",
+            "title": "Session Name"
+          },
+          "session_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/RunProgress"
+          },
+          "current_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentRunCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_name",
+          "session_status",
+          "progress",
+          "current_card"
+        ],
+        "title": "PracticeRunState",
+        "description": "The whole `GET .../state` payload (ADR 031) \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
+      },
+      "PracticeRunSummary": {
         "properties": {
           "id": {
             "type": "string",
@@ -4158,7 +4158,7 @@
             "title": "Name"
           },
           "status": {
-            "$ref": "#/components/schemas/SessionStatus"
+            "$ref": "#/components/schemas/RunStatus"
           },
           "created_at": {
             "type": "string",
@@ -4167,7 +4167,7 @@
           },
           "decks": {
             "items": {
-              "$ref": "#/components/schemas/PracticeSessionDeckSummary"
+              "$ref": "#/components/schemas/PracticeRunDeckSummary"
             },
             "type": "array",
             "title": "Decks"
@@ -4187,7 +4187,7 @@
           "decks",
           "deleted_deck_count"
         ],
-        "title": "PracticeSessionSummary",
+        "title": "PracticeRunSummary",
         "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter. Those snapshots are counted in `deleted_deck_count`\ninstead, so the client can render them as \"deleted deck\" chips: with `abandoned`\ngone, a session stranded by a deck deletion reads as Completed, and the chip is the\nonly thing that tells the two apart (ADR 015 as amended)."
       },
       "RatedFieldValue": {
@@ -4302,7 +4302,7 @@
         "title": "ResolvedFieldValue",
         "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution ADR 031 replaces bare-id responses with. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (ADR 026 only governs generation-time candidacy, not later edits)."
       },
-      "SessionProgress": {
+      "RunProgress": {
         "properties": {
           "total_cards": {
             "type": "integer",
@@ -4333,16 +4333,16 @@
           "passed",
           "still_failed"
         ],
-        "title": "SessionProgress",
+        "title": "RunProgress",
         "description": "The ADR 028 live-progress counts: `total_cards` is fixed at session start\n(distinct card_ids that received a practice_card row then) and never changes, so\nthe other four counts \u2014 a partition of it by chain-fold bucket \u2014 only ever\nredistribute, never grow the denominator mid-session."
       },
-      "SessionStatus": {
+      "RunStatus": {
         "type": "string",
         "enum": [
           "active",
           "completed"
         ],
-        "title": "SessionStatus",
+        "title": "RunStatus",
         "description": "Two states, not three. `abandoned` was dropped: nothing could distinguish it from\n`completed` without tracking why a session ran out of pending cards, which ADR 015\nhad already declined to invent state for. A session is either still practisable or it\nisn't (ADR 015, amended)."
       },
       "SubjectCreate": {

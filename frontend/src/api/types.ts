@@ -246,7 +246,7 @@ export interface paths {
         patch: operations["update_deck_practice_config_api_deck_practice_configs__config_id__patch"];
         trace?: never;
     };
-    "/api/practice_sessions": {
+    "/api/practice_runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -254,27 +254,27 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Practice Sessions
+         * Read Practice Runs
          * @description Newest first, each row carrying the decks (and their subjects) it snapshotted.
          *     Filters are the same relation, asked as a question: a session matches a subject or
          *     deck if any of its practice_deck rows points at a matching deck (schema invariant 5
          *     — there is no config lineage to filter on).
          */
-        get: operations["read_practice_sessions_api_practice_sessions_get"];
+        get: operations["read_practice_runs_api_practice_runs_get"];
         put?: never;
         /**
-         * Create Practice Session
+         * Create Practice Run
          * @description Create *is* start: the session, its snapshots, and every practice_card are
          *     written in one transaction. There is no draft session and no deferred generation.
          */
-        post: operations["create_practice_session_api_practice_sessions_post"];
+        post: operations["create_practice_run_api_practice_runs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/{practice_session_id}": {
+    "/api/practice_runs/{practice_run_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -282,26 +282,26 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Practice Session
+         * Read Practice Run
          * @description MD-3: the detail page needs the same deck chips the list already renders, so this
-         *     answers with PracticeSessionSummary rather than the bare PracticeSessionRead — API-
+         *     answers with PracticeRunSummary rather than the bare PracticeRunRead — API-
          *     first beats a client-side join of the list endpoint.
          */
-        get: operations["read_practice_session_api_practice_sessions__practice_session_id__get"];
+        get: operations["read_practice_run_api_practice_runs__practice_run_id__get"];
         put?: never;
         post?: never;
         /**
-         * Delete Practice Session
+         * Delete Practice Run
          * @description User delete is the only way a session leaves the list — there is no `abandoned`
          *     status for one to fall out of view into (ADR 015 as amended).
          */
-        delete: operations["delete_practice_session_api_practice_sessions__practice_session_id__delete"];
+        delete: operations["delete_practice_run_api_practice_runs__practice_run_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/{practice_session_id}/run": {
+    "/api/practice_runs/{practice_run_id}/state": {
         parameters: {
             query?: never;
             header?: never;
@@ -314,7 +314,7 @@ export interface paths {
          *     endpoint. 404 for an unknown or foreign session; `current_card: null` once nothing
          *     is pending, at which point `session_status` already reads "completed".
          */
-        get: operations["read_practice_run_state_api_practice_sessions__practice_session_id__run_get"];
+        get: operations["read_practice_run_state_api_practice_runs__practice_run_id__state_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -323,7 +323,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/{practice_session_id}/breakdown": {
+    "/api/practice_runs/{practice_run_id}/breakdown": {
         parameters: {
             query?: never;
             header?: never;
@@ -331,12 +331,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Practice Session Breakdown
+         * Read Practice Run Breakdown
          * @description ADR 029/031: the completion dataset behind the retrospective view. 409 while the
          *     session is still active — the bucket refinement only makes sense once nothing is
          *     pending; 404 for an unknown or foreign session.
          */
-        get: operations["read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get"];
+        get: operations["read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -345,7 +345,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_sessions/{practice_session_id}/rerun": {
+    "/api/practice_runs/{practice_run_id}/rerun": {
         parameters: {
             query?: never;
             header?: never;
@@ -355,13 +355,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rerun Session
+         * Rerun Run
          * @description ADR 030: recreates a completed session from its own frozen practice_deck
          *     snapshots and deletes the original, in one transaction. 404 for an unknown or
-         *     foreign session; 400 `session_active` if it hasn't completed; 400
+         *     foreign session; 400 `run_active` if it hasn't completed; 400
          *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck.
          */
-        post: operations["rerun_session_api_practice_sessions__practice_session_id__rerun_post"];
+        post: operations["rerun_run_api_practice_runs__practice_run_id__rerun_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -875,10 +875,10 @@ export interface components {
              */
             id: string;
             /**
-             * Practice Session Id
+             * Practice Run Id
              * Format: uuid
              */
-            practice_session_id: string;
+            practice_run_id: string;
             /**
              * Card Id
              * Format: uuid
@@ -903,26 +903,13 @@ export interface components {
          */
         PracticeCardStatus: "pending" | "passed" | "failed";
         /**
-         * PracticeRunState
-         * @description The whole `GET .../run` payload (ADR 031) — everything the run page needs to
-         *     render one screen, in one round trip. `current_card` is None once nothing is
-         *     pending, which is also exactly when `session_status` reads `completed`.
-         */
-        PracticeRunState: {
-            /** Session Name */
-            session_name: string;
-            session_status: components["schemas"]["SessionStatus"];
-            progress: components["schemas"]["SessionProgress"];
-            current_card: components["schemas"]["CurrentRunCard"] | null;
-        };
-        /**
-         * PracticeSessionBreakdown
+         * PracticeRunBreakdown
          * @description The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and
          *     every card's full resolved history, so the completion screen's row-tap detail needs
          *     no second request. Only ever built for a completed session (ADR 029) — the router
          *     409s an active one before this is composed.
          */
-        PracticeSessionBreakdown: {
+        PracticeRunBreakdown: {
             /** Total Cards */
             total_cards: number;
             /** Passed First Try */
@@ -936,22 +923,22 @@ export interface components {
             /** Cards */
             cards: components["schemas"]["BreakdownCard"][];
         };
-        /** PracticeSessionCreate */
-        PracticeSessionCreate: {
+        /** PracticeRunCreate */
+        PracticeRunCreate: {
             /** Name */
             name: string;
             /** Deck Practice Config Ids */
             deck_practice_config_ids: string[];
         };
         /**
-         * PracticeSessionDeckSummary
+         * PracticeRunDeckSummary
          * @description One deck a session touches, resolved through `practice_deck → deck → subject`.
          *
          *     This chain is the *only* link between a session and a subject/deck — `practice_deck`
          *     has no `source_config_id` and never will (schema invariant 5), so "which sessions
          *     relate to this deck" can only be asked this way.
          */
-        PracticeSessionDeckSummary: {
+        PracticeRunDeckSummary: {
             /**
              * Deck Id
              * Format: uuid
@@ -967,8 +954,8 @@ export interface components {
             /** Subject Name */
             subject_name: string;
         };
-        /** PracticeSessionRead */
-        PracticeSessionRead: {
+        /** PracticeRunRead */
+        PracticeRunRead: {
             /**
              * Id
              * Format: uuid
@@ -981,7 +968,7 @@ export interface components {
             user_id: string;
             /** Name */
             name: string;
-            status: components["schemas"]["SessionStatus"];
+            status: components["schemas"]["RunStatus"];
             /**
              * Created At
              * Format: date-time
@@ -989,7 +976,20 @@ export interface components {
             created_at: string;
         };
         /**
-         * PracticeSessionSummary
+         * PracticeRunState
+         * @description The whole `GET .../state` payload (ADR 031) — everything the run page needs to
+         *     render one screen, in one round trip. `current_card` is None once nothing is
+         *     pending, which is also exactly when `session_status` reads `completed`.
+         */
+        PracticeRunState: {
+            /** Session Name */
+            session_name: string;
+            session_status: components["schemas"]["RunStatus"];
+            progress: components["schemas"]["RunProgress"];
+            current_card: components["schemas"]["CurrentRunCard"] | null;
+        };
+        /**
+         * PracticeRunSummary
          * @description A list row for the practice overview: the session plus the decks it snapshotted,
          *     so the client can render and filter by subject/deck without a second round trip or a
          *     client-side join.
@@ -1002,7 +1002,7 @@ export interface components {
          *     gone, a session stranded by a deck deletion reads as Completed, and the chip is the
          *     only thing that tells the two apart (ADR 015 as amended).
          */
-        PracticeSessionSummary: {
+        PracticeRunSummary: {
             /**
              * Id
              * Format: uuid
@@ -1015,14 +1015,14 @@ export interface components {
             user_id: string;
             /** Name */
             name: string;
-            status: components["schemas"]["SessionStatus"];
+            status: components["schemas"]["RunStatus"];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
             /** Decks */
-            decks: components["schemas"]["PracticeSessionDeckSummary"][];
+            decks: components["schemas"]["PracticeRunDeckSummary"][];
             /** Deleted Deck Count */
             deleted_deck_count: number;
         };
@@ -1083,13 +1083,13 @@ export interface components {
             value: string;
         };
         /**
-         * SessionProgress
+         * RunProgress
          * @description The ADR 028 live-progress counts: `total_cards` is fixed at session start
          *     (distinct card_ids that received a practice_card row then) and never changes, so
          *     the other four counts — a partition of it by chain-fold bucket — only ever
          *     redistribute, never grow the denominator mid-session.
          */
-        SessionProgress: {
+        RunProgress: {
             /** Total Cards */
             total_cards: number;
             /** Unseen */
@@ -1102,14 +1102,14 @@ export interface components {
             still_failed: number;
         };
         /**
-         * SessionStatus
+         * RunStatus
          * @description Two states, not three. `abandoned` was dropped: nothing could distinguish it from
          *     `completed` without tracking why a session ran out of pending cards, which ADR 015
          *     had already declined to invent state for. A session is either still practisable or it
          *     isn't (ADR 015, amended).
          * @enum {string}
          */
-        SessionStatus: "active" | "completed";
+        RunStatus: "active" | "completed";
         /** SubjectCreate */
         SubjectCreate: {
             /** Name */
@@ -2213,7 +2213,7 @@ export interface operations {
             };
         };
     };
-    read_practice_sessions_api_practice_sessions_get: {
+    read_practice_runs_api_practice_runs_get: {
         parameters: {
             query?: {
                 subject_id?: string | null;
@@ -2234,7 +2234,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionSummary"][];
+                    "application/json": components["schemas"]["PracticeRunSummary"][];
                 };
             };
             /** @description Validation Error */
@@ -2248,7 +2248,7 @@ export interface operations {
             };
         };
     };
-    create_practice_session_api_practice_sessions_post: {
+    create_practice_run_api_practice_runs_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2260,7 +2260,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PracticeSessionCreate"];
+                "application/json": components["schemas"]["PracticeRunCreate"];
             };
         };
         responses: {
@@ -2270,7 +2270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionRead"];
+                    "application/json": components["schemas"]["PracticeRunRead"];
                 };
             };
             /** @description Validation Error */
@@ -2284,7 +2284,7 @@ export interface operations {
             };
         };
     };
-    read_practice_session_api_practice_sessions__practice_session_id__get: {
+    read_practice_run_api_practice_runs__practice_run_id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -2292,7 +2292,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_session_id: string;
+                practice_run_id: string;
             };
             cookie?: never;
         };
@@ -2304,7 +2304,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionSummary"];
+                    "application/json": components["schemas"]["PracticeRunSummary"];
                 };
             };
             /** @description Validation Error */
@@ -2318,7 +2318,7 @@ export interface operations {
             };
         };
     };
-    delete_practice_session_api_practice_sessions__practice_session_id__delete: {
+    delete_practice_run_api_practice_runs__practice_run_id__delete: {
         parameters: {
             query?: never;
             header?: {
@@ -2326,7 +2326,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_session_id: string;
+                practice_run_id: string;
             };
             cookie?: never;
         };
@@ -2350,7 +2350,7 @@ export interface operations {
             };
         };
     };
-    read_practice_run_state_api_practice_sessions__practice_session_id__run_get: {
+    read_practice_run_state_api_practice_runs__practice_run_id__state_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2358,7 +2358,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_session_id: string;
+                practice_run_id: string;
             };
             cookie?: never;
         };
@@ -2384,7 +2384,7 @@ export interface operations {
             };
         };
     };
-    read_practice_session_breakdown_api_practice_sessions__practice_session_id__breakdown_get: {
+    read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2392,7 +2392,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_session_id: string;
+                practice_run_id: string;
             };
             cookie?: never;
         };
@@ -2404,7 +2404,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionBreakdown"];
+                    "application/json": components["schemas"]["PracticeRunBreakdown"];
                 };
             };
             /** @description Validation Error */
@@ -2418,7 +2418,7 @@ export interface operations {
             };
         };
     };
-    rerun_session_api_practice_sessions__practice_session_id__rerun_post: {
+    rerun_run_api_practice_runs__practice_run_id__rerun_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2426,7 +2426,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_session_id: string;
+                practice_run_id: string;
             };
             cookie?: never;
         };
@@ -2438,7 +2438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeSessionRead"];
+                    "application/json": components["schemas"]["PracticeRunRead"];
                 };
             };
             /** @description Validation Error */

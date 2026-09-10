@@ -89,7 +89,7 @@ function mockLibrary(
   server.use(
     http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
-    http.get(`${BASE}/api/practice_sessions`, ({ request }) => {
+    http.get(`${BASE}/api/practice_runs`, ({ request }) => {
       const query = new URL(request.url).searchParams;
       requests.push(query);
       return HttpResponse.json(sessionsFor(query));
@@ -262,7 +262,7 @@ describe('PracticeOverviewPage', () => {
     let deleted: string | null = null;
     const requests = mockLibrary(() => (deleted ? [betaRun] : [alphaRun, betaRun]));
     server.use(
-      http.delete(`${BASE}/api/practice_sessions/:id`, ({ params }) => {
+      http.delete(`${BASE}/api/practice_runs/:id`, ({ params }) => {
         deleted = params.id as string;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -285,7 +285,7 @@ describe('PracticeOverviewPage', () => {
     let deleteCalls = 0;
     mockLibrary();
     server.use(
-      http.delete(`${BASE}/api/practice_sessions/:id`, () => {
+      http.delete(`${BASE}/api/practice_runs/:id`, () => {
         deleteCalls += 1;
         return new HttpResponse(null, { status: 204 });
       }),

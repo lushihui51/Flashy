@@ -27,7 +27,7 @@ function session(overrides: Record<string, unknown> = {}) {
 
 function mockSession(data: Record<string, unknown> | null = session()) {
   server.use(
-    http.get(`${BASE}/api/practice_sessions/:id`, () =>
+    http.get(`${BASE}/api/practice_runs/:id`, () =>
       data ? HttpResponse.json(data) : HttpResponse.json({ detail: 'not found' }, { status: 404 }),
     ),
   );
@@ -65,7 +65,7 @@ function breakdown(overrides: Record<string, unknown> = {}) {
 
 function mockBreakdown(data: Record<string, unknown> = breakdown()) {
   server.use(
-    http.get(`${BASE}/api/practice_sessions/:id/breakdown`, () => HttpResponse.json(data)),
+    http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)),
   );
 }
 
@@ -164,7 +164,7 @@ describe('PracticeDetailsPage', () => {
     let deletedId: string | null = null;
     mockSession();
     server.use(
-      http.delete(`${BASE}/api/practice_sessions/:id`, ({ params }) => {
+      http.delete(`${BASE}/api/practice_runs/:id`, ({ params }) => {
         deletedId = params.id as string;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -184,7 +184,7 @@ describe('PracticeDetailsPage', () => {
     let deleteCalls = 0;
     mockSession();
     server.use(
-      http.delete(`${BASE}/api/practice_sessions/:id`, () => {
+      http.delete(`${BASE}/api/practice_runs/:id`, () => {
         deleteCalls += 1;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -204,7 +204,7 @@ describe('PracticeDetailsPage', () => {
   it('a failed delete shows the error inside the dialog, which stays open', async () => {
     mockSession();
     server.use(
-      http.delete(`${BASE}/api/practice_sessions/:id`, () =>
+      http.delete(`${BASE}/api/practice_runs/:id`, () =>
         HttpResponse.json({ detail: 'Something went wrong' }, { status: 500 }),
       ),
     );
@@ -252,7 +252,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:id/rerun`, ({ params }) => {
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, ({ params }) => {
         rerunRequestedId = params.id as string;
         return HttpResponse.json(
           {
@@ -265,7 +265,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
           { status: 201 },
         );
       }),
-      http.get(`${BASE}/api/practice_sessions/ps2`, () =>
+      http.get(`${BASE}/api/practice_runs/ps2`, () =>
         HttpResponse.json(session({ id: 'ps2', name: 'Alpha run (new)', status: 'active' })),
       ),
     );
@@ -287,7 +287,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:id/rerun`, () => {
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, () => {
         rerunCalls += 1;
         return HttpResponse.json({}, { status: 201 });
       }),
@@ -308,7 +308,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
-      http.post(`${BASE}/api/practice_sessions/:id/rerun`, () =>
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
         HttpResponse.json(
           {
             detail: {

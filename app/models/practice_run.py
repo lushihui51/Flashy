@@ -8,7 +8,7 @@ from sqlmodel import Column, Field, String
 from app.models.base import AppModel, TimestampMixin
 
 
-class SessionStatus(str, Enum):
+class RunStatus(str, Enum):
     """Two states, not three. `abandoned` was dropped: nothing could distinguish it from
     `completed` without tracking why a session ran out of pending cards, which ADR 015
     had already declined to invent state for. A session is either still practisable or it
@@ -18,7 +18,7 @@ class SessionStatus(str, Enum):
     completed = "completed"
 
 
-class PracticeSession(AppModel, TimestampMixin, table=True):
+class PracticeRun(AppModel, TimestampMixin, table=True):
     """No deck_id and no curr — a session spans one practice_deck per deck (Phase 4.2),
     and the current card is derived (WHERE status='pending' ORDER BY position LIMIT 1),
     never stored."""
@@ -34,25 +34,25 @@ class PracticeSession(AppModel, TimestampMixin, table=True):
     # timezone arithmetic here (ADR 019 — the zone is a rendering input, and this string
     # is already rendered). Not unique.
     name: str
-    status: SessionStatus = Field(
-        sa_column=Column(String, nullable=False, default=SessionStatus.active)
+    status: RunStatus = Field(
+        sa_column=Column(String, nullable=False, default=RunStatus.active)
     )
 
 
-class PracticeSessionCreate(AppModel):
+class PracticeRunCreate(AppModel):
     name: str
     deck_practice_config_ids: list[uuid.UUID]
 
 
-class PracticeSessionRead(AppModel):
+class PracticeRunRead(AppModel):
     id: uuid.UUID
     user_id: uuid.UUID
     name: str
-    status: SessionStatus
+    status: RunStatus
     created_at: datetime
 
 
-class PracticeSessionDeckSummary(AppModel):
+class PracticeRunDeckSummary(AppModel):
     """One deck a session touches, resolved through `practice_deck → deck → subject`.
 
     This chain is the *only* link between a session and a subject/deck — `practice_deck`
@@ -65,7 +65,7 @@ class PracticeSessionDeckSummary(AppModel):
     subject_name: str
 
 
-class PracticeSessionSummary(PracticeSessionRead):
+class PracticeRunSummary(PracticeRunRead):
     """A list row for the practice overview: the session plus the decks it snapshotted,
     so the client can render and filter by subject/deck without a second round trip or a
     client-side join.
@@ -78,5 +78,5 @@ class PracticeSessionSummary(PracticeSessionRead):
     gone, a session stranded by a deck deletion reads as Completed, and the chip is the
     only thing that tells the two apart (ADR 015 as amended)."""
 
-    decks: list[PracticeSessionDeckSummary]
+    decks: list[PracticeRunDeckSummary]
     deleted_deck_count: int

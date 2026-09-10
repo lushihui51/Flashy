@@ -3,12 +3,12 @@ import uuid
 from sqlmodel import Session, col, func, select
 
 from app.models.practice_card import PracticeCard, PracticeCardStatus
-from app.models.practice_session import PracticeSession
+from app.models.practice_run import PracticeRun
 from app.models.review_log import ReviewLog
 
 
 def db_create_practice_card(db: Session, data: dict) -> PracticeCard:
-    """Does not commit — see db_create_practice_session."""
+    """Does not commit — see db_create_practice_run."""
     card = PracticeCard(**data)
     db.add(card)
     db.flush()
@@ -20,21 +20,21 @@ def db_read_practice_card(
 ) -> PracticeCard | None:
     return db.exec(
         select(PracticeCard)
-        .join(PracticeSession, PracticeSession.id == PracticeCard.practice_session_id)
-        .where(PracticeCard.id == practice_card_id, PracticeSession.user_id == user_id)
+        .join(PracticeRun, PracticeRun.id == PracticeCard.practice_run_id)
+        .where(PracticeCard.id == practice_card_id, PracticeRun.user_id == user_id)
     ).first()
 
 
 def db_read_current_practice_card(
-    db: Session, practice_session_id: uuid.UUID, user_id: uuid.UUID
+    db: Session, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeCard | None:
     """The derived current card — invariant: never stored, always this query."""
     return db.exec(
         select(PracticeCard)
-        .join(PracticeSession, PracticeSession.id == PracticeCard.practice_session_id)
+        .join(PracticeRun, PracticeRun.id == PracticeCard.practice_run_id)
         .where(
-            PracticeCard.practice_session_id == practice_session_id,
-            PracticeSession.user_id == user_id,
+            PracticeCard.practice_run_id == practice_run_id,
+            PracticeRun.user_id == user_id,
             PracticeCard.status == PracticeCardStatus.pending,
         )
         .order_by(PracticeCard.position)
@@ -42,8 +42,8 @@ def db_read_current_practice_card(
     ).first()
 
 
-def db_read_practice_cards_for_session(
-    db: Session, practice_session_id: uuid.UUID
+def db_read_practice_cards_for_run(
+    db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Every row a session has ever produced, in every status, oldest first — the raw
     material for the ADR 028/029 chain fold: grouping consecutive same-card_id rows in
@@ -53,20 +53,20 @@ def db_read_practice_cards_for_session(
     return list(
         db.exec(
             select(PracticeCard)
-            .where(PracticeCard.practice_session_id == practice_session_id)
+            .where(PracticeCard.practice_run_id == practice_run_id)
             .order_by(PracticeCard.created_at)
         ).all()
     )
 
 
 def db_read_pending_practice_cards(
-    db: Session, practice_session_id: uuid.UUID
+    db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     return list(
         db.exec(
             select(PracticeCard)
             .where(
-                PracticeCard.practice_session_id == practice_session_id,
+                PracticeCard.practice_run_id == practice_run_id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
             .order_by(PracticeCard.position)
@@ -75,17 +75,17 @@ def db_read_pending_practice_cards(
 
 
 def db_renumber_pending_practice_cards(
-    db: Session, practice_session_id: uuid.UUID
+    db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Fresh 1000-spaced positions for a session's pending cards, preserving their
     relative order — the position-collision fallback. Starts strictly above the
     session's current max position (across *every* status, not just pending) rather
     than restarting at 0: passed/failed rows keep their old position forever, so
     renumbering from 0 would routinely collide with one of them."""
-    cards = db_read_pending_practice_cards(db, practice_session_id)
+    cards = db_read_pending_practice_cards(db, practice_run_id)
     max_position = db.exec(
         select(func.max(PracticeCard.position)).where(
-            PracticeCard.practice_session_id == practice_session_id
+            PracticeCard.practice_run_id == practice_run_id
         )
     ).one()
     base = (max_position or 0) + 1000

@@ -1,9 +1,9 @@
 import type { components } from 'src/api/types';
 
-type SessionStatus = components['schemas']['SessionStatus'];
+type RunStatus = components['schemas']['RunStatus'];
 
 type PracticeStatusBadgeProps = {
-  status: SessionStatus;
+  status: RunStatus;
 };
 
 /** The one place a session's `active`/`completed` status becomes a badge — extracted

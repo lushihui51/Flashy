@@ -11,13 +11,13 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     at session start (Phase 4.2). Editing or deleting the source config must never
     affect a session, so nothing here points back to it."""
 
-    __table_args__ = (UniqueConstraint("practice_session_id", "deck_id"),)
+    __table_args__ = (UniqueConstraint("practice_run_id", "deck_id"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     # ON DELETE CASCADE — a snapshot outlives its *deck* (see deck_id below) but not
     # its session, which owns it outright (ADR 015 as amended).
-    practice_session_id: uuid.UUID = Field(
-        foreign_key="practice_session.id", ondelete="CASCADE"
+    practice_run_id: uuid.UUID = Field(
+        foreign_key="practice_run.id", ondelete="CASCADE"
     )
     # Nullable with ON DELETE SET NULL — a snapshot is immutable, self-contained
     # session history (see class docstring); deleting the source deck must not erase

@@ -1,9 +1,9 @@
 import type { components } from 'src/api/types';
 
-type PracticeSessionDeckSummary = components['schemas']['PracticeSessionDeckSummary'];
+type PracticeRunDeckSummary = components['schemas']['PracticeRunDeckSummary'];
 
 type SessionDeckChipsProps = {
-  decks: PracticeSessionDeckSummary[];
+  decks: PracticeRunDeckSummary[];
   deletedDeckCount: number;
 };
 
@@ -13,7 +13,7 @@ type SessionDeckChipsProps = {
  * a caller drops these chips into whatever flex row it's already building (the
  * overview row sits a created-date chip alongside them; the detail page doesn't).
  *
- * No fetching: `decks` and `deletedDeckCount` are already on `PracticeSessionSummary`,
+ * No fetching: `decks` and `deletedDeckCount` are already on `PracticeRunSummary`,
  * so this only renders what it's given (AGENTS.md).
  */
 export default function SessionDeckChips({ decks, deletedDeckCount }: SessionDeckChipsProps) {

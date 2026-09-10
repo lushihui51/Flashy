@@ -202,7 +202,7 @@ describe('PracticeCreatePage', () => {
     mockLibrary();
     let sent: Record<string, unknown> | null = null;
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, async ({ request }) => {
+      http.post(`${BASE}/api/practice_runs`, async ({ request }) => {
         sent = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
           { id: 'ps9', user_id: 'u1', name: sent.name, status: 'active', created_at: '' },
@@ -229,7 +229,7 @@ describe('PracticeCreatePage', () => {
   it('stale_config renders on the offending row and keeps the selection', async () => {
     mockLibrary();
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, () =>
+      http.post(`${BASE}/api/practice_runs`, () =>
         HttpResponse.json(
           { detail: { code: 'stale_config', message: 'stale', config_id: 'c1' } },
           { status: 400 },
@@ -257,7 +257,7 @@ describe('PracticeCreatePage', () => {
         calls += 1;
         return HttpResponse.json(ALL_CONFIGS);
       }),
-      http.post(`${BASE}/api/practice_sessions`, () =>
+      http.post(`${BASE}/api/practice_runs`, () =>
         HttpResponse.json(
           { detail: { code: 'config_not_found', message: 'gone', config_id: 'c1' } },
           { status: 404 },
@@ -281,7 +281,7 @@ describe('PracticeCreatePage', () => {
   it('duplicate_deck and any other error render as a banner above Create', async () => {
     mockLibrary();
     server.use(
-      http.post(`${BASE}/api/practice_sessions`, () =>
+      http.post(`${BASE}/api/practice_runs`, () =>
         HttpResponse.json({ detail: 'Something went wrong' }, { status: 400 }),
       ),
     );

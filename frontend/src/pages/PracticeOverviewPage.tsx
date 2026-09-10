@@ -3,13 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
-import { deletePracticeSession, readPracticeSessions } from 'src/api/practice_session';
+import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
-import PracticeSessionRow from 'src/components/practice/PracticeSessionRow';
+import PracticeRunRow from 'src/components/practice/PracticeRunRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import type { components } from 'src/api/types';
 
-type PracticeSessionSummary = components['schemas']['PracticeSessionSummary'];
+type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 
 const STATUS_TABS = ['all', 'active', 'completed'] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
@@ -39,7 +39,7 @@ export default function PracticeOverviewPage() {
     ? (searchParams.get('status') as StatusTab)
     : 'all';
 
-  const [pendingDelete, setPendingDelete] = useState<PracticeSessionSummary | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PracticeRunSummary | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
@@ -48,17 +48,17 @@ export default function PracticeOverviewPage() {
   // being asked about (practice_deck → deck → subject) lives there, and a session's
   // rows only carry the decks that still exist.
   const sessionsQuery = useQuery({
-    queryKey: ['practice_sessions', subjectId, deckId],
+    queryKey: ['practice_runs', subjectId, deckId],
     queryFn: () =>
-      readPracticeSessions({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+      readPracticeRuns({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (sessionId: string) => deletePracticeSession(sessionId),
+    mutationFn: (sessionId: string) => deletePracticeRun(sessionId),
     onSuccess: async () => {
       setPendingDelete(null);
       setDeleteError(null);
-      await queryClient.invalidateQueries({ queryKey: ['practice_sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
     },
     onError: (error: Error) => setDeleteError(error.message),
   });
@@ -159,7 +159,7 @@ export default function PracticeOverviewPage() {
         <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
           {sessions.map((session) => (
             <li key={session.id}>
-              <PracticeSessionRow session={session} onDelete={() => setPendingDelete(session)} />
+              <PracticeRunRow session={session} onDelete={() => setPendingDelete(session)} />
             </li>
           ))}
         </ul>

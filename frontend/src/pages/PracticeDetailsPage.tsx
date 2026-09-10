@@ -3,19 +3,19 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, RotateCcw, Trash2 } from 'lucide-react';
 import {
-  deletePracticeSession,
-  readPracticeSession,
-  readPracticeSessionBreakdown,
-  rerunPracticeSession,
-} from 'src/api/practice_session';
+  deletePracticeRun,
+  readPracticeRun,
+  readPracticeRunBreakdown,
+  rerunPracticeRun,
+} from 'src/api/practice_run';
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
-import SessionBreakdown from 'src/components/practice/SessionBreakdown';
+import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { formatDateTime } from 'src/lib/datetime';
 import type { components } from 'src/api/types';
 
-type PracticeSessionSummary = components['schemas']['PracticeSessionSummary'];
+type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 
 /**
  * One practice's own page: name, status, when it was created, which decks it covers,
@@ -32,8 +32,8 @@ export default function PracticeDetailsPage() {
   const { practiceSessionId } = useParams<{ practiceSessionId: string }>();
 
   const sessionQuery = useQuery({
-    queryKey: ['practice_session', practiceSessionId],
-    queryFn: () => readPracticeSession(practiceSessionId!),
+    queryKey: ['practice_run_summary', practiceSessionId],
+    queryFn: () => readPracticeRun(practiceSessionId!),
     enabled: !!practiceSessionId,
   });
 
@@ -49,7 +49,7 @@ export default function PracticeDetailsPage() {
   return <PracticeDetailsPageBody session={sessionQuery.data} />;
 }
 
-function PracticeDetailsPageBody({ session }: { session: PracticeSessionSummary }) {
+function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -60,24 +60,24 @@ function PracticeDetailsPageBody({ session }: { session: PracticeSessionSummary 
   // Only a completed session has a breakdown to show (ADR 029) — the router itself
   // 409s a breakdown request for an active one, so this stays disabled until then.
   const breakdownQuery = useQuery({
-    queryKey: ['practice_breakdown', session.id],
-    queryFn: () => readPracticeSessionBreakdown(session.id),
+    queryKey: ['practice_run_breakdown', session.id],
+    queryFn: () => readPracticeRunBreakdown(session.id),
     enabled: session.status === 'completed',
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deletePracticeSession(session.id),
+    mutationFn: () => deletePracticeRun(session.id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['practice_sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate('/practice');
     },
     onError: (error: Error) => setDeleteError(error.message),
   });
 
   const rerunMutation = useMutation({
-    mutationFn: () => rerunPracticeSession(session.id),
+    mutationFn: () => rerunPracticeRun(session.id),
     onSuccess: async (newSession) => {
-      await queryClient.invalidateQueries({ queryKey: ['practice_sessions'] });
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate(`/practice/${newSession.id}`);
     },
     onError: (error: Error) => {
@@ -153,7 +153,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeSessionSummary 
               {breakdownQuery.error.message}
             </p>
           )}
-          {breakdownQuery.data && <SessionBreakdown breakdown={breakdownQuery.data} />}
+          {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
         </div>
       )}
 
