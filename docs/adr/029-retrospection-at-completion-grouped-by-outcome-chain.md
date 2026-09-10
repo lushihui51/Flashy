@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Does not amend or supersede ADR 015 — see the note under Decision.
+Accepted. Does not amend or supersede ADR 015 — see the note under Decision. The four-tab grouping is superseded by ADR 044; the outcome-chain semantics remain in force.
 
 ## Context
 

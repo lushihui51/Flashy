@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The delete-the-original half is superseded by ADR 039; the frozen-snapshot source semantics remain in force.
 
 ## Context
 

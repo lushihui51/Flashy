@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The minimum-gap follow-up deferred below is decided by ADR 037.
 
 ## Context
 
