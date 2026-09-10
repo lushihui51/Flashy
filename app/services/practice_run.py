@@ -62,6 +62,10 @@ _ARRAY_FIELDS = (
 )
 
 _POSITION_GAP = 1000
+# ADR 037: a retry may not surface until this many other pending cards have had their
+# turn, clamping the mastery-ordered insertion point rather than replacing it — a card
+# whose mastery already puts it deeper than the floor stays at its deeper slot.
+RETRY_SPACING_FLOOR = 3
 _POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"
 
 
@@ -566,15 +570,19 @@ def get_practice_run_breakdown(
 
 def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:
     """pending: a session's pending cards in position order, each paired with its
-    current mastery score. Finds the midpoint position (ADR-008) that keeps the
-    ascending-mastery invariant this function itself maintains by construction."""
-    lower: PracticeCard | None = None
-    upper: PracticeCard | None = None
-    for card, score in pending:
-        if score >= new_score:
-            upper = card
-            break
-        lower = card
+    current mastery score. `mastery_index` — the count of pending cards whose score is
+    strictly below `new_score` — is where the ascending-mastery invariant (ADR-008)
+    alone would insert. ADR 037 then clamps that index up to at least
+    RETRY_SPACING_FLOOR (or the end of the queue, whichever is smaller): a clamp, not a
+    fixed placement, so a card whose mastery already puts it deeper stays at that
+    deeper slot. Finds the midpoint position at the resulting index, keeping the
+    (now floor-clamped) ascending-mastery invariant this function itself maintains by
+    construction."""
+    mastery_index = sum(1 for _, score in pending if score < new_score)
+    final_index = max(mastery_index, min(RETRY_SPACING_FLOOR, len(pending)))
+
+    lower = pending[final_index - 1][0] if final_index > 0 else None
+    upper = pending[final_index][0] if final_index < len(pending) else None
 
     if lower:
         lower_pos = lower.position

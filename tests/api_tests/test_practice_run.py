@@ -13,7 +13,13 @@ from app.services.practice_generation import (
     generate_practice_card_fields,
     resolve_prompts_or_answers,
 )
-from app.services.practice_run import run_progress, start_practice_run, submit_rating
+from app.services.practice_run import (
+    _POSITION_GAP,
+    _insertion_position,
+    run_progress,
+    start_practice_run,
+    submit_rating,
+)
 
 
 @pytest.fixture
@@ -241,13 +247,15 @@ class TestPracticeRunAcceptance:
             original_answers,
         )
 
-        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR),
-        # so a forced fail always drops the requeued card's mastery below all of them
-        # — the exact scenario `_insertion_position` guarantees becomes the new session
-        # minimum: it is inserted before whatever was previously second-in-queue,
-        # making it the new front. This is a hard guarantee of the insertion formula,
-        # not an approximation — assert the guarantee itself (new front of the pending
-        # queue, i.e. it's what gets served next), not just "position changed".
+        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR), so
+        # a forced fail always drops the requeued card's mastery to index 0 — the front
+        # of the mastery order. But only 2 other pending cards remain once the original
+        # is marked failed, so ADR 037's spacing floor (RETRY_SPACING_FLOOR=3) clamps
+        # that index up to min(3, len(pending)) = 2: the end of the queue, not the
+        # front. This is a hard guarantee of the clamp, not an approximation — assert
+        # the guarantee itself (new back of the pending queue), not just "position
+        # changed". TestRetrySpacingFloor covers the floor directly with ≥4 pending
+        # cards, where the clamp and the mastery index can disagree either way.
         assert requeued.position != original_position
         pending_positions = db.exec(
             select(PracticeCard.position).where(
@@ -256,11 +264,11 @@ class TestPracticeRunAcceptance:
             )
         ).all()
         assert len(pending_positions) == len(set(pending_positions))  # all unique
-        assert requeued.position == min(pending_positions)
+        assert requeued.position == max(pending_positions)
 
         current = db_read_current_practice_card(db, session.id, existing_user.id)
         assert current is not None
-        assert current.id == requeued.id
+        assert current.id != requeued.id
 
         db.refresh(original)
         assert original.status == PracticeCardStatus.failed
@@ -411,6 +419,166 @@ class TestForcedFailedAnswerFields:
         assert requeued.answers[1] in {
             fid for name, fid in session_fields.items() if name.startswith("pool_a")
         } - {failed_pool}
+
+
+class TestRetrySpacingFloor:
+    """ADR 037: RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up,
+    never down — a retry surfaces only after that many other pending cards have had
+    their turn, or at the end of the queue with fewer than that remaining. The "2
+    pending cards -> retry is last" case is already covered by
+    TestPracticeRunAcceptance.test_full_fail_requeue_cycle (its own scenario, not
+    duplicated here)."""
+
+    @staticmethod
+    def _add_cards(client, existing_deck, session_fields, n, start_at):
+        ids = []
+        for i in range(start_at, start_at + n):
+            values = {str(fid): f"extra{i}-{name}" for name, fid in session_fields.items()}
+            res = client.post(
+                "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
+            )
+            assert res.status_code == 201, res.text
+            ids.append(uuid.UUID(res.json()["id"]))
+        return ids
+
+    @staticmethod
+    def _card_at(position: int) -> PracticeCard:
+        """A detached PracticeCard carrying only the `.position` _insertion_position
+        ever reads — never persisted, so the other NOT NULL columns are placeholders."""
+        return PracticeCard(
+            practice_run_id=uuid.uuid4(),
+            card_id=uuid.uuid4(),
+            position=position,
+            prompts=[],
+            answers=[],
+        )
+
+    def test_hard_fail_lands_after_exactly_three_pending_with_four_or_more(
+        self,
+        db,
+        client,
+        existing_user,
+        existing_deck,
+        session_cards,
+        session_config,
+        session_fields,
+    ):
+        self._add_cards(client, existing_deck, session_fields, 2, start_at=3)  # 5 cards total
+        strategy = EmaStrategy()
+        config_id = uuid.UUID(session_config["id"])
+        session = start_practice_run(
+            db, strategy, existing_user.id, "Floor run", [config_id], rng=random.Random(1)
+        )
+        db.commit()
+
+        original = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert original is not None
+
+        ratings = {answer_id: 1 for answer_id in original.answers}  # hard fail: index 0
+        _, requeued = submit_rating(
+            db, strategy, existing_user.id, original.id, ratings, rng=random.Random(2)
+        )
+        db.commit()
+        assert requeued is not None
+
+        pending = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        # 5 started; the original leaves pending (now failed) and the requeue takes
+        # its place, so the pending count is unchanged — but the requeue is no longer
+        # necessarily first, per the floor.
+        assert len(pending) == 5
+        assert pending[3].id == requeued.id  # exactly 3 pending cards ahead of it
+
+    def test_mastery_index_deeper_than_the_floor_wins(self):
+        """Direct test of `_insertion_position`: six pending cards at strictly
+        ascending mastery, a new_score above every one of them (mastery_index=6, well
+        past RETRY_SPACING_FLOOR=3) must land after all six — the clamp only ever
+        raises the floor, it never caps a deeper index back down to it (a clamp, not a
+        fixed placement)."""
+        pending = [(self._card_at(i * _POSITION_GAP), float(i)) for i in range(6)]
+
+        position = _insertion_position(pending, new_score=100.0)
+
+        assert position > pending[-1][0].position
+
+    def test_failing_the_same_card_again_reapplies_the_floor(
+        self,
+        db,
+        client,
+        existing_user,
+        existing_deck,
+        session_cards,
+        session_config,
+        session_fields,
+    ):
+        self._add_cards(client, existing_deck, session_fields, 3, start_at=3)  # 6 cards total
+        strategy = EmaStrategy()
+        config_id = uuid.UUID(session_config["id"])
+        session = start_practice_run(
+            db, strategy, existing_user.id, "Floor run", [config_id], rng=random.Random(1)
+        )
+        db.commit()
+
+        original = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert original is not None
+
+        ratings = {answer_id: 1 for answer_id in original.answers}
+        _, first_requeue = submit_rating(
+            db, strategy, existing_user.id, original.id, ratings, rng=random.Random(2)
+        )
+        db.commit()
+        assert first_requeue is not None
+
+        pending_after_first = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        assert pending_after_first[3].id == first_requeue.id
+
+        # Fail the requeued row itself — a second attempt at the same card_id.
+        ratings_2 = {answer_id: 1 for answer_id in first_requeue.answers}
+        _, second_requeue = submit_rating(
+            db, strategy, existing_user.id, first_requeue.id, ratings_2, rng=random.Random(3)
+        )
+        db.commit()
+        assert second_requeue is not None
+        assert second_requeue.card_id == original.card_id
+
+        pending_after_second = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        # Re-applied fresh against whatever's pending now, not carried over from the
+        # first requeue's own placement.
+        assert pending_after_second[3].id == second_requeue.id
 
 
 class TestPositionCollisionFallback:
@@ -1169,6 +1337,21 @@ class TestRunState:
         )
         assert rate.status_code == 200, rate.text
         assert rate.json()["requeued_practice_card"] is not None
+
+        # ADR 037: with only 2 other pending cards left, the retry's spacing floor
+        # (RETRY_SPACING_FLOOR=3) clamps it to the end of the queue — pass both of the
+        # others before the requeued row resurfaces as the current card.
+        for _ in range(2):
+            current = client.get(f"/api/practice_runs/{session['id']}/state").json()[
+                "current_card"
+            ]
+            assert current["card_id"] != first["card_id"]
+            pass_ratings = {a["field_def_id"]: 4 for a in current["answers"]}
+            passed = client.post(
+                f"/api/practice_cards/{current['practice_card_id']}/rate",
+                json={"ratings": pass_ratings},
+            )
+            assert passed.status_code == 200, passed.text
 
         second = client.get(f"/api/practice_runs/{session['id']}/state").json()["current_card"]
         assert second["card_id"] == first["card_id"]
