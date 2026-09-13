@@ -1,8 +1,20 @@
 import uuid
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, select, update
 
+from app.database_ops.deck_practice_config import db_update_deck_practice_config
+from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef
+from app.models.practice_deck import PracticeDeck
+
+_ARRAY_FIELDS = (
+    "prompt_field_ids",
+    "answer_field_ids",
+    "prompt_pool_ids",
+    "prompt_pool_counts",
+    "answer_pool_ids",
+    "answer_pool_counts",
+)
 
 
 def validate_deck_practice_config(
@@ -76,3 +88,27 @@ def validate_deck_practice_config(
         raise ValueError("at least one prompt field or prompt pool id is required")
     if not answer_field_ids and not answer_pool_ids:
         raise ValueError("at least one answer field or answer pool id is required")
+
+
+def update_deck_practice_config(
+    db: Session, config: DeckPracticeConfig, data: dict
+) -> DeckPracticeConfig:
+    """Applies an already-validated PATCH, severing config lineage first if the update
+    is material (ADR 040): any of the six prompt/answer field or pool arrays actually
+    present in `data` differs — compared as ordered lists, since a reordering is a
+    different config even with the same members — from what's currently stored. A
+    rename-only update (no array field in `data`) is therefore never material. The
+    comparison runs against the stored row before `db_update_deck_practice_config`
+    mutates it; the unlink UPDATE and the config update commit together in that call's
+    own transaction, so a failure there (or a validation failure upstream, which never
+    reaches this function at all) leaves every snapshot's source_config_id untouched."""
+    material = any(
+        field in data and data[field] != getattr(config, field) for field in _ARRAY_FIELDS
+    )
+    if material:
+        db.exec(
+            update(PracticeDeck)
+            .where(col(PracticeDeck.source_config_id) == config.id)
+            .values(source_config_id=None)
+        )
+    return db_update_deck_practice_config(db, config, data)

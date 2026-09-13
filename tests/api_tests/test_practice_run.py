@@ -2009,3 +2009,84 @@ class TestConfigLineage:
             select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
         ).one()
         assert new_snapshot.source_config_id is None
+
+
+class TestConfigEditSeversLineage:
+    """ADR 040 (task 009 T7): materially editing a config nulls source_config_id on
+    every snapshot cut from it — a rename alone, or an update that fails validation,
+    leaves every link untouched."""
+
+    @staticmethod
+    def _second_config(client, session_config, session_fields):
+        f = session_fields
+        payload = {
+            "deck_id": session_config["deck_id"],
+            "name": "Second Config",
+            "prompt_field_ids": [str(f["prompt1"])],
+            "answer_field_ids": [str(f["answer1"])],
+            "prompt_pool_ids": [str(f["pool_p1"]), str(f["pool_p2"]), str(f["pool_p3"])],
+            "prompt_pool_counts": [1],
+            "answer_pool_ids": [str(f["pool_a1"]), str(f["pool_a2"]), str(f["pool_a3"])],
+            "answer_pool_counts": [1],
+        }
+        res = client.post("/api/deck_practice_configs", json=payload)
+        assert res.status_code == 201, res.text
+        return res.json()
+
+    @staticmethod
+    def _snapshot(db, session_id: str):
+        return db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
+        ).one()
+
+    def test_editing_a_pool_array_nulls_only_that_configs_snapshots(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        other_config = self._second_config(client, session_config, session_fields)
+        edited_session = _start(client, "Edited config run", [session_config["id"]])
+        other_session = _start(client, "Other config run", [other_config["id"]])
+
+        # Narrows the pool from 3 ids to 1 — a different ordered list, hence material,
+        # even though prompt_pool_counts=[1] validates against either.
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"prompt_pool_ids": [str(session_fields["pool_p1"])]},
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._snapshot(db, edited_session["id"]).source_config_id is None
+        assert self._snapshot(db, other_session["id"]).source_config_id == uuid.UUID(
+            other_config["id"]
+        )
+
+    def test_rename_only_update_leaves_links_intact(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}", json={"name": "Renamed"}
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+            session_config["id"]
+        )
+
+    def test_failed_validation_leaves_links_intact(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        # Reintroduces prompt1 as an answer field too — a material change to
+        # answer_field_ids, but one that violates pairwise-disjointness against the
+        # unchanged prompt_field_ids and never reaches update_deck_practice_config.
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"answer_field_ids": [str(session_fields["prompt1"])]},
+        )
+        assert res.status_code == 400, res.text
+
+        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+            session_config["id"]
+        )

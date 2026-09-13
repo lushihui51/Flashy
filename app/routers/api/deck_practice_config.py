@@ -9,7 +9,6 @@ from app.database_ops.deck_practice_config import (
     db_delete_deck_practice_config,
     db_read_deck_practice_config,
     db_read_deck_practice_configs_with_context,
-    db_update_deck_practice_config,
 )
 from app.dependencies import CurrentUserDep
 from app.models.deck_practice_config import (
@@ -18,7 +17,10 @@ from app.models.deck_practice_config import (
     DeckPracticeConfigSummary,
     DeckPracticeConfigUpdate,
 )
-from app.services.deck_practice_config import validate_deck_practice_config
+from app.services.deck_practice_config import (
+    update_deck_practice_config,
+    validate_deck_practice_config,
+)
 
 router = APIRouter(prefix="/deck_practice_configs", tags=["Practice Config"])
 
@@ -81,7 +83,7 @@ def read_deck_practice_config(
 
 
 @router.patch("/{config_id}", response_model=DeckPracticeConfigRead, status_code=200)
-def update_deck_practice_config(
+def patch_deck_practice_config(
     db: SessionDep,
     current_user: CurrentUserDep,
     config_id: uuid.UUID,
@@ -98,7 +100,7 @@ def update_deck_practice_config(
     merged = {field: data.get(field, getattr(config, field)) for field in _ARRAY_FIELDS}
     try:
         validate_deck_practice_config(db, config.deck_id, **merged)
-        return db_update_deck_practice_config(db, config, data)
+        return update_deck_practice_config(db, config, data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
