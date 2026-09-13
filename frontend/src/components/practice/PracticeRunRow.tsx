@@ -5,16 +5,16 @@ import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import type { components } from 'src/api/types';
 
-type PracticeSessionSummary = components['schemas']['PracticeSessionSummary'];
+type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 
-type PracticeSessionRowProps = {
-  session: PracticeSessionSummary;
+type PracticeRunRowProps = {
+  session: PracticeRunSummary;
   onDelete: () => void;
 };
 
 /** Not a ListRow: this row carries deck/subject chips and a destructive action of its
  * own, neither of which fits that row's identity-shape-size grammar. */
-export default function PracticeSessionRow({ session, onDelete }: PracticeSessionRowProps) {
+export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProps) {
   return (
     <div className="flex items-center gap-2">
       <Link

@@ -32,7 +32,7 @@ from app.models.field_def import (
 )
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
-from app.models.practice_session import PracticeSession, SessionStatus
+from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
 from app.models.subject import Subject, SubjectCreate, SubjectRead, SubjectSummary, SubjectUpdate
 
@@ -69,8 +69,8 @@ __all__ = [
     "PracticeCard",
     "PracticeCardStatus",
     "PracticeDeck",
-    "PracticeSession",
-    "SessionStatus",
+    "PracticeRun",
+    "RunStatus",
     "ReviewLog",
     "Subject",
     "SubjectCreate",

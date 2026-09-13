@@ -5,12 +5,12 @@ import { RATING_TIERS } from 'src/components/practice/ratingTiers';
 import BottomSheet from 'src/components/ui/BottomSheet';
 import type { components } from 'src/api/types';
 
-type PracticeSessionBreakdown = components['schemas']['PracticeSessionBreakdown'];
+type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
 type BreakdownBucket = components['schemas']['BreakdownBucket'];
 
-type SessionBreakdownProps = {
-  breakdown: PracticeSessionBreakdown;
+type RunBreakdownProps = {
+  breakdown: PracticeRunBreakdown;
 };
 
 /** ADR 029's one retrospective view: a summary line, four bucket tabs (each with its
@@ -35,7 +35,7 @@ function cardTitle(card: BreakdownCard): string {
     : 'Untitled card';
 }
 
-export default function SessionBreakdown({ breakdown }: SessionBreakdownProps) {
+export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
   const [activeBucket, setActiveBucket] = useState<BreakdownBucket>(
     () => TABS.find((tab) => breakdown[tab.bucket] > 0)?.bucket ?? 'passed_first_try',
   );

@@ -2,12 +2,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SessionBreakdown from 'src/components/practice/SessionBreakdown';
+import RunBreakdown from 'src/components/practice/RunBreakdown';
 import type { components } from 'src/api/types';
 
-type PracticeSessionBreakdown = components['schemas']['PracticeSessionBreakdown'];
+type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 
-function breakdown(overrides: Partial<PracticeSessionBreakdown> = {}): PracticeSessionBreakdown {
+function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBreakdown {
   return {
     total_cards: 4,
     passed_first_try: 1,
@@ -110,9 +110,9 @@ function breakdown(overrides: Partial<PracticeSessionBreakdown> = {}): PracticeS
   };
 }
 
-describe('SessionBreakdown', () => {
+describe('RunBreakdown', () => {
   it('shows all four bucket tabs, each with its count', () => {
-    render(<SessionBreakdown breakdown={breakdown()} />);
+    render(<RunBreakdown breakdown={breakdown()} />);
 
     expect(screen.getByRole('tab', { name: 'First try (1)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'One retry (1)' })).toBeInTheDocument();
@@ -121,7 +121,7 @@ describe('SessionBreakdown', () => {
   });
 
   it("a row shows only the primary field's name and value, not prompt/answer content", () => {
-    render(<SessionBreakdown breakdown={breakdown()} />);
+    render(<RunBreakdown breakdown={breakdown()} />);
 
     // Default tab is the first bucket with a nonzero count — passed_first_try.
     expect(screen.getByRole('button', { name: 'Front: Bonjour' })).toBeInTheDocument();
@@ -130,7 +130,7 @@ describe('SessionBreakdown', () => {
 
   it('shows "Untitled card" for a card whose primary field is blank', async () => {
     const user = userEvent.setup();
-    render(<SessionBreakdown breakdown={breakdown()} />);
+    render(<RunBreakdown breakdown={breakdown()} />);
 
     await user.click(screen.getByRole('tab', { name: '2+ retries (1)' }));
 
@@ -140,7 +140,7 @@ describe('SessionBreakdown', () => {
   it('shows a "no cards" message for a bucket with nothing in it', async () => {
     const user = userEvent.setup();
     render(
-      <SessionBreakdown
+      <RunBreakdown
         breakdown={breakdown({
           passed_after_many_fails: 0,
           cards: breakdown().cards.filter((card) => card.bucket !== 'passed_after_many_fails'),
@@ -155,7 +155,7 @@ describe('SessionBreakdown', () => {
 
   it('opens the detail sheet with labels, ratings, and every attempt for a two-attempt card', async () => {
     const user = userEvent.setup();
-    render(<SessionBreakdown breakdown={breakdown()} />);
+    render(<RunBreakdown breakdown={breakdown()} />);
 
     await user.click(screen.getByRole('tab', { name: 'One retry (1)' }));
     await user.click(screen.getByRole('button', { name: 'Front: Bonsoir' }));
@@ -175,7 +175,7 @@ describe('SessionBreakdown', () => {
 
   it('shows no attempt header for a single-attempt card', async () => {
     const user = userEvent.setup();
-    render(<SessionBreakdown breakdown={breakdown()} />);
+    render(<RunBreakdown breakdown={breakdown()} />);
 
     await user.click(screen.getByRole('button', { name: 'Front: Bonjour' }));
 

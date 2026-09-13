@@ -155,7 +155,7 @@ function mockLibrary() {
         ? HttpResponse.json(detail)
         : HttpResponse.json({ detail: 'Deck not found' }, { status: 404 });
     }),
-    http.get(`${BASE}/api/practice_sessions`, () => HttpResponse.json([])),
+    http.get(`${BASE}/api/practice_runs`, () => HttpResponse.json([])),
     http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
       const query = new URL(request.url).searchParams;
       configRequests.push(query);

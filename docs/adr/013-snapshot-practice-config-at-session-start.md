@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged.
 
 ## Context
 

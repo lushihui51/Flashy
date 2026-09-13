@@ -59,21 +59,30 @@ def resolve_prompts_or_answers(
     pool_ids: list[uuid.UUID],
     pool_counts: list[int],
     rng: random.Random,
+    forced_pool_ids: Sequence[uuid.UUID] = (),
 ) -> list[uuid.UUID]:
     """One side (prompts or answers) of pool resolution for one card. Fixed ids are
-    always included if they survive filtering (still live, not blank on this card);
-    pool ids are weighted-sampled from the survivors, with the drawn count — chosen
-    from the config's allowed pool_counts — clamped to how many actually survive."""
+    always included if they survive filtering (still live, not blank on this card).
+    Any `forced_pool_ids` that survive the same filtering are included next, ahead of
+    sampling (ADR 036 — the requeue's guarantee that a field rated "Again" is re-asked);
+    the remaining pool ids are weighted-sampled from the rest, with the drawn count —
+    chosen from the config's allowed pool_counts — reduced by however many were forced
+    and floored at zero, so a card with more forced fields than the drawn count simply
+    carries all of them rather than dropping one to make room."""
     rows = db_fetch_generation_candidates(db, card_id, fixed_ids + pool_ids)
     scores = {row.field_def_id: strategy.field_score(_row_state(row)) for row in rows}
 
     surviving_fixed = [fid for fid in fixed_ids if fid in scores]
-    surviving_pool = [(pid, scores[pid]) for pid in pool_ids if pid in scores]
+    forced = [pid for pid in pool_ids if pid in scores and pid in forced_pool_ids]
+    forced_set = set(forced)
+    surviving_pool = [
+        (pid, scores[pid]) for pid in pool_ids if pid in scores and pid not in forced_set
+    ]
 
     count = rng.choice(pool_counts) if pool_counts else 0
-    sampled_pool = weighted_low_mastery_sample(surviving_pool, count, rng)
+    sampled_pool = weighted_low_mastery_sample(surviving_pool, max(0, count - len(forced)), rng)
 
-    return surviving_fixed + sampled_pool
+    return surviving_fixed + forced + sampled_pool
 
 
 def generate_practice_card_fields(
@@ -87,15 +96,25 @@ def generate_practice_card_fields(
     answer_pool_ids: list[uuid.UUID],
     answer_pool_counts: list[int],
     rng: random.Random,
+    forced_answer_pool_ids: Sequence[uuid.UUID] = (),
 ) -> tuple[list[uuid.UUID], list[uuid.UUID]] | None:
     """Resolves (prompts, answers) for one card under one config snapshot. Returns None
     — meaning skip this card — if zero prompts or zero answers survive, rather than
-    generating an unrenderable practice_card."""
+    generating an unrenderable practice_card. `forced_answer_pool_ids` (ADR 036) only
+    ever applies to the answer side — session-start and rerun generation pass nothing,
+    leaving prompt-side and today's answer-side behavior byte-for-byte unchanged."""
     prompts = resolve_prompts_or_answers(
         db, strategy, card_id, prompt_field_ids, prompt_pool_ids, prompt_pool_counts, rng
     )
     answers = resolve_prompts_or_answers(
-        db, strategy, card_id, answer_field_ids, answer_pool_ids, answer_pool_counts, rng
+        db,
+        strategy,
+        card_id,
+        answer_field_ids,
+        answer_pool_ids,
+        answer_pool_counts,
+        rng,
+        forced_pool_ids=forced_answer_pool_ids,
     )
     if not prompts or not answers:
         return None

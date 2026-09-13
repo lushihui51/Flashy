@@ -28,7 +28,7 @@ function runState(overrides: Record<string, unknown> = {}) {
 
 function mockRun(data: Record<string, unknown> | null = runState()) {
   server.use(
-    http.get(`${BASE}/api/practice_sessions/:id/run`, () =>
+    http.get(`${BASE}/api/practice_runs/:id/state`, () =>
       data
         ? HttpResponse.json(data)
         : HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
@@ -68,7 +68,7 @@ function breakdownState(overrides: Record<string, unknown> = {}) {
 
 function mockBreakdown(data: Record<string, unknown> = breakdownState()) {
   server.use(
-    http.get(`${BASE}/api/practice_sessions/:id/breakdown`, () => HttpResponse.json(data)),
+    http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)),
   );
 }
 
@@ -317,7 +317,7 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     let sentBody: unknown;
     let runCallCount = 0;
     server.use(
-      http.get(`${BASE}/api/practice_sessions/:id/run`, () => {
+      http.get(`${BASE}/api/practice_runs/:id/state`, () => {
         runCallCount += 1;
         return runCallCount === 1
           ? HttpResponse.json(twoAnswerRunState())
@@ -342,7 +342,7 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
         return HttpResponse.json({
           rated_practice_card: {
             id: 'pc1',
-            practice_session_id: 'ps1',
+            practice_run_id: 'ps1',
             card_id: 'card1',
             position: 0,
             prompts: [],

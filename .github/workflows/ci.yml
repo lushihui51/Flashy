@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flashy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # None of these need to be real: tests override auth (get_current_app_user) and
+      # mock the Clerk JWKS client (tests/api_tests/test_verify_clerk_session.py), and
+      # Settings() only needs every field to be present as a string/list to construct.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/flashy
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/flashy_test
+      PERMITTED_ORIGINS: '["http://localhost:5173"]'
+      VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+      CLERK_FAPI_URL: https://ci-placeholder.clerk.accounts.dev
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create test database
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE flashy_test;"
+
+      - name: Run migrations from an empty database
+        run: uv run alembic upgrade head
+
+      - name: Run backend tests
+        run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build

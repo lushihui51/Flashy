@@ -13,7 +13,13 @@ from app.services.practice_generation import (
     generate_practice_card_fields,
     resolve_prompts_or_answers,
 )
-from app.services.practice_session import session_progress, start_practice_session, submit_rating
+from app.services.practice_run import (
+    _POSITION_GAP,
+    _insertion_position,
+    run_progress,
+    start_practice_run,
+    submit_rating,
+)
 
 
 @pytest.fixture
@@ -67,10 +73,10 @@ def session_config(client, existing_deck, session_fields):
     return res.json()
 
 
-class TestPracticeSessionHTTPFlow:
+class TestPracticeRunHTTPFlow:
     def test_start_session(self, client, existing_user, session_cards, session_config):
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -84,7 +90,7 @@ class TestPracticeSessionHTTPFlow:
 
     def test_start_session_config_not_found(self, client, existing_user):
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -95,7 +101,7 @@ class TestPracticeSessionHTTPFlow:
 
     def test_run_state_and_rate_pass(self, client, existing_user, session_cards, session_config):
         start_res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -104,7 +110,7 @@ class TestPracticeSessionHTTPFlow:
         )
         session_id = start_res.json()["id"]
 
-        run_res = client.get(f"/api/practice_sessions/{session_id}/run")
+        run_res = client.get(f"/api/practice_runs/{session_id}/state")
         assert run_res.status_code == 200, run_res.text
         card = run_res.json()["current_card"]
         assert card["attempt"] == 1
@@ -123,7 +129,7 @@ class TestPracticeSessionHTTPFlow:
         self, client, existing_user, session_cards, session_config
     ):
         start_res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -131,7 +137,7 @@ class TestPracticeSessionHTTPFlow:
             },
         )
         session_id = start_res.json()["id"]
-        card = client.get(f"/api/practice_sessions/{session_id}/run").json()["current_card"]
+        card = client.get(f"/api/practice_runs/{session_id}/state").json()["current_card"]
 
         res = client.post(
             f"/api/practice_cards/{card['practice_card_id']}/rate",
@@ -143,7 +149,7 @@ class TestPracticeSessionHTTPFlow:
         self, client, existing_user, session_cards, session_config
     ):
         start_res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -151,7 +157,7 @@ class TestPracticeSessionHTTPFlow:
             },
         )
         session_id = start_res.json()["id"]
-        card = client.get(f"/api/practice_sessions/{session_id}/run").json()["current_card"]
+        card = client.get(f"/api/practice_runs/{session_id}/state").json()["current_card"]
         ratings = {a["field_def_id"]: 4 for a in card["answers"]}
 
         first = client.post(
@@ -168,7 +174,7 @@ class TestPracticeSessionHTTPFlow:
         self, client, existing_user, session_cards, session_config
     ):
         start_res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Evening run",
                 "user_id": str(existing_user.id),
@@ -176,7 +182,7 @@ class TestPracticeSessionHTTPFlow:
             },
         )
         session_id = start_res.json()["id"]
-        card = client.get(f"/api/practice_sessions/{session_id}/run").json()["current_card"]
+        card = client.get(f"/api/practice_runs/{session_id}/state").json()["current_card"]
 
         ratings = {a["field_def_id"]: 1 for a in card["answers"]}  # rating 1 -> fail
         rate_res = client.post(
@@ -193,7 +199,7 @@ class TestPracticeSessionHTTPFlow:
         assert requeued["status"] == "pending"
 
 
-class TestPracticeSessionAcceptance:
+class TestPracticeRunAcceptance:
     """The Phase 4.2 acceptance test: start, rate, fail, requeue — the requeued card is
     a new row with a different prompt/answer combination and a position consistent
     with its updated mastery; the old row remains failed."""
@@ -204,7 +210,7 @@ class TestPracticeSessionAcceptance:
         strategy = EmaStrategy()
         config_id = uuid.UUID(session_config["id"])
 
-        session = start_practice_session(
+        session = start_practice_run(
             db, strategy, existing_user.id, "Acceptance run", [config_id], rng=random.Random(1)
         )
         db.commit()
@@ -212,7 +218,7 @@ class TestPracticeSessionAcceptance:
         original = db.exec(
             select(PracticeCard)
             .where(
-                PracticeCard.practice_session_id == session.id,
+                PracticeCard.practice_run_id == session.id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
             .order_by(PracticeCard.position)
@@ -241,31 +247,338 @@ class TestPracticeSessionAcceptance:
             original_answers,
         )
 
-        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR),
-        # so a forced fail always drops the requeued card's mastery below all of them
-        # — the exact scenario `_insertion_position` guarantees becomes the new session
-        # minimum: it is inserted before whatever was previously second-in-queue,
-        # making it the new front. This is a hard guarantee of the insertion formula,
-        # not an approximation — assert the guarantee itself (new front of the pending
-        # queue, i.e. it's what gets served next), not just "position changed".
+        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR), so
+        # a forced fail always drops the requeued card's mastery to index 0 — the front
+        # of the mastery order. But only 2 other pending cards remain once the original
+        # is marked failed, so ADR 037's spacing floor (RETRY_SPACING_FLOOR=3) clamps
+        # that index up to min(3, len(pending)) = 2: the end of the queue, not the
+        # front. This is a hard guarantee of the clamp, not an approximation — assert
+        # the guarantee itself (new back of the pending queue), not just "position
+        # changed". TestRetrySpacingFloor covers the floor directly with ≥4 pending
+        # cards, where the clamp and the mastery index can disagree either way.
         assert requeued.position != original_position
         pending_positions = db.exec(
             select(PracticeCard.position).where(
-                PracticeCard.practice_session_id == session.id,
+                PracticeCard.practice_run_id == session.id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
         ).all()
         assert len(pending_positions) == len(set(pending_positions))  # all unique
-        assert requeued.position == min(pending_positions)
+        assert requeued.position == max(pending_positions)
 
         current = db_read_current_practice_card(db, session.id, existing_user.id)
         assert current is not None
-        assert current.id == requeued.id
+        assert current.id != requeued.id
 
         db.refresh(original)
         assert original.status == PracticeCardStatus.failed
         assert set(original.prompts) == original_prompts
         assert set(original.answers) == original_answers
+
+
+class TestForcedFailedAnswerFields:
+    """ADR 036: the retry of a failed card force-includes every answer field rated
+    "Again" that is still live and non-blank, ahead of pool sampling. With the fixture's
+    answer_pool_counts=[1], the forced fields fill (or overflow) the whole draw, so
+    every assertion here is deterministic for any rng seed — the seed never gets a
+    chance to make the test pass by luck."""
+
+    def _start_and_first_pending(self, db, existing_user, config_id, seed):
+        strategy = EmaStrategy()
+        session = start_practice_run(
+            db,
+            strategy,
+            existing_user.id,
+            "Forced-fields run",
+            [uuid.UUID(config_id)],
+            rng=random.Random(seed),
+        )
+        db.commit()
+        card = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert card is not None
+        return strategy, card
+
+    def test_failed_pool_answer_field_is_reasked(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        fixed = session_fields["answer1"]
+        [failed_pool] = [fid for fid in original.answers if fid != fixed]
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 4, failed_pool: 1},
+            rng=random.Random(2),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # The drawn count is 1 and the forced field fills it, so the answer side is
+        # exactly fixed + forced — no sampled remainder for the seed to vary.
+        assert requeued.answers == [fixed, failed_pool]
+
+    def test_two_failed_pool_fields_both_reasked_when_count_is_one(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        f = session_fields
+        # Craft a prior appearance carrying two pool answers even though this
+        # snapshot's drawn count is 1 — the state a chained retry can reach — to hit
+        # the overflow rule: forced fields exceed the draw and dropping one is never
+        # permitted (ADR 036).
+        original.answers = [f["answer1"], f["pool_a1"], f["pool_a2"]]
+        db.add(original)
+        db.commit()
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {f["answer1"]: 4, f["pool_a1"]: 1, f["pool_a2"]: 1},
+            rng=random.Random(5),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # Both forced (in answer_pool_ids order), zero sampled: max(0, 1 - 2) slots.
+        assert requeued.answers == [f["answer1"], f["pool_a1"], f["pool_a2"]]
+
+    def test_failed_fixed_answer_field_still_reasked(
+        self, db, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        f = session_fields
+        fixed = f["answer1"]
+        [pool_field] = [fid for fid in original.answers if fid != fixed]
+
+        # Fail only the fixed field; the pool field passes.
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 1, pool_field: 4},
+            rng=random.Random(11),
+        )
+        db.commit()
+
+        assert requeued is not None
+        # A fixed field was never at risk — always included — but guard that the
+        # forcing change didn't disturb it, and that a failed fixed field is not
+        # double-included by the forced-pool path (it's fixed, not pool): exactly one
+        # fixed slot plus the one drawn pool slot.
+        assert requeued.answers[0] == fixed
+        assert len(requeued.answers) == 2
+        assert requeued.answers[1] in {f["pool_a1"], f["pool_a2"], f["pool_a3"]}
+
+    def test_archived_failed_pool_field_drops_out_and_card_still_requeues(
+        self, db, client, existing_user, session_cards, session_config, session_fields
+    ):
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        fixed = session_fields["answer1"]
+        [failed_pool] = [fid for fid in original.answers if fid != fixed]
+
+        archived = client.delete(f"/api/fields/{failed_pool}")
+        assert archived.status_code == 200, archived.text
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 4, failed_pool: 1},
+            rng=random.Random(4),
+        )
+        db.commit()
+
+        assert requeued is not None
+        assert failed_pool not in requeued.answers
+        # The card still generates: the fixed answer survives, and the pool draw fills
+        # its one slot from the two remaining live pool fields.
+        assert requeued.answers[0] == fixed
+        assert len(requeued.answers) == 2
+        assert requeued.answers[1] in {
+            fid for name, fid in session_fields.items() if name.startswith("pool_a")
+        } - {failed_pool}
+
+
+class TestRetrySpacingFloor:
+    """ADR 037: RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up,
+    never down — a retry surfaces only after that many other pending cards have had
+    their turn, or at the end of the queue with fewer than that remaining. The "2
+    pending cards -> retry is last" case is already covered by
+    TestPracticeRunAcceptance.test_full_fail_requeue_cycle (its own scenario, not
+    duplicated here)."""
+
+    @staticmethod
+    def _add_cards(client, existing_deck, session_fields, n, start_at):
+        ids = []
+        for i in range(start_at, start_at + n):
+            values = {str(fid): f"extra{i}-{name}" for name, fid in session_fields.items()}
+            res = client.post(
+                "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
+            )
+            assert res.status_code == 201, res.text
+            ids.append(uuid.UUID(res.json()["id"]))
+        return ids
+
+    @staticmethod
+    def _card_at(position: int) -> PracticeCard:
+        """A detached PracticeCard carrying only the `.position` _insertion_position
+        ever reads — never persisted, so the other NOT NULL columns are placeholders."""
+        return PracticeCard(
+            practice_run_id=uuid.uuid4(),
+            card_id=uuid.uuid4(),
+            position=position,
+            prompts=[],
+            answers=[],
+        )
+
+    def test_hard_fail_lands_after_exactly_three_pending_with_four_or_more(
+        self,
+        db,
+        client,
+        existing_user,
+        existing_deck,
+        session_cards,
+        session_config,
+        session_fields,
+    ):
+        self._add_cards(client, existing_deck, session_fields, 2, start_at=3)  # 5 cards total
+        strategy = EmaStrategy()
+        config_id = uuid.UUID(session_config["id"])
+        session = start_practice_run(
+            db, strategy, existing_user.id, "Floor run", [config_id], rng=random.Random(1)
+        )
+        db.commit()
+
+        original = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert original is not None
+
+        ratings = {answer_id: 1 for answer_id in original.answers}  # hard fail: index 0
+        _, requeued = submit_rating(
+            db, strategy, existing_user.id, original.id, ratings, rng=random.Random(2)
+        )
+        db.commit()
+        assert requeued is not None
+
+        pending = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        # 5 started; the original leaves pending (now failed) and the requeue takes
+        # its place, so the pending count is unchanged — but the requeue is no longer
+        # necessarily first, per the floor.
+        assert len(pending) == 5
+        assert pending[3].id == requeued.id  # exactly 3 pending cards ahead of it
+
+    def test_mastery_index_deeper_than_the_floor_wins(self):
+        """Direct test of `_insertion_position`: six pending cards at strictly
+        ascending mastery, a new_score above every one of them (mastery_index=6, well
+        past RETRY_SPACING_FLOOR=3) must land after all six — the clamp only ever
+        raises the floor, it never caps a deeper index back down to it (a clamp, not a
+        fixed placement)."""
+        pending = [(self._card_at(i * _POSITION_GAP), float(i)) for i in range(6)]
+
+        position = _insertion_position(pending, new_score=100.0)
+
+        assert position > pending[-1][0].position
+
+    def test_failing_the_same_card_again_reapplies_the_floor(
+        self,
+        db,
+        client,
+        existing_user,
+        existing_deck,
+        session_cards,
+        session_config,
+        session_fields,
+    ):
+        self._add_cards(client, existing_deck, session_fields, 3, start_at=3)  # 6 cards total
+        strategy = EmaStrategy()
+        config_id = uuid.UUID(session_config["id"])
+        session = start_practice_run(
+            db, strategy, existing_user.id, "Floor run", [config_id], rng=random.Random(1)
+        )
+        db.commit()
+
+        original = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).first()
+        assert original is not None
+
+        ratings = {answer_id: 1 for answer_id in original.answers}
+        _, first_requeue = submit_rating(
+            db, strategy, existing_user.id, original.id, ratings, rng=random.Random(2)
+        )
+        db.commit()
+        assert first_requeue is not None
+
+        pending_after_first = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        assert pending_after_first[3].id == first_requeue.id
+
+        # Fail the requeued row itself — a second attempt at the same card_id.
+        ratings_2 = {answer_id: 1 for answer_id in first_requeue.answers}
+        _, second_requeue = submit_rating(
+            db, strategy, existing_user.id, first_requeue.id, ratings_2, rng=random.Random(3)
+        )
+        db.commit()
+        assert second_requeue is not None
+        assert second_requeue.card_id == original.card_id
+
+        pending_after_second = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session.id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        # Re-applied fresh against whatever's pending now, not carried over from the
+        # first requeue's own placement.
+        assert pending_after_second[3].id == second_requeue.id
 
 
 class TestPositionCollisionFallback:
@@ -278,12 +591,12 @@ class TestPositionCollisionFallback:
         leaves virtual-boundary gaps of 1000+, so this can't be provoked by just
         wedging existing cards close together — the stub makes it deterministic
         instead of trying to engineer mastery scores precisely enough to collide."""
-        import app.services.practice_session as practice_session_module
+        import app.services.practice_run as practice_run_module
 
         strategy = EmaStrategy()
         config_id = uuid.UUID(session_config["id"])
 
-        session = start_practice_session(
+        session = start_practice_run(
             db, strategy, existing_user.id, "Collision run", [config_id], rng=random.Random(7)
         )
         db.commit()
@@ -291,7 +604,7 @@ class TestPositionCollisionFallback:
         pending = db.exec(
             select(PracticeCard)
             .where(
-                PracticeCard.practice_session_id == session.id,
+                PracticeCard.practice_run_id == session.id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
             .order_by(PracticeCard.position)
@@ -308,7 +621,7 @@ class TestPositionCollisionFallback:
         target = pending[1]
         assert target.id != occupied.id
 
-        monkeypatch.setattr(practice_session_module, "_insertion_position", lambda *a, **k: 0)
+        monkeypatch.setattr(practice_run_module, "_insertion_position", lambda *a, **k: 0)
 
         ratings = {answer_id: 1 for answer_id in target.answers}
         rated, requeued = submit_rating(
@@ -327,7 +640,7 @@ class TestPositionCollisionFallback:
 
         positions = db.exec(
             select(PracticeCard.position).where(
-                PracticeCard.practice_session_id == session.id,
+                PracticeCard.practice_run_id == session.id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
         ).all()
@@ -335,7 +648,7 @@ class TestPositionCollisionFallback:
 
         positions = db.exec(
             select(PracticeCard.position).where(
-                PracticeCard.practice_session_id == session.id,
+                PracticeCard.practice_run_id == session.id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
         ).all()
@@ -431,7 +744,7 @@ class TestBlankValueGenerationFilter:
 
 def _start(client, name, config_ids):
     res = client.post(
-        "/api/practice_sessions",
+        "/api/practice_runs",
         json={"name": name, "deck_practice_config_ids": config_ids},
     )
     assert res.status_code == 201, res.text
@@ -443,7 +756,7 @@ def _finish_session(client, session_id):
     on every answer field) — a pass never requeues, so this always terminates once the
     session's practice_cards run out."""
     for _ in range(50):
-        run = client.get(f"/api/practice_sessions/{session_id}/run").json()
+        run = client.get(f"/api/practice_runs/{session_id}/state").json()
         if run["current_card"] is None:
             return
         card = run["current_card"]
@@ -456,11 +769,11 @@ def _finish_session(client, session_id):
 
 
 def _bare_practice_card(card_id, status):
-    """An unpersisted PracticeCard for session_progress's pure-function tests below —
+    """An unpersisted PracticeCard for run_progress's pure-function tests below —
     the fold only reads card_id and status, and requires callers to already hand it
     cards in created_at-ascending order (list position stands in for that here)."""
     return PracticeCard(
-        practice_session_id=uuid.uuid4(),
+        practice_run_id=uuid.uuid4(),
         card_id=card_id,
         position=0,
         prompts=[],
@@ -469,8 +782,8 @@ def _bare_practice_card(card_id, status):
     )
 
 
-class TestPracticeSessionList:
-    """GET /api/practice_sessions — the practice overview's only read. Relevance to a
+class TestPracticeRunList:
+    """GET /api/practice_runs — the practice overview's only read. Relevance to a
     subject or deck is answered through practice_deck → deck → subject and nothing else
     (schema invariant 5: a session has no config lineage)."""
 
@@ -479,7 +792,7 @@ class TestPracticeSessionList:
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
-        res = client.get("/api/practice_sessions")
+        res = client.get("/api/practice_runs")
         assert res.status_code == 200, res.text
         rows = res.json()
 
@@ -498,7 +811,7 @@ class TestPracticeSessionList:
         name = "Aug 24, 2026, 2:15 PM"
         created = _start(client, name, [multi_subject_library["configs"]["a"]["id"]])
         assert created["name"] == name
-        assert client.get(f"/api/practice_sessions/{created['id']}").json()["name"] == name
+        assert client.get(f"/api/practice_runs/{created['id']}").json()["name"] == name
 
     def test_session_spanning_two_decks_lists_both(self, client, multi_subject_library):
         lib = multi_subject_library
@@ -507,7 +820,7 @@ class TestPracticeSessionList:
             "Both decks",
             [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]],
         )
-        rows = client.get("/api/practice_sessions").json()
+        rows = client.get("/api/practice_runs").json()
         assert len(rows) == 1
         assert {deck["subject_name"] for deck in rows[0]["decks"]} == {"Alpha", "Beta"}
 
@@ -517,7 +830,7 @@ class TestPracticeSessionList:
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
         rows = client.get(
-            "/api/practice_sessions", params={"subject_id": lib["subjects"]["a"]["id"]}
+            "/api/practice_runs", params={"subject_id": lib["subjects"]["a"]["id"]}
         ).json()
         assert [row["name"] for row in rows] == ["Alpha run"]
 
@@ -527,7 +840,7 @@ class TestPracticeSessionList:
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
         rows = client.get(
-            "/api/practice_sessions", params={"deck_id": lib["decks"]["b"]["id"]}
+            "/api/practice_runs", params={"deck_id": lib["decks"]["b"]["id"]}
         ).json()
         assert [row["name"] for row in rows] == ["Beta run"]
 
@@ -537,7 +850,7 @@ class TestPracticeSessionList:
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
         rows = client.get(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             params={
                 "subject_id": lib["subjects"]["a"]["id"],
                 "deck_id": lib["decks"]["b"]["id"],
@@ -552,23 +865,23 @@ class TestPracticeSessionList:
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
 
         act_as(other_user)
-        assert client.get("/api/practice_sessions").json() == []
+        assert client.get("/api/practice_runs").json() == []
         assert (
             client.get(
-                "/api/practice_sessions", params={"subject_id": lib["subjects"]["a"]["id"]}
+                "/api/practice_runs", params={"subject_id": lib["subjects"]["a"]["id"]}
             ).json()
             == []
         )
 
 
-class TestSessionStartErrorShape:
+class TestRunStartErrorShape:
     """The creation page selects several configs at once, so a start failure has to name
     the offending config rather than arrive as a bare message."""
 
     def test_unknown_config_404s_with_the_config_id(self, client):
         missing = str(uuid.uuid4())
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={"name": "Run", "deck_practice_config_ids": [missing]},
         )
         assert res.status_code == 404
@@ -595,7 +908,7 @@ class TestSessionStartErrorShape:
         assert second.status_code == 201, second.text
 
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={
                 "name": "Run",
                 "deck_practice_config_ids": [session_config["id"], second.json()["id"]],
@@ -614,7 +927,7 @@ class TestSessionStartErrorShape:
         assert archived.status_code == 200, archived.text
 
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={"name": "Run", "deck_practice_config_ids": [session_config["id"]]},
         )
         assert res.status_code == 400
@@ -647,17 +960,17 @@ class TestSessionStartErrorShape:
         db.commit()
 
         res = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={"name": "Run", "deck_practice_config_ids": [str(legacy.id)]},
         )
         assert res.status_code == 400
         detail = res.json()["detail"]
         assert detail["code"] == "stale_config"
         assert detail["config_id"] == str(legacy.id)
-        assert client.get("/api/practice_sessions").json() == []
+        assert client.get("/api/practice_runs").json() == []
 
 
-class TestPracticeSessionDelete:
+class TestPracticeRunDelete:
     """A session owns its practice_decks and practice_cards outright, so deleting it
     takes them with it (ADR 015, amended). review_log is history and survives — the same
     split ADR 015 drew for deck deletion, applied one level up."""
@@ -667,12 +980,12 @@ class TestPracticeSessionDelete:
     ):
         from app.models.practice_card import PracticeCard
         from app.models.practice_deck import PracticeDeck
-        from app.models.practice_session import PracticeSession
+        from app.models.practice_run import PracticeRun
 
         created = _start(client, "Doomed run", [session_config["id"]])
         session_id = uuid.UUID(created["id"])
 
-        card = client.get(f"/api/practice_sessions/{created['id']}/run").json()["current_card"]
+        card = client.get(f"/api/practice_runs/{created['id']}/state").json()["current_card"]
         rated = client.post(
             f"/api/practice_cards/{card['practice_card_id']}/rate",
             json={"ratings": {a["field_def_id"]: 4 for a in card["answers"]}},
@@ -684,24 +997,24 @@ class TestPracticeSessionDelete:
         )
         assert review_log_ids, "rating should have produced a review_log row"
 
-        deleted = client.delete(f"/api/practice_sessions/{created['id']}")
+        deleted = client.delete(f"/api/practice_runs/{created['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        assert db.get(PracticeSession, session_id) is None
+        assert db.get(PracticeRun, session_id) is None
         assert (
             db.exec(
-                select(PracticeCard).where(PracticeCard.practice_session_id == session_id)
+                select(PracticeCard).where(PracticeCard.practice_run_id == session_id)
             ).all()
             == []
         )
         assert (
             db.exec(
-                select(PracticeDeck).where(PracticeDeck.practice_session_id == session_id)
+                select(PracticeDeck).where(PracticeDeck.practice_run_id == session_id)
             ).all()
             == []
         )
-        assert client.get(f"/api/practice_sessions/{created['id']}").status_code == 404
-        assert client.get("/api/practice_sessions").json() == []
+        assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
+        assert client.get("/api/practice_runs").json() == []
 
         # History outlives the session: the rows stay, only the practice_card reference
         # nulls out, so rebuild_mastery still replays them.
@@ -712,7 +1025,7 @@ class TestPracticeSessionDelete:
         assert all(row.field_def_id is not None for row in surviving)
 
     def test_delete_unknown_session_404s(self, client):
-        assert client.delete(f"/api/practice_sessions/{uuid.uuid4()}").status_code == 404
+        assert client.delete(f"/api/practice_runs/{uuid.uuid4()}").status_code == 404
 
     def test_delete_another_users_session_404s(
         self, client, act_as, other_user, session_cards, session_config
@@ -720,16 +1033,16 @@ class TestPracticeSessionDelete:
         created = _start(client, "Not yours", [session_config["id"]])
 
         act_as(other_user)
-        assert client.delete(f"/api/practice_sessions/{created['id']}").status_code == 404
+        assert client.delete(f"/api/practice_runs/{created['id']}").status_code == 404
 
-        act_as_owner = client.get(f"/api/practice_sessions/{created['id']}")
+        act_as_owner = client.get(f"/api/practice_runs/{created['id']}")
         assert act_as_owner.status_code == 404  # still acting as other_user
 
 
-class TestPracticeSessionDetailShape:
-    """GET /api/practice_sessions/{id} (T1, MD-3): the detail page needs the same deck
+class TestPracticeRunDetailShape:
+    """GET /api/practice_runs/{id} (T1, MD-3): the detail page needs the same deck
     chips the list already carries, so the single-session read returns
-    PracticeSessionSummary too — not a client-side join of the list endpoint."""
+    PracticeRunSummary too — not a client-side join of the list endpoint."""
 
     def test_detail_carries_decks_and_deleted_deck_count(self, client, multi_subject_library):
         lib = multi_subject_library
@@ -742,7 +1055,7 @@ class TestPracticeSessionDetailShape:
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        res = client.get(f"/api/practice_sessions/{created['id']}")
+        res = client.get(f"/api/practice_runs/{created['id']}")
         assert res.status_code == 200, res.text
         data = res.json()
         assert data["name"] == "Both decks"
@@ -752,7 +1065,7 @@ class TestPracticeSessionDetailShape:
     def test_detail_with_every_deck_intact_counts_zero(self, client, multi_subject_library):
         created = _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
 
-        res = client.get(f"/api/practice_sessions/{created['id']}")
+        res = client.get(f"/api/practice_runs/{created['id']}")
         assert res.status_code == 200, res.text
         data = res.json()
         assert data["deleted_deck_count"] == 0
@@ -771,10 +1084,10 @@ class TestPracticeSessionDetailShape:
         created = _start(client, "Not yours", [multi_subject_library["configs"]["a"]["id"]])
 
         act_as(other_user)
-        assert client.get(f"/api/practice_sessions/{created['id']}").status_code == 404
+        assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
 
     def test_detail_for_missing_session_404s(self, client):
-        assert client.get(f"/api/practice_sessions/{uuid.uuid4()}").status_code == 404
+        assert client.get(f"/api/practice_runs/{uuid.uuid4()}").status_code == 404
 
 
 class TestDeletedDeckChips:
@@ -795,14 +1108,14 @@ class TestDeletedDeckChips:
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        rows = client.get("/api/practice_sessions").json()
+        rows = client.get("/api/practice_runs").json()
         assert len(rows) == 1
         assert [deck["subject_name"] for deck in rows[0]["decks"]] == ["Beta"]
         assert rows[0]["deleted_deck_count"] == 1
 
     def test_sessions_with_every_deck_intact_count_zero(self, client, multi_subject_library):
         _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
-        rows = client.get("/api/practice_sessions").json()
+        rows = client.get("/api/practice_runs").json()
         assert rows[0]["deleted_deck_count"] == 0
 
     def test_a_deleted_deck_no_longer_matches_its_own_filter(
@@ -812,17 +1125,17 @@ class TestDeletedDeckChips:
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
         assert client.delete(f"/api/decks/{lib['decks']['a']['id']}").status_code == 204
 
-        assert client.get("/api/practice_sessions").json() != []
+        assert client.get("/api/practice_runs").json() != []
         assert (
             client.get(
-                "/api/practice_sessions", params={"deck_id": lib["decks"]["a"]["id"]}
+                "/api/practice_runs", params={"deck_id": lib["decks"]["a"]["id"]}
             ).json()
             == []
         )
 
 
-class TestSessionProgressFold:
-    """session_progress (ADR 028) as a pure function, no DB or generation involved —
+class TestRunProgressFold:
+    """run_progress (ADR 028) as a pure function, no DB or generation involved —
     the chain/bucket rule itself, independent of how a chain came to look that way."""
 
     def test_all_four_buckets_from_each_chains_last_row(self):
@@ -835,7 +1148,7 @@ class TestSessionProgressFold:
             _bare_practice_card(stuck_id, PracticeCardStatus.failed),  # no successor -> still_failed
         ]
 
-        progress = session_progress(cards)
+        progress = run_progress(cards)
 
         assert progress.total_cards == 4
         assert progress.unseen == 1
@@ -851,14 +1164,14 @@ class TestSessionProgressFold:
             _bare_practice_card(card_id, PracticeCardStatus.failed),  # last row: no successor
         ]
 
-        progress = session_progress(cards)
+        progress = run_progress(cards)
 
         assert progress.total_cards == 1
         assert progress.still_failed == 1
         assert progress.unseen == progress.retry_pending == progress.passed == 0
 
     def test_empty_session_is_all_zero(self):
-        progress = session_progress([])
+        progress = run_progress([])
         assert progress.total_cards == 0
         assert progress.unseen == progress.retry_pending == 0
         assert progress.passed == progress.still_failed == 0
@@ -909,7 +1222,7 @@ class TestRunState:
         ).json()
 
         session = _start(client, "Order run", [config["id"]])
-        run = client.get(f"/api/practice_sessions/{session['id']}/run")
+        run = client.get(f"/api/practice_runs/{session['id']}/state")
         assert run.status_code == 200, run.text
         data = run.json()
 
@@ -967,7 +1280,7 @@ class TestRunState:
         patch = client.patch(f"/api/cards/{card['id']}", json={"values": {answer["id"]: ""}})
         assert patch.status_code == 200, patch.text
 
-        run = client.get(f"/api/practice_sessions/{session['id']}/run").json()
+        run = client.get(f"/api/practice_runs/{session['id']}/state").json()
         assert run["current_card"]["answers"] == [
             {"field_def_id": answer["id"], "name": "answer", "type": "text", "value": ""}
         ]
@@ -1005,7 +1318,7 @@ class TestRunState:
         archived = client.delete(f"/api/fields/{answer['id']}")
         assert archived.status_code == 200, archived.text
 
-        run = client.get(f"/api/practice_sessions/{session['id']}/run").json()
+        run = client.get(f"/api/practice_runs/{session['id']}/state").json()
         assert run["current_card"]["answers"] == [
             {"field_def_id": answer["id"], "name": "answer", "type": "text", "value": "A"}
         ]
@@ -1015,7 +1328,7 @@ class TestRunState:
     ):
         session = _start(client, "Attempt run", [session_config["id"]])
 
-        first = client.get(f"/api/practice_sessions/{session['id']}/run").json()["current_card"]
+        first = client.get(f"/api/practice_runs/{session['id']}/state").json()["current_card"]
         assert first["attempt"] == 1
 
         ratings = {a["field_def_id"]: 1 for a in first["answers"]}  # rating 1 -> fail
@@ -1025,7 +1338,22 @@ class TestRunState:
         assert rate.status_code == 200, rate.text
         assert rate.json()["requeued_practice_card"] is not None
 
-        second = client.get(f"/api/practice_sessions/{session['id']}/run").json()["current_card"]
+        # ADR 037: with only 2 other pending cards left, the retry's spacing floor
+        # (RETRY_SPACING_FLOOR=3) clamps it to the end of the queue — pass both of the
+        # others before the requeued row resurfaces as the current card.
+        for _ in range(2):
+            current = client.get(f"/api/practice_runs/{session['id']}/state").json()[
+                "current_card"
+            ]
+            assert current["card_id"] != first["card_id"]
+            pass_ratings = {a["field_def_id"]: 4 for a in current["answers"]}
+            passed = client.post(
+                f"/api/practice_cards/{current['practice_card_id']}/rate",
+                json={"ratings": pass_ratings},
+            )
+            assert passed.status_code == 200, passed.text
+
+        second = client.get(f"/api/practice_runs/{session['id']}/state").json()["current_card"]
         assert second["card_id"] == first["card_id"]
         assert second["practice_card_id"] != first["practice_card_id"]
         assert second["attempt"] == 2
@@ -1036,7 +1364,7 @@ class TestRunState:
         session = _start(client, "Finish run", [session_config["id"]])
 
         for _ in range(len(session_cards) + 5):  # generous bound; a pass never requeues
-            run = client.get(f"/api/practice_sessions/{session['id']}/run").json()
+            run = client.get(f"/api/practice_runs/{session['id']}/state").json()
             if run["current_card"] is None:
                 break
             card = run["current_card"]
@@ -1048,7 +1376,7 @@ class TestRunState:
         else:
             pytest.fail("session never reported current_card: null")
 
-        final = client.get(f"/api/practice_sessions/{session['id']}/run").json()
+        final = client.get(f"/api/practice_runs/{session['id']}/state").json()
         assert final["current_card"] is None
         assert final["session_status"] == "completed"
 
@@ -1105,7 +1433,7 @@ class TestRunState:
         by_card_id = {
             str(pc.card_id): pc
             for pc in db.exec(
-                select(PracticeCard).where(PracticeCard.practice_session_id == session_id)
+                select(PracticeCard).where(PracticeCard.practice_run_id == session_id)
             ).all()
         }
         assert set(by_card_id) == {unseen_card, retry_card, passed_card, stuck_card}
@@ -1138,7 +1466,7 @@ class TestRunState:
         assert fail_stuck.status_code == 200, fail_stuck.text
         assert fail_stuck.json()["requeued_practice_card"] is None
 
-        mid_run = client.get(f"/api/practice_sessions/{session['id']}/run")
+        mid_run = client.get(f"/api/practice_runs/{session['id']}/state")
         assert mid_run.status_code == 200, mid_run.text
         mid_data = mid_run.json()
         assert mid_data["session_status"] == "active"
@@ -1155,7 +1483,7 @@ class TestRunState:
         # retry_card's requeued row) to drive the session to completion.
         remaining = db.exec(
             select(PracticeCard).where(
-                PracticeCard.practice_session_id == session_id,
+                PracticeCard.practice_run_id == session_id,
                 PracticeCard.status == PracticeCardStatus.pending,
             )
         ).all()
@@ -1166,7 +1494,7 @@ class TestRunState:
             )
             assert res.status_code == 200, res.text
 
-        final = client.get(f"/api/practice_sessions/{session['id']}/run")
+        final = client.get(f"/api/practice_runs/{session['id']}/state")
         assert final.status_code == 200, final.text
         final_data = final.json()
         assert final_data["current_card"] is None
@@ -1180,14 +1508,14 @@ class TestRunState:
         }
 
     def test_404_for_unknown_session(self, client):
-        assert client.get(f"/api/practice_sessions/{uuid.uuid4()}/run").status_code == 404
+        assert client.get(f"/api/practice_runs/{uuid.uuid4()}/state").status_code == 404
 
     def test_404_for_foreign_session(
         self, client, act_as, other_user, session_cards, session_config
     ):
         session = _start(client, "Mine", [session_config["id"]])
         act_as(other_user)
-        assert client.get(f"/api/practice_sessions/{session['id']}/run").status_code == 404
+        assert client.get(f"/api/practice_runs/{session['id']}/state").status_code == 404
 
 
 class TestBreakdown:
@@ -1265,7 +1593,7 @@ class TestBreakdown:
         by_card_id = {
             str(pc.card_id): pc.id
             for pc in db.exec(
-                select(PracticeCard).where(PracticeCard.practice_session_id == session_id)
+                select(PracticeCard).where(PracticeCard.practice_run_id == session_id)
             ).all()
         }
         assert set(by_card_id) == {first_card, retry_card, many_card, stuck_card}
@@ -1313,10 +1641,10 @@ class TestBreakdown:
         assert stuck_res.json()["requeued_practice_card"] is None
 
         # The session must now report completed — nothing pending anywhere.
-        run = client.get(f"/api/practice_sessions/{session['id']}/run")
+        run = client.get(f"/api/practice_runs/{session['id']}/state")
         assert run.json()["session_status"] == "completed"
 
-        res = client.get(f"/api/practice_sessions/{session['id']}/breakdown")
+        res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 200, res.text
         data = res.json()
 
@@ -1369,7 +1697,7 @@ class TestBreakdown:
         first_rows_by_card: dict[str, PracticeCard] = {}
         for pc in db.exec(
             select(PracticeCard)
-            .where(PracticeCard.practice_session_id == session_id)
+            .where(PracticeCard.practice_run_id == session_id)
             .order_by(PracticeCard.created_at)
         ).all():
             first_rows_by_card.setdefault(str(pc.card_id), pc)
@@ -1384,19 +1712,19 @@ class TestBreakdown:
         self._make_card(client, existing_deck, title, prompt, answer, "solo", "Solo Card")
         session = _start(client, "Still going", [config["id"]])
 
-        res = client.get(f"/api/practice_sessions/{session['id']}/breakdown")
+        res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 409, res.text
-        assert res.json()["detail"]["code"] == "session_active"
+        assert res.json()["detail"]["code"] == "run_active"
 
     def test_404_for_unknown_session(self, client):
-        assert client.get(f"/api/practice_sessions/{uuid.uuid4()}/breakdown").status_code == 404
+        assert client.get(f"/api/practice_runs/{uuid.uuid4()}/breakdown").status_code == 404
 
     def test_404_for_foreign_session(
         self, client, act_as, other_user, session_cards, session_config
     ):
         session = _start(client, "Mine", [session_config["id"]])
         for _ in range(len(session_cards) + 5):
-            run = client.get(f"/api/practice_sessions/{session['id']}/run").json()
+            run = client.get(f"/api/practice_runs/{session['id']}/state").json()
             if run["current_card"] is None:
                 break
             card = run["current_card"]
@@ -1407,34 +1735,48 @@ class TestBreakdown:
             )
 
         act_as(other_user)
-        assert client.get(f"/api/practice_sessions/{session['id']}/breakdown").status_code == 404
+        assert client.get(f"/api/practice_runs/{session['id']}/breakdown").status_code == 404
+
+
+def _rerun(client, session_id, name):
+    return client.post(f"/api/practice_runs/{session_id}/rerun", json={"name": name})
 
 
 class TestRerun:
-    """POST .../rerun (ADR 030) — recreates a completed session from its own frozen
-    practice_deck snapshots, never a deck_practice_config lookup."""
+    """POST .../rerun (ADR 039) — creates a new run from a completed run's own frozen
+    practice_deck snapshots, never a deck_practice_config lookup. The original run is
+    never deleted (that's the point of ADR 039, superseding ADR 030's delete half)."""
 
-    def test_rerun_creates_new_session_and_deletes_old(
+    def test_rerun_creates_new_run_with_posted_name_and_keeps_the_original(
         self, client, db, existing_user, session_cards, session_config
     ):
         session = _start(client, "Original run", [session_config["id"]])
         _finish_session(client, session["id"])
-        assert client.get(f"/api/practice_sessions/{session['id']}").json()["status"] == "completed"
+        assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "completed"
 
-        res = client.post(f"/api/practice_sessions/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Original run (rerun)")
         assert res.status_code == 201, res.text
         new_session = res.json()
-        assert new_session["name"] == "Original run"
+        # The client-supplied name is stored verbatim, not copied from the original.
+        assert new_session["name"] == "Original run (rerun)"
         assert new_session["status"] == "active"
         assert new_session["id"] != session["id"]
 
-        # The old session is gone...
-        assert client.get(f"/api/practice_sessions/{session['id']}").status_code == 404
+        # The original run is untouched: still readable, still completed...
+        original = client.get(f"/api/practice_runs/{session['id']}")
+        assert original.status_code == 200, original.text
+        assert original.json()["status"] == "completed"
+        assert original.json()["name"] == "Original run"
 
-        # ...and the new one has fresh, pending practice_cards.
+        # ...and still appears in the list, alongside the new run.
+        listed_ids = {row["id"] for row in client.get("/api/practice_runs").json()}
+        assert session["id"] in listed_ids
+        assert new_session["id"] in listed_ids
+
+        # The new run has fresh, pending practice_cards of its own.
         new_cards = db.exec(
             select(PracticeCard).where(
-                PracticeCard.practice_session_id == uuid.UUID(new_session["id"])
+                PracticeCard.practice_run_id == uuid.UUID(new_session["id"])
             )
         ).all()
         assert len(new_cards) > 0
@@ -1450,16 +1792,17 @@ class TestRerun:
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        res = client.post(f"/api/practice_sessions/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Both decks (rerun)")
         assert res.status_code == 201, res.text
         new_session_id = uuid.UUID(res.json()["id"])
 
         new_decks = db.exec(
-            select(PracticeDeck).where(PracticeDeck.practice_session_id == new_session_id)
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
         ).all()
         assert {d.deck_id for d in new_decks} == {uuid.UUID(lib["decks"]["b"]["id"])}
 
-        assert client.get(f"/api/practice_sessions/{session['id']}").status_code == 404
+        # Dropping a stale deck from the new snapshot never touches the original run.
+        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db, existing_subject):
         # Deck A: three fields so `answer` can be archived afterward without hitting
@@ -1544,12 +1887,12 @@ class TestRerun:
         archived = client.delete(f"/api/fields/{fields_a['answer']}")
         assert archived.status_code == 200, archived.text
 
-        res = client.post(f"/api/practice_sessions/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Two healthy decks (rerun)")
         assert res.status_code == 201, res.text
         new_session_id = uuid.UUID(res.json()["id"])
 
         new_decks = db.exec(
-            select(PracticeDeck).where(PracticeDeck.practice_session_id == new_session_id)
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
         ).all()
         assert {d.deck_id for d in new_decks} == {uuid.UUID(deck_b["id"])}
 
@@ -1562,24 +1905,24 @@ class TestRerun:
         deleted = client.delete(f"/api/decks/{existing_deck['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        res = client.post(f"/api/practice_sessions/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Doomed run (rerun)")
         assert res.status_code == 400, res.text
         assert res.json()["detail"]["code"] == "nothing_to_rerun"
 
-        # Refusal never deletes the original.
-        assert client.get(f"/api/practice_sessions/{session['id']}").status_code == 200
+        # Refusal never touches the original.
+        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_refuses_active_session(self, client, session_cards, session_config):
         session = _start(client, "Still going", [session_config["id"]])
 
-        res = client.post(f"/api/practice_sessions/{session['id']}/rerun")
+        res = _rerun(client, session["id"], "Still going (rerun)")
         assert res.status_code == 400, res.text
-        assert res.json()["detail"]["code"] == "session_active"
+        assert res.json()["detail"]["code"] == "run_active"
 
-        assert client.get(f"/api/practice_sessions/{session['id']}").json()["status"] == "active"
+        assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "active"
 
     def test_404_for_unknown_session(self, client):
-        assert client.post(f"/api/practice_sessions/{uuid.uuid4()}/rerun").status_code == 404
+        assert _rerun(client, uuid.uuid4(), "Rerun").status_code == 404
 
     def test_404_for_foreign_session(
         self, client, act_as, other_user, session_cards, session_config
@@ -1588,4 +1931,162 @@ class TestRerun:
         _finish_session(client, session["id"])
 
         act_as(other_user)
-        assert client.post(f"/api/practice_sessions/{session['id']}/rerun").status_code == 404
+        assert _rerun(client, session["id"], "Rerun").status_code == 404
+
+
+class TestConfigLineage:
+    """practice_deck.source_config_id (ADR 040) — attribution-only: written at run
+    start, copied through rerun verbatim, nulled (snapshot untouched) if the source
+    config is later deleted. Never read by generation, validation, or rerun logic, and
+    not exposed on any payload here — these tests reach it straight off the ORM row."""
+
+    def test_start_writes_the_configs_id_onto_the_snapshot(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        assert snapshot.source_config_id == uuid.UUID(session_config["id"])
+
+    def test_rerun_copies_the_old_snapshots_source_config_id_verbatim(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+        _finish_session(client, session["id"])
+
+        res = _rerun(client, session["id"], "Lineage run (rerun)")
+        assert res.status_code == 201, res.text
+        new_session_id = uuid.UUID(res.json()["id"])
+
+        new_snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
+        ).one()
+        assert new_snapshot.source_config_id == uuid.UUID(session_config["id"])
+
+    def test_deleting_the_config_nulls_the_link_but_the_snapshot_survives(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+        session_id = uuid.UUID(session["id"])
+        deck_id = uuid.UUID(session_config["deck_id"])
+
+        deleted = client.delete(f"/api/deck_practice_configs/{session_config['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == session_id)
+        ).one()
+        assert snapshot.source_config_id is None
+        # The snapshot itself, and the run it belongs to, are untouched — deleting the
+        # config's own FK is a SET NULL on this one column, nothing cascades from it.
+        assert snapshot.deck_id == deck_id
+        assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
+
+    def test_a_run_started_without_source_config_id_still_reruns_with_it_null(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        """Covers rerun's "possibly already null" case (contract): a snapshot with no
+        lineage of its own (simulating a config deleted before this session's own
+        first completion, or a future internally-generated session) must still copy
+        that null through rather than backfilling anything."""
+        session = _start(client, "No lineage", [session_config["id"]])
+        session_id = uuid.UUID(session["id"])
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == session_id)
+        ).one()
+        snapshot.source_config_id = None
+        db.add(snapshot)
+        db.commit()
+
+        _finish_session(client, session["id"])
+        res = _rerun(client, session["id"], "No lineage (rerun)")
+        assert res.status_code == 201, res.text
+        new_session_id = uuid.UUID(res.json()["id"])
+
+        new_snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == new_session_id)
+        ).one()
+        assert new_snapshot.source_config_id is None
+
+
+class TestConfigEditSeversLineage:
+    """ADR 040 (task 009 T7): materially editing a config nulls source_config_id on
+    every snapshot cut from it — a rename alone, or an update that fails validation,
+    leaves every link untouched."""
+
+    @staticmethod
+    def _second_config(client, session_config, session_fields):
+        f = session_fields
+        payload = {
+            "deck_id": session_config["deck_id"],
+            "name": "Second Config",
+            "prompt_field_ids": [str(f["prompt1"])],
+            "answer_field_ids": [str(f["answer1"])],
+            "prompt_pool_ids": [str(f["pool_p1"]), str(f["pool_p2"]), str(f["pool_p3"])],
+            "prompt_pool_counts": [1],
+            "answer_pool_ids": [str(f["pool_a1"]), str(f["pool_a2"]), str(f["pool_a3"])],
+            "answer_pool_counts": [1],
+        }
+        res = client.post("/api/deck_practice_configs", json=payload)
+        assert res.status_code == 201, res.text
+        return res.json()
+
+    @staticmethod
+    def _snapshot(db, session_id: str):
+        return db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
+        ).one()
+
+    def test_editing_a_pool_array_nulls_only_that_configs_snapshots(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        other_config = self._second_config(client, session_config, session_fields)
+        edited_session = _start(client, "Edited config run", [session_config["id"]])
+        other_session = _start(client, "Other config run", [other_config["id"]])
+
+        # Narrows the pool from 3 ids to 1 — a different ordered list, hence material,
+        # even though prompt_pool_counts=[1] validates against either.
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"prompt_pool_ids": [str(session_fields["pool_p1"])]},
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._snapshot(db, edited_session["id"]).source_config_id is None
+        assert self._snapshot(db, other_session["id"]).source_config_id == uuid.UUID(
+            other_config["id"]
+        )
+
+    def test_rename_only_update_leaves_links_intact(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}", json={"name": "Renamed"}
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+            session_config["id"]
+        )
+
+    def test_failed_validation_leaves_links_intact(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        # Reintroduces prompt1 as an answer field too — a material change to
+        # answer_field_ids, but one that violates pairwise-disjointness against the
+        # unchanged prompt_field_ids and never reaches update_deck_practice_config.
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"answer_field_ids": [str(session_fields["prompt1"])]},
+        )
+        assert res.status_code == 400, res.text
+
+        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+            session_config["id"]
+        )

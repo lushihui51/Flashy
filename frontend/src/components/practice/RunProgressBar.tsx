@@ -1,9 +1,9 @@
 import type { components } from 'src/api/types';
 
-type SessionProgress = components['schemas']['SessionProgress'];
+type RunProgress = components['schemas']['RunProgress'];
 
 type RunProgressBarProps = {
-  progress: SessionProgress;
+  progress: RunProgress;
 };
 
 /** ADR 028: one proportional bar, four color segments, sized against `total_cards` —

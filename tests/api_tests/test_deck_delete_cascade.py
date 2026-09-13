@@ -9,7 +9,7 @@ from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef
 from app.models.practice_card import PracticeCard
 from app.models.practice_deck import PracticeDeck
-from app.models.practice_session import SessionStatus
+from app.models.practice_run import RunStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import rebuild_mastery
 
@@ -70,13 +70,13 @@ class TestDeckDeleteCascade:
         assert config.status_code == 201, config.text
 
         session = client.post(
-            "/api/practice_sessions",
+            "/api/practice_runs",
             json={"name": "Cascade run", "deck_practice_config_ids": [config.json()["id"]]},
         )
         assert session.status_code == 201, session.text
         session_id = session.json()["id"]
 
-        current = client.get(f"/api/practice_sessions/{session_id}/run")
+        current = client.get(f"/api/practice_runs/{session_id}/state")
         assert current.status_code == 200, current.text
         practice_card = current.json()["current_card"]
         assert practice_card is not None
@@ -138,7 +138,7 @@ class TestDeckDeleteCascade:
 
         # practice_deck — the session snapshot — also survives, deck_id nulled
         practice_deck = db.exec(
-            select(PracticeDeck).where(PracticeDeck.practice_session_id == ids["session_id"])
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == ids["session_id"])
         ).first()
         assert practice_deck is not None
         assert practice_deck.deck_id is None
@@ -226,14 +226,14 @@ class TestDeckDeleteCascade:
         response = client.delete(f"/api/decks/{existing_deck['id']}")
         assert response.status_code == 204, response.text
 
-        run = client.get(f"/api/practice_sessions/{ids['session_id']}/run")
+        run = client.get(f"/api/practice_runs/{ids['session_id']}/state")
         assert run.status_code == 200, run.text
         assert run.json()["current_card"] is None
-        assert run.json()["session_status"] == SessionStatus.completed.value
+        assert run.json()["session_status"] == RunStatus.completed.value
 
-        session = client.get(f"/api/practice_sessions/{ids['session_id']}")
+        session = client.get(f"/api/practice_runs/{ids['session_id']}")
         assert session.status_code == 200, session.text
-        assert session.json()["status"] == SessionStatus.completed.value
+        assert session.json()["status"] == RunStatus.completed.value
 
     def test_deleting_the_card_being_practiced_serves_the_next_pending_card(
         self, db, client, existing_deck
@@ -245,7 +245,7 @@ class TestDeckDeleteCascade:
         anywhere. The session stays active."""
         ids = self._setup(db, client, existing_deck, rate=False, extra_cards=1)
 
-        current = client.get(f"/api/practice_sessions/{ids['session_id']}/run")
+        current = client.get(f"/api/practice_runs/{ids['session_id']}/state")
         assert current.status_code == 200, current.text
         served = current.json()["current_card"]
         assert served is not None
@@ -256,12 +256,12 @@ class TestDeckDeleteCascade:
         assert deleted.status_code == 204, deleted.text
         assert db.get(PracticeCard, uuid.UUID(served["practice_card_id"])) is None
 
-        next_run = client.get(f"/api/practice_sessions/{ids['session_id']}/run")
+        next_run = client.get(f"/api/practice_runs/{ids['session_id']}/state")
         assert next_run.status_code == 200, next_run.text
         next_current = next_run.json()["current_card"]
         assert next_current is not None
         assert next_current["practice_card_id"] != served["practice_card_id"]
         assert next_current["card_id"] != served["card_id"]
 
-        session = client.get(f"/api/practice_sessions/{ids['session_id']}")
-        assert session.json()["status"] == SessionStatus.active.value
+        session = client.get(f"/api/practice_runs/{ids['session_id']}")
+        assert session.json()["status"] == RunStatus.active.value

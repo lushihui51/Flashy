@@ -5,12 +5,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ratePracticeCard,
   readPracticeRunState,
-  readPracticeSessionBreakdown,
-} from 'src/api/practice_session';
+  readPracticeRunBreakdown,
+} from 'src/api/practice_run';
 import FieldValue from 'src/components/practice/FieldValue';
 import RatingChip from 'src/components/practice/RatingChip';
 import RunProgressBar from 'src/components/practice/RunProgressBar';
-import SessionBreakdown from 'src/components/practice/SessionBreakdown';
+import RunBreakdown from 'src/components/practice/RunBreakdown';
 import type { components } from 'src/api/types';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
@@ -81,8 +81,8 @@ function PracticeRunBody({
 
 function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
   const breakdownQuery = useQuery({
-    queryKey: ['practice_breakdown', practiceSessionId],
-    queryFn: () => readPracticeSessionBreakdown(practiceSessionId),
+    queryKey: ['practice_run_breakdown', practiceSessionId],
+    queryFn: () => readPracticeRunBreakdown(practiceSessionId),
   });
 
   return (
@@ -94,7 +94,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
           {breakdownQuery.error.message}
         </p>
       )}
-      {breakdownQuery.data && <SessionBreakdown breakdown={breakdownQuery.data} />}
+      {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
 
       <Link
         to={`/practice/${practiceSessionId}`}
