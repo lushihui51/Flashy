@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Row, delete, desc, insert
+from sqlalchemy import BigInteger, Row, Uuid, column, delete, desc, insert, values
 from sqlmodel import Session, col, select
 
 from app.mastery.types import FieldMasteryState
@@ -128,6 +128,72 @@ def db_fetch_mastery_read_rows(
     if field_def_ids is not None:
         query = query.where(col(FieldDef.id).in_(field_def_ids))
     return list(db.exec(query).all())
+
+
+def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
+    """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
+    used by the breakdown's delta computation (task 010 T3, ADR 042/043, 010 MD-4) to
+    find each (card, field) pair this run itself touched and, among those, its own
+    first and last row. `id` ascending (the ledger's total order) so callers reading
+    min/max per pair don't need to re-sort."""
+    return list(
+        db.exec(
+            select(MasteryLog)
+            .where(MasteryLog.practice_run_id == practice_run_id)
+            .order_by(MasteryLog.id)
+        ).all()
+    )
+
+
+def db_fetch_mastery_before_bound(
+    db: Session, bounds: list[tuple[uuid.UUID, uuid.UUID, int]]
+) -> dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState]:
+    """The breakdown's per-pair 'before' lookup (task 010 T3, ADR 042/043, 010 MD-4):
+    one statement for every (card_id, field_def_id, bound) triple in `bounds`,
+    regardless of how many there are — a VALUES relation of each pair's own bound id,
+    inner-joined to mastery_log on (card_id, field_def_id, id < bound) and reduced to
+    one row per pair with DISTINCT ON, ordered by id descending. The join predicate is
+    covered by `ix_mastery_log_card_field (card_id, field_def_id, id)`: an index
+    range scan per pair, never a scan of a pair's full history. A pair with no row
+    below its bound contributes nothing to an inner join, so it's simply absent from
+    the returned dict — the caller's contract for 'never reviewed as of that point'."""
+    if not bounds:
+        return {}
+    bounds_values = values(
+        column("card_id", Uuid),
+        column("field_def_id", Uuid),
+        column("bound", BigInteger),
+        name="bounds",
+    ).data(bounds)
+    query = (
+        select(
+            bounds_values.c.card_id,
+            bounds_values.c.field_def_id,
+            MasteryLog.prompt_mastery,
+            MasteryLog.answer_mastery,
+            MasteryLog.prompt_review_count,
+            MasteryLog.answer_review_count,
+        )
+        .select_from(bounds_values)
+        .join(
+            MasteryLog,
+            (MasteryLog.card_id == bounds_values.c.card_id)
+            & (MasteryLog.field_def_id == bounds_values.c.field_def_id)
+            & (MasteryLog.id < bounds_values.c.bound),
+        )
+        .distinct(bounds_values.c.card_id, bounds_values.c.field_def_id)
+        .order_by(bounds_values.c.card_id, bounds_values.c.field_def_id, desc(MasteryLog.id))
+    )
+    rows = db.exec(query).all()
+    return {
+        (row.card_id, row.field_def_id): FieldMasteryState(
+            prompt_mastery=row.prompt_mastery,
+            answer_mastery=row.answer_mastery,
+            prompt_review_count=row.prompt_review_count,
+            answer_review_count=row.answer_review_count,
+        )
+        for row in rows
+    }
 
 
 def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:

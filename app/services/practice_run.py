@@ -1,5 +1,6 @@
 import random
 import uuid
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -10,6 +11,11 @@ from sqlmodel import Session
 from app.database_ops.card import db_read_card, db_read_card_ids_for_deck
 from app.database_ops.deck_practice_config import db_read_deck_practice_config
 from app.database_ops.field_def import db_read_field_defs
+from app.database_ops.mastery_log import (
+    db_fetch_mastery_before_bound,
+    db_fetch_mastery_read_rows,
+    db_fetch_run_mastery_log_rows,
+)
 from app.database_ops.practice_card import (
     db_create_practice_card,
     db_read_current_practice_card,
@@ -31,13 +37,14 @@ from app.database_ops.practice_run import (
     db_update_practice_run_status,
 )
 from app.mastery.strategy import MasteryStrategy
-from app.mastery.types import ReviewGroup
+from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.field_def import FieldDef
 from app.models.practice_card import (
     BreakdownAttempt,
     BreakdownBucket,
     BreakdownCard,
     CurrentRunCard,
+    FieldMasteryDelta,
     PracticeCard,
     PracticeCardStatus,
     PracticeRunState,
@@ -501,14 +508,99 @@ def _resolve_rated_field_values(
     ]
 
 
+def _row_to_field_state(row) -> FieldMasteryState | None:
+    """Row -> FieldMasteryState, for the raw material db_fetch_mastery_read_rows
+    hands back (prompt_mastery NULL means never reviewed). A private mirror of
+    app.services.mastery._row_state — small enough, and mastery-log-specific enough
+    to this module's own delta computation, not to import across module boundaries."""
+    if row.prompt_mastery is None:
+        return None
+    return FieldMasteryState(
+        prompt_mastery=row.prompt_mastery,
+        answer_mastery=row.answer_mastery,
+        prompt_review_count=row.prompt_review_count,
+        answer_review_count=row.answer_review_count,
+    )
+
+
+def _compute_field_mastery_deltas(
+    db: Session,
+    strategy: MasteryStrategy,
+    practice_run_id: uuid.UUID,
+    domain: list[tuple[uuid.UUID, uuid.UUID]],
+) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]]:
+    """{(card_id, field_def_id): (before_score, after_score, delta)} for every pair in
+    `domain`, per the delta-semantics contract (ADR 042, ADR 043, task 010 T3). Reads
+    only this run's own mastery_log rows plus one bounded before-lookup covering every
+    pair at once — never a history replay, and the statement count against
+    mastery_log is fixed at 2 regardless of len(domain) (010 MD-4)."""
+    prior_score = strategy.field_score(strategy.prior())
+    run_rows = db_fetch_run_mastery_log_rows(db, practice_run_id)
+
+    if not run_rows:
+        # 010 MD-4's degenerate case: this run's own attribution is empty (only
+        # reachable via an all-retry submission history — every rating a client
+        # resubmit of an already-logged group). before = after = the overall latest
+        # row per pair; every delta is 0.
+        card_ids = list({card_id for card_id, _ in domain})
+        read_rows = db_fetch_mastery_read_rows(db, card_ids)
+        score_by_pair = {
+            (row.card_id, row.field_def_id): strategy.field_score(_row_to_field_state(row))
+            for row in read_rows
+        }
+        return {pair: (score_by_pair.get(pair), score_by_pair.get(pair), 0.0) for pair in domain}
+
+    attributed_by_pair: dict[tuple[uuid.UUID, uuid.UUID], list] = defaultdict(list)
+    for row in run_rows:
+        attributed_by_pair[(row.card_id, row.field_def_id)].append(row)
+    first_id = min(row.id for row in run_rows)
+
+    bounds: list[tuple[uuid.UUID, uuid.UUID, int]] = []
+    after_state_by_pair: dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState] = {}
+    for pair in domain:
+        rows_for_pair = attributed_by_pair.get(pair)
+        if rows_for_pair:
+            bound = min(r.id for r in rows_for_pair)
+            after_row = max(rows_for_pair, key=lambda r: r.id)
+            after_state_by_pair[pair] = FieldMasteryState(
+                prompt_mastery=after_row.prompt_mastery,
+                answer_mastery=after_row.answer_mastery,
+                prompt_review_count=after_row.prompt_review_count,
+                answer_review_count=after_row.answer_review_count,
+            )
+        else:
+            bound = first_id
+        bounds.append((pair[0], pair[1], bound))
+
+    before_state_by_pair = db_fetch_mastery_before_bound(db, bounds)
+
+    result: dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]] = {}
+    for pair in domain:
+        before_state = before_state_by_pair.get(pair)
+        # Untouched by this run: after == before by construction, not a fallback —
+        # this run contributed no movement to this pair, so its "after" is whatever
+        # the field already was.
+        after_state = after_state_by_pair.get(pair, before_state)
+        before_score = strategy.field_score(before_state)
+        after_score = strategy.field_score(after_state)
+        if after_score is None:
+            delta = 0.0
+        else:
+            delta = after_score - (before_score if before_score is not None else prior_score)
+        result[pair] = (before_score, after_score, delta)
+    return result
+
+
 def get_practice_run_breakdown(
-    db: Session, practice_run_id: uuid.UUID, user_id: uuid.UUID
+    db: Session, strategy: MasteryStrategy, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunBreakdown | None:
-    """The whole `GET .../breakdown` payload (ADR 029, ADR 031): every card's full
-    resolved, rated attempt history, grouped into the completion-time buckets. None for
-    an unknown or foreign session (the router 404s). Raises RunActiveError if the
-    session hasn't completed yet (the router 409s) — the bucket refinement and
-    terminal-only attempts below only make sense once nothing is pending."""
+    """The whole `GET .../breakdown` payload (ADR 029, ADR 031, ADR 042, ADR 043, ADR
+    044): every card's full resolved, rated attempt history, grouped into the
+    completion-time buckets, plus each card's mastery/delta and its per-field detail
+    (task 010 T3). None for an unknown or foreign session (the router 404s). Raises
+    RunActiveError if the session hasn't completed yet (the router 409s) — the bucket
+    refinement and terminal-only attempts below only make sense once nothing is
+    pending."""
     session = db_read_practice_run(db, practice_run_id, user_id)
     if session is None:
         return None
@@ -523,10 +615,16 @@ def get_practice_run_breakdown(
     # (practice_deck), not one per card, so this keeps field resolution to one pair of
     # queries per deck rather than per card.
     field_defs_by_deck: dict[uuid.UUID, dict[uuid.UUID, FieldDef]] = {}
+    active_field_defs_by_deck: dict[uuid.UUID, list[FieldDef]] = {}
     primary_field_by_deck: dict[uuid.UUID, FieldDef] = {}
+    deck_id_by_card: dict[uuid.UUID, uuid.UUID] = {}
 
     counts = dict.fromkeys(BreakdownBucket, 0)
-    breakdown_cards = []
+    # Built in two passes: this one resolves everything but the mastery/delta fields
+    # (which need every card's active-field domain gathered first, so the delta
+    # computation below can read mastery_log in one fixed-size batch — 010 MD-4 —
+    # instead of once per card).
+    raw_cards = []
     for card_id, chain in chains.items():
         bucket = _breakdown_bucket(chain)
         counts[bucket] += 1
@@ -534,14 +632,17 @@ def get_practice_run_breakdown(
         card = db_read_card(db, card_id, user_id)
         assert card is not None, "a practice_card's card_id cascades on card delete"
         deck_id = card.deck_id
+        deck_id_by_card[card_id] = deck_id
         if deck_id not in field_defs_by_deck:
             field_defs_by_deck[deck_id] = {
                 fd.id: fd
                 for fd in db_read_field_defs(db, deck_id, user_id, include_archived=True)
             }
-            # ADR 032: the deck's primary field is its active field_def at position 0 —
-            # db_read_field_defs is already active-only and position-sorted.
-            primary_field_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)[0]
+            # ADR 032/043: db_read_field_defs is already active-only and
+            # position-sorted; the primary field is index 0, the mastery domain is
+            # every entry.
+            active_field_defs_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)
+            primary_field_by_deck[deck_id] = active_field_defs_by_deck[deck_id][0]
         field_defs_by_id = field_defs_by_deck[deck_id]
         primary = primary_field_by_deck[deck_id]
         values_by_field = {v.field_def_id: v.value for v in card.values}
@@ -559,18 +660,52 @@ def get_practice_run_breakdown(
             for pc in chain
         ]
 
-        breakdown_cards.append(
-            BreakdownCard(
-                card_id=card_id,
-                bucket=bucket,
-                attempt_count=len(chain),
-                primary_field=ResolvedFieldValue(
+        raw_cards.append(
+            {
+                "card_id": card_id,
+                "bucket": bucket,
+                "attempt_count": len(chain),
+                "primary_field": ResolvedFieldValue(
                     field_def_id=primary.id,
                     name=primary.name,
                     type=primary.type,
                     value=values_by_field.get(primary.id, ""),
                 ),
-                attempts=attempts,
+                "attempts": attempts,
+            }
+        )
+
+    domain = [
+        (card_id, fd.id)
+        for card_id, deck_id in deck_id_by_card.items()
+        for fd in active_field_defs_by_deck[deck_id]
+    ]
+    field_deltas = _compute_field_mastery_deltas(db, strategy, practice_run_id, domain)
+
+    breakdown_cards = []
+    for raw in raw_cards:
+        card_id = raw["card_id"]
+        active_fields = active_field_defs_by_deck[deck_id_by_card[card_id]]
+        fields = []
+        before_scores = []
+        after_scores = []
+        for fd in active_fields:
+            before_score, after_score, delta = field_deltas[(card_id, fd.id)]
+            before_scores.append(before_score)
+            after_scores.append(after_score)
+            fields.append(
+                FieldMasteryDelta(
+                    field_def_id=fd.id, name=fd.name, type=fd.type, mastery=after_score, delta=delta
+                )
+            )
+        card_before = strategy.card_score(before_scores)
+        card_after = strategy.card_score(after_scores)
+        breakdown_cards.append(
+            BreakdownCard(
+                **raw,
+                mastery=card_after.mastery,
+                delta=card_after.mastery - card_before.mastery,
+                fields=fields,
             )
         )
 

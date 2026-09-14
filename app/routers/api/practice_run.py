@@ -127,11 +127,13 @@ def read_practice_run_state(
 def read_practice_run_breakdown(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
-    """ADR 029/031: the completion dataset behind the retrospective view. 409 while the
-    session is still active — the bucket refinement only makes sense once nothing is
-    pending; 404 for an unknown or foreign session."""
+    """ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
+    including each card's mastery/delta and per-field detail (task 010 T3). 409 while
+    the session is still active — the bucket refinement only makes sense once nothing
+    is pending; 404 for an unknown or foreign session."""
+    strategy = get_mastery_strategy()
     try:
-        breakdown = get_practice_run_breakdown(db, practice_run_id, current_user.id)
+        breakdown = get_practice_run_breakdown(db, strategy, practice_run_id, current_user.id)
     except RunActiveError as e:
         raise HTTPException(status_code=409, detail=e.detail) from e
     if not breakdown:
