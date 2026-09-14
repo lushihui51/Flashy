@@ -4,9 +4,9 @@ from sqlmodel import col, select
 
 from app.mastery.ema import EmaStrategy
 from app.models.card import Card
-from app.models.card_field_mastery import CardFieldMastery
 from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef
+from app.models.mastery_log import MasteryLog
 from app.models.practice_card import PracticeCard
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import RunStatus
@@ -121,7 +121,7 @@ class TestDeckDeleteCascade:
             is None
         )
         assert (
-            db.exec(select(CardFieldMastery).where(CardFieldMastery.card_id == ids["card_id"]))
+            db.exec(select(MasteryLog).where(MasteryLog.card_id == ids["card_id"]))
             .all()
             == []
         )
@@ -147,7 +147,7 @@ class TestDeckDeleteCascade:
         self, db, client, existing_deck
     ):
         """Phase 4.5 (§2.6): DELETE /api/cards/{id} follows the same D12 policy as a
-        deck delete, just scoped to one card — card_field_mastery for it is gone, and
+        deck delete, just scoped to one card — mastery_log for it is gone, and
         review_log rows keep existing (card_id, practice_card_id SET NULL) rather than
         being deleted. Unlike a deck delete, the field_def itself isn't touched, so
         review_log.field_def_id is untouched too — this is the one place that differs
@@ -164,7 +164,7 @@ class TestDeckDeleteCascade:
 
         assert (
             db.exec(
-                select(CardFieldMastery).where(CardFieldMastery.card_id == ids["card_id"])
+                select(MasteryLog).where(MasteryLog.card_id == ids["card_id"])
             ).all()
             == []
         )
@@ -184,13 +184,13 @@ class TestDeckDeleteCascade:
         response = client.delete(f"/api/decks/{existing_deck['id']}")
         assert response.status_code == 204, response.text
 
-        # must not crash trying to write card_field_mastery for a card_id that no
+        # must not crash trying to write mastery_log for a card_id that no
         # longer exists — orphaned review_log rows are excluded from the replay
         rebuild_mastery(db, EmaStrategy())
 
         assert (
             db.exec(
-                select(CardFieldMastery).where(CardFieldMastery.card_id == ids["card_id"])
+                select(MasteryLog).where(MasteryLog.card_id == ids["card_id"])
             ).all()
             == []
         )

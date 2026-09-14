@@ -1,13 +1,14 @@
 import uuid
 from collections import defaultdict
 
+from sqlalchemy import text
 from sqlmodel import Session, col, select
 
-from app.database_ops.card_field_mastery import (
+from app.database_ops.mastery_log import (
+    db_append_mastery_log,
     db_clear_mastery,
+    db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
-    db_fetch_mastery_states_for_update,
-    db_upsert_mastery_states,
 )
 from app.database_ops.review_log import (
     ReviewGroupWriteOutcome,
@@ -17,25 +18,42 @@ from app.database_ops.review_log import (
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import CardScore, FieldMasteryState, ReviewGroup
 from app.models.card import Card
+from app.models.practice_card import PracticeCard
 from app.models.review_log import ReviewLog
 
 
-def apply_rating(db: Session, strategy: MasteryStrategy, group: ReviewGroup) -> None:
+def apply_rating(
+    db: Session,
+    strategy: MasteryStrategy,
+    group: ReviewGroup,
+    practice_run_id: uuid.UUID | None,
+) -> None:
     """Unconditionally blends one appearance into mastery — the pure write-path
     primitive. Assumes the caller has already established that this group is new to
     the log (record_review_group does that for the live write path; rebuild_mastery
     doesn't need to, since it only ever replays rows that are already on record). Not
     idempotent on its own: calling it twice for the same group blends toward the same
-    target twice, which is exactly why record_review_group exists as the safe entry
-    point instead of calling this directly from a request handler.
+    target twice and appends twice, which is exactly why record_review_group exists as
+    the safe entry point instead of calling this directly from a request handler.
 
     expand() decides every (card, field, side) update up front — including the prompt
     side's breadth, which needs the whole group, not one row, hence taking a
-    ReviewGroup rather than a raw log row. Does not commit — the caller owns the
+    ReviewGroup rather than a raw log row. `practice_run_id` attributes the appended
+    rows to the run this appearance happened in (None for a rebuild replay that can't
+    reconstruct one, e.g. the run itself no longer exists).
+
+    Because append-only rows can't serialize a read-modify-append the way the old row
+    lock did, this takes a per-card Postgres advisory lock before fetching latest
+    states — the same pattern db_log_review_group already uses for review_group_id,
+    scoped here to card_id instead. Does not commit — the caller owns the
     transaction."""
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(group.card_id)}
+    )
+
     updates = strategy.expand(group)
     affected_field_ids = {field_def_id for _, field_def_id, _ in updates}
-    states = dict(db_fetch_mastery_states_for_update(db, group.card_id, list(affected_field_ids)))
+    states = dict(db_fetch_latest_mastery_states(db, group.card_id, list(affected_field_ids)))
 
     # Applied sequentially onto an evolving working state (not a one-pass collapse) so
     # that if an update set ever legitimately touched both sides of the same field
@@ -44,11 +62,15 @@ def apply_rating(db: Session, strategy: MasteryStrategy, group: ReviewGroup) -> 
     for (_, field_def_id, _side), update in updates.items():
         states[field_def_id] = strategy.apply_review(states.get(field_def_id), update)
 
-    db_upsert_mastery_states(db, group.card_id, states, group.reviewed_at)
+    db_append_mastery_log(db, group.card_id, states, group.reviewed_at, practice_run_id)
 
 
 def record_review_group(
-    db: Session, strategy: MasteryStrategy, user_id: uuid.UUID, group: ReviewGroup
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    group: ReviewGroup,
+    practice_run_id: uuid.UUID | None,
 ) -> ReviewGroupWriteOutcome:
     """The retry-safe write-path entry point for one appearance — what Phase 4's rating
     endpoint should call, not apply_rating directly. Logs the group, then blends it
@@ -56,12 +78,13 @@ def record_review_group(
 
     - NEW: the group was written for the first time; apply_rating runs.
     - RETRY: review_log already had exactly this group's rated fields on record.
-      Mastery is deliberately *not* re-blended. This looks like a bug at a glance —
-      "we skipped the update" — but it's invariant 2 doing exactly the work it exists
-      for: mastery is a disposable, faithful function of the log, so if the log already
-      reflects this appearance, the mastery write that happened when it was first
-      logged already reflects it too. Re-blending here would move mastery toward the
-      same target a second time for a client-side retry that changed nothing.
+      Mastery is deliberately *not* re-blended, and no ledger row is appended. This
+      looks like a bug at a glance — "we skipped the update" — but it's invariant 2
+      doing exactly the work it exists for: mastery is a disposable, faithful function
+      of the log, so if the log already reflects this appearance, the ledger append
+      that happened when it was first logged already reflects it too. Re-appending
+      here would move mastery toward the same target a second time for a client-side
+      retry that changed nothing.
     - Raises ReviewGroupInconsistent (propagated from db_log_review_group) if the log
       has a different set of rated fields on record for this review_group_id already.
 
@@ -80,7 +103,7 @@ def record_review_group(
     ]
     outcome = db_log_review_group(db, group.review_group_id, rows)
     if outcome is ReviewGroupWriteOutcome.new:
-        apply_rating(db, strategy, group)
+        apply_rating(db, strategy, group, practice_run_id)
     return outcome
 
 
@@ -149,15 +172,41 @@ def _group_review_log_rows(rows: list[ReviewLog]) -> list[ReviewGroup]:
     return groups
 
 
+def _fetch_run_attribution(
+    db: Session, review_group_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, uuid.UUID | None]:
+    """Reconstructs run attribution for a rebuild replay: a group's review_group_id is
+    the practice_card.id it was submitted against (submit_rating's construction), so a
+    still-existing practice_card row gives back its practice_run_id; a group whose
+    practice_card is gone (its card, or its whole run, was deleted) gets no entry here
+    and rebuild_mastery treats that as None — the accepted asymmetry ADR 042 calls
+    out: live writes keep attribution when a card is later deleted, a rebuild loses it,
+    which no breakdown can show anyway."""
+    if not review_group_ids:
+        return {}
+    return dict(
+        db.exec(
+            select(PracticeCard.id, PracticeCard.practice_run_id).where(
+                col(PracticeCard.id).in_(review_group_ids)
+            )
+        ).all()
+    )
+
+
 def rebuild_mastery(
     db: Session, strategy: MasteryStrategy, user_id: uuid.UUID | None = None
 ) -> None:
-    """Truncates (or delete-scopes) card_field_mastery and replays review_log through
-    the same write path apply_rating uses, one appearance at a time, oldest first.
-    Because the strategy is a parameter, changing strategies is not a migration — it's
-    a rebuild. Slow is fine."""
+    """Truncates (or delete-scopes) mastery_log and replays review_log through the same
+    write path apply_rating uses, one appearance at a time, oldest first, reconstructing
+    each group's run attribution along the way. Because the strategy is a parameter,
+    changing strategies is not a migration — it's a rebuild. Slow is fine."""
     db_clear_mastery(db, user_id)
     rows = db_fetch_review_log_for_rebuild(db, user_id)
-    for group in _group_review_log_rows(rows):
-        apply_rating(db, strategy, group)
+    groups = _group_review_log_rows(rows)
+    run_ids_by_review_group = _fetch_run_attribution(
+        db, [group.review_group_id for group in groups]
+    )
+    for group in groups:
+        practice_run_id = run_ids_by_review_group.get(group.review_group_id)
+        apply_rating(db, strategy, group, practice_run_id)
     db.commit()

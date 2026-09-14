@@ -1,15 +1,14 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Row, delete
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import Row, delete, desc, insert
 from sqlmodel import Session, col, select
 
 from app.mastery.types import FieldMasteryState
 from app.models.card import Card
-from app.models.card_field_mastery import CardFieldMastery
 from app.models.deck import Deck
 from app.models.field_def import FieldDef
+from app.models.mastery_log import MasteryLog
 from app.models.subject import Subject
 
 # Invariant 8: this module fetches and writes state; it never computes it. Every value
@@ -17,20 +16,24 @@ from app.models.subject import Subject
 # blending, scoring, or aggregation expression appears in any statement here.
 
 
-def db_fetch_mastery_states_for_update(
+def db_fetch_latest_mastery_states(
     db: Session, card_id: uuid.UUID, field_def_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, FieldMasteryState]:
-    """Row-locks the mastery rows for this card's affected fields. Missing rows are
-    simply absent from the returned dict — invariant 4, lazy creation."""
+    """Latest row per (card, field) among this card's affected fields — DISTINCT ON,
+    ordered by id descending (the ledger's total order, not reviewed_at). No FOR
+    UPDATE: apply_rating's caller takes a per-card advisory lock instead, since
+    append-only rows have nothing for a row lock to serialize against. Missing rows
+    are simply absent from the returned dict — invariant 4, lazy creation."""
     if not field_def_ids:
         return {}
     rows = db.exec(
-        select(CardFieldMastery)
+        select(MasteryLog)
         .where(
-            CardFieldMastery.card_id == card_id,
-            col(CardFieldMastery.field_def_id).in_(field_def_ids),
+            MasteryLog.card_id == card_id,
+            col(MasteryLog.field_def_id).in_(field_def_ids),
         )
-        .with_for_update()
+        .distinct(MasteryLog.field_def_id)
+        .order_by(MasteryLog.field_def_id, desc(MasteryLog.id))
     ).all()
     return {
         row.field_def_id: FieldMasteryState(
@@ -43,40 +46,32 @@ def db_fetch_mastery_states_for_update(
     }
 
 
-def db_upsert_mastery_states(
+def db_append_mastery_log(
     db: Session,
     card_id: uuid.UUID,
     states: dict[uuid.UUID, FieldMasteryState],
-    updated_at: datetime,
+    reviewed_at: datetime,
+    practice_run_id: uuid.UUID | None,
 ) -> None:
     """Writes computed values only. No `SET x = <expression>` — the incoming states are
-    already the strategy's output; this just persists them."""
+    already the strategy's output; this just appends them. Plain bulk INSERT — the
+    ledger is append-only, so there's nothing to upsert."""
     if not states:
         return
     rows = [
         {
             "card_id": card_id,
             "field_def_id": field_def_id,
+            "practice_run_id": practice_run_id,
             "prompt_mastery": state.prompt_mastery,
             "answer_mastery": state.answer_mastery,
             "prompt_review_count": state.prompt_review_count,
             "answer_review_count": state.answer_review_count,
-            "updated_at": updated_at,
+            "reviewed_at": reviewed_at,
         }
         for field_def_id, state in states.items()
     ]
-    stmt = insert(CardFieldMastery).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["card_id", "field_def_id"],
-        set_={
-            "prompt_mastery": stmt.excluded.prompt_mastery,
-            "answer_mastery": stmt.excluded.answer_mastery,
-            "prompt_review_count": stmt.excluded.prompt_review_count,
-            "answer_review_count": stmt.excluded.answer_review_count,
-            "updated_at": stmt.excluded.updated_at,
-        },
-    )
-    db.execute(stmt)
+    db.execute(insert(MasteryLog).values(rows))
 
 
 def db_fetch_mastery_read_rows(
@@ -85,18 +80,38 @@ def db_fetch_mastery_read_rows(
     """Raw material for card_mastery/deck_mastery. Drives from field_def (invariant 4):
     one row per (card, active field def), mastery columns NULL when never reviewed.
     Purely a fetch — no scoring or aggregation happens here; the caller folds scores in
-    Python via the strategy."""
+    Python via the strategy.
+
+    The old single-row-per-pair cache table's outerjoin becomes an outerjoin to a
+    DISTINCT ON subquery of mastery_log's latest row per (card, field), bounded to
+    the requested card_ids — one statement, never a history replay."""
     if not card_ids:
         return []
+    latest_query = select(
+        MasteryLog.card_id,
+        MasteryLog.field_def_id,
+        MasteryLog.prompt_mastery,
+        MasteryLog.answer_mastery,
+        MasteryLog.prompt_review_count,
+        MasteryLog.answer_review_count,
+    ).where(col(MasteryLog.card_id).in_(card_ids))
+    if field_def_ids is not None:
+        latest_query = latest_query.where(col(MasteryLog.field_def_id).in_(field_def_ids))
+    latest_mastery = (
+        latest_query.distinct(MasteryLog.card_id, MasteryLog.field_def_id)
+        .order_by(MasteryLog.card_id, MasteryLog.field_def_id, desc(MasteryLog.id))
+        .subquery()
+    )
+
     query = (
         select(
             Card.id.label("card_id"),
             Card.deck_id.label("deck_id"),
             FieldDef.id.label("field_def_id"),
-            CardFieldMastery.prompt_mastery,
-            CardFieldMastery.answer_mastery,
-            CardFieldMastery.prompt_review_count,
-            CardFieldMastery.answer_review_count,
+            latest_mastery.c.prompt_mastery,
+            latest_mastery.c.answer_mastery,
+            latest_mastery.c.prompt_review_count,
+            latest_mastery.c.answer_review_count,
         )
         .select_from(Card)
         .join(
@@ -104,9 +119,9 @@ def db_fetch_mastery_read_rows(
             (FieldDef.deck_id == Card.deck_id) & (col(FieldDef.archived_at).is_(None)),
         )
         .outerjoin(
-            CardFieldMastery,
-            (CardFieldMastery.card_id == Card.id)
-            & (CardFieldMastery.field_def_id == FieldDef.id),
+            latest_mastery,
+            (latest_mastery.c.card_id == Card.id)
+            & (latest_mastery.c.field_def_id == FieldDef.id),
         )
         .where(col(Card.id).in_(card_ids))
     )
@@ -119,7 +134,7 @@ def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     """Delete-scoped clear for rebuild_mastery. user_id=None clears every row; otherwise
     only rows for cards owned (via deck -> subject) by that user."""
     if user_id is None:
-        db.execute(delete(CardFieldMastery))
+        db.execute(delete(MasteryLog))
         return
     owned_card_ids = (
         select(Card.id)
@@ -127,4 +142,4 @@ def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
         .join(Subject, Subject.id == Deck.subject_id)
         .where(Subject.user_id == user_id)
     )
-    db.execute(delete(CardFieldMastery).where(col(CardFieldMastery.card_id).in_(owned_card_ids)))
+    db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))

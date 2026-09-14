@@ -1,6 +1,5 @@
 from app.models.app_user import AppUser
 from app.models.card import Card, CardCreate, CardRead, CardUpdate
-from app.models.card_field_mastery import CardFieldMastery
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import (
     CardBatchCreate,
@@ -30,6 +29,7 @@ from app.models.field_def import (
     FieldDefUpdate,
     FieldType,
 )
+from app.models.mastery_log import MasteryLog
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
@@ -45,7 +45,6 @@ __all__ = [
     "CardCreate",
     "CardRead",
     "CardUpdate",
-    "CardFieldMastery",
     "CardFieldValue",
     "Deck",
     "DeckBatchEdit",
@@ -66,6 +65,7 @@ __all__ = [
     "FieldDefRead",
     "FieldDefUpdate",
     "FieldType",
+    "MasteryLog",
     "PracticeCard",
     "PracticeCardStatus",
     "PracticeDeck",

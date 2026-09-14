@@ -11,7 +11,7 @@ class ReviewSide(str, Enum):
 
 @dataclass(frozen=True)
 class FieldMasteryState:
-    """Mirrors card_field_mastery's value columns exactly. No card_id/field_def_id —
+    """Mirrors mastery_log's value columns exactly. No card_id/field_def_id —
     identity is the caller's concern, not the strategy's."""
 
     prompt_mastery: float

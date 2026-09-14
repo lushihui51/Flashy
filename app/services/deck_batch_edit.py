@@ -135,7 +135,7 @@ def apply_deck_batch_edit(
                     f"field_defs.delete id {field_id} not found on this deck"
                 )
             del active_fields[field_id]
-            # No manual cleanup of card_field_value/card_field_mastery rows — both
+            # No manual cleanup of card_field_value/mastery_log rows — both
             # have a DB-level ON DELETE CASCADE on field_def_id (D11's "deleting a
             # field_def cascades its values and mastery rows").
             db.delete(field)

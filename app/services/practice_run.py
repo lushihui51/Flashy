@@ -726,7 +726,7 @@ def submit_rating(
         ratings=tuple(ratings.items()),
         shown_prompt_ids=tuple(practice_card.prompts),
     )
-    record_review_group(db, strategy, user_id, group)
+    record_review_group(db, strategy, user_id, group, practice_card.practice_run_id)
 
     failed = any(rating == 1 for rating in ratings.values())
     new_status = PracticeCardStatus.failed if failed else PracticeCardStatus.passed

@@ -5,7 +5,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from sqlmodel import select
+from sqlalchemy import desc
+from sqlmodel import col, select
 
 from app.database_ops.review_log import (
     ReviewGroupInconsistent,
@@ -14,7 +15,10 @@ from app.database_ops.review_log import (
 )
 from app.mastery.ema import EmaStrategy
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
-from app.models.card_field_mastery import CardFieldMastery
+from app.models.card import Card
+from app.models.mastery_log import MasteryLog
+from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.practice_run import PracticeRun, RunStatus
 from app.services.mastery import apply_rating, rebuild_mastery, record_review_group
 
 STRATEGIES = [EmaStrategy()]
@@ -41,16 +45,47 @@ def mastery_cards(client, existing_deck):
 
 
 def _snapshot(db):
-    rows = db.exec(select(CardFieldMastery)).all()
-    return {
-        (row.card_id, row.field_def_id): (
+    """Current mastery = latest row per (card, field) pair (ADR 042) — folds the
+    append-only ledger down to the same shape the old single-row-per-pair cache had,
+    so every existing assertion below still reads as "current state" without knowing
+    the ledger keeps history underneath."""
+    rows = db.exec(select(MasteryLog).order_by(MasteryLog.id)).all()
+    latest: dict[tuple, tuple] = {}
+    for row in rows:
+        latest[(row.card_id, row.field_def_id)] = (
             row.prompt_mastery,
             row.answer_mastery,
             row.prompt_review_count,
             row.answer_review_count,
         )
-        for row in rows
-    }
+    return latest
+
+
+def _make_practice_run(db, user_id, status=RunStatus.active):
+    run = PracticeRun(user_id=user_id, name="attribution test", status=status)
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def _make_practice_card(db, practice_run_id, card_id, position=0):
+    """review_group_id == practice_card.id is submit_rating's actual construction
+    (app/services/practice_run.py); building one directly here, with no generation
+    machinery, is enough to exercise the attribution join since it only cares about
+    id and practice_run_id."""
+    practice_card = PracticeCard(
+        practice_run_id=practice_run_id,
+        card_id=card_id,
+        position=position,
+        prompts=[],
+        answers=[],
+        status=PracticeCardStatus.pending,
+    )
+    db.add(practice_card)
+    db.commit()
+    db.refresh(practice_card)
+    return practice_card
 
 
 class TestApplyReviewPurity:
@@ -228,7 +263,7 @@ class TestRecordReviewGroupOutcomes:
             shown_prompt_ids=(field_ids[1],),
         )
 
-        outcome = record_review_group(db, strategy, existing_user.id, group)
+        outcome = record_review_group(db, strategy, existing_user.id, group, None)
         db.commit()
 
         assert outcome is ReviewGroupWriteOutcome.new
@@ -249,11 +284,11 @@ class TestRecordReviewGroupOutcomes:
             shown_prompt_ids=(field_ids[2],),
         )
 
-        first_outcome = record_review_group(db, strategy, existing_user.id, group)
+        first_outcome = record_review_group(db, strategy, existing_user.id, group, None)
         db.commit()
         once = _snapshot(db)
 
-        second_outcome = record_review_group(db, strategy, existing_user.id, group)
+        second_outcome = record_review_group(db, strategy, existing_user.id, group, None)
         db.commit()
         twice = _snapshot(db)
 
@@ -295,7 +330,7 @@ class TestRecordReviewGroupOutcomes:
         )
 
         with pytest.raises(ReviewGroupInconsistent):
-            record_review_group(db, strategy, existing_user.id, full_group)
+            record_review_group(db, strategy, existing_user.id, full_group, None)
         db.rollback()
 
     def test_subset_of_a_logged_group_raises_not_treated_as_retry(
@@ -317,7 +352,7 @@ class TestRecordReviewGroupOutcomes:
             ratings=((field_ids[0], 4), (field_ids[1], 2), (field_ids[2], 3)),
             shown_prompt_ids=(field_ids[3],),
         )
-        record_review_group(db, strategy, existing_user.id, full_group)
+        record_review_group(db, strategy, existing_user.id, full_group, None)
         db.commit()
 
         subset_group = ReviewGroup(
@@ -329,8 +364,69 @@ class TestRecordReviewGroupOutcomes:
         )
 
         with pytest.raises(ReviewGroupInconsistent):
-            record_review_group(db, strategy, existing_user.id, subset_group)
+            record_review_group(db, strategy, existing_user.id, subset_group, None)
         db.rollback()
+
+
+class TestRunAttribution:
+    """ADR 042's practice_run_id parameter on the write path: each appended row is
+    attributed to the run it happened in, and a retry of an already-logged group
+    appends nothing at all — not even an unattributed row."""
+
+    def test_rating_appends_rows_carrying_the_run_id(self, db, existing_user, mastery_cards):
+        strategy = EmaStrategy()
+        card_id = mastery_cards["card_ids"][0]
+        field_ids = mastery_cards["field_ids"]
+        run = _make_practice_run(db, existing_user.id)
+        practice_card = _make_practice_card(db, run.id, card_id)
+
+        group = ReviewGroup(
+            review_group_id=practice_card.id,
+            card_id=card_id,
+            reviewed_at=datetime.now(UTC),
+            ratings=((field_ids[0], 4),),
+            shown_prompt_ids=(field_ids[1],),
+        )
+
+        outcome = record_review_group(db, strategy, existing_user.id, group, run.id)
+        db.commit()
+
+        assert outcome is ReviewGroupWriteOutcome.new
+        rows = db.exec(
+            select(MasteryLog).where(
+                MasteryLog.card_id == card_id,
+                col(MasteryLog.field_def_id).in_([field_ids[0], field_ids[1]]),
+            )
+        ).all()
+        assert rows, "record_review_group should have appended ledger rows"
+        assert all(row.practice_run_id == run.id for row in rows)
+
+    def test_exact_retry_appends_no_rows(self, db, existing_user, mastery_cards):
+        strategy = EmaStrategy()
+        card_id = mastery_cards["card_ids"][0]
+        field_ids = mastery_cards["field_ids"]
+        run = _make_practice_run(db, existing_user.id)
+        practice_card = _make_practice_card(db, run.id, card_id)
+
+        group = ReviewGroup(
+            review_group_id=practice_card.id,
+            card_id=card_id,
+            reviewed_at=datetime.now(UTC),
+            ratings=((field_ids[0], 4),),
+            shown_prompt_ids=(field_ids[1],),
+        )
+
+        first_outcome = record_review_group(db, strategy, existing_user.id, group, run.id)
+        db.commit()
+        row_count_after_first = len(db.exec(select(MasteryLog)).all())
+
+        second_outcome = record_review_group(db, strategy, existing_user.id, group, run.id)
+        db.commit()
+        row_count_after_retry = len(db.exec(select(MasteryLog)).all())
+
+        assert first_outcome is ReviewGroupWriteOutcome.new
+        assert second_outcome is ReviewGroupWriteOutcome.retry
+        assert row_count_after_retry == row_count_after_first
 
 
 class TestRebuildOracle:
@@ -373,7 +469,7 @@ class TestRebuildOracle:
                     for field_def_id, rating in group.ratings
                 ],
             )
-            apply_rating(db, strategy, group)
+            apply_rating(db, strategy, group, None)
             db.commit()
 
         incremental = _snapshot(db)
@@ -390,11 +486,95 @@ class TestRebuildOracle:
             assert inc_pc == reb_pc
             assert inc_ac == reb_ac
 
+    def test_rebuild_reconstructs_attribution_and_preserves_state(
+        self, db, existing_user, mastery_cards
+    ):
+        """The reconstruction ADR 042 calls out: a group's review_group_id is the
+        practice_card.id it was submitted against, so rebuild_mastery recovers
+        practice_run_id by joining back to still-existing practice_card rows —
+        surviving for a run that's still around, nulled for a run that was deleted
+        (its practice_card cascades away with it; the reviewed card itself is
+        untouched and its ledger state must come out unchanged either way)."""
+        strategy = EmaStrategy()
+        card_a, card_b = mastery_cards["card_ids"][0], mastery_cards["card_ids"][1]
+        answer_field, prompt_field = mastery_cards["field_ids"][0], mastery_cards["field_ids"][1]
+
+        surviving_run = _make_practice_run(db, existing_user.id)
+        surviving_card = _make_practice_card(db, surviving_run.id, card_a)
+        deleted_run = _make_practice_run(db, existing_user.id)
+        deleted_run_card = _make_practice_card(db, deleted_run.id, card_b)
+        # captured now — deleted_run_card is about to be cascade-deleted out from
+        # under this session, and accessing an expired ORM attribute on a row that's
+        # since vanished raises ObjectDeletedError instead of quietly refreshing.
+        deleted_run_card_id = deleted_run_card.id
+
+        group_a = ReviewGroup(
+            review_group_id=surviving_card.id,
+            card_id=card_a,
+            reviewed_at=datetime.now(UTC),
+            ratings=((answer_field, 4),),
+            shown_prompt_ids=(prompt_field,),
+        )
+        group_b = ReviewGroup(
+            review_group_id=deleted_run_card.id,
+            card_id=card_b,
+            reviewed_at=datetime.now(UTC),
+            ratings=((answer_field, 2),),
+            shown_prompt_ids=(prompt_field,),
+        )
+        record_review_group(db, strategy, existing_user.id, group_a, surviving_run.id)
+        record_review_group(db, strategy, existing_user.id, group_b, deleted_run.id)
+        db.commit()
+
+        pre_rebuild = _snapshot(db)
+        assert (card_a, answer_field) in pre_rebuild
+        assert (card_b, answer_field) in pre_rebuild
+
+        db.delete(deleted_run)
+        db.commit()
+        assert (
+            db.exec(select(PracticeCard).where(PracticeCard.id == deleted_run_card_id)).first()
+            is None
+        )
+        assert db.get(Card, card_b) is not None  # the card itself outlives its run
+
+        rebuild_mastery(db, strategy)
+        post_rebuild = _snapshot(db)
+
+        for key in [
+            (card_a, answer_field),
+            (card_a, prompt_field),
+            (card_b, answer_field),
+            (card_b, prompt_field),
+        ]:
+            assert key in post_rebuild
+            pre_prompt, pre_answer, pre_pc, pre_ac = pre_rebuild[key]
+            post_prompt, post_answer, post_pc, post_ac = post_rebuild[key]
+            assert post_prompt == pytest.approx(pre_prompt, abs=1e-4)
+            assert post_answer == pytest.approx(pre_answer, abs=1e-4)
+            assert post_pc == pre_pc
+            assert post_ac == pre_ac
+
+        latest_a = db.exec(
+            select(MasteryLog)
+            .where(MasteryLog.card_id == card_a, MasteryLog.field_def_id == answer_field)
+            .order_by(desc(MasteryLog.id))
+            .limit(1)
+        ).first()
+        latest_b = db.exec(
+            select(MasteryLog)
+            .where(MasteryLog.card_id == card_b, MasteryLog.field_def_id == answer_field)
+            .order_by(desc(MasteryLog.id))
+            .limit(1)
+        ).first()
+        assert latest_a.practice_run_id == surviving_run.id
+        assert latest_b.practice_run_id is None
+
 
 MASTERY_ARITHMETIC = re.compile(r"(prompt_mastery|answer_mastery)\s*[+\-*/]")
 SCANNED_FOR_ARITHMETIC = [
-    "app/database_ops/card_field_mastery.py",
-    "app/models/card_field_mastery.py",
+    "app/database_ops/mastery_log.py",
+    "app/models/mastery_log.py",
     "app/services/mastery.py",
 ]
 

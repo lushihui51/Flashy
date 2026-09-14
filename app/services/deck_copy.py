@@ -40,7 +40,7 @@ def copy_deck(
     on the new deck or a copied config, or a selected config that's gone stale since
     it was saved) rolls back the whole copy, not just the failed step.
 
-    Never copied: card_field_mastery, review_log, sessions — a copy starts with no
+    Never copied: mastery_log, review_log, sessions — a copy starts with no
     history of its own. deck_practice_config_ids is the sharer's choice of which
     configs to bring along, if any; omitted or empty copies none.
     """

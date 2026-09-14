@@ -99,7 +99,7 @@ def db_fetch_review_log_for_rebuild(
     """Every row with a live card and field, oldest first — the replay order
     rebuild_mastery folds through. A row whose card_id or field_def_id has gone SET
     NULL (its card, or the whole deck, was deleted) is excluded: mastery is a cache for
-    a live (card, field), and card_field_mastery cascade-deletes with the card, so
+    a live (card, field), and mastery_log cascade-deletes with the card, so
     there's nothing to rebuild for it — only orphaned review_log history remains."""
     query = (
         select(ReviewLog)
