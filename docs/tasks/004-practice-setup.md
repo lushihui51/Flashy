@@ -6,6 +6,10 @@ Branch: `rewrite/practice-setup`. Execute one task per /build session; stop and 
 
 Already shipped on this branch (history, not tasks): backend endpoints + `name` column (`f304e7a`, verified in `docs/cc/2026-08-24-practice-setup-phase-0-backend.md`), practice overview with filters/tabs/entry points (`6fe4ec0`), the drag-table builder now condemned by ADR 020 (`4c32349`, renamed `b24b4aa`), deck/subject action scoping (`f4afa9a`, `6a288a0`).
 
+## Superseded since (sync 2026-09-14)
+
+- **`practice_session` is now `practice_run`** (ADR 038, task 009 T2): the vocabulary table's schema term, every `/api/practice_sessions…` path in Contracts (`/api/practice_runs…`), `PracticeSessionRead/Summary`→`PracticeRunRead/Summary` (MD-3, T1), `practice_session_id`→`practice_run_id` in the `practice_deck` uniqueness rule, and T1's `practice_session.py`/`test_practice_session.py`/`practice_session.ts` file names. The user-facing word "practice" is unchanged (ADR 021).
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.

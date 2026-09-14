@@ -13,16 +13,16 @@
 
 ## Commands
 
-- Toggle venv: `source .venv/bin/activate`
 - Frontend dev server: `npm run dev` (in /frontend)
 - Backend dev server: `fastapi dev`
 - Tests: `pytest` , `npm run test` (in /frontend)
 - Regenerate API types: `npm run gen:api` (in /frontend)
 - Migrations: `alembic revision --autogenerate -m "message"` to generate migration, then `alembic upgrade head` to apply
+- CI: `.github/workflows/ci.yml` runs `pytest`, the alembic chain from an empty database, `vitest`, lint, and build on every PR and push to `main` (ADR 041). The `protect-main` ruleset requires both the `backend` and `frontend` checks, so changes reach `main` through PRs
 
 ## Hard rules
 
-- Never run commands if not in venv, activate with `source .venv/bin/activate`
+- Never run Python commands outside the project venv: `source .venv/bin/activate` first (CI and `npm run gen:api` use `uv run …`, which is equivalent)
 - Never edit frontend/src/api/types.ts by hand, regenerate with `npm run gen:api` (in /frontend)
 - Before committing any frontend change, run `npx vitest run`, `npm run lint`, and `npm run build` (in /frontend) — all three clean, not just the file(s) you touched. `npm run build` already runs `tsc -b` before bundling, so this covers typecheck + tests + lint + bundle
 - Always read the generated migration before applying it
@@ -32,10 +32,10 @@
   implementations under `app/mastery/` — never in SQL, a SQLModel expression, or a
   trigger, in any phase
 - A `review_group_id`'s rows must be logged atomically, in one transaction, and never appended to afterward. The mastery write path computes the prompt side's breadth from the whole group; a group submitted partially and completed later would make the incremental write and a later `rebuild_mastery` replay disagree
-- Diagnostic reports, investigation traces, and plan-mode findings go in `docs/cc/`, never `~/.claude/plans/` or any path outside the repository. If plan mode wrote a file elsewhere, copy it into `docs/cc/` before ending the session and reference the repo path in your summary
-- Never write findings only into a chat summary. If an investigation produced a trace worth referencing later, it goes in `docs/cc/` as a file
+- Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/cc/` — never only a chat summary, and never a path outside the repository. If plan mode wrote a file elsewhere, copy it into `docs/cc/` before ending the session and reference the repo path in your summary
 - `cc` is the only directory under `docs/` that you may create or edit files in without asking, everything else needs explicit permissions
-- Timestamps are server-stamped UTC instants; the user's timezone is a **rendering** input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, and never store, order, or compare instants in anything but UTC — `reviewed_at` is `rebuild_mastery`'s replay ordering key on an append-only log, so a skewed or DST-ambiguous value is permanent corruption. The user's IANA zone rides every request as the `X-Timezone` header and is stored on `app_user.timezone`; every user-facing date (display, "today", day-bucketing, streaks) is computed in it at read time. The one sanctioned exception is offline capture, and it is not built
+- Several sessions may work in this checkout and against the `TEST_DATABASE_URL` database at the same time: before staging, confirm every hunk belongs to your task (`git add -p`), commit only your own files, and don't start a full `pytest` run while a peer session is mid-run
+- Timestamps are server-stamped UTC instants; the user's timezone is a **rendering** input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, and never store, order, or compare instants in anything but UTC. The user's IANA zone rides every request as the `X-Timezone` header and is stored on `app_user.timezone`; every user-facing date (display, "today", day-bucketing, streaks) is computed in it at read time. The one sanctioned exception is offline capture, and it is not built
 - Never bulk-delete rows from the local dev database as "cleanup" after seeding data for a live browser check (e.g. deleting every subject/deck currently present). The dev database can hold real data at any time, and a delete-everything cleanup can't tell that apart from what was just seeded. Leave seeded data in place once a browser check is done instead of removing it
 
 ## Conventions
@@ -46,10 +46,11 @@
 - Reusable components do not fetch, all data are passed down as props
 - When a new surface needs something close to an existing component, extend that component with props (e.g. a prop saying whether a picker is being used to filter or to create) rather than forking a near-duplicate — one interaction layer, one set of bugs. If a genuinely new component is warranted, name it for the purpose it serves (`SubjectFilterCombobox`), never a generic name that leaves two similar components indistinguishable at the import site
 - Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (`SubjectForm`, `DeckEditor`, `CardStandaloneForm`, `DeckConfigurationEditor` — see `App.tsx`). The one non-area directory is `ui/`: domain-free primitives every area may import (PickerCombobox, ConfirmDialog, FullScreenDialog, BottomSheet, ListRow). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
+- A `.tsx` component file exports only components — ESLint's `react-refresh/only-export-components` rejects an exported constant or helper — so shared values live in a sibling `.ts` (`ratingTiers.ts`, `navItems.ts`, `pickerConfig.ts`)
 - Imports are absolute from `src/` (alias in `vite.config.ts` and `tsconfig.app.json`), never relative `../..` chains
 - Routed pages render below `AppShell`'s sticky header — don't size their content with `min-h-dvh`/`h-screen`/full-height `flex-1`, since the box ends up taller than what's visible and pins bottom controls below the fold
 - Modals/sheets: use Radix Dialog primitives (`@radix-ui/react-dialog`, ADR 016), not a hand-rolled focus trap/scroll-lock. If the trigger button isn't a `Dialog.Trigger` descendant (e.g. it lives in a sibling component), thread a `triggerRef` for `onCloseAutoFocus`-based focus restoration and give the trigger an inline `pointerEvents: 'auto'` + a matching `onPointerDownOutside` exemption, or Radix's `disableOutsidePointerEvents` silently blocks it while the dialog is open (see `SideDrawer.tsx`)
-- API layer error handling: `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`), never side-effect (no `console.error`, no toast) — display is a UI-edge concern, not the data layer's (ADR 006)
+- API layer error handling: `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`), never side-effect (no `console.error`, no toast) — display is a UI-edge concern, not the data layer's (ADR 006). A structured `{code, message}` detail throws a typed `ApiDetailError`; shape-aware callers `instanceof`-check it, everyone else catches a plain `Error` (ADR 022)
 - Error display: inline at the call site — a failed query renders a banner in place of its content, a failed mutation renders its message next to the triggering control; no ErrorBoundary, no global QueryCache/MutationCache handlers, no toasts (ADR 035)
 - `// TODO(defer:<tag>)` marks deliberately-deferred skeleton work; `grep -r "TODO(defer:" frontend/src/` before considering a phase/PR done — every deferred item must be tagged, nothing untagged
 - Component tests: default Vitest environment is `node`; a test needing a DOM opts in per-file with a `// @vitest-environment jsdom` docblock at the top, not a global config change (ADR 017). Reuse `frontend/src/test/testUtils.tsx` (`renderWithRouter`, `renderWithProviders`) and `frontend/src/test/mocks/clerk.ts` (mocks `@clerk/react`'s `useUser`/`useClerk`) rather than re-mocking per file. RTL doesn't auto-cleanup here (only fires under Vitest's `globals: true`, which this repo doesn't set) — `test/setup.ts`'s `afterEach(() => cleanup())` does it instead; don't remove it
@@ -63,12 +64,10 @@
 
 ## Mastery model
 
-- `card_field_mastery` is a disposable cache, fully rebuildable from `review_log`
-- The database stores mastery state, it never computes it
 - One `review_group_id` is one appearance: a `ReviewGroup` bundling every rated answer field and the prompt fields shown alongside them.
 - `MasteryStrategy.expand(group)` decides one `MasteryUpdate` per `(card_id, field_def_id, side)` up front, because the prompt side needs the whole group to know its breadth — it can't be decided one log row at a time.
-- Breadth (how many rated answers a prompt was shown for in one appearance) changes the _weight_ of the prompt-side update, not its _target_ — the 0-100 mastery scale has no room to express "more evidence" through the target once it's already saturated. `EmaStrategy`'s effective weight is `alpha_eff = 1-(1-alpha)^(breadth^beta)`; `beta` (default `0.5`) is the diminishing-evidence knob, tunable on the strategy like `alpha`. `prompt_review_count` `answer_review_count` increment by exactly 1 per appearance regardless of breadth
-- **Harshest-wins** is the rule for collapsing multiple per-field answer ratings into one signal, and it is applied in two separate places that must stay consistent: a `practice_card` is marked failed if _any_ one of its answer fields is rated 1 (`app/services/practice_session.py`, `submit_rating`), and the prompt-side mastery target for that same appearance is the harshest (rating-1) score if any answer failed, otherwise the mean of the normalized scores (`app/mastery/ema.py`, `EmaStrategy._aggregate_target`). Changing one site's aggregation rule without the other would make a card's pass/fail outcome silently disagree with the mastery value driving its own resurfacing.
+- Breadth (how many rated answers a prompt was shown for in one appearance) changes the _weight_ of the prompt-side update, not its _target_ — the 0-100 mastery scale has no room to express "more evidence" through the target once it's already saturated. `EmaStrategy`'s effective weight is `alpha_eff = 1-(1-alpha)^(breadth^beta)`; `beta` (default `0.5`) is the diminishing-evidence knob, tunable on the strategy like `alpha`. `prompt_review_count` and `answer_review_count` increment by exactly 1 per appearance regardless of breadth
+- **Harshest-wins** is the rule for collapsing multiple per-field answer ratings into one signal, and it is applied in two separate places that must stay consistent: a `practice_card` is marked failed if _any_ one of its answer fields is rated 1 (`app/services/practice_run.py`, `submit_rating`), and the prompt-side mastery target for that same appearance is the harshest (rating-1) score if any answer failed, otherwise the mean of the normalized scores (`app/mastery/ema.py`, `EmaStrategy._aggregate_target`). Changing one site's aggregation rule without the other would make a card's pass/fail outcome silently disagree with the mastery value driving its own resurfacing.
 
 ## Entity vocabulary
 
@@ -92,19 +91,17 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   `app/models/subject.py`). `last_activity_at` is the sort key every subject list
   orders by descending; it bubbles from owned decks (a deck created/deleted/moved
   under this subject) as well as the subject's own edits, written only by `touch()`
-  (`app/services/activity.py`). There is no `updated_at` — a prior version had one and
-  it was removed for having zero consumers (ADR 018).
+  (`app/services/activity.py`). There is no `updated_at` (ADR 018).
 - `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`,
   and `deck_practice_config` rows, unique per `(subject_id, name)`. Deleting a deck
   cascades all three — and, transitively, `card_field_value`, `card_field_mastery`,
   and `practice_card` — but never touches `review_log` or `practice_deck`, which
-  outlive it (ADR 015). Always has **≥2 active `field_def` rows** (task 003's D3) — a
-  practice session needs at least one prompt field and one answer field, and a field
-  is one or the other, never both, so fewer than two makes a deck
-  unpractisable. Enforced on create, on the batch-edit endpoint, and on archiving a
-  field (archiving counts as removing for this purpose). `last_activity_at` is the
-  same sort-key mechanism as `subject`'s — bumps on the deck's own edits and on any
-  field/card write under it — and likewise has no `updated_at` (ADR 018).
+  outlive it (ADR 015). Always has **≥2 active `field_def` rows** (task 003's D3: at
+  least one prompt and one answer field, and a field is one or the other), enforced on
+  create, on the batch-edit endpoint, and on archiving a field (archiving counts as
+  removing). `last_activity_at` is the same sort-key mechanism as `subject`'s — bumps
+  on the deck's own edits and on any field/card write under it — and likewise has no
+  `updated_at` (ADR 018).
 - `field_def` — the sole source of truth for what a field is (name, `FieldType`,
   display `position`); archived via `archived_at`, never hard-deleted by default
   (ADR 009, ADR 010). Every other table references a field only by `field_def.id`.
@@ -137,30 +134,37 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   `review_log` (ADR 011, ADR 012).
 - `deck_practice_config` — a saved, named template describing which fields are
   prompts/answers and pool-sampling rules; mutable.
-- `practice_session` — one user's practice run, `active` or `completed`. There is no
-  third status: `abandoned` was dropped because nothing could set it reliably (ADR 015,
-  amended). Spans one or more `practice_deck`s. Status is never inferred except on the
-  current-card read path: `get_current_practice_card` transitions an `active` session
-  to `completed` if no pending `practice_card` remains, whether because the user
-  genuinely finished or because cascade-deleted cards stranded it — that distinction
-  isn't tracked. The session list surfaces `deleted_deck_count` (its `practice_deck`
-  rows whose `deck_id` has gone null) so the UI can render "deleted deck" chips, which
-  is the only thing distinguishing the second case; nothing new is stored for it.
-  Deleting a session is a user action and the only way one leaves the list.
+- `practice_run` — one user's practice run (`practice_session` before ADR 038; the UI
+  says "practice", ADR 021), `active` or `completed` — no third status (`abandoned`
+  was dropped, ADR 015 amended). Spans one or more `practice_deck`s. Status is never
+  inferred except on the current-card read path: `get_current_practice_card`
+  transitions an `active` run to `completed` if no pending `practice_card` remains,
+  whether because the user genuinely finished or because cascade-deleted cards
+  stranded it — that distinction isn't tracked. The run list surfaces
+  `deleted_deck_count` (its `practice_deck` rows whose `deck_id` has gone null) so the
+  UI can render "deleted deck" chips, which is the only thing distinguishing the second
+  case; nothing new is stored for it. Rerun (ADR 039) creates a new run from a
+  completed run's own snapshots and keeps the original; deleting a run is a user
+  action and the only way one leaves the list.
 - `practice_deck` — an immutable snapshot of a `deck_practice_config`, copied at
-  session start; editing or deleting the source config never affects it (ADR 013).
+  run start; editing or deleting the source config never affects it (ADR 013).
   `deck_id` is nullable with `ON DELETE SET NULL` — the snapshot survives deleting the
   source deck too, since it copies the config's field/pool ids into its own arrays
-  rather than referencing the deck live (ADR 015). It does **not** survive its own
-  session: `practice_session_id` is `ON DELETE CASCADE`, because a snapshot of a session
-  that no longer exists is history nobody can read.
-- `practice_card` — one generated card instance within a session
+  rather than referencing the deck live (ADR 015). `source_config_id` is attribution
+  only: nullable, `SET NULL` when the config is deleted, nulled by any material edit
+  to the config's six arrays, and never read by generation, validation, or rerun
+  (ADR 040). It does **not** survive its own run: `practice_run_id` is
+  `ON DELETE CASCADE`.
+- `practice_card` — one generated card instance within a run
   (`pending`/`passed`/`failed`); a failed card is requeued as a new row, never
-  mutated in place. `card_id` is `NOT NULL` with `ON DELETE CASCADE` — a practice_card
-  without a card is meaningless, so deleting the card deletes it too, rather than
-  leaving a nullable reference every reader would have to guard against (ADR 015).
-  `practice_session_id` cascades too: the row is session-owned state, not history.
+  mutated in place. The requeue force-includes every "Again"-rated answer field that
+  is still live and non-blank (ADR 036) and is inserted no earlier than
+  `RETRY_SPACING_FLOOR` (3) other pending cards, or at the end of the queue when
+  fewer remain (ADR 037). `card_id` is `NOT NULL` with `ON DELETE CASCADE` — deleting
+  the card deletes it too (ADR 015). `practice_run_id` cascades too: the row is
+  run-owned state, not history.
 
 ## Context
 
 - Design decisions: see docs/adr/
+- Task files (one per cycle, per-task Notes, "Superseded since" corrections): see docs/tasks/

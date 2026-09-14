@@ -2,6 +2,14 @@
 
 The run surface for a started practice session, per the 2026-08-26/27 /plan session: the card view with reveal and rating, live progress, the completion breakdown, and re-run. Builds on 004 (setup/creation) and 005 (breadcrumbs — its MD-2 left the run crumb static pending this work). Branch: `rewrite/practice-run`, after 004/005 land.
 
+## Superseded since (sync 2026-09-14)
+
+Later cycles changed parts of what this file describes; sections are left as written, with current truth here:
+
+- **Everything named `practice_session` is now `practice_run`** (ADR 038, task 009 T2): modules, types (`PracticeSessionBreakdown`→`PracticeRunBreakdown`, `SessionProgress`→`RunProgress`, `session_progress`→`run_progress`), API paths (`/api/practice_runs/…`), `practice_session.ts`→`practice_run.ts`, and `SessionBreakdown.tsx`→`RunBreakdown.tsx`. Per 009 MD-1 the run-state endpoint is `GET …/{id}/state`, not `/{id}/run`, and the `session_active` detail code is `run_active`. Query keys: `'practice_sessions'`→`'practice_runs'`, `'practice_breakdown'`→`'practice_run_breakdown'`. Browser routes and UI copy are unchanged (ADR 021).
+- **Re-run keeps the original run** (ADR 039, task 009 T5). The "API — re-run" contract and T4/T9's delete-the-original Done-when criteria no longer hold: `POST …/rerun` takes a client-supplied `{name}` (the creation page's default-name formatter), creates the new run, and leaves the original listed and readable. Dialog copy is now "A new practice with the same decks is created. This practice and its reviews stay on record." T4 and T9 stay checked as history; ADR 030's delete half is superseded, its frozen-snapshot semantics still hold. `practice_deck` also gained an attribution-only `source_config_id` (ADR 040, 009 T6/T7), unread by rerun.
+- **ADR 029's four-tab grouping is superseded on paper by ADR 044** (task 010 T4), but the tabs are still what `RunBreakdown.tsx` renders until 010 lands; the outcome-chain buckets remain in force.
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.
