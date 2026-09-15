@@ -14,8 +14,8 @@
 ## Commands
 
 - Frontend dev server: `npm run dev` (in /frontend)
-- Backend dev server: `fastapi dev`
-- Tests: `pytest` , `npm run test` (in /frontend)
+- Backend dev server: `fastapi dev`. The app never creates tables — a fresh database needs `alembic upgrade head` first (ADR 045)
+- Tests: `pytest`; `npx vitest run` (in /frontend — `npm run test` is `vitest` in watch mode and never exits)
 - Regenerate API types: `npm run gen:api` (in /frontend)
 - Migrations: `alembic revision --autogenerate -m "message"` to generate migration, then `alembic upgrade head` to apply
 - CI: `.github/workflows/ci.yml` runs `pytest`, the alembic chain from an empty database, `vitest`, lint, and build on every PR and push to `main` (ADR 041). The `protect-main` ruleset requires both the `backend` and `frontend` checks, so changes reach `main` through PRs
@@ -26,6 +26,7 @@
 - Never edit frontend/src/api/types.ts by hand, regenerate with `npm run gen:api` (in /frontend)
 - Before committing any frontend change, run `npx vitest run`, `npm run lint`, and `npm run build` (in /frontend) — all three clean, not just the file(s) you touched. `npm run build` already runs `tsc -b` before bundling, so this covers typecheck + tests + lint + bundle
 - Always read the generated migration before applying it
+- Schema changes reach any persistent database only through an alembic migration; nothing under `app/` calls `SQLModel.metadata.create_all`/`drop_all` (ADR 045; `tests/api_tests/test_schema_guard.py` fails if one appears). Only `tests/conftest.py` may `create_all`, and only against `TEST_DATABASE_URL`
 - Always manage Python dependencies with `uv`
 - Always manage Node dependencies with `npm` (in /frontend)
 - Mastery arithmetic (blending, scoring, aggregation) lives only inside `MasteryStrategy`
@@ -41,12 +42,13 @@
 ## Conventions
 
 - Backend layering (ADR 034): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table, `db_*` prefix, ownership scoped in the query); a service exists only where a flow spans multiple operations — a one-query handler calls its `db_*` function directly
+- `app/models/` layout (ADR 046): `<table>.py` holds the table, its `Base`, and only that table's own single-row shapes (`Create`/`Read`/`Update`/`Summary` — scalar additions allowed, nested models not). A shape that nests another model or describes a page/flow lives in `app/models/<router>_payloads.py` (`practice_run_payloads.py`, `deck_payloads.py`). A table module may import a sibling's table class for a `Relationship`, never a shape — `tests/api_tests/test_models_layout_guard.py` enforces that half
 - Frontend date formatting goes through `formatDate`/`formatDateTime` in `frontend/src/lib/datetime.ts`, which pins `timeZone` explicitly — never `toLocaleDateString`/`toLocaleString`/`toLocaleTimeString` or a hand-built `Intl.DateTimeFormat`. An ESLint `no-restricted-syntax` rule blocks those outside that one file; a zone-less formatter looks correct on a developer machine sitting in the user's zone and is silently wrong everywhere else
 - Frontend server fetch through TanStack Query (ADR 033), no raw fetch in components; server data lives in the query cache, never copied into long-lived component state
 - Reusable components do not fetch, all data are passed down as props
 - When a new surface needs something close to an existing component, extend that component with props (e.g. a prop saying whether a picker is being used to filter or to create) rather than forking a near-duplicate — one interaction layer, one set of bugs. If a genuinely new component is warranted, name it for the purpose it serves (`SubjectFilterCombobox`), never a generic name that leaves two similar components indistinguishable at the import site
-- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (`SubjectForm`, `DeckEditor`, `CardStandaloneForm`, `DeckConfigurationEditor` — see `App.tsx`). The one non-area directory is `ui/`: domain-free primitives every area may import (PickerCombobox, ConfirmDialog, FullScreenDialog, BottomSheet, ListRow). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
-- A `.tsx` component file exports only components — ESLint's `react-refresh/only-export-components` rejects an exported constant or helper — so shared values live in a sibling `.ts` (`ratingTiers.ts`, `navItems.ts`, `pickerConfig.ts`)
+- Frontend component/page layout: one directory per functional area under `frontend/src/components/` (e.g. `shell/` for the app-shell chrome — TopBar, SideDrawer, AccountSheet, AuthSlot, Logo, SearchBar), not a flat `components/`. Pages are `frontend/src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (`SubjectForm`, `DeckEditor`, `CardStandaloneForm`, `DeckConfigurationEditor` — see `App.tsx`). The one non-area directory is `ui/`: domain-free primitives every area may import (see the directory — the inventory drifts). Nothing in `ui/` fetches or knows an entity — a primitive that needs data takes it as props, and the page owns the query
+- A `.tsx` component file exports only components — ESLint's `react-refresh/only-export-components` rejects an exported constant or helper — so shared values live in a plain `.ts` module — a sibling (`ratingTiers.ts`, `navItems.ts`) or `src/lib/` (`pickerConfig.ts`)
 - Imports are absolute from `src/` (alias in `vite.config.ts` and `tsconfig.app.json`), never relative `../..` chains
 - Routed pages render below `AppShell`'s sticky header — don't size their content with `min-h-dvh`/`h-screen`/full-height `flex-1`, since the box ends up taller than what's visible and pins bottom controls below the fold
 - Modals/sheets: use Radix Dialog primitives (`@radix-ui/react-dialog`, ADR 016), not a hand-rolled focus trap/scroll-lock. If the trigger button isn't a `Dialog.Trigger` descendant (e.g. it lives in a sibling component), thread a `triggerRef` for `onCloseAutoFocus`-based focus restoration and give the trigger an inline `pointerEvents: 'auto'` + a matching `onPointerDownOutside` exemption, or Radix's `disableOutsidePointerEvents` silently blocks it while the dialog is open (see `SideDrawer.tsx`)
@@ -66,8 +68,9 @@
 
 - One `review_group_id` is one appearance: a `ReviewGroup` bundling every rated answer field and the prompt fields shown alongside them.
 - `MasteryStrategy.expand(group)` decides one `MasteryUpdate` per `(card_id, field_def_id, side)` up front, because the prompt side needs the whole group to know its breadth — it can't be decided one log row at a time.
-- Breadth (how many rated answers a prompt was shown for in one appearance) changes the _weight_ of the prompt-side update, not its _target_ — the 0-100 mastery scale has no room to express "more evidence" through the target once it's already saturated. `EmaStrategy`'s effective weight is `alpha_eff = 1-(1-alpha)^(breadth^beta)`; `beta` (default `0.5`) is the diminishing-evidence knob, tunable on the strategy like `alpha`. `prompt_review_count` and `answer_review_count` increment by exactly 1 per appearance regardless of breadth
+- Breadth (how many rated answers a prompt was shown for in one appearance) changes the _weight_ of the prompt-side update, not its _target_ (why: the comment above `EMA_BETA` in `app/mastery/ema.py`). `EmaStrategy`'s effective weight is `alpha_eff = 1-(1-alpha)^(breadth^beta)`; `beta` (default `0.5`) is the diminishing-evidence knob, tunable on the strategy like `alpha`. `prompt_review_count` and `answer_review_count` increment by exactly 1 per appearance regardless of breadth
 - **Harshest-wins** is the rule for collapsing multiple per-field answer ratings into one signal, and it is applied in two separate places that must stay consistent: a `practice_card` is marked failed if _any_ one of its answer fields is rated 1 (`app/services/practice_run.py`, `submit_rating`), and the prompt-side mastery target for that same appearance is the harshest (rating-1) score if any answer failed, otherwise the mean of the normalized scores (`app/mastery/ema.py`, `EmaStrategy._aggregate_target`). Changing one site's aggregation rule without the other would make a card's pass/fail outcome silently disagree with the mastery value driving its own resurfacing.
+- A card's display mastery is `strategy.card_score` over all of its deck's active fields, unreviewed fields at the prior (ADR 043) — one definition for every display surface, the breakdown today and the browse/statistics cycles later. Run deltas (ADR 042) read only that run's own `mastery_log` rows plus one bounded latest-row-below-bound lookup per pair, never a history replay; the exact bound rule is the delta-semantics contract in `docs/tasks/010-mastery-log.md`
 
 ## Entity vocabulary
 
@@ -94,7 +97,7 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   (`app/services/activity.py`). There is no `updated_at` (ADR 018).
 - `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`,
   and `deck_practice_config` rows, unique per `(subject_id, name)`. Deleting a deck
-  cascades all three — and, transitively, `card_field_value`, `card_field_mastery`,
+  cascades all three — and, transitively, `card_field_value`, `mastery_log`,
   and `practice_card` — but never touches `review_log` or `practice_deck`, which
   outlive it (ADR 015). Always has **≥2 active `field_def` rows** (task 003's D3: at
   least one prompt and one answer field, and a field is one or the other), enforced on
@@ -128,10 +131,15 @@ All 12 tables under `app/models/`. When suggesting code, use these — not
   with `ON DELETE SET NULL`, so a row survives the deletion of anything it references
   as orphaned history (ADR 015). `rebuild_mastery` excludes rows with a null
   `card_id`/`field_def_id` from its replay — there's no live `(card, field)` left to
-  rebuild `card_field_mastery` for.
-- `card_field_mastery` — disposable, lazily-created cache of per-(card, field)
-  mastery scores, computed by a `MasteryStrategy` and fully rebuildable from
-  `review_log` (ADR 011, ADR 012).
+  rebuild a `mastery_log` state for.
+- `mastery_log` — append-only ledger: one row per `(card, field)` state change carrying
+  the full post-blend `FieldMasteryState`; current mastery is the max-`id` row per pair
+  (the BIGINT identity is the ordering key — `reviewed_at` is display data, never an
+  order key). `practice_run_id` is nullable `ON DELETE SET NULL` attribution for run
+  deltas; `card_id`/`field_def_id` are `ON DELETE CASCADE`. A disposable projection of
+  `review_log`, regenerated whole by `rebuild_mastery` (ADR 042, ADR 011). Its write
+  path takes a per-card `pg_advisory_xact_lock`, since append-only rows have nothing
+  for a row lock to serialize.
 - `deck_practice_config` — a saved, named template describing which fields are
   prompts/answers and pool-sampling rules; mutable.
 - `practice_run` — one user's practice run (`practice_session` before ADR 038; the UI
