@@ -47,12 +47,12 @@ OpenAPI schema names are class names, so `frontend/src/api/openapi.json` and `ty
 
 ### T2 — `deck_payloads.py` (ADR 046, MD-1) — independent of T1
 
-- [ ] **Goal:** `deck.py` holds only the deck's own row shapes; the create, detail, and batch-edit payloads live in `deck_payloads.py`.
+- [x] **Goal:** `deck.py` holds only the deck's own row shapes; the create, detail, and batch-edit payloads live in `deck_payloads.py`.
 - **Files:** `app/models/deck_payloads.py` (new), `app/models/deck.py`, `app/routers/api/deck.py`, `app/services/deck_batch_edit.py`, `app/models/__init__.py`.
 - **Details:** Per the module-inventory contract. Move the alias and 10 classes by cut-and-paste. Repoint the router's `from app.models.deck import (Deck, DeckBatchEdit, DeckCreate, DeckDetail, DeckFieldDefRead, DeckSummary)` — `Deck` and `DeckSummary` stay on `deck`, the other four come from `deck_payloads` — and `deck_batch_edit.py`'s `DeckBatchEdit`. Per MD-1, `__init__.py`'s `from app.models.deck import (...)` splits into the four names that stay and a new `from app.models.deck_payloads import (...)` for the ten that moved; `__all__` is byte-identical. After the move `deck.py` imports nothing from `card` or `field_def` — delete those two lines. `services/deck_create.py` imports `FieldDefCreate` from `field_def` directly and is unaffected.
 - **Out of scope:** renaming any class; changing `__all__` membership; touching `practice_*` modules (T1); the guard test (T3); `card.py` and `CardMasteryRead`, which stay by ADR 046's derived-scalars clause.
 - **Done when:** `grep -E "^class |^[A-Za-z]+ = " app/models/deck_payloads.py app/models/deck.py` lists exactly the contract's inventories in order; `grep -n "^from app.models" app/models/deck.py` shows only `app.models.base`; `git diff app/models/__init__.py` changes only import lines, never a line inside `__all__`; `python -c "import app.main"` succeeds; full `pytest` passes with no test file modified; in `frontend/`, `npm run gen:api && git diff --exit-code -- src/api/openapi.json src/api/types.ts` exits 0.
-- Notes:
+- Notes: Implemented exactly per contract — no ambiguity here (unlike T1's inventory sentence, this one's explicit order and the "from deck.py" provenance agree, since it matches deck.py's actual source order already). `__init__.py`'s `from app.models.deck import (...)` block was alphabetized before the split (not source-file order), so the two post-split blocks (`deck`: `Deck, DeckRead, DeckSummary`; `deck_payloads`: the other ten) are each alphabetized too, matching that file's existing convention; `__all__` is untouched (byte-identical, confirmed by `git diff`). All `Done when` checks pass, including the `gen:api` byte-identical diff (exit 0). Full `pytest`: 280 passed, no test file modified.
 
 ### T3 — The layout guard (ADR 046) — after T1 and T2
 

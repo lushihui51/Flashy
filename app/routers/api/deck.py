@@ -13,13 +13,12 @@ from app.database_ops.deck import (
 from app.database_ops.field_def import db_read_field_defs
 from app.dependencies import CurrentUserDep
 from app.models.card import CardRead
-from app.models.deck import (
-    Deck,
+from app.models.deck import Deck, DeckSummary
+from app.models.deck_payloads import (
     DeckBatchEdit,
     DeckCreate,
     DeckDetail,
     DeckFieldDefRead,
-    DeckSummary,
 )
 from app.services.deck_batch_edit import DeckBatchEditValidationError, apply_deck_batch_edit
 from app.services.deck_create import DeckCreateValidationError, create_deck_atomic

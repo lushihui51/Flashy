@@ -7,7 +7,8 @@ from app.database_ops.field_def import db_next_position
 from app.database_ops.subject import db_read_subject
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
-from app.models.deck import Deck, DeckBatchEdit
+from app.models.deck import Deck
+from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
 from app.services.activity import touch
