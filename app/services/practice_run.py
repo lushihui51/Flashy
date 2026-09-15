@@ -39,22 +39,21 @@ from app.database_ops.practice_run import (
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.field_def import FieldDef
-from app.models.practice_card import (
+from app.models.practice_card import PracticeCard, PracticeCardStatus
+from app.models.practice_deck import PracticeDeck
+from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice_run_payloads import (
     BreakdownAttempt,
     BreakdownBucket,
     BreakdownCard,
     CurrentRunCard,
     FieldMasteryDelta,
-    PracticeCard,
-    PracticeCardStatus,
     PracticeRunState,
     PracticeRunBreakdown,
     RatedFieldValue,
     ResolvedFieldValue,
     RunProgress,
 )
-from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import PracticeRun, RunStatus
 from app.services.deck_practice_config import validate_deck_practice_config
 from app.services.mastery import card_mastery, record_review_group
 from app.services.practice_generation import generate_practice_card_fields

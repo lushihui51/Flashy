@@ -11,17 +11,17 @@ from app.database_ops.practice_run import (
 )
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
-from app.models.practice_card import (
-    PracticeRunState,
-    PracticeRunBreakdown,
-    RatingSubmission,
-    RatingSubmissionResult,
-)
 from app.models.practice_run import (
     PracticeRunCreate,
     PracticeRunRead,
     PracticeRunRerun,
+)
+from app.models.practice_run_payloads import (
+    PracticeRunState,
+    PracticeRunBreakdown,
     PracticeRunSummary,
+    RatingSubmission,
+    RatingSubmissionResult,
 )
 from app.services.practice_run import (
     RerunError,
