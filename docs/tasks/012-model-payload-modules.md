@@ -56,9 +56,9 @@ OpenAPI schema names are class names, so `frontend/src/api/openapi.json` and `ty
 
 ### T3 — The layout guard (ADR 046) — after T1 and T2
 
-- [ ] **Goal:** a test fails whenever a table module imports a non-table shape from a sibling, so ADR 046 outlives this cycle.
+- [x] **Goal:** a test fails whenever a table module imports a non-table shape from a sibling, so ADR 046 outlives this cycle.
 - **Files:** `tests/api_tests/test_models_layout_guard.py` (new).
 - **Details:** Per the guard-test contract. Follows `tests/api_tests/test_schema_guard.py`'s source-scan shape, with `ast` for the import lines and `importlib` for resolution. `card.py`'s `CardFieldValue` import must pass (it has `__table__`); that is the case ADR 046's table-class exception exists for, so assert it explicitly in a second, positive test that imports `app.models.card` and checks the guard's own predicate returns true for `CardFieldValue` and false for `CardRead`.
 - **Out of scope:** checking payload-module naming (ADR 046's `<router>_payloads.py` is convention, not enforced); scanning `app/models/__init__.py`; any change to source under `app/`.
 - **Done when:** the guard passes on the tree as left by T1 and T2; it fails when `from app.models.field_def import FieldType` is temporarily pasted into `app/models/practice_card.py` (try it, confirm the message names `practice_card`, `FieldType`, and `field_def`, then revert); it still passes with `from app.models.card_field_value import CardFieldValue` present in `card.py`; full `pytest` passes.
-- Notes:
+- Notes: Implemented exactly per contract: `ast.walk` collects every `from app.models.<x> import <name>` (excluding `base`) regardless of nesting, `importlib` resolves each name against the live module, and `hasattr(obj, "__table__")` is the predicate, factored into `_is_table_class` so the second, positive test can call it directly on `CardFieldValue`/`CardRead` per the task's own instruction. Ran the mutation exactly as specified — pasted the forbidden import into `practice_card.py`, confirmed the failure message read "practice_card.py imports FieldType from field_def.py, which is not a table class...", then reverted and confirmed `git diff` showed no change and both tests passed again. Full `pytest`: 282 passed (280 + this task's 2 new tests), no other file touched.
