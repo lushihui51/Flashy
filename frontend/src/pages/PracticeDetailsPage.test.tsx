@@ -57,6 +57,12 @@ function breakdown(overrides: Record<string, unknown> = {}) {
             ],
           },
         ],
+        mastery: 65,
+        delta: 15,
+        fields: [
+          { field_def_id: 'front', name: 'Front', type: 'text', mastery: 60, delta: 10 },
+          { field_def_id: 'back', name: 'Back', type: 'text', mastery: 70, delta: 20 },
+        ],
       },
     ],
     ...overrides,
@@ -139,8 +145,8 @@ describe('PracticeDetailsPage', () => {
     expect(
       screen.queryByText('A summary of this practice is coming later.'),
     ).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Front: Bonjour' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'First try (1)' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(screen.getByText('First try')).toBeInTheDocument();
   });
 
   it('states deleted decks as a proportion of the session, not a bare count', async () => {

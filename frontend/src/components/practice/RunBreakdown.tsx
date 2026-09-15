@@ -8,22 +8,55 @@ import type { components } from 'src/api/types';
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
 type BreakdownBucket = components['schemas']['BreakdownBucket'];
+type FieldMasteryDelta = components['schemas']['FieldMasteryDelta'];
 
-type RunBreakdownProps = {
-  breakdown: PracticeRunBreakdown;
+/** ADR 044's one retrospective view: a summary line, a sort control, one compact row
+ * per card (outcome badge, mastery, delta), and a row tap opening the full
+ * attempt-by-attempt detail plus every active field's mastery/delta. Doesn't fetch —
+ * the run page (once nothing is pending) and the details page (for any completed
+ * session) each own the breakdown query and pass the same payload down here, so the
+ * view itself can't drift between the two places it's shown. */
+const BUCKET_LABELS: Record<BreakdownBucket, string> = {
+  passed_first_try: 'First try',
+  passed_after_one_fail: 'One retry',
+  passed_after_many_fails: '2+ retries',
+  still_failed: 'Abandoned',
 };
 
-/** ADR 029's one retrospective view: a summary line, four bucket tabs (each with its
- * count), one compact row per card, and a row tap opening the full attempt-by-attempt
- * detail. Doesn't fetch — the run page (once nothing is pending) and the details page
- * (for any completed session) each own the breakdown query and pass the same payload
- * down here, so the view itself can't drift between the two places it's shown. */
-const TABS: { bucket: BreakdownBucket; label: string }[] = [
-  { bucket: 'passed_first_try', label: 'First try' },
-  { bucket: 'passed_after_one_fail', label: 'One retry' },
-  { bucket: 'passed_after_many_fails', label: '2+ retries' },
-  { bucket: 'still_failed', label: 'Abandoned' },
+type SortKey = 'gains' | 'drops' | 'mastery';
+
+// 010 MD-1: labeled exactly this way, `gains` the default. No tie-breaking rule is
+// defined — Array.prototype.sort is stable, so equal values keep the server's
+// first-attempt position order, but nothing here relies on that being the case.
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'gains', label: 'Gains first' },
+  { key: 'drops', label: 'Drops first' },
+  { key: 'mastery', label: 'Mastery' },
 ];
+
+function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
+  const sorted = [...cards];
+  if (sort === 'gains') sorted.sort((a, b) => b.delta - a.delta);
+  else if (sort === 'drops') sorted.sort((a, b) => a.delta - b.delta);
+  else sorted.sort((a, b) => a.mastery - b.mastery);
+  return sorted;
+}
+
+// 010 MD-2: a rounded integer, "—" for a field that's never been reviewed. Card-level
+// mastery is never null (BreakdownCard.mastery is a plain float), so this only ever
+// takes that branch for a field entry.
+function formatMastery(mastery: number | null): string {
+  return mastery === null ? '—' : String(Math.round(mastery));
+}
+
+// 010 MD-2: the exact difference rounded to a signed integer, "±0" at zero. Rounding
+// happens first and the sign is read off the rounded value, not the original float —
+// otherwise a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
+function formatDelta(delta: number): string {
+  const rounded = Math.round(delta);
+  if (rounded === 0) return '±0';
+  return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
+}
 
 /** The compact row's text (ADR 029): only the deck's primary field, name and value —
  * never prompt/answer content. Falls back to CardSummaryRow.tsx's existing "Untitled
@@ -35,10 +68,12 @@ function cardTitle(card: BreakdownCard): string {
     : 'Untitled card';
 }
 
+type RunBreakdownProps = {
+  breakdown: PracticeRunBreakdown;
+};
+
 export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
-  const [activeBucket, setActiveBucket] = useState<BreakdownBucket>(
-    () => TABS.find((tab) => breakdown[tab.bucket] > 0)?.bucket ?? 'passed_first_try',
-  );
+  const [sortKey, setSortKey] = useState<SortKey>('gains');
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   // One shared trigger ref, reassigned to whichever row was tapped most recently, so
   // BottomSheet's onCloseAutoFocus returns focus to that exact row (mirrors
@@ -46,7 +81,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const titleId = useId();
 
-  const cards = breakdown.cards.filter((card) => card.bucket === activeBucket);
+  const cards = sortCards(breakdown.cards, sortKey);
   const selectedCard = breakdown.cards.find((card) => card.card_id === selectedCardId) ?? null;
 
   return (
@@ -55,58 +90,56 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
         {breakdown.total_cards} card{breakdown.total_cards === 1 ? '' : 's'} practiced
       </p>
 
-      <div
-        role="tablist"
-        aria-label="Outcome"
-        // Four labeled, counted tabs routinely overflow a phone-width viewport (unlike
-        // the shorter status tabs elsewhere), so this row scrolls horizontally on its
-        // own rather than letting an overflowing tab drag the whole page sideways.
-        className="flex gap-4 overflow-x-auto border-b border-(--color-surface-elevated)"
-      >
-        {TABS.map((tab) => (
+      <div role="radiogroup" aria-label="Sort" className="flex gap-2 overflow-x-auto">
+        {SORT_OPTIONS.map((option) => (
           <button
-            key={tab.bucket}
+            key={option.key}
             type="button"
-            role="tab"
-            aria-selected={activeBucket === tab.bucket}
-            onClick={() => setActiveBucket(tab.bucket)}
-            className={`h-11 whitespace-nowrap border-b-2 px-1 text-sm font-medium ${
-              activeBucket === tab.bucket
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
+            role="radio"
+            aria-checked={sortKey === option.key}
+            onClick={() => setSortKey(option.key)}
+            className={`h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-sm font-medium ${
+              sortKey === option.key
+                ? 'border-(--color-primary) bg-(--color-primary) text-(--color-primary-contrast)'
+                : 'border-(--color-surface-elevated) text-(--color-text-muted)'
             }`}
           >
-            {tab.label} ({breakdown[tab.bucket]})
+            {option.label}
           </button>
         ))}
       </div>
 
-      {cards.length === 0 ? (
-        <p className="text-sm text-(--color-text-muted)">No cards in this bucket.</p>
-      ) : (
-        <ul className="flex flex-col">
-          {cards.map((card) => (
-            <li key={card.card_id}>
-              <button
-                type="button"
-                onClick={(event) => {
-                  triggerRef.current = event.currentTarget;
-                  setSelectedCardId(card.card_id);
-                }}
-                className="flex min-h-16 w-full items-center gap-3 py-[14px] text-left"
-              >
-                <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-text)">
-                  {cardTitle(card)}
-                </span>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="h-4 w-4 shrink-0 text-(--color-text-muted)"
-                />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="flex flex-col">
+        {cards.map((card) => (
+          <li key={card.card_id}>
+            <button
+              type="button"
+              onClick={(event) => {
+                triggerRef.current = event.currentTarget;
+                setSelectedCardId(card.card_id);
+              }}
+              className="flex min-h-16 w-full items-center gap-3 py-[14px] text-left"
+            >
+              <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-text)">
+                {cardTitle(card)}
+              </span>
+              <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-surface-elevated) px-2 text-xs text-(--color-text-muted)">
+                {BUCKET_LABELS[card.bucket]}
+              </span>
+              <span className="shrink-0 text-sm font-medium text-(--color-text)">
+                {formatMastery(card.mastery)}
+              </span>
+              <span className="shrink-0 text-sm font-medium text-(--color-text)">
+                {formatDelta(card.delta)}
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-(--color-text-muted)"
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
 
       <BottomSheet
         open={selectedCard !== null}
@@ -148,11 +181,38 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                   </div>
                 </div>
               ))}
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+                  Fields
+                </h3>
+                <ul className="flex flex-col gap-2">
+                  {selectedCard.fields.map((field) => (
+                    <FieldMasteryRow key={field.field_def_id} field={field} />
+                  ))}
+                </ul>
+              </div>
             </div>
           </>
         )}
       </BottomSheet>
     </div>
+  );
+}
+
+/** One entry of the detail sheet's Fields section (ADR 044, task 010 T4): every
+ * currently active field of the card's deck, not just the ones this run's attempts
+ * happened to touch — an untouched field still shows its current mastery, at ±0. */
+function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
+  return (
+    <li className="flex items-center justify-between gap-3">
+      <span className="min-w-0 flex-1 truncate text-sm text-(--color-text)">{field.name}</span>
+      <span className="shrink-0 text-sm font-medium text-(--color-text)">
+        {formatMastery(field.mastery)}
+      </span>
+      <span className="shrink-0 text-sm font-medium text-(--color-text)">
+        {formatDelta(field.delta)}
+      </span>
+    </li>
   );
 }
 
