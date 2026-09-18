@@ -9,6 +9,7 @@ os.environ["DEV_AUTH_USER_ID"] = ""
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
@@ -38,6 +39,36 @@ def init_db():
 def db(init_db):
     with Session(engine) as session:
         yield session
+
+
+class _StatementCounter:
+    """A resettable counter of statements whose compiled SQL names a given table,
+    issued against the module-level test `engine`. Used by 010 MD-4's statement-count
+    test: reset immediately before the request under test, read immediately after,
+    to prove a fixed statement count against `mastery_log` regardless of run size."""
+
+    def __init__(self, table_name: str):
+        self._table_name = table_name
+        self._count = 0
+
+    def _before_cursor_execute(self, conn, cursor, statement, parameters, context, executemany):
+        if self._table_name in statement:
+            self._count += 1
+
+    def reset(self) -> None:
+        self._count = 0
+
+    @property
+    def count(self) -> int:
+        return self._count
+
+
+@pytest.fixture
+def mastery_log_statement_counter():
+    counter = _StatementCounter("mastery_log")
+    event.listen(engine, "before_cursor_execute", counter._before_cursor_execute)
+    yield counter
+    event.remove(engine, "before_cursor_execute", counter._before_cursor_execute)
 
 
 @pytest.fixture

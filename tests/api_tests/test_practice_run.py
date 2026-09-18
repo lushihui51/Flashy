@@ -1,14 +1,20 @@
 import random
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from sqlmodel import col, select
 
 from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
+from app.mastery.types import FieldMasteryState, ReviewGroup
+from app.models.card import Card
+from app.models.field_def import FieldDef
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
+from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
+from app.services.mastery import record_review_group
 from app.services.practice_generation import (
     generate_practice_card_fields,
     resolve_prompts_or_answers,
@@ -16,6 +22,7 @@ from app.services.practice_generation import (
 from app.services.practice_run import (
     _POSITION_GAP,
     _insertion_position,
+    get_practice_run_breakdown,
     run_progress,
     start_practice_run,
     submit_rating,
@@ -1736,6 +1743,305 @@ class TestBreakdown:
 
         act_as(other_user)
         assert client.get(f"/api/practice_runs/{session['id']}/breakdown").status_code == 404
+
+    def test_delta_computation_statement_count_is_fixed(
+        self,
+        client,
+        existing_user,
+        existing_subject,
+        session_cards,
+        session_config,
+        mastery_log_statement_counter,
+    ):
+        """010 MD-4: the breakdown's mastery_log statement count is fixed — it must
+        not grow with the run's card count or the decks' active-field count. One card
+        on a fresh two-field deck and three cards on session_fields' eight-field deck
+        (session_cards + session_config) must report the same nonzero count."""
+        small_deck = client.post(
+            "/api/decks",
+            json={
+                "name": "Small breakdown deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [
+                    {"name": "front", "type": "text"},
+                    {"name": "back", "type": "text"},
+                ],
+            },
+        ).json()
+        front_id, back_id = (fd["id"] for fd in small_deck["field_defs"])
+        client.post(
+            "/api/cards",
+            json={"deck_id": small_deck["id"], "values": {front_id: "Q", back_id: "A"}},
+        )
+        small_config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": small_deck["id"],
+                "name": "Small config",
+                "prompt_field_ids": [front_id],
+                "answer_field_ids": [back_id],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+
+        def _complete(session_id):
+            for _ in range(50):
+                run = client.get(f"/api/practice_runs/{session_id}/state").json()
+                if run["current_card"] is None:
+                    break
+                current = run["current_card"]
+                ratings = {a["field_def_id"]: 4 for a in current["answers"]}
+                res = client.post(
+                    f"/api/practice_cards/{current['practice_card_id']}/rate",
+                    json={"ratings": ratings},
+                )
+                assert res.status_code == 200, res.text
+
+        small_session = _start(client, "Small breakdown run", [small_config["id"]])
+        _complete(small_session["id"])
+
+        large_session = _start(client, "Large breakdown run", [session_config["id"]])
+        _complete(large_session["id"])
+
+        mastery_log_statement_counter.reset()
+        small_res = client.get(f"/api/practice_runs/{small_session['id']}/breakdown")
+        assert small_res.status_code == 200, small_res.text
+        small_count = mastery_log_statement_counter.count
+
+        mastery_log_statement_counter.reset()
+        large_res = client.get(f"/api/practice_runs/{large_session['id']}/breakdown")
+        assert large_res.status_code == 200, large_res.text
+        large_count = mastery_log_statement_counter.count
+
+        assert small_count > 0
+        assert small_count == large_count
+
+
+def _make_run(db, user_id, status=RunStatus.completed):
+    run = PracticeRun(user_id=user_id, name="mastery delta test", status=status)
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def _make_appearance(
+    db, practice_run_id, card_id, answers, prompts=(), status=PracticeCardStatus.passed, position=0
+):
+    """A practice_card row built directly, bypassing generation — the delta tests
+    below need exact control over which run touches which field when, not a
+    realistic session."""
+    pc = PracticeCard(
+        practice_run_id=practice_run_id,
+        card_id=card_id,
+        position=position,
+        prompts=list(prompts),
+        answers=list(answers),
+        status=status,
+    )
+    db.add(pc)
+    db.commit()
+    db.refresh(pc)
+    return pc
+
+
+def _rate(db, strategy, user_id, practice_run_id, practice_card, ratings, shown_prompt_ids=()):
+    """record_review_group with review_group_id == practice_card.id, mirroring
+    submit_rating's own construction (app/services/practice_run.py)."""
+    group = ReviewGroup(
+        review_group_id=practice_card.id,
+        card_id=practice_card.card_id,
+        reviewed_at=datetime.now(UTC),
+        ratings=tuple(ratings.items()),
+        shown_prompt_ids=tuple(shown_prompt_ids),
+    )
+    record_review_group(db, strategy, user_id, group, practice_run_id)
+    db.commit()
+
+
+def _expected_after(strategy, ratings, shown_prompt_ids=(), prior_states=None):
+    """The FieldMasteryState each rated/shown field reaches after one appearance,
+    blended on top of `prior_states` ({field_def_id: FieldMasteryState}, default
+    empty — apply_review's own None-prior fallback covers a field with nothing yet).
+    The oracle these tests check the breakdown's reported after-state against: it
+    calls the same MasteryStrategy.expand/apply_review apply_rating itself calls, so
+    it verifies the breakdown's bound/attribution logic — the thing actually under
+    test — without hand-computing EMA arithmetic that would silently drift from the
+    strategy's real constants."""
+    group = ReviewGroup(
+        review_group_id=uuid.uuid4(),
+        card_id=uuid.uuid4(),
+        reviewed_at=datetime.now(UTC),
+        ratings=tuple(ratings.items()),
+        shown_prompt_ids=tuple(shown_prompt_ids),
+    )
+    states: dict[uuid.UUID, FieldMasteryState] = dict(prior_states or {})
+    for (_, field_def_id, _side), update in strategy.expand(group).items():
+        states[field_def_id] = strategy.apply_review(states.get(field_def_id), update)
+    return states
+
+
+class TestBreakdownMastery:
+    """GET .../breakdown's mastery/delta additions (ADR 042, ADR 043, task 010 T3).
+    Built directly against practice_run/practice_card/mastery_log rather than through
+    the generation/rating HTTP flow — the delta-semantics contract is specifically
+    about row ordering and attribution, which this gives exact control over."""
+
+    def test_first_review_delta_and_untouched_field_dilutes_card_fold(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        answer = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
+        ).json()
+        other = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "other", "type": "text"}
+        ).json()
+        answer_id, other_id = uuid.UUID(answer["id"]), uuid.UUID(other["id"])
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {answer["id"]: "a", other["id"]: "o"},
+                },
+            ).json()["id"]
+        )
+
+        run = _make_run(db, existing_user.id)
+        pc = _make_appearance(db, run.id, card_id, answers=[answer_id])
+        _rate(db, strategy, existing_user.id, run.id, pc, {answer_id: 4})
+
+        expected_score = strategy.field_score(_expected_after(strategy, {answer_id: 4})[answer_id])
+
+        breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
+        card = next(c for c in breakdown.cards if c.card_id == card_id)
+        fields_by_id = {f.field_def_id: f for f in card.fields}
+
+        # field_def.position ascending (010 T3's contract), not touched-first.
+        assert [f.field_def_id for f in card.fields] == [answer_id, other_id]
+
+        # Reviewed for the first time inside this run: delta is against the prior.
+        assert fields_by_id[answer_id].mastery == pytest.approx(expected_score)
+        assert fields_by_id[answer_id].delta == pytest.approx(expected_score - 50.0)
+
+        # Never reviewed by anyone, and untouched by this run: no score, no movement.
+        assert fields_by_id[other_id].mastery is None
+        assert fields_by_id[other_id].delta == 0.0
+
+        # ADR 043's own stated cost: the untouched field dilutes the card fold —
+        # half the per-field movement here, since one of the two active fields moved.
+        assert card.mastery == pytest.approx((expected_score + 50.0) / 2)
+        assert card.delta == pytest.approx((expected_score - 50.0) / 2)
+
+    def test_per_field_bound_excludes_a_different_runs_intervening_write(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        answer_a = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer_a", "type": "text"}
+        ).json()
+        answer_b = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer_b", "type": "text"}
+        ).json()
+        a_id, b_id = uuid.UUID(answer_a["id"]), uuid.UUID(answer_b["id"])
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {answer_a["id"]: "x", answer_b["id"]: "y"},
+                },
+            ).json()["id"]
+        )
+
+        run1 = _make_run(db, existing_user.id, status=RunStatus.active)
+        pc1_a = _make_appearance(db, run1.id, card_id, answers=[a_id])
+        # run1's own first-ever row: bound(card, A) starts here. If the breakdown ever
+        # used this as a single run-wide bound for every pair instead of each pair's
+        # own, field B below would wrongly look "never touched before run1" too.
+        _rate(db, strategy, existing_user.id, run1.id, pc1_a, {a_id: 4})
+
+        # A different, concurrently active run touches field B in between.
+        run2 = _make_run(db, existing_user.id, status=RunStatus.active)
+        pc2 = _make_appearance(db, run2.id, card_id, answers=[b_id])
+        _rate(db, strategy, existing_user.id, run2.id, pc2, {b_id: 1})
+        run2.status = RunStatus.completed
+        db.add(run2)
+        db.commit()
+
+        # run1 later touches field B too — its own bound for (card, B) must be its OWN
+        # row here, not run1's overall first row (field A, above).
+        pc1_b = _make_appearance(db, run1.id, card_id, answers=[b_id], position=1)
+        _rate(db, strategy, existing_user.id, run1.id, pc1_b, {b_id: 4})
+        run1.status = RunStatus.completed
+        db.add(run1)
+        db.commit()
+
+        run2_after_b = _expected_after(strategy, {b_id: 1})
+        run1_after_b = _expected_after(strategy, {b_id: 4}, prior_states=run2_after_b)
+        expected_before = strategy.field_score(run2_after_b[b_id])
+        expected_after = strategy.field_score(run1_after_b[b_id])
+
+        breakdown = get_practice_run_breakdown(db, strategy, run1.id, existing_user.id)
+        card = next(c for c in breakdown.cards if c.card_id == card_id)
+        fields_by_id = {f.field_def_id: f for f in card.fields}
+
+        assert fields_by_id[b_id].mastery == pytest.approx(expected_after)
+        assert fields_by_id[b_id].delta == pytest.approx(expected_after - expected_before)
+        # The wrong answer a single run-wide bound would give: treating field B as if
+        # run1 never saw any prior state for it at all.
+        assert fields_by_id[b_id].delta != pytest.approx(expected_after - 50.0)
+
+    def test_deleted_run_attribution_survives_as_before_state(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        field_x = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "field_x", "type": "text"}
+        ).json()
+        field_y = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "field_y", "type": "text"}
+        ).json()
+        x_id, y_id = uuid.UUID(field_x["id"]), uuid.UUID(field_y["id"])
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {field_x["id"]: "x", field_y["id"]: "y"},
+                },
+            ).json()["id"]
+        )
+
+        old_run = _make_run(db, existing_user.id)
+        old_pc = _make_appearance(db, old_run.id, card_id, answers=[x_id])
+        _rate(db, strategy, existing_user.id, old_run.id, old_pc, {x_id: 2})
+        expected_orphaned = strategy.field_score(_expected_after(strategy, {x_id: 2})[x_id])
+
+        # Deleting the run cascades its practice_card; mastery_log's row for field_x
+        # survives with practice_run_id SET NULL — orphaned, but still real state.
+        db.delete(old_run)
+        db.commit()
+
+        new_run = _make_run(db, existing_user.id, status=RunStatus.active)
+        new_pc = _make_appearance(db, new_run.id, card_id, answers=[y_id])
+        _rate(db, strategy, existing_user.id, new_run.id, new_pc, {y_id: 4})
+        new_run.status = RunStatus.completed
+        db.add(new_run)
+        db.commit()
+
+        breakdown = get_practice_run_breakdown(db, strategy, new_run.id, existing_user.id)
+        card = next(c for c in breakdown.cards if c.card_id == card_id)
+        fields_by_id = {f.field_def_id: f for f in card.fields}
+
+        # field_x: untouched by new_run, and its only history's run is gone — must
+        # surface the orphaned row's real value rather than erroring or going missing.
+        assert fields_by_id[x_id].mastery == pytest.approx(expected_orphaned)
+        assert fields_by_id[x_id].delta == 0.0
 
 
 def _rerun(client, session_id, name):

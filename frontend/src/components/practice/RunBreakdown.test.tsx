@@ -7,6 +7,8 @@ import type { components } from 'src/api/types';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 
+// Deltas are distinct across every card, and cover all three MD-2 sign cases
+// (+5, −10, ±0, +20) so a single fixture can drive every ordering/formatting test.
 function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBreakdown {
   return {
     total_cards: 4,
@@ -30,6 +32,12 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
               { field_def_id: 'back1', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
             ],
           },
+        ],
+        mastery: 70,
+        delta: 5,
+        fields: [
+          { field_def_id: 'front1', name: 'Front', type: 'text', mastery: 65, delta: 5 },
+          { field_def_id: 'back1', name: 'Back', type: 'text', mastery: 75, delta: 5 },
         ],
       },
       {
@@ -69,6 +77,15 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
+        mastery: 40,
+        delta: -10,
+        // Named distinctly from the attempts section's own "Front"/"Back" labels so
+        // this card's Fields section entries don't collide with those assertions.
+        fields: [
+          { field_def_id: 'notes2', name: 'Notes', type: 'text', mastery: 40, delta: -10 },
+          // Never reviewed by anyone — the sheet's Fields section renders "—", not 0.
+          { field_def_id: 'filler2', name: 'Filler', type: 'text', mastery: null, delta: 0 },
+        ],
       },
       {
         card_id: 'card3',
@@ -87,6 +104,9 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
+        mastery: 50,
+        delta: 0,
+        fields: [{ field_def_id: 'front3', name: 'Front', type: 'text', mastery: 50, delta: 0 }],
       },
       {
         card_id: 'card4',
@@ -104,61 +124,106 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
+        mastery: 60,
+        delta: 20,
+        fields: [{ field_def_id: 'front4', name: 'Front', type: 'text', mastery: 60, delta: 20 }],
       },
     ],
     ...overrides,
   };
 }
 
+/** The row buttons' accessible names include the badge/mastery/delta text alongside
+ * the title (they're all inside the same <button>), so these tests match on the
+ * title substring rather than the exact name. */
+function rowTitles() {
+  return screen
+    .getAllByRole('button', { name: /Front:|Untitled card/ })
+    .map((el) => el.textContent);
+}
+
 describe('RunBreakdown', () => {
-  it('shows all four bucket tabs, each with its count', () => {
+  it('shows the counts line', () => {
+    render(<RunBreakdown breakdown={breakdown()} />);
+    expect(screen.getByText('4 cards practiced')).toBeInTheDocument();
+  });
+
+  it('defaults to delta descending (Gains first)', () => {
     render(<RunBreakdown breakdown={breakdown()} />);
 
-    expect(screen.getByRole('tab', { name: 'First try (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'One retry (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '2+ retries (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Abandoned (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Gains first' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    // Deltas: card4 +20, card1 +5, card3 ±0, card2 −10.
+    const titles = rowTitles();
+    expect(titles[0]).toContain('Adieu');
+    expect(titles[1]).toContain('Bonjour');
+    expect(titles[2]).toContain('Untitled card');
+    expect(titles[3]).toContain('Bonsoir');
+  });
+
+  it('Drops first sorts delta ascending', async () => {
+    const user = userEvent.setup();
+    render(<RunBreakdown breakdown={breakdown()} />);
+
+    await user.click(screen.getByRole('radio', { name: 'Drops first' }));
+
+    const titles = rowTitles();
+    expect(titles[0]).toContain('Bonsoir'); // −10
+    expect(titles[1]).toContain('Untitled card'); // ±0
+    expect(titles[2]).toContain('Bonjour'); // +5
+    expect(titles[3]).toContain('Adieu'); // +20
+  });
+
+  it('Mastery sorts ascending — weakest first', async () => {
+    const user = userEvent.setup();
+    render(<RunBreakdown breakdown={breakdown()} />);
+
+    await user.click(screen.getByRole('radio', { name: 'Mastery' }));
+
+    // Masteries: card2 40, card3 50, card4 60, card1 70.
+    const titles = rowTitles();
+    expect(titles[0]).toContain('Bonsoir');
+    expect(titles[1]).toContain('Untitled card');
+    expect(titles[2]).toContain('Adieu');
+    expect(titles[3]).toContain('Bonjour');
   });
 
   it("a row shows only the primary field's name and value, not prompt/answer content", () => {
     render(<RunBreakdown breakdown={breakdown()} />);
 
-    // Default tab is the first bucket with a nonzero count — passed_first_try.
-    expect(screen.getByRole('button', { name: 'Front: Bonjour' })).toBeInTheDocument();
+    expect(screen.getByText('Front: Bonjour')).toBeInTheDocument();
     expect(screen.queryByText('Hello')).not.toBeInTheDocument();
   });
 
-  it('shows "Untitled card" for a card whose primary field is blank', async () => {
+  it('shows "Untitled card" for a card whose primary field is blank', () => {
+    render(<RunBreakdown breakdown={breakdown()} />);
+    expect(screen.getByRole('button', { name: /Untitled card/ })).toBeInTheDocument();
+  });
+
+  it('a row shows its outcome badge, rounded mastery, and delta rendering', () => {
+    render(<RunBreakdown breakdown={breakdown()} />);
+
+    const row = screen.getByRole('button', { name: /Bonjour/ });
+    expect(within(row).getByText('First try')).toBeInTheDocument();
+    expect(within(row).getByText('70')).toBeInTheDocument();
+    expect(within(row).getByText('+5')).toBeInTheDocument();
+
+    // One case each of the other two signs, from the other rows.
+    expect(
+      within(screen.getByRole('button', { name: /Bonsoir/ })).getByText('−10'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('button', { name: /Untitled card/ })).getByText('±0'),
+    ).toBeInTheDocument();
+  });
+
+  it('opens the detail sheet with labels, ratings, every attempt, and the Fields section for a two-attempt card', async () => {
     const user = userEvent.setup();
     render(<RunBreakdown breakdown={breakdown()} />);
 
-    await user.click(screen.getByRole('tab', { name: '2+ retries (1)' }));
-
-    expect(screen.getByRole('button', { name: 'Untitled card' })).toBeInTheDocument();
-  });
-
-  it('shows a "no cards" message for a bucket with nothing in it', async () => {
-    const user = userEvent.setup();
-    render(
-      <RunBreakdown
-        breakdown={breakdown({
-          passed_after_many_fails: 0,
-          cards: breakdown().cards.filter((card) => card.bucket !== 'passed_after_many_fails'),
-        })}
-      />,
-    );
-
-    await user.click(screen.getByRole('tab', { name: '2+ retries (0)' }));
-
-    expect(screen.getByText('No cards in this bucket.')).toBeInTheDocument();
-  });
-
-  it('opens the detail sheet with labels, ratings, and every attempt for a two-attempt card', async () => {
-    const user = userEvent.setup();
-    render(<RunBreakdown breakdown={breakdown()} />);
-
-    await user.click(screen.getByRole('tab', { name: 'One retry (1)' }));
-    await user.click(screen.getByRole('button', { name: 'Front: Bonsoir' }));
+    await user.click(screen.getByRole('button', { name: /Bonsoir/ }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Attempt 1 of 2 · Failed')).toBeInTheDocument();
@@ -171,13 +236,18 @@ describe('RunBreakdown', () => {
     // The first attempt's answer was rated 1 ("Again"), the second 3 ("Good").
     expect(within(dialog).getByText('Again')).toBeInTheDocument();
     expect(within(dialog).getByText('Good')).toBeInTheDocument();
+
+    // Fields section: every active field, including one never reviewed by anyone.
+    expect(within(dialog).getByText('Fields')).toBeInTheDocument();
+    expect(within(dialog).getByText('Filler')).toBeInTheDocument();
+    expect(within(dialog).getByText('—')).toBeInTheDocument();
   });
 
   it('shows no attempt header for a single-attempt card', async () => {
     const user = userEvent.setup();
     render(<RunBreakdown breakdown={breakdown()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Front: Bonjour' }));
+    await user.click(screen.getByRole('button', { name: /Bonjour/ }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByText(/Attempt 1/)).not.toBeInTheDocument();

@@ -34,7 +34,7 @@ class CardUpdate(AppModel):
 
 
 class CardMasteryRead(AppModel):
-    """Display-only aggregate — never stored, computed fresh from card_field_mastery
+    """Display-only aggregate — never stored, computed fresh from mastery_log
     via the active MasteryStrategy on every request (invariant 8)."""
 
     mastery: float

@@ -149,7 +149,7 @@ class TestCopyDeckContent:
     def test_never_copies_review_log_or_mastery(
         self, db, existing_user, source_setup, target_subject
     ):
-        from app.models.card_field_mastery import CardFieldMastery
+        from app.models.mastery_log import MasteryLog
         from app.models.review_log import ReviewLog
 
         new_deck = copy_deck(
@@ -165,7 +165,7 @@ class TestCopyDeckContent:
             select(ReviewLog).where(ReviewLog.card_id.in_(new_card_ids))
         ).all()
         assert not db.exec(
-            select(CardFieldMastery).where(CardFieldMastery.card_id.in_(new_card_ids))
+            select(MasteryLog).where(MasteryLog.card_id.in_(new_card_ids))
         ).all()
 
 

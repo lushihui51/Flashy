@@ -4,12 +4,8 @@ from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
 from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import (
-    PracticeRun,
-    PracticeRunDeckSummary,
-    PracticeRunSummary,
-    RunStatus,
-)
+from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice_run_payloads import PracticeRunDeckSummary, PracticeRunSummary
 from app.models.subject import Subject
 
 

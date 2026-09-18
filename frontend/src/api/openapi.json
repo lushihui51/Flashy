@@ -2025,8 +2025,8 @@
         "tags": [
           "Practice Config"
         ],
-        "summary": "Update Deck Practice Config",
-        "operationId": "update_deck_practice_config_api_deck_practice_configs__config_id__patch",
+        "summary": "Patch Deck Practice Config",
+        "operationId": "patch_deck_practice_config_api_deck_practice_configs__config_id__patch",
         "parameters": [
           {
             "name": "config_id",
@@ -2574,7 +2574,7 @@
           "Practice"
         ],
         "summary": "Read Practice Run Breakdown",
-        "description": "ADR 029/031: the completion dataset behind the retrospective view. 409 while the\nsession is still active \u2014 the bucket refinement only makes sense once nothing is\npending; 404 for an unknown or foreign session.",
+        "description": "ADR 029/031/042/043/044: the completion dataset behind the retrospective view,\nincluding each card's mastery/delta and per-field detail (task 010 T3). 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
         "operationId": "read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get",
         "parameters": [
           {
@@ -2908,6 +2908,21 @@
             },
             "type": "array",
             "title": "Attempts"
+          },
+          "mastery": {
+            "type": "number",
+            "title": "Mastery"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldMasteryDelta"
+            },
+            "type": "array",
+            "title": "Fields"
           }
         },
         "type": "object",
@@ -2916,10 +2931,13 @@
           "bucket",
           "attempt_count",
           "primary_field",
-          "attempts"
+          "attempts",
+          "mastery",
+          "delta",
+          "fields"
         ],
         "title": "BreakdownCard",
-        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`."
+        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR\n042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every\nactive field's after-state score; `delta` is that same fold's after-state minus\nits before-state, exact (the client rounds per 010 MD-2); `fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
       },
       "CardBatchCreate": {
         "properties": {
@@ -3041,7 +3059,7 @@
           "reviewed_field_count"
         ],
         "title": "CardMasteryRead",
-        "description": "Display-only aggregate \u2014 never stored, computed fresh from card_field_mastery\nvia the active MasteryStrategy on every request (invariant 8)."
+        "description": "Display-only aggregate \u2014 never stored, computed fresh from mastery_log\nvia the active MasteryStrategy on every request (invariant 8)."
       },
       "CardRead": {
         "properties": {
@@ -3898,6 +3916,47 @@
         "type": "object",
         "title": "FieldDefUpdate"
       },
+      "FieldMasteryDelta": {
+        "properties": {
+          "field_def_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Field Def Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "mastery": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_def_id",
+          "name",
+          "type",
+          "mastery",
+          "delta"
+        ],
+        "title": "FieldMasteryDelta",
+        "description": "One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
+      },
       "FieldType": {
         "type": "string",
         "enum": [
@@ -4081,7 +4140,7 @@
           "subject_name"
         ],
         "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the *only* link between a session and a subject/deck \u2014 `practice_deck`\nhas no `source_config_id` and never will (schema invariant 5), so \"which sessions\nrelate to this deck\" can only be asked this way."
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link this payload exposes between a session and a\nsubject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is\nattribution-only, unread by any query in this cycle, and not surfaced on any API\npayload \u2014 so \"which sessions relate to this deck\" is still only askable this way."
       },
       "PracticeRunRead": {
         "properties": {

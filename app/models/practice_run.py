@@ -57,34 +57,3 @@ class PracticeRunRead(AppModel):
     name: str
     status: RunStatus
     created_at: datetime
-
-
-class PracticeRunDeckSummary(AppModel):
-    """One deck a session touches, resolved through `practice_deck → deck → subject`.
-
-    This chain is the only link this payload exposes between a session and a
-    subject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is
-    attribution-only, unread by any query in this cycle, and not surfaced on any API
-    payload — so "which sessions relate to this deck" is still only askable this way."""
-
-    deck_id: uuid.UUID
-    deck_name: str
-    subject_id: uuid.UUID
-    subject_name: str
-
-
-class PracticeRunSummary(PracticeRunRead):
-    """A list row for the practice overview: the session plus the decks it snapshotted,
-    so the client can render and filter by subject/deck without a second round trip or a
-    client-side join.
-
-    `decks` omits any `practice_deck` whose source deck has since been deleted
-    (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
-    the session still lists, but a deleted deck has no name or subject left to show and
-    can never match a filter. Those snapshots are counted in `deleted_deck_count`
-    instead, so the client can render them as "deleted deck" chips: with `abandoned`
-    gone, a session stranded by a deck deletion reads as Completed, and the chip is the
-    only thing that tells the two apart (ADR 015 as amended)."""
-
-    decks: list[PracticeRunDeckSummary]
-    deleted_deck_count: int

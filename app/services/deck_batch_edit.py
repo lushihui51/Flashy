@@ -7,7 +7,8 @@ from app.database_ops.field_def import db_next_position
 from app.database_ops.subject import db_read_subject
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
-from app.models.deck import Deck, DeckBatchEdit
+from app.models.deck import Deck
+from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
 from app.services.activity import touch
@@ -135,7 +136,7 @@ def apply_deck_batch_edit(
                     f"field_defs.delete id {field_id} not found on this deck"
                 )
             del active_fields[field_id]
-            # No manual cleanup of card_field_value/card_field_mastery rows — both
+            # No manual cleanup of card_field_value/mastery_log rows — both
             # have a DB-level ON DELETE CASCADE on field_def_id (D11's "deleting a
             # field_def cascades its values and mastery rows").
             db.delete(field)

@@ -24,14 +24,6 @@ _CONNECT_ARGS = {"options": "-c timezone=utc"}
 engine = create_engine(settings.database_url, echo=False, connect_args=_CONNECT_ARGS)
 
 
-def init_db():
-    SQLModel.metadata.create_all(bind=engine)
-
-
-def reset_db():
-    SQLModel.metadata.drop_all(bind=engine)
-
-
 def get_session():
     with Session(engine) as session:
         yield session

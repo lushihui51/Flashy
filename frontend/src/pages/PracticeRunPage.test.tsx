@@ -60,6 +60,12 @@ function breakdownState(overrides: Record<string, unknown> = {}) {
             ],
           },
         ],
+        mastery: 65,
+        delta: 15,
+        fields: [
+          { field_def_id: 'front', name: 'Front', type: 'text', mastery: 60, delta: 10 },
+          { field_def_id: 'back', name: 'Back', type: 'text', mastery: 70, delta: 20 },
+        ],
       },
     ],
     ...overrides,
@@ -67,9 +73,7 @@ function breakdownState(overrides: Record<string, unknown> = {}) {
 }
 
 function mockBreakdown(data: Record<string, unknown> = breakdownState()) {
-  server.use(
-    http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)),
-  );
+  server.use(http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)));
 }
 
 function twoAnswerRunState() {
@@ -200,8 +204,8 @@ describe('PracticeRunPage', () => {
     mockBreakdown();
     renderRun('ps1');
 
-    expect(await screen.findByRole('tab', { name: 'First try (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Front: Bonjour' })).toBeInTheDocument();
+    expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
   });
 
   it('shows "not found" for an unknown or foreign session, without crashing', async () => {

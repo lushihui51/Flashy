@@ -242,8 +242,8 @@ export interface paths {
         delete: operations["delete_deck_practice_config_api_deck_practice_configs__config_id__delete"];
         options?: never;
         head?: never;
-        /** Update Deck Practice Config */
-        patch: operations["update_deck_practice_config_api_deck_practice_configs__config_id__patch"];
+        /** Patch Deck Practice Config */
+        patch: operations["patch_deck_practice_config_api_deck_practice_configs__config_id__patch"];
         trace?: never;
     };
     "/api/practice_runs": {
@@ -332,9 +332,10 @@ export interface paths {
         };
         /**
          * Read Practice Run Breakdown
-         * @description ADR 029/031: the completion dataset behind the retrospective view. 409 while the
-         *     session is still active — the bucket refinement only makes sense once nothing is
-         *     pending; 404 for an unknown or foreign session.
+         * @description ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
+         *     including each card's mastery/delta and per-field detail (task 010 T3). 409 while
+         *     the session is still active — the bucket refinement only makes sense once nothing
+         *     is pending; 404 for an unknown or foreign session.
          */
         get: operations["read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get"];
         put?: never;
@@ -438,7 +439,12 @@ export interface components {
          * BreakdownCard
          * @description One card's whole outcome chain for the completion breakdown (ADR 029):
          *     `attempts` is chronological, so `attempts[-1]` is the determining attempt that
-         *     decided `bucket`.
+         *     decided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR
+         *     042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every
+         *     active field's after-state score; `delta` is that same fold's after-state minus
+         *     its before-state, exact (the client rounds per 010 MD-2); `fields` lists every
+         *     currently active field_def of the card's deck, field_def.position ascending —
+         *     not just the ones this run's attempts happened to touch.
          */
         BreakdownCard: {
             /**
@@ -452,6 +458,12 @@ export interface components {
             primary_field: components["schemas"]["ResolvedFieldValue"];
             /** Attempts */
             attempts: components["schemas"]["BreakdownAttempt"][];
+            /** Mastery */
+            mastery: number;
+            /** Delta */
+            delta: number;
+            /** Fields */
+            fields: components["schemas"]["FieldMasteryDelta"][];
         };
         /**
          * CardBatchCreate
@@ -506,7 +518,7 @@ export interface components {
         };
         /**
          * CardMasteryRead
-         * @description Display-only aggregate — never stored, computed fresh from card_field_mastery
+         * @description Display-only aggregate — never stored, computed fresh from mastery_log
          *     via the active MasteryStrategy on every request (invariant 8).
          */
         CardMasteryRead: {
@@ -858,6 +870,27 @@ export interface components {
             type?: components["schemas"]["FieldType"] | null;
         };
         /**
+         * FieldMasteryDelta
+         * @description One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):
+         *     `mastery` is the after-state field score (`strategy.field_score`, the existing
+         *     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
+         *     is always a float, never None — 0.0 for a field this run's card left untouched.
+         */
+        FieldMasteryDelta: {
+            /**
+             * Field Def Id
+             * Format: uuid
+             */
+            field_def_id: string;
+            /** Name */
+            name: string;
+            type: components["schemas"]["FieldType"];
+            /** Mastery */
+            mastery: number | null;
+            /** Delta */
+            delta: number;
+        };
+        /**
          * FieldType
          * @enum {string}
          */
@@ -934,9 +967,10 @@ export interface components {
          * PracticeRunDeckSummary
          * @description One deck a session touches, resolved through `practice_deck → deck → subject`.
          *
-         *     This chain is the *only* link between a session and a subject/deck — `practice_deck`
-         *     has no `source_config_id` and never will (schema invariant 5), so "which sessions
-         *     relate to this deck" can only be asked this way.
+         *     This chain is the only link this payload exposes between a session and a
+         *     subject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is
+         *     attribution-only, unread by any query in this cycle, and not surfaced on any API
+         *     payload — so "which sessions relate to this deck" is still only askable this way.
          */
         PracticeRunDeckSummary: {
             /**
@@ -2184,7 +2218,7 @@ export interface operations {
             };
         };
     };
-    update_deck_practice_config_api_deck_practice_configs__config_id__patch: {
+    patch_deck_practice_config_api_deck_practice_configs__config_id__patch: {
         parameters: {
             query?: never;
             header?: {
