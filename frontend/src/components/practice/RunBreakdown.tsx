@@ -59,9 +59,8 @@ function formatDelta(delta: number): string {
 }
 
 /** The compact row's text (ADR 029): only the deck's primary field, name and value —
- * never prompt/answer content. Falls back to CardSummaryRow.tsx's existing "Untitled
- * card" copy when the primary field itself is blank, so a blank card reads the same
- * way here as it does in the card list. */
+ * never prompt/answer content. Falls back to "Untitled card" when the primary field
+ * itself is blank. */
 function cardTitle(card: BreakdownCard): string {
   return card.primary_field.value
     ? `${card.primary_field.name}: ${card.primary_field.value}`
