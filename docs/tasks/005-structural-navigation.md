@@ -2,6 +2,10 @@
 
 Makes the app fully navigable per the 2026-08-26 /plan session: every non-top-level page shows where it sits and how to go up, and going back always restores what you were looking at. Branch: `rewrite/practice-setup`; start after 004's T6 lands (T6 is in flight and this file's tests touch neighboring surfaces).
 
+## Superseded since (sync 2026-09-18)
+
+- **MD-2's static run-page crumb label is gone**: task 006 T5 fetched the run state, so `PracticeRunPage.tsx` renders the run's own name (`session_name`) once the state query resolves and falls back to "Practice session" only while loading or when the run isn't found — the upgrade MD-2 and the Practice-crumbs contract anticipated. The `TODO(defer:practice-run)` tag that T2's Done-when greps for went with the stub; the crumb target (`/practice/{practiceSessionId}`) and T2's checked status stand.
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. `CardSummaryRow.tsx` was removed as dead code on 2026-09-18 (it had no importer once the deck editor's Cards section went); `CardTable` and the breakdown row remain the consumers of the convention.
 
 ## Context
 

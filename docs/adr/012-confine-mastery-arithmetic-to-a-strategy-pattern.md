@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The row-lock and upsert write mechanics described below are replaced by ADR 042's append-only ledger and per-card advisory lock; the decision — arithmetic confined to `MasteryStrategy`, never in SQL — is unchanged.
 
 ## Context
 

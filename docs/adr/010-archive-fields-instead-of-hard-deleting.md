@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-09-18 (see Amendment below)
 
 ## Context
 
@@ -40,3 +40,9 @@ Benefits:
 Costs:
 
 - **Known gap, not yet fixed as of this writing.** The rewrite's invariant calls for checking four things before hard delete: `card_field_value`, `card_field_mastery`, `review_log`, and all six `deck_practice_config` uuid[] arrays across the deck. The shipped endpoint (`app/routers/api/field_def.py:106-119`) only checks `card_field_value` via `db_count_card_field_values`. In practice `review_log`'s `RESTRICT` FK still stops a delete with review history at the database level, and `card_field_mastery` CASCADEs silently (acceptable — it's a disposable cache, see ADR 011) — but a stale `deck_practice_config` array reference to the deleted field's id is checked nowhere at hard-delete time. This is a real discrepancy between the stated invariant and the implementation, left as a follow-up rather than fixed here.
+
+## Amendment (2026-09-18, sync): the RESTRICT backstop no longer exists
+
+ADR 015 made `review_log.field_def_id` nullable with `ON DELETE SET NULL`, so the database-level rejection this ADR's Context and "Known gap" paragraph rely on — a hard delete of a field with review history failing on `review_log`'s implicit `RESTRICT` — is gone. `card_field_mastery` has since become the append-only `mastery_log` (ADR 042), which still cascades on `field_def_id`.
+
+The hard-delete gate itself is unchanged: the field must already be archived and have zero `card_field_value` rows (`app/routers/api/field_def.py`, `hard_delete_field_def`). Hard-deleting such a field that nevertheless has review history therefore now succeeds and orphans those `review_log` rows — their `field_def_id` goes null and `rebuild_mastery` skips them — instead of being rejected. The `deck_practice_config` array reference remains unchecked at hard-delete time, as before; a stale id left in a config is caught by config validation at run start (task 004's `stale_config`), not here. Nothing in this amendment changes the decision — archival stays the default and hard delete stays the gated exception — it corrects which safety net still stands behind it.

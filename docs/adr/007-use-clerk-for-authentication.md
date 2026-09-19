@@ -30,6 +30,10 @@ The frontend package is `@clerk/react` (not `@clerk/clerk-react`, which an earli
 
 Verification uses PyJWT (`pyjwt[crypto]`) with a module-cached `PyJWKClient` pointed at `{clerk_fapi_url}/.well-known/jwks.json` (`app/verify_clerk_session.py`): RS256 only, required claims `azp`/`sub`/`iss`, issuer checked against `clerk_fapi_url`, and `azp` checked against `permitted_origins`. Signing keys are cached and refetched on an unknown `kid`. Any failure raises a `jwt.PyJWTError` subclass, which callers map to 401.
 
+### Implementation note — local dev-auth bypass (added 2026-09-18)
+
+`get_current_app_user` (`app/dependencies.py`) skips token verification entirely when **both** `DEV_AUTH_USER_ID` and `ENV=development` are set, treating every request — including one with no `Authorization` header — as that `clerk_user_id`. Either variable alone does nothing; the double gate is what keeps a stray variable on a deployed environment from ever activating it, and the app logs a warning at import time when it is on. `tests/conftest.py` forces it off for the whole suite (it sets `DEV_AUTH_USER_ID=""` before `app.config` is imported). It exists for local browser checks and headless driving of the real app, is tagged `TODO(defer:dev-auth-bypass)` as cleanup, and must never be set outside local development.
+
 ## Consequences
 
 Benefits:
