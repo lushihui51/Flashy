@@ -2,6 +2,10 @@
 
 Formalizes and surfaces a convention the frontend already relies on implicitly: a card is identified, wherever showing every field would be too dense, by its deck's first field. This task makes that fact visible in the one place a user actually controls field order. Surfaced while decomposing 006 (its T3/T8 consume this definition — see ADR 032) but independently shippable and not a dependency of 006 in either direction. Branch: `rewrite/primary-field`, independent of 004/005/006 — touches only `DeckEditor.tsx` and its test, no files shared with those.
 
+## Superseded since (sync 2026-09-19)
+
+- **`CardSummaryRow.tsx` no longer exists**: removed as dead code on 2026-09-18 (commit `09c7004`) once the deck editor's Cards section went (task 003, ADR 023). The read-only consumers of the primary-field convention that MD-1 and the ADR bullet name are now `CardTable` and the breakdown row only, matching ADR 032's status note. MD-1's scoping — the visible marker lives in `DeckEditor` alone — is unchanged.
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADR.

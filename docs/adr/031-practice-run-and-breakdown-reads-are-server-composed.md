@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. `GET .../run` is `GET .../state` since ADR 038 (009 MD-1); the server-composition decision is unchanged.
 
 ## Context
 
