@@ -91,7 +91,7 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
         card_id: 'card3',
         bucket: 'passed_after_many_fails',
         attempt_count: 1,
-        // A blank primary field — CardSummaryRow.tsx's "Untitled card" fallback copy.
+        // A blank primary field — triggers the "Untitled card" fallback copy.
         primary_field: { field_def_id: 'front3', name: 'Front', type: 'text', value: '' },
         attempts: [
           {

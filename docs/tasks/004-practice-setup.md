@@ -8,7 +8,9 @@ Already shipped on this branch (history, not tasks): backend endpoints + `name` 
 
 ## Superseded since (sync 2026-09-14)
 
-- **`practice_session` is now `practice_run`** (ADR 038, task 009 T2): the vocabulary table's schema term, every `/api/practice_sessions…` path in Contracts (`/api/practice_runs…`), `PracticeSessionRead/Summary`→`PracticeRunRead/Summary` (MD-3, T1), `practice_session_id`→`practice_run_id` in the `practice_deck` uniqueness rule, and T1's `practice_session.py`/`test_practice_session.py`/`practice_session.ts` file names. The user-facing word "practice" is unchanged (ADR 021).
+- **`practice_session` is now `practice_run`** (ADR 038, task 009 T2): the vocabulary table's schema term, every `/api/practice_sessions…` path in Contracts (`/api/practice_runs…`), `PracticeSessionRead/Summary`→`PracticeRunRead/Summary` (MD-3, T1), `practice_session_id`→`practice_run_id` in the `practice_deck` uniqueness rule, and T1's `practice_session.py`/`test_practice_session.py`/`practice_session.ts` file names (and T5's `PracticeSessionRow.tsx`, now `PracticeRunRow.tsx`; sync 2026-09-18). The user-facing word "practice" is unchanged (ADR 021).
+- **Carried invariant 1 no longer holds** (sync 2026-09-18): `practice_deck` does have a `source_config_id` — ADR 040 (task 009 T6/T7) added it as nullable, `ON DELETE SET NULL` attribution that is never read by generation, validation, or rerun, and that a material config edit nulls. Run ↔ subject/deck relevance still resolves only through `practice_deck.deck_id → deck → subject`; the other eight invariants stand.
+- **Three "Deferred — do not build" items have since been built** (sync 2026-09-18): the run surface (task 006); Restart, shipped as re-run (006 T4/T9) and then changed by ADR 039 (009 T5) to keep the original run rather than delete it, with a client-supplied name; and removing the deck-create `cards` array (008 T2, executing ADR 023's deferred cleanup). The remaining items — home-page launchers, a "stale" badge, rename from the UI, pointer drag — are still unbuilt.
 
 ## ADRs
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. `card_field_mastery` is the append-only `mastery_log` since ADR 042; the decision here — `review_log` as the sole source of truth, mastery as a rebuildable projection of it — is unchanged.
 
 ## Context
 

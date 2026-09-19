@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by ADR 022 (`unwrap` throws a typed `ApiDetailError` for structured error details); the display question left open under "Error normalization" is decided by ADR 035 (inline at the call site, no global handler).
 
 ## Context
 

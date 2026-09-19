@@ -2,6 +2,10 @@
 
 Removes four dead dependencies and the vestigial `cards` array from the deck-create contract, per the 2026-08-27 /plan session (which followed the same day's /sync checkpoint). Branch: `chore/dependency-cleanup`, independent of 006's `rewrite/practice-run` — no shared files.
 
+## Superseded since (sync 2026-09-18)
+
+- **The deck payload shapes moved modules**: `DeckCreate` — and `DeckDetail`/`DeckBatchEdit`, which the T2 contract names as untouched — now live in `app/models/deck_payloads.py`, not `app/models/deck.py` (ADR 046, task 012 T2). The shapes are byte-for-byte what the Contracts block shows; only the import path changed.
+
 ## ADRs
 
 Decisions this cycle resolved; full context and rejected alternatives live in the ADRs.

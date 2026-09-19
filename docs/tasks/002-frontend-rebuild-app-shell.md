@@ -12,7 +12,8 @@ Later work changed what parts of this file describe; contracts and checked boxes
 
 - **§1.1's Create no-op (and P5's "Create is clickable and does nothing" box)**: superseded by task 003 Phase 2 — Create opens `CreateSheet` (`AppShell.tsx`) and its `TODO(defer:nav-targets)` tag is gone. The checked box records what P5 verified at the time.
 - **§2's provider nesting shipped inverted**: `main.tsx` has `QueryClientProvider` outermost, then `ClerkProvider`, then the router. Neither depends on the other; the diagram's order was never load-bearing.
-- **§2's colour-token list has grown**: `index.css` also defines `--color-text-secondary`, `--color-danger`, `--color-danger-contrast`, with more arriving with task 006.
+- **§2's colour-token list has grown**: `index.css` also defines `--color-text-secondary`, `--color-danger`, `--color-danger-contrast`, and task 006's five run-page tokens (`--color-success`, `--color-warning`, `--color-pending`, `--color-rating-hard`, `--color-rating-good`; sync 2026-09-18).
+- **§1.1's top bar has moved on since this file closed** (sync 2026-09-18): Create is icon-only (a `+` with `aria-label="Create"` — the "later tweak" §1.1's note anticipated), a Practice icon link sits between Create and the auth slot (from the same `navItems.ts` constant as the drawer's item), and the fixed-width auth slot §1.1 asked for was removed in favour of content sizing — the padding put ~50px of dead space between Create and the avatar — accepting a one-time shift when the wider signed-out "Log in" pill swaps for the avatar (commits `046933c`, `d0bb3e8`, `1853c41`). P5's unchecked "no horizontal layout shift" box is therefore superseded, not pending.
 - **§3.8's `PracticePage.tsx`**: replaced by `PracticeOverviewPage.tsx` in task 004; `/practice` routes there (`App.tsx`). The other three placeholder pages kept their names.
 
 ## ADRs
@@ -261,7 +262,7 @@ Each entry: path, props, responsibilities, test file. Adjust paths to match the 
   - [x] Fixed header with hamburger, logo, Create, auth slot; search row beneath.
   - [x] Logo links to `/` and does nothing else.
   - [x] Create is clickable and does nothing.
-  - [ ] No horizontal layout shift when auth slot changes state. (structurally guaranteed by a static-width wrapper div, but never asserted by a test)
+  - [ ] No horizontal layout shift when auth slot changes state. (superseded — the static-width wrapper was later removed for content sizing; see "Superseded since")
 
   **Search**
   - [x] Input accepts text; value persists while typing.
