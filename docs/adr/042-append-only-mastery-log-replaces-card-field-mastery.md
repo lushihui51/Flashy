@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by ADR 050 (2026-09-21): the ledger's order is reviewed_at, stamped strictly increasing per card, and the id is a uuid; the rejection of CASCADE on the run foreign key stands.
 
 ## Context
 

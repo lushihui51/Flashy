@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-08-24 (see Amendment below)
+Accepted; amended 2026-08-24 (see Amendment below). The SET NULL half — review_log rows and practice_deck snapshots outliving what they reference, and the deleted-deck chip — is superseded by ADR 048 under the rule of ADR 047 (2026-09-21); the cascade of deck-owned rows, the two run statuses, and the lazy completion of a stranded run remain in force.
 
 ## Context
 
