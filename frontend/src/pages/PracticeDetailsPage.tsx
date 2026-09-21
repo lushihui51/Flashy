@@ -137,7 +137,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
       <p className="mt-1 text-sm text-(--color-text-muted)">{formatDateTime(session.created_at)}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1">
-        <SessionDeckChips decks={session.decks} deletedDeckCount={session.deleted_deck_count} />
+        <SessionDeckChips decks={session.decks} />
       </div>
 
       {session.status === 'active' ? (

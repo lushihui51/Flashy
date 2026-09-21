@@ -633,8 +633,21 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Back' })).toBeDisabled();
   });
 
-  it('Delete deck: confirm names the cascade and what survives, deletes, lands on the subject', async () => {
+  it('Delete deck: confirm counts the closure from the impact query, deletes, lands on the subject', async () => {
     mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 1,
+          fields_deleted: 2,
+          cards_deleted: 1,
+          cards_affected: 0,
+          configurations_deleted: 3,
+          runs_deleted: 1,
+        }),
+      ),
+    );
     let deleteCalled = false;
     let deleted = false;
     server.use(
@@ -660,11 +673,11 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
     expect(await screen.findByText('Delete deck?')).toBeInTheDocument();
-    // ADR 015: cards, fields and configurations are deck-owned and cascade; review
-    // history is not deck-owned and survives.
+    // ADR 048: everything the closure counts cascades with the deck, review history
+    // included — the sentence names each type the impact query reported.
     expect(
       screen.getByText(
-        "This also deletes 1 card, 2 fields and its practice configurations. Your review history is kept. This can't be undone.",
+        "This also deletes 1 deck, 1 card, 2 fields, 3 deck configurations and 1 practice. This can't be undone.",
       ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -673,8 +686,21 @@ describe('DeckEditor — edit mode', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
   });
 
-  it('Delete deck on a card-less deck: the confirm drops the card clause, keeps the rest', async () => {
+  it("Delete deck with nothing else to lose: the confirm says only that it can't be undone", async () => {
     mockEditDeck({ ...deckDetail, cards: [] });
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 0,
+          fields_deleted: 0,
+          cards_deleted: 0,
+          cards_affected: 0,
+          configurations_deleted: 0,
+          runs_deleted: 0,
+        }),
+      ),
+    );
     const user = userEvent.setup();
     renderEditDeck();
 
@@ -682,15 +708,41 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
     expect(await screen.findByText('Delete deck?')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "This also deletes 2 fields and its practice configurations. Your review history is kept. This can't be undone.",
+    expect(screen.getByText("This can't be undone.")).toBeInTheDocument();
+  });
+
+  it('a failed impact request renders the error inline and never opens the confirm', async () => {
+    mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({ detail: 'deck 1 not found' }, { status: 404 }),
       ),
-    ).toBeInTheDocument();
+    );
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Delete deck' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('deck 1 not found');
+    expect(screen.queryByText('Delete deck?')).not.toBeInTheDocument();
   });
 
   it('Delete deck ignores unsaved edits — a typed rename never gets sent', async () => {
     mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 0,
+          fields_deleted: 0,
+          cards_deleted: 0,
+          cards_affected: 0,
+          configurations_deleted: 0,
+          runs_deleted: 0,
+        }),
+      ),
+    );
     let deleteCalled = false;
     let deleted = false;
     server.use(

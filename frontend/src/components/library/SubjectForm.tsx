@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
-import { readDecks } from 'src/api/deck';
+import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import { pluralize } from 'src/lib/pluralize';
+import { deletionSummaryText } from 'src/lib/deletionSummary';
 import type { components } from 'src/api/types';
 
 type SubjectFormProps = {
@@ -21,11 +21,6 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
   const subjectQuery = useQuery({
     queryKey: ['subject', subjectId],
     queryFn: () => readSubject(subjectId!),
-    enabled: mode === 'edit' && !!subjectId,
-  });
-  const decksQuery = useQuery({
-    queryKey: ['decks', subjectId],
-    queryFn: () => readDecks(subjectId),
     enabled: mode === 'edit' && !!subjectId,
   });
 
@@ -48,7 +43,6 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       mode={mode}
       subjectId={subjectId}
       original={mode === 'edit' ? subjectQuery.data : undefined}
-      deckCount={decksQuery.data?.length ?? 0}
       onSuccess={(subject) => navigate(`/subjects/${subject.id}`)}
       onCancel={() => navigate(mode === 'create' ? '/library' : `/subjects/${subjectId}`)}
       onDelete={() => navigate('/library')}
@@ -60,10 +54,6 @@ export type SubjectFormBodyProps = {
   mode: 'create' | 'edit';
   subjectId: string | undefined;
   original: components['schemas']['SubjectRead'] | undefined;
-  /** Only meaningful in edit mode — names the count in the delete confirm. The
-   * create-overlay caller (DeckEditor) never renders that branch, so it can pass
-   * 0 without fetching anything. */
-  deckCount: number;
   /** Create succeeded, or edit was saved (possibly a no-op save with nothing
    * changed) — either way, the subject to treat as "the current one" now. */
   onSuccess: (subject: components['schemas']['SubjectRead']) => void;
@@ -82,7 +72,6 @@ export function SubjectFormBody({
   mode,
   subjectId,
   original,
-  deckCount,
   onSuccess,
   onCancel,
   onDelete,
@@ -97,11 +86,16 @@ export function SubjectFormBody({
   const [submitting, setSubmitting] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletionImpact, setDeletionImpact] = useState<
+    components['schemas']['DeletionImpactRead'] | null
+  >(null);
+  const [checkingDeletionImpact, setCheckingDeletionImpact] = useState(false);
 
   const dirty =
     mode === 'create'
       ? name.trim() !== '' || description.trim() !== '' || icon.trim() !== ''
-      : !!original && (name !== original.name || description !== original.description || icon !== original.icon);
+      : !!original &&
+        (name !== original.name || description !== original.description || icon !== original.icon);
 
   const handleCancel = () => {
     if (dirty) {
@@ -159,6 +153,24 @@ export function SubjectFormBody({
       setFormError(err instanceof Error ? err.message : 'Something went wrong.');
       setSubmitting(false);
       setConfirmDeleteOpen(false);
+    }
+  };
+
+  // MD-3: the confirm's wording is a live count, not a guess — fetched fresh on
+  // every click rather than kept around from mount, so it reflects whatever's
+  // changed underneath since the page loaded. An error renders through the form's
+  // existing error state and never opens the dialog.
+  const handleDeleteClick = async () => {
+    setCheckingDeletionImpact(true);
+    setFormError(null);
+    try {
+      const impact = await readDeletionImpact({ subjectIds: [subjectId!] });
+      setDeletionImpact(impact);
+      setConfirmDeleteOpen(true);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setCheckingDeletionImpact(false);
     }
   };
 
@@ -239,8 +251,9 @@ export function SubjectFormBody({
       {mode === 'edit' && (
         <button
           type="button"
-          onClick={() => setConfirmDeleteOpen(true)}
-          className="h-11 text-sm font-semibold text-(--color-danger)"
+          onClick={() => void handleDeleteClick()}
+          disabled={checkingDeletionImpact}
+          className="h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
         >
           Delete subject
         </button>
@@ -260,11 +273,7 @@ export function SubjectFormBody({
         <ConfirmDialog
           open={confirmDeleteOpen}
           title="Delete subject?"
-          description={
-            deckCount > 0
-              ? `This will also delete ${pluralize(deckCount, 'deck')} and all of their cards. This can't be undone.`
-              : "This can't be undone."
-          }
+          description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void handleDelete()}

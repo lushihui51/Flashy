@@ -20,7 +20,6 @@ function session(overrides: Record<string, unknown> = {}) {
     decks: [
       { deck_id: 'd1', deck_name: 'Shared Deck Name', subject_id: 's1', subject_name: 'Alpha' },
     ],
-    deleted_deck_count: 0,
     ...overrides,
   };
 }
@@ -147,21 +146,6 @@ describe('PracticeDetailsPage', () => {
     ).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
     expect(screen.getByText('First try')).toBeInTheDocument();
-  });
-
-  it('states deleted decks as a proportion of the session, not a bare count', async () => {
-    mockSession(session({ deleted_deck_count: 1 })); // one deck left, one gone
-    renderDetails();
-
-    expect(await screen.findByText('1 / 2 decks deleted')).toBeInTheDocument();
-  });
-
-  it('says nothing about deleted decks when every deck is intact', async () => {
-    mockSession(session());
-    renderDetails();
-
-    await screen.findByRole('heading', { name: 'Alpha run' });
-    expect(screen.queryByText(/decks deleted/)).not.toBeInTheDocument();
   });
 
   it('deleting confirms first, calls the API, and navigates to the practice list', async () => {
