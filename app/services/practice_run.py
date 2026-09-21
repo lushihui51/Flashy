@@ -552,15 +552,15 @@ def _compute_field_mastery_deltas(
     attributed_by_pair: dict[tuple[uuid.UUID, uuid.UUID], list] = defaultdict(list)
     for row in run_rows:
         attributed_by_pair[(row.card_id, row.field_def_id)].append(row)
-    first_id = min(row.id for row in run_rows)
+    first_reviewed_at = min(row.reviewed_at for row in run_rows)
 
-    bounds: list[tuple[uuid.UUID, uuid.UUID, int]] = []
+    bounds: list[tuple[uuid.UUID, uuid.UUID, datetime]] = []
     after_state_by_pair: dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState] = {}
     for pair in domain:
         rows_for_pair = attributed_by_pair.get(pair)
         if rows_for_pair:
-            bound = min(r.id for r in rows_for_pair)
-            after_row = max(rows_for_pair, key=lambda r: r.id)
+            bound = min(r.reviewed_at for r in rows_for_pair)
+            after_row = max(rows_for_pair, key=lambda r: r.reviewed_at)
             after_state_by_pair[pair] = FieldMasteryState(
                 prompt_mastery=after_row.prompt_mastery,
                 answer_mastery=after_row.answer_mastery,
@@ -568,7 +568,7 @@ def _compute_field_mastery_deltas(
                 answer_review_count=after_row.answer_review_count,
             )
         else:
-            bound = first_id
+            bound = first_reviewed_at
         bounds.append((pair[0], pair[1], bound))
 
     before_state_by_pair = db_fetch_mastery_before_bound(db, bounds)

@@ -1,5 +1,7 @@
 import uuid
+from collections.abc import Collection
 
+from sqlalchemy import delete, exists, or_
 from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
@@ -145,6 +147,65 @@ def db_delete_practice_run(db: Session, session: PracticeRun) -> None:
     rebuild_mastery replays exactly as before."""
     db.delete(session)
     db.commit()
+
+
+def db_read_run_ids_with_all_decks_in(
+    db: Session, user_id: uuid.UUID, deck_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Runs of user_id with at least one practice_deck, none of whose practice_decks
+    points at a deck outside deck_ids — ADR 051 step 7's first half: a run entirely
+    contained in this closure of decks. Written against the post-cascade schema (task
+    013 T4's NOT NULL practice_deck.deck_id); until then a null deck_id satisfies SQL's
+    NOT IN semantics vacuously (NULL NOT IN (...) is never true, so it can never make
+    the exclusion fire) and so is treated as if it were "in" deck_ids — which only
+    matters for rows the T4 cascade migration deletes anyway."""
+    if not deck_ids:
+        return set()
+    has_a_deck = exists().where(PracticeDeck.practice_run_id == PracticeRun.id)
+    has_an_outside_deck = exists().where(
+        PracticeDeck.practice_run_id == PracticeRun.id,
+        col(PracticeDeck.deck_id).not_in(deck_ids),
+    )
+    query = select(PracticeRun.id).where(
+        PracticeRun.user_id == user_id, has_a_deck, ~has_an_outside_deck
+    )
+    return set(db.exec(query).all())
+
+
+def db_read_active_run_ids_naming_fields(
+    db: Session, user_id: uuid.UUID, field_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Active runs of user_id with a practice_deck whose prompt/answer/pool field
+    arrays overlap field_ids — ADR 051 step 7's second half. Completed runs are never
+    touched by a field-only deletion: they still show their attempts, they just don't
+    need to be rateable any more (ADR 047)."""
+    if not field_ids:
+        return set()
+    ids = list(field_ids)
+    query = (
+        select(PracticeRun.id)
+        .join(PracticeDeck, PracticeDeck.practice_run_id == PracticeRun.id)
+        .where(
+            PracticeRun.user_id == user_id,
+            PracticeRun.status == RunStatus.active,
+            or_(
+                PracticeDeck.prompt_field_ids.op("&&")(ids),
+                PracticeDeck.answer_field_ids.op("&&")(ids),
+                PracticeDeck.prompt_pool_ids.op("&&")(ids),
+                PracticeDeck.answer_pool_ids.op("&&")(ids),
+            ),
+        )
+    )
+    return set(db.exec(query).all())
+
+
+def db_delete_practice_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
+    Its practice_decks and practice_cards cascade away with it; every review and
+    mastery value it produced stays (ADR 047, ADR 039)."""
+    if not ids:
+        return
+    db.execute(delete(PracticeRun).where(col(PracticeRun.id).in_(ids)))
 
 
 def db_update_practice_run_status(

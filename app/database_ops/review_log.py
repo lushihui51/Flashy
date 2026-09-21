@@ -1,10 +1,13 @@
 import uuid
+from collections.abc import Collection
+from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import text
+from sqlalchemy import func, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, col, select
 
+from app.models.card import Card
 from app.models.review_log import ReviewLog
 
 
@@ -36,6 +39,16 @@ class ReviewGroupInconsistent(Exception):
             f"on record but this submission has {sorted(submitted_field_ids)} — an "
             "appearance must be logged atomically and never appended to"
         )
+
+
+def db_read_latest_reviewed_at(db: Session, card_id: uuid.UUID) -> datetime | None:
+    """The card's own latest review_log timestamp (`max(reviewed_at)`), served by
+    `ix_review_log_card_id_reviewed_at`. record_review_group (ADR 050) reads this
+    under the card's advisory lock to keep mastery_log's order strictly increasing
+    per card; None for a card with no reviews yet."""
+    return db.exec(
+        select(func.max(ReviewLog.reviewed_at)).where(ReviewLog.card_id == card_id)
+    ).one()
 
 
 def db_insert_review_logs(db: Session, rows: list[dict]) -> None:
@@ -94,13 +107,16 @@ def db_log_review_group(
 
 
 def db_fetch_review_log_for_rebuild(
-    db: Session, user_id: uuid.UUID | None = None
+    db: Session, user_id: uuid.UUID | None = None, deck_id: uuid.UUID | None = None
 ) -> list[ReviewLog]:
     """Every row with a live card and field, oldest first — the replay order
-    rebuild_mastery folds through. A row whose card_id or field_def_id has gone SET
-    NULL (its card, or the whole deck, was deleted) is excluded: mastery is a cache for
-    a live (card, field), and mastery_log cascade-deletes with the card, so
-    there's nothing to rebuild for it — only orphaned review_log history remains."""
+    rebuild_mastery and rebuild_deck_mastery fold through. A row whose card_id or
+    field_def_id has gone SET NULL (its card, or the whole deck, was deleted) is
+    excluded: mastery is a cache for a live (card, field), and mastery_log
+    cascade-deletes with the card, so there's nothing to rebuild for it — only
+    orphaned review_log history remains. At most one of user_id/deck_id is ever
+    passed — a user-wide rebuild and a deck-scoped one are different callers, never
+    combined in one call."""
     query = (
         select(ReviewLog)
         .where(col(ReviewLog.card_id).is_not(None), col(ReviewLog.field_def_id).is_not(None))
@@ -108,4 +124,32 @@ def db_fetch_review_log_for_rebuild(
     )
     if user_id is not None:
         query = query.where(ReviewLog.user_id == user_id)
+    if deck_id is not None:
+        query = query.where(
+            col(ReviewLog.card_id).in_(select(Card.id).where(Card.deck_id == deck_id))
+        )
     return list(db.exec(query).all())
+
+
+def db_scrub_shown_prompt_ids(
+    db: Session, deck_id: uuid.UUID, field_ids: Collection[uuid.UUID]
+) -> None:
+    """Removes each of field_ids from shown_prompt_ids on this deck's own cards' rows
+    (ADR 049) — one UPDATE per id, so cost scales with how many fields are being
+    deleted, not with how many review_log rows exist. `@>` (array contains) narrows
+    each UPDATE to rows that actually name the id, the same effect array_remove's own
+    "not present, no-op" gives a single row, applied at the query level so an id
+    nobody used touches nothing. No commit — apply_deletion (ADR 051) owns the
+    transaction."""
+    if not field_ids:
+        return
+    deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)
+    for field_id in field_ids:
+        db.execute(
+            update(ReviewLog)
+            .where(
+                col(ReviewLog.card_id).in_(deck_card_ids),
+                ReviewLog.shown_prompt_ids.op("@>")([field_id]),
+            )
+            .values(shown_prompt_ids=func.array_remove(ReviewLog.shown_prompt_ids, field_id))
+        )

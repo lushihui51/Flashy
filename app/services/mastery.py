@@ -1,5 +1,7 @@
+import dataclasses
 import uuid
 from collections import defaultdict
+from datetime import timedelta
 
 from sqlalchemy import text
 from sqlmodel import Session, col, select
@@ -7,6 +9,7 @@ from sqlmodel import Session, col, select
 from app.database_ops.mastery_log import (
     db_append_mastery_log,
     db_clear_mastery,
+    db_clear_mastery_for_deck,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
 )
@@ -14,6 +17,7 @@ from app.database_ops.review_log import (
     ReviewGroupWriteOutcome,
     db_fetch_review_log_for_rebuild,
     db_log_review_group,
+    db_read_latest_reviewed_at,
 )
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import CardScore, FieldMasteryState, ReviewGroup
@@ -62,7 +66,9 @@ def apply_rating(
     for (_, field_def_id, _side), update in updates.items():
         states[field_def_id] = strategy.apply_review(states.get(field_def_id), update)
 
-    db_append_mastery_log(db, group.card_id, states, group.reviewed_at, practice_run_id)
+    db_append_mastery_log(
+        db, group.card_id, states, group.reviewed_at, group.review_group_id, practice_run_id
+    )
 
 
 def record_review_group(
@@ -84,11 +90,35 @@ def record_review_group(
       of the log, so if the log already reflects this appearance, the ledger append
       that happened when it was first logged already reflects it too. Re-appending
       here would move mastery toward the same target a second time for a client-side
-      retry that changed nothing.
+      retry that changed nothing. Because record_review_group recomputes a stamp
+      before every attempt, a retry recomputes one too — but since nothing is written
+      on a RETRY, the persisted stamp from the first attempt is untouched.
     - Raises ReviewGroupInconsistent (propagated from db_log_review_group) if the log
       has a different set of rated fields on record for this review_group_id already.
 
+    Order contract (ADR 050): takes the per-card advisory lock first — before
+    db_log_review_group's own review_group_id lock and before apply_rating's — then
+    replaces `group.reviewed_at` with the greater of the proposed stamp and the
+    card's latest review timestamp plus one microsecond, so the stamp is strictly
+    increasing across this card's appearances (a card with no reviews yet keeps the
+    proposed stamp). The read and the write happen under one lock and one
+    READ COMMITTED transaction, so a second transaction for the same card blocks at
+    the lock until this one commits and then sees this stamp. Every transaction takes
+    the card lock before any group lock, in this function or in apply_rating's
+    re-entry of the same transaction-scoped lock, so this ordering cannot deadlock
+    against the old group-then-card order.
+
     Does not commit — the caller owns the transaction."""
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(group.card_id)}
+    )
+    latest_reviewed_at = db_read_latest_reviewed_at(db, group.card_id)
+    if latest_reviewed_at is not None:
+        group = dataclasses.replace(
+            group,
+            reviewed_at=max(group.reviewed_at, latest_reviewed_at + timedelta(microseconds=1)),
+        )
+
     rows = [
         {
             "user_id": user_id,
@@ -193,6 +223,26 @@ def _fetch_run_attribution(
     )
 
 
+def _replay_review_groups(db: Session, strategy: MasteryStrategy, rows: list[ReviewLog]) -> None:
+    """The replay core shared by every rebuild scope (ADR 049): collapses the given
+    review_log rows into ReviewGroups (oldest first, `review_group_id` a
+    deterministic tiebreak for groups of different pairs sharing a timestamp),
+    reconstructs each group's run attribution, and calls apply_rating per group —
+    the same write path a live rating goes through. Never re-stamps: apply_rating
+    receives each group's already-persisted `reviewed_at` unchanged, so a rebuild of
+    any scope reproduces every row's order position (ADR 050). Does not clear
+    mastery_log and does not commit — the caller owns both, since a full rebuild's
+    clear scope (every row, or one user's) and a deck-scoped rebuild's (one deck's
+    cards) are different calls to different database_ops functions."""
+    groups = _group_review_log_rows(rows)
+    run_ids_by_review_group = _fetch_run_attribution(
+        db, [group.review_group_id for group in groups]
+    )
+    for group in groups:
+        practice_run_id = run_ids_by_review_group.get(group.review_group_id)
+        apply_rating(db, strategy, group, practice_run_id)
+
+
 def rebuild_mastery(
     db: Session, strategy: MasteryStrategy, user_id: uuid.UUID | None = None
 ) -> None:
@@ -201,12 +251,19 @@ def rebuild_mastery(
     each group's run attribution along the way. Because the strategy is a parameter,
     changing strategies is not a migration — it's a rebuild. Slow is fine."""
     db_clear_mastery(db, user_id)
-    rows = db_fetch_review_log_for_rebuild(db, user_id)
-    groups = _group_review_log_rows(rows)
-    run_ids_by_review_group = _fetch_run_attribution(
-        db, [group.review_group_id for group in groups]
-    )
-    for group in groups:
-        practice_run_id = run_ids_by_review_group.get(group.review_group_id)
-        apply_rating(db, strategy, group, practice_run_id)
+    rows = db_fetch_review_log_for_rebuild(db, user_id=user_id)
+    _replay_review_groups(db, strategy, rows)
     db.commit()
+
+
+def rebuild_deck_mastery(db: Session, strategy: MasteryStrategy, deck_id: uuid.UUID) -> None:
+    """Deck-scoped counterpart to rebuild_mastery (ADR 049): clears and replays only
+    this deck's cards' mastery_log rows, reproducing exactly what a user-wide rebuild
+    would produce for this deck (ADR 050 makes this safe — the ledger's order is
+    `reviewed_at`, not an identity id, so deleting and re-inserting one deck's rows
+    cannot disturb any other deck's order). Every other deck's rows, including their
+    ids, are untouched. Does not commit — apply_deletion (task 013 T3) calls this
+    inside its own transaction."""
+    db_clear_mastery_for_deck(db, deck_id)
+    rows = db_fetch_review_log_for_rebuild(db, deck_id=deck_id)
+    _replay_review_groups(db, strategy, rows)

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Row, Uuid, column, delete, desc, insert, values
+from sqlalchemy import DateTime, Row, Uuid, column, delete, desc, insert, values
 from sqlmodel import Session, col, select
 
 from app.mastery.types import FieldMasteryState
@@ -20,10 +20,10 @@ def db_fetch_latest_mastery_states(
     db: Session, card_id: uuid.UUID, field_def_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, FieldMasteryState]:
     """Latest row per (card, field) among this card's affected fields — DISTINCT ON,
-    ordered by id descending (the ledger's total order, not reviewed_at). No FOR
-    UPDATE: apply_rating's caller takes a per-card advisory lock instead, since
-    append-only rows have nothing for a row lock to serialize against. Missing rows
-    are simply absent from the returned dict — invariant 4, lazy creation."""
+    ordered by reviewed_at descending (the ledger's order, ADR 050). No FOR UPDATE:
+    apply_rating's caller takes a per-card advisory lock instead, since append-only
+    rows have nothing for a row lock to serialize against. Missing rows are simply
+    absent from the returned dict — invariant 4, lazy creation."""
     if not field_def_ids:
         return {}
     rows = db.exec(
@@ -33,7 +33,7 @@ def db_fetch_latest_mastery_states(
             col(MasteryLog.field_def_id).in_(field_def_ids),
         )
         .distinct(MasteryLog.field_def_id)
-        .order_by(MasteryLog.field_def_id, desc(MasteryLog.id))
+        .order_by(MasteryLog.field_def_id, desc(MasteryLog.reviewed_at))
     ).all()
     return {
         row.field_def_id: FieldMasteryState(
@@ -51,18 +51,24 @@ def db_append_mastery_log(
     card_id: uuid.UUID,
     states: dict[uuid.UUID, FieldMasteryState],
     reviewed_at: datetime,
+    review_group_id: uuid.UUID,
     practice_run_id: uuid.UUID | None,
 ) -> None:
     """Writes computed values only. No `SET x = <expression>` — the incoming states are
     already the strategy's output; this just appends them. Plain bulk INSERT — the
-    ledger is append-only, so there's nothing to upsert."""
+    ledger is append-only, so there's nothing to upsert. `id` is supplied here
+    (ADR 050: a uuid that identifies the row and orders nothing) since the column has
+    no server default; `review_group_id` is provenance only, carried on every row of
+    the appearance that produced it."""
     if not states:
         return
     rows = [
         {
+            "id": uuid.uuid4(),
             "card_id": card_id,
             "field_def_id": field_def_id,
             "practice_run_id": practice_run_id,
+            "review_group_id": review_group_id,
             "prompt_mastery": state.prompt_mastery,
             "answer_mastery": state.answer_mastery,
             "prompt_review_count": state.prompt_review_count,
@@ -99,7 +105,7 @@ def db_fetch_mastery_read_rows(
         latest_query = latest_query.where(col(MasteryLog.field_def_id).in_(field_def_ids))
     latest_mastery = (
         latest_query.distinct(MasteryLog.card_id, MasteryLog.field_def_id)
-        .order_by(MasteryLog.card_id, MasteryLog.field_def_id, desc(MasteryLog.id))
+        .order_by(MasteryLog.card_id, MasteryLog.field_def_id, desc(MasteryLog.reviewed_at))
         .subquery()
     )
 
@@ -134,35 +140,37 @@ def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> li
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
     used by the breakdown's delta computation (task 010 T3, ADR 042/043, 010 MD-4) to
     find each (card, field) pair this run itself touched and, among those, its own
-    first and last row. `id` ascending (the ledger's total order) so callers reading
-    min/max per pair don't need to re-sort."""
+    first and last row. `reviewed_at` ascending (the ledger's order, ADR 050) so
+    callers reading min/max per pair don't need to re-sort."""
     return list(
         db.exec(
             select(MasteryLog)
             .where(MasteryLog.practice_run_id == practice_run_id)
-            .order_by(MasteryLog.id)
+            .order_by(MasteryLog.reviewed_at)
         ).all()
     )
 
 
 def db_fetch_mastery_before_bound(
-    db: Session, bounds: list[tuple[uuid.UUID, uuid.UUID, int]]
+    db: Session, bounds: list[tuple[uuid.UUID, uuid.UUID, datetime]]
 ) -> dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState]:
-    """The breakdown's per-pair 'before' lookup (task 010 T3, ADR 042/043, 010 MD-4):
-    one statement for every (card_id, field_def_id, bound) triple in `bounds`,
-    regardless of how many there are — a VALUES relation of each pair's own bound id,
-    inner-joined to mastery_log on (card_id, field_def_id, id < bound) and reduced to
-    one row per pair with DISTINCT ON, ordered by id descending. The join predicate is
-    covered by `ix_mastery_log_card_field (card_id, field_def_id, id)`: an index
-    range scan per pair, never a scan of a pair's full history. A pair with no row
-    below its bound contributes nothing to an inner join, so it's simply absent from
-    the returned dict — the caller's contract for 'never reviewed as of that point'."""
+    """The breakdown's per-pair 'before' lookup (task 010 T3, ADR 042/043, 010 MD-4;
+    bound type per ADR 050): one statement for every (card_id, field_def_id,
+    bound_reviewed_at) triple in `bounds`, regardless of how many there are — a
+    VALUES relation of each pair's own bound timestamp, inner-joined to mastery_log on
+    (card_id, field_def_id, reviewed_at < bound_reviewed_at) and reduced to one row
+    per pair with DISTINCT ON, ordered by reviewed_at descending. The join predicate is
+    covered by the `uq_mastery_log_card_field_reviewed` unique constraint's backing
+    index (card_id, field_def_id, reviewed_at): an index range scan per pair, never a
+    scan of a pair's full history. A pair with no row below its bound contributes
+    nothing to an inner join, so it's simply absent from the returned dict — the
+    caller's contract for 'never reviewed as of that point'."""
     if not bounds:
         return {}
     bounds_values = values(
         column("card_id", Uuid),
         column("field_def_id", Uuid),
-        column("bound", BigInteger),
+        column("bound_reviewed_at", DateTime(timezone=True)),
         name="bounds",
     ).data(bounds)
     query = (
@@ -179,10 +187,14 @@ def db_fetch_mastery_before_bound(
             MasteryLog,
             (MasteryLog.card_id == bounds_values.c.card_id)
             & (MasteryLog.field_def_id == bounds_values.c.field_def_id)
-            & (MasteryLog.id < bounds_values.c.bound),
+            & (MasteryLog.reviewed_at < bounds_values.c.bound_reviewed_at),
         )
         .distinct(bounds_values.c.card_id, bounds_values.c.field_def_id)
-        .order_by(bounds_values.c.card_id, bounds_values.c.field_def_id, desc(MasteryLog.id))
+        .order_by(
+            bounds_values.c.card_id,
+            bounds_values.c.field_def_id,
+            desc(MasteryLog.reviewed_at),
+        )
     )
     rows = db.exec(query).all()
     return {
@@ -209,3 +221,11 @@ def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
         .where(Subject.user_id == user_id)
     )
     db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))
+
+
+def db_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
+    """Delete-scoped clear for rebuild_deck_mastery (ADR 049): only rows for cards
+    belonging to this one deck — every other deck's rows, and their ids, are
+    untouched."""
+    deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)
+    db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(deck_card_ids)))
