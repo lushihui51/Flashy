@@ -5,13 +5,14 @@ from fastapi import APIRouter, HTTPException
 from app.database import SessionDep
 from app.database_ops.subject import (
     db_create_subject,
-    db_delete_subject,
     db_read_subject,
     db_read_subjects_with_summary,
     db_update_subject,
 )
 from app.dependencies import CurrentUserDep
+from app.mastery.config import get_mastery_strategy
 from app.models.subject import SubjectCreate, SubjectRead, SubjectSummary, SubjectUpdate
+from app.services.deletion import delete_subject as delete_subject_service
 
 router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
@@ -55,4 +56,4 @@ def delete_subject(db: SessionDep, current_user: CurrentUserDep, subject_id: uui
     subject = db_read_subject(db, subject_id, current_user.id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
-    db_delete_subject(db, subject)
+    delete_subject_service(db, get_mastery_strategy(), subject)

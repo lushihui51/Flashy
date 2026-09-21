@@ -1,7 +1,8 @@
-"""Service tests for compute_deletion_impact + apply_deletion (task 013 T3, ADR 047,
-ADR 051) — calling the pair directly and committing, the same way delete_subject/
-delete_deck/delete_card do internally. review_log rows being gone belongs to T4 (the
-cascade doesn't exist yet); here field_def_id/card_id only ever go SET NULL."""
+"""Service tests for compute_deletion_impact + apply_deletion (task 013 T3/T4, ADR
+047, ADR 051) — calling the pair directly and committing, the same way
+delete_subject/delete_deck/delete_card do internally. review_log.card_id/
+field_def_id are NOT NULL ON DELETE CASCADE (ADR 048): a deleted card's or field's
+review rows are gone entirely, never left behind with a nulled reference."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -108,7 +109,22 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     deck1_id, deck2_id = deck1.id, deck2.id
     d1_front = _field(db, deck1_id, "front", 0)
     d1_back = _field(db, deck1_id, "back", 1)
-    _card(db, deck1_id, [d1_front.id, d1_back.id])
+    d1_card = _card(db, deck1_id, [d1_front.id, d1_back.id])
+    d1_card_id = d1_card.id
+    record_review_group(
+        db,
+        strategy,
+        existing_user.id,
+        ReviewGroup(
+            review_group_id=uuid.uuid4(),
+            card_id=d1_card_id,
+            reviewed_at=datetime.now(UTC),
+            ratings=((d1_back.id, 4),),
+            shown_prompt_ids=(d1_front.id,),
+        ),
+        None,
+    )
+    db.commit()
     d2_front = _field(db, deck2_id, "front", 0)
     d2_back = _field(db, deck2_id, "back", 1)
     _card(db, deck2_id, [d2_front.id, d2_back.id])
@@ -158,6 +174,9 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     assert surviving_snapshot is not None
     assert surviving_snapshot.deck_id == other_deck_id
     assert surviving_snapshot.prompt_field_ids == [o_front.id]
+
+    # No review row references the deleted card either (ADR 048's cascade).
+    assert db.exec(select(ReviewLog).where(ReviewLog.card_id == d1_card_id)).first() is None
 
 
 def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_configs_and_runs(
@@ -281,8 +300,10 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
         a_state_before
     )
 
-    # B has no mastery_log rows left at all.
+    # B has no mastery_log rows left at all, and no review_log rows either — its
+    # own rating from appearance 1 cascaded away with the field (ADR 048).
     assert db.exec(select(MasteryLog).where(MasteryLog.field_def_id == b_id)).first() is None
+    assert db.exec(select(ReviewLog).where(ReviewLog.field_def_id == b_id)).first() is None
 
     # The scrub: deck1's own row no longer names B, deck2's identical array still does.
     d1_row = db.exec(
@@ -346,3 +367,4 @@ def test_card_deletion_issues_no_mastery_log_statements_beyond_its_own_cascade(
 
     assert mastery_log_statement_counter.count == 0
     assert db.get(Card, card.id) is None
+    assert db.exec(select(ReviewLog).where(ReviewLog.card_id == card.id)).first() is None

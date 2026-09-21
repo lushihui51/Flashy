@@ -77,11 +77,6 @@ def db_update_card_values(db: Session, card: Card, values: dict[uuid.UUID, str])
     return _read_card_with_values(db, card.id)
 
 
-def db_delete_card(db: Session, card: Card) -> None:
-    db.delete(card)
-    db.commit()
-
-
 def db_read_owned_card_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:

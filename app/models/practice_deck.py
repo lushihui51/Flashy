@@ -14,9 +14,12 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     one exception, and it is attribution-only: it records which config this snapshot
     was cut from so per-config progress can be asked about later, but nothing in this
     codebase reads it back for generation, validation, or rerun. A material edit to
-    the source config, or deleting it outright, nulls it (deletion via this column's
-    own ON DELETE SET NULL; an edit via app/services/deck_practice_config.py) — the
-    snapshot itself is never touched either way."""
+    the source config nulls it (an edit via app/services/deck_practice_config.py; the
+    snapshot's own array fields are never touched). Deleting the source config also
+    nulls it (this column's own ON DELETE SET NULL). Deleting the source *deck* is
+    different: `deck_id` is `NOT NULL ON DELETE CASCADE` (ADR 047, ADR 048) — this
+    snapshot goes with it, and a run left owning no `PracticeDeck` at all is deleted
+    alongside its last one (`compute_deletion_impact`'s run closure, ADR 051)."""
 
     __table_args__ = (UniqueConstraint("practice_run_id", "deck_id"),)
 
@@ -26,10 +29,9 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     practice_run_id: uuid.UUID = Field(
         foreign_key="practice_run.id", ondelete="CASCADE"
     )
-    # Nullable with ON DELETE SET NULL — a snapshot is immutable, self-contained
-    # session history (see class docstring); deleting the source deck must not erase
-    # it, same reasoning as review_log.card_id.
-    deck_id: uuid.UUID | None = Field(default=None, foreign_key="deck.id", ondelete="SET NULL")
+    # NOT NULL, ON DELETE CASCADE (ADR 047, ADR 048, task 013) — see the class
+    # docstring: a snapshot is owned by its session, but it does not outlive its deck.
+    deck_id: uuid.UUID = Field(foreign_key="deck.id", ondelete="CASCADE", nullable=False)
     # Attribution-only (ADR 040, see class docstring) — never read by generation,
     # validation, or rerun. Written at run start with the config's id; rerun copies the
     # old snapshot's value (possibly already null) rather than looking anything up.

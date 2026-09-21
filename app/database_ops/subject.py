@@ -79,11 +79,6 @@ def db_update_subject(db: Session, subject: Subject, data: dict) -> Subject:
     return subject
 
 
-def db_delete_subject(db: Session, subject: Subject) -> None:
-    db.delete(subject)
-    db.commit()
-
-
 def db_read_owned_subject_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:

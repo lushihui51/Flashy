@@ -109,19 +109,13 @@ def db_log_review_group(
 def db_fetch_review_log_for_rebuild(
     db: Session, user_id: uuid.UUID | None = None, deck_id: uuid.UUID | None = None
 ) -> list[ReviewLog]:
-    """Every row with a live card and field, oldest first — the replay order
-    rebuild_mastery and rebuild_deck_mastery fold through. A row whose card_id or
-    field_def_id has gone SET NULL (its card, or the whole deck, was deleted) is
-    excluded: mastery is a cache for a live (card, field), and mastery_log
-    cascade-deletes with the card, so there's nothing to rebuild for it — only
-    orphaned review_log history remains. At most one of user_id/deck_id is ever
-    passed — a user-wide rebuild and a deck-scoped one are different callers, never
-    combined in one call."""
-    query = (
-        select(ReviewLog)
-        .where(col(ReviewLog.card_id).is_not(None), col(ReviewLog.field_def_id).is_not(None))
-        .order_by(ReviewLog.reviewed_at)
-    )
+    """Every row, oldest first — the replay order rebuild_mastery and
+    rebuild_deck_mastery fold through. review_log.card_id/field_def_id cascade-delete
+    with their card/field (ADR 047, ADR 048), so every remaining row is already about
+    a live (card, field) pair — no filter needed to establish that. At most one of
+    user_id/deck_id is ever passed — a user-wide rebuild and a deck-scoped one are
+    different callers, never combined in one call."""
+    query = select(ReviewLog).order_by(ReviewLog.reviewed_at)
     if user_id is not None:
         query = query.where(ReviewLog.user_id == user_id)
     if deck_id is not None:

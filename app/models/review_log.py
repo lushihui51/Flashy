@@ -8,6 +8,15 @@ from app.models.base import AppModel
 
 
 class ReviewLog(AppModel, table=True):
+    """The append-only ledger of every rated field review (AGENTS.md's mastery
+    model) — the source of truth mastery_log is rebuilt from. `card_id` and
+    `field_def_id` are `NOT NULL ON DELETE CASCADE` (ADR 047, ADR 048): a persistent
+    entity's deletion deletes every record that references its id, and a review of a
+    card or field that no longer exists answers no question about anything, so there
+    is nothing here for history to preserve past the delete. `review_group_id` is the
+    durable appearance identifier `practice_card_id` used to be (that column is
+    dropped) — grouping never depended on it even before."""
+
     __table_args__ = (
         CheckConstraint("rating BETWEEN 1 AND 4", name="rating_range"),
         UniqueConstraint("review_group_id", "field_def_id"),
@@ -18,24 +27,9 @@ class ReviewLog(AppModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="app_user.id")
-    # Nullable with ON DELETE SET NULL, not CASCADE — review_log is the append-only
-    # source of truth for mastery (AGENTS.md); deleting a deck/card must not silently
-    # erase review history. A row whose card_id has gone null is orphaned history: it
-    # stays on record but is excluded from rebuild_mastery (nothing to rebuild for a
-    # card that no longer exists) and from any read path keyed by a live card.
-    card_id: uuid.UUID | None = Field(default=None, foreign_key="card.id", ondelete="SET NULL")
-    # Nullable with ON DELETE SET NULL — a row can be logged before/without a live
-    # practice_card (e.g. rebuild replay, or review outside a session), and
-    # practice_card itself now cascade-deletes with its card, so a review_log row
-    # must survive that too. review_group_id (not this) is the durable appearance
-    # identifier; grouping must never depend on practice_card_id.
-    practice_card_id: uuid.UUID | None = Field(
-        default=None, foreign_key="practice_card.id", ondelete="SET NULL"
-    )
-    # Same ON DELETE SET NULL reasoning as card_id — a deleted field_def's rating
-    # history outlives the field.
-    field_def_id: uuid.UUID | None = Field(
-        default=None, foreign_key="field_def.id", ondelete="SET NULL"
+    card_id: uuid.UUID = Field(foreign_key="card.id", ondelete="CASCADE", nullable=False)
+    field_def_id: uuid.UUID = Field(
+        foreign_key="field_def.id", ondelete="CASCADE", nullable=False
     )
     review_group_id: uuid.UUID
     rating: int = Field(sa_column=Column(SmallInteger, nullable=False))

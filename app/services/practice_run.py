@@ -120,8 +120,11 @@ class RunActiveError(Exception):
 class RerunError(Exception):
     """A re-run failure (ADR 039), detail = `{code, message}`: `run_active` when
     the session hasn't completed yet; `nothing_to_rerun` when every one of its
-    practice_deck snapshots was dropped (a deleted deck, or field ids no longer live)
-    and nothing survived to rebuild a session from."""
+    practice_deck snapshots has field ids that no longer validate against its deck's
+    live fields, and nothing survived to rebuild a session from. A snapshot naming a
+    deleted deck never reaches this check at all — its row cascaded away with the
+    deck (ADR 047), and a run left owning no snapshot is deleted alongside its last
+    one (ADR 048), so there is no rerun call left to make against it."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -291,10 +294,10 @@ def rerun_practice_run(
 ) -> PracticeRun:
     """ADR 039: creates a new run from the completed run's own frozen practice_deck
     snapshots — never a deck_practice_config lookup (practice_deck has no behavioral
-    coupling to its source config, ADR 013). Per snapshot: dropped if its deck was
-    deleted (deck_id null) or its field ids no longer validate against the deck's live
-    fields; the rest are re-snapshotted and regenerated exactly like session start, via
-    the same _snapshot_and_generate_deck helper, each carrying its old snapshot's
+    coupling to its source config, ADR 013). Per snapshot: dropped if its field ids no
+    longer validate against the deck's live fields; the rest are re-snapshotted and
+    regenerated exactly like session start, via the same _snapshot_and_generate_deck
+    helper, each carrying its old snapshot's
     `source_config_id` forward verbatim (ADR 040 — attribution only, possibly already
     null; never looked up fresh). `name` is stored verbatim on the new run — the client
     formats it, same as start_practice_run. Raises LookupError for an unknown/foreign
@@ -312,8 +315,6 @@ def rerun_practice_run(
 
     surviving_decks: list[tuple[uuid.UUID, dict[str, list], uuid.UUID | None]] = []
     for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
-        if practice_deck.deck_id is None:
-            continue
         array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
         try:
             validate_deck_practice_config(db, practice_deck.deck_id, **array_values)
@@ -355,11 +356,11 @@ def get_current_practice_card(
     """The derived current card — never stored, always this query (invariant, see
     PracticeRun's docstring). If none remain for a still-active session, it
     transitions to completed rather than leaving the caller to 404 against it forever.
-    This doesn't distinguish *why* nothing remains — genuine completion and
-    practice_card rows cascade-deleted out from under the session by a card deletion
-    look the same here. ADR 015 as amended accepts that blur rather than tracking a third status
-    nothing could set reliably; the client tells the second case apart by the session's
-    "deleted deck" chips."""
+    This doesn't distinguish *why* nothing remains: a run rated to genuine completion
+    looks the same here as one stranded because its cards were deleted, or because one
+    deck of a multi-deck run was deleted and took that deck's cards' practice_card rows
+    with it (ADR 047's cascade). ADR 015 as amended accepts that blur rather than
+    tracking a third status nothing could set reliably."""
     card = db_read_current_practice_card(db, practice_run_id, user_id)
     if card is None:
         session = db_read_practice_run(db, practice_run_id, user_id)

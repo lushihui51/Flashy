@@ -32,16 +32,12 @@ class PracticeRunSummary(PracticeRunRead):
     so the client can render and filter by subject/deck without a second round trip or a
     client-side join.
 
-    `decks` omits any `practice_deck` whose source deck has since been deleted
-    (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
-    the session still lists, but a deleted deck has no name or subject left to show and
-    can never match a filter. Those snapshots are counted in `deleted_deck_count`
-    instead, so the client can render them as "deleted deck" chips: with `abandoned`
-    gone, a session stranded by a deck deletion reads as Completed, and the chip is the
-    only thing that tells the two apart (ADR 015 as amended)."""
+    `decks` lists every snapshot of the run — a `practice_deck` no longer outlives its
+    deck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run
+    left owning no snapshot at all is deleted alongside its last one. There is no
+    "deleted deck" state left for a summary to represent."""
 
     decks: list[PracticeRunDeckSummary]
-    deleted_deck_count: int
 
 
 class ResolvedFieldValue(AppModel):

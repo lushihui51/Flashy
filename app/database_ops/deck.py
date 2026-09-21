@@ -9,7 +9,6 @@ from app.models.card import Card
 from app.models.deck import Deck, DeckSummary
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
-from app.services.activity import touch
 
 
 def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | None:
@@ -79,15 +78,6 @@ def db_read_decks_with_summary(
         )
         for deck in decks
     ]
-
-
-def db_delete_deck(db: Session, deck: Deck) -> None:
-    # D13: the deck itself is gone, but its subject's activity still bubbles.
-    subject = db.get(Subject, deck.subject_id)
-    if subject:
-        touch(db, subject)
-    db.delete(deck)
-    db.commit()
 
 
 def db_read_owned_deck_ids(
