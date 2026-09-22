@@ -27,7 +27,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         </span>
 
         <span className="flex flex-wrap items-center gap-1">
-          <SessionDeckChips decks={session.decks} deletedDeckCount={session.deleted_deck_count} />
+          <SessionDeckChips decks={session.decks} />
           <span className="text-[11px] text-(--color-text-muted)">
             {formatDate(session.created_at)}
           </span>

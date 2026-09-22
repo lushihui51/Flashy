@@ -2171,6 +2171,128 @@
         }
       }
     },
+    "/api/deletion-impact": {
+      "get": {
+        "tags": [
+          "Deletion"
+        ],
+        "summary": "Get Deletion Impact",
+        "description": "The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,\nMD-3): the same closure a deletion transaction computes for itself, reported as\ncounts. 404 for the first id that's foreign or doesn't exist; 422 when all four\nlists are empty \u2014 there's nothing to preview.",
+        "operationId": "get_deletion_impact_api_deletion_impact_get",
+        "parameters": [
+          {
+            "name": "subject_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "default": [],
+              "title": "Subject Ids"
+            }
+          },
+          {
+            "name": "deck_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "default": [],
+              "title": "Deck Ids"
+            }
+          },
+          {
+            "name": "field_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "default": [],
+              "title": "Field Ids"
+            }
+          },
+          {
+            "name": "card_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "default": [],
+              "title": "Card Ids"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionImpactRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/practice_runs": {
       "post": {
         "tags": [
@@ -3726,6 +3848,50 @@
         "title": "DeckSummary",
         "description": "DeckRead plus preview data for a list row (Phase 2.6) \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
       },
+      "DeletionImpactRead": {
+        "properties": {
+          "subjects_deleted": {
+            "type": "integer",
+            "title": "Subjects Deleted"
+          },
+          "decks_deleted": {
+            "type": "integer",
+            "title": "Decks Deleted"
+          },
+          "fields_deleted": {
+            "type": "integer",
+            "title": "Fields Deleted"
+          },
+          "cards_deleted": {
+            "type": "integer",
+            "title": "Cards Deleted"
+          },
+          "cards_affected": {
+            "type": "integer",
+            "title": "Cards Affected"
+          },
+          "configurations_deleted": {
+            "type": "integer",
+            "title": "Configurations Deleted"
+          },
+          "runs_deleted": {
+            "type": "integer",
+            "title": "Runs Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subjects_deleted",
+          "decks_deleted",
+          "fields_deleted",
+          "cards_deleted",
+          "cards_affected",
+          "configurations_deleted",
+          "runs_deleted"
+        ],
+        "title": "DeletionImpactRead",
+        "description": "The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,\nby type, for a delete confirm to word its warning (task 013 MD-2, MD-3). Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
+      },
       "FieldDefBatchCreate": {
         "properties": {
           "client_key": {
@@ -4254,10 +4420,6 @@
             },
             "type": "array",
             "title": "Decks"
-          },
-          "deleted_deck_count": {
-            "type": "integer",
-            "title": "Deleted Deck Count"
           }
         },
         "type": "object",
@@ -4267,11 +4429,10 @@
           "name",
           "status",
           "created_at",
-          "decks",
-          "deleted_deck_count"
+          "decks"
         ],
         "title": "PracticeRunSummary",
-        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` omits any `practice_deck` whose source deck has since been deleted\n(`deck_id` is nullable with ON DELETE SET NULL, ADR 015) \u2014 the snapshot survives and\nthe session still lists, but a deleted deck has no name or subject left to show and\ncan never match a filter. Those snapshots are counted in `deleted_deck_count`\ninstead, so the client can render them as \"deleted deck\" chips: with `abandoned`\ngone, a session stranded by a deck deletion reads as Completed, and the chip is the\nonly thing that tells the two apart (ADR 015 as amended)."
+        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` no longer outlives its\ndeck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state left for a summary to represent."
       },
       "RatedFieldValue": {
         "properties": {
@@ -4312,7 +4473,7 @@
           "rating"
         ],
         "title": "RatedFieldValue",
-        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. `None` only if that\n`review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a\nhard delete) \u2014 never for a row that simply hasn't been rated, since a `passed`/\n`failed` practice_card was rated on every one of its answer fields by construction\n(`submit_rating`)."
+        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. Under ADR 048 a\n`review_log` row cascades with its field, so the `None` case this type was built\nto carry can no longer occur; the `int | None` type is kept only so this payload\nand the frontend branch reading it stay stable (task 013 MD-4)."
       },
       "RatingSubmission": {
         "properties": {

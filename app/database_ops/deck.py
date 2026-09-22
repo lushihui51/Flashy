@@ -1,13 +1,14 @@
 import uuid
 from collections import defaultdict
+from collections.abc import Collection
 
+from sqlalchemy import delete
 from sqlmodel import Session, col, func, select
 
 from app.models.card import Card
 from app.models.deck import Deck, DeckSummary
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
-from app.services.activity import touch
 
 
 def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | None:
@@ -79,10 +80,35 @@ def db_read_decks_with_summary(
     ]
 
 
-def db_delete_deck(db: Session, deck: Deck) -> None:
-    # D13: the deck itself is gone, but its subject's activity still bubbles.
-    subject = db.get(Subject, deck.subject_id)
-    if subject:
-        touch(db, subject)
-    db.delete(deck)
-    db.commit()
+def db_read_owned_deck_ids(
+    db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """The subset of `ids` that exist and belong to user_id (via the subject chain) —
+    compute_deletion_impact's ownership check (ADR 051 step 1)."""
+    if not ids:
+        return set()
+    return set(
+        db.exec(
+            select(Deck.id)
+            .join(Subject, Subject.id == Deck.subject_id)
+            .where(col(Deck.id).in_(ids), Subject.user_id == user_id)
+        ).all()
+    )
+
+
+def db_read_deck_ids_for_subjects(
+    db: Session, subject_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Every deck of these subjects — ADR 051 step 2's ∪ decks-of-subject_ids. Not
+    ownership-scoped on its own; the caller has already established subject_ids are
+    owned."""
+    if not subject_ids:
+        return set()
+    return set(db.exec(select(Deck.id).where(col(Deck.subject_id).in_(subject_ids))).all())
+
+
+def db_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    if not ids:
+        return
+    db.execute(delete(Deck).where(col(Deck.id).in_(ids)))

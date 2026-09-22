@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-09-18 (see Amendment below)
+Accepted; amended 2026-09-18 (see Amendment below). Superseded by ADR 049 (2026-09-21): field removal is a hard delete whose influence is removed entirely; the archive mechanism stays in the code, unexposed.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The delete-the-original half is superseded by ADR 039; the frozen-snapshot source semantics remain in force.
+Accepted. The delete-the-original half is superseded by ADR 039; the frozen-snapshot source semantics remain in force. The null-deck_id branch of rerun is unreachable since ADR 048; the stale-arrays branch stands.
 
 ## Context
 

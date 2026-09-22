@@ -246,6 +246,29 @@ export interface paths {
         patch: operations["patch_deck_practice_config_api_deck_practice_configs__config_id__patch"];
         trace?: never;
     };
+    "/api/deletion-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Deletion Impact
+         * @description The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,
+         *     MD-3): the same closure a deletion transaction computes for itself, reported as
+         *     counts. 404 for the first id that's foreign or doesn't exist; 422 when all four
+         *     lists are empty — there's nothing to preview.
+         */
+        get: operations["get_deletion_impact_api_deletion_impact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/practice_runs": {
         parameters: {
             query?: never;
@@ -797,6 +820,30 @@ export interface components {
             /** Field Names */
             field_names: string[];
         };
+        /**
+         * DeletionImpactRead
+         * @description The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,
+         *     by type, for a delete confirm to word its warning (task 013 MD-2, MD-3). Each
+         *     field is the count of one closure set `compute_deletion_impact` returns —
+         *     `cards_affected` is `DeletionImpact.affected_card_count`, every other field is
+         *     `len()` of the matching id set. Never nests another shape.
+         */
+        DeletionImpactRead: {
+            /** Subjects Deleted */
+            subjects_deleted: number;
+            /** Decks Deleted */
+            decks_deleted: number;
+            /** Fields Deleted */
+            fields_deleted: number;
+            /** Cards Deleted */
+            cards_deleted: number;
+            /** Cards Affected */
+            cards_affected: number;
+            /** Configurations Deleted */
+            configurations_deleted: number;
+            /** Runs Deleted */
+            runs_deleted: number;
+        };
         /** FieldDefBatchCreate */
         FieldDefBatchCreate: {
             /** Client Key */
@@ -1037,13 +1084,10 @@ export interface components {
          *     so the client can render and filter by subject/deck without a second round trip or a
          *     client-side join.
          *
-         *     `decks` omits any `practice_deck` whose source deck has since been deleted
-         *     (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
-         *     the session still lists, but a deleted deck has no name or subject left to show and
-         *     can never match a filter. Those snapshots are counted in `deleted_deck_count`
-         *     instead, so the client can render them as "deleted deck" chips: with `abandoned`
-         *     gone, a session stranded by a deck deletion reads as Completed, and the chip is the
-         *     only thing that tells the two apart (ADR 015 as amended).
+         *     `decks` lists every snapshot of the run — a `practice_deck` no longer outlives its
+         *     deck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run
+         *     left owning no snapshot at all is deleted alongside its last one. There is no
+         *     "deleted deck" state left for a summary to represent.
          */
         PracticeRunSummary: {
             /**
@@ -1066,17 +1110,14 @@ export interface components {
             created_at: string;
             /** Decks */
             decks: components["schemas"]["PracticeRunDeckSummary"][];
-            /** Deleted Deck Count */
-            deleted_deck_count: number;
         };
         /**
          * RatedFieldValue
          * @description A resolved answer field plus the rating it was given, joined from `review_log`
-         *     on `review_group_id == practice_card.id` and `field_def_id`. `None` only if that
-         *     `review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a
-         *     hard delete) — never for a row that simply hasn't been rated, since a `passed`/
-         *     `failed` practice_card was rated on every one of its answer fields by construction
-         *     (`submit_rating`).
+         *     on `review_group_id == practice_card.id` and `field_def_id`. Under ADR 048 a
+         *     `review_log` row cascades with its field, so the `None` case this type was built
+         *     to carry can no longer occur; the `int | None` type is kept only so this payload
+         *     and the frontend branch reading it stay stable (task 013 MD-4).
          */
         RatedFieldValue: {
             /**
@@ -2243,6 +2284,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeckPracticeConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_deletion_impact_api_deletion_impact_get: {
+        parameters: {
+            query?: {
+                subject_ids?: string[];
+                deck_ids?: string[];
+                field_ids?: string[];
+                card_ids?: string[];
+            };
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionImpactRead"];
                 };
             };
             /** @description Validation Error */

@@ -5,6 +5,7 @@ from sqlmodel import Session, col, select
 
 from app.database_ops.field_def import db_next_position
 from app.database_ops.subject import db_read_subject
+from app.mastery.strategy import MasteryStrategy
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
@@ -12,6 +13,7 @@ from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
 from app.services.activity import touch
+from app.services.deletion import apply_deletion, compute_deletion_impact
 
 
 class DeckBatchEditValidationError(ValueError):
@@ -36,7 +38,7 @@ def _resolve_field_key(
 
 
 def apply_deck_batch_edit(
-    db: Session, user_id: uuid.UUID, deck: Deck, payload: DeckBatchEdit
+    db: Session, user_id: uuid.UUID, deck: Deck, payload: DeckBatchEdit, strategy: MasteryStrategy
 ) -> Deck:
     """Applies a §2.3 changeset to `deck` in one transaction: field create → field
     update → field delete → reorder → card delete → card update → card create, then a
@@ -118,6 +120,10 @@ def apply_deck_batch_edit(
                 raise DeckBatchEditValidationError(
                     f"field_defs.update id {entry.id} not found on this deck"
                 )
+            if entry.type is not None and entry.type != field.type:
+                raise DeckBatchEditValidationError(
+                    "field_defs.update type cannot be changed"
+                )
             if entry.name is not None:
                 field_name = entry.name.strip()
                 if not field_name:
@@ -125,8 +131,6 @@ def apply_deck_batch_edit(
                         "field_defs.update name must not be empty"
                     )
                 field.name = field_name
-            if entry.type is not None:
-                field.type = entry.type
             db.add(field)
 
         for field_id in ops.delete:
@@ -136,13 +140,19 @@ def apply_deck_batch_edit(
                     f"field_defs.delete id {field_id} not found on this deck"
                 )
             del active_fields[field_id]
-            # No manual cleanup of card_field_value/mastery_log rows — both
-            # have a DB-level ON DELETE CASCADE on field_def_id (D11's "deleting a
-            # field_def cascades its values and mastery rows").
-            db.delete(field)
 
         if len(active_fields) < 2:
             raise DeckBatchEditValidationError("a deck needs at least two fields")
+
+        # No manual cleanup of configurations, active runs, review rows, or
+        # shown_prompt_ids references — apply_deletion is the only way a field_def
+        # is ever deleted, and it takes all of that with it and rebuilds the deck's
+        # mastery to what the live path would have written without the field
+        # (ADR 049, ADR 051).
+        if ops.delete:
+            apply_deletion(
+                db, strategy, compute_deletion_impact(db, user_id, field_ids=ops.delete)
+            )
 
         if ops.order:
             resolved_order: list[FieldDef] = []
@@ -179,7 +189,14 @@ def apply_deck_batch_edit(
                 raise DeckBatchEditValidationError(
                     f"cards.delete id {card_id} not found on this deck"
                 )
-            db.delete(card)
+
+        # No manual cleanup — apply_deletion takes the card's review rows and
+        # mastery rows with it; a card delete never needs a rebuild (ADR 047,
+        # ADR 051).
+        if ops.delete:
+            apply_deletion(
+                db, strategy, compute_deletion_impact(db, user_id, card_ids=ops.delete)
+            )
         db.flush()
 
         for entry in ops.update:

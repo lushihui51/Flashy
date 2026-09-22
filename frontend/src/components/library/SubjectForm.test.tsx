@@ -77,15 +77,16 @@ describe('SubjectForm — create mode', () => {
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
     await user.click(screen.getByRole('button', { name: 'Create subject' }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'),
-    );
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
   });
 
   it('shows the API error and does not navigate on a failed create', async () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
-        HttpResponse.json({ detail: 'Subject with this name already exists for this user' }, { status: 400 }),
+        HttpResponse.json(
+          { detail: 'Subject with this name already exists for this user' },
+          { status: 400 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -94,7 +95,9 @@ describe('SubjectForm — create mode', () => {
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Math');
     await user.click(screen.getByRole('button', { name: 'Create subject' }));
 
-    expect(await screen.findByText('Subject with this name already exists for this user')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Subject with this name already exists for this user'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
   });
 
@@ -122,10 +125,7 @@ describe('SubjectForm — create mode', () => {
 
 describe('SubjectForm — edit mode', () => {
   function mockEdit() {
-    server.use(
-      http.get(`${BASE}/api/subjects/:id`, () => HttpResponse.json(subject)),
-      http.get(`${BASE}/api/decks`, () => HttpResponse.json([{ id: 'd1' }])),
-    );
+    server.use(http.get(`${BASE}/api/subjects/:id`, () => HttpResponse.json(subject)));
   }
 
   it('prefills from the existing subject', async () => {
@@ -169,8 +169,21 @@ describe('SubjectForm — edit mode', () => {
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
   });
 
-  it('delete confirm names the deck count, and confirming navigates to /library', async () => {
+  it('delete confirm counts the closure from the impact query, and confirming navigates to /library', async () => {
     mockEdit();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 3,
+          cards_deleted: 120,
+          fields_deleted: 8,
+          cards_affected: 0,
+          configurations_deleted: 5,
+          runs_deleted: 4,
+        }),
+      ),
+    );
     let deleteCalled = false;
     server.use(
       http.delete(`${BASE}/api/subjects/:id`, () => {
@@ -183,7 +196,12 @@ describe('SubjectForm — edit mode', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
 
-    expect(await screen.findByText(/This will also delete 1 deck/)).toBeInTheDocument();
+    // Verbatim against the copy contract's own subject example (task 013).
+    expect(
+      await screen.findByText(
+        "This also deletes 3 decks, 120 cards, 8 fields, 5 deck configurations and 4 practices. This can't be undone.",
+      ),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteCalled).toBe(true));
@@ -192,6 +210,19 @@ describe('SubjectForm — edit mode', () => {
 
   it('cancelling the delete confirm keeps the form and does not call the API', async () => {
     mockEdit();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 1,
+          cards_deleted: 0,
+          fields_deleted: 0,
+          cards_affected: 0,
+          configurations_deleted: 0,
+          runs_deleted: 0,
+        }),
+      ),
+    );
     let deleteCalled = false;
     server.use(
       http.delete(`${BASE}/api/subjects/:id`, () => {
@@ -209,5 +240,21 @@ describe('SubjectForm — edit mode', () => {
 
     expect(screen.queryByText('Delete subject?')).not.toBeInTheDocument();
     expect(deleteCalled).toBe(false);
+  });
+
+  it('a failed impact request renders the error inline and never opens the confirm', async () => {
+    mockEdit();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({ detail: 'subject 1 not found' }, { status: 404 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/s1/edit');
+
+    await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('subject 1 not found');
+    expect(screen.queryByText('Delete subject?')).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,8 @@
 import uuid
+from collections.abc import Collection
 
-from sqlmodel import Session, col, func, select
+from sqlalchemy import delete, exists, or_
+from sqlmodel import Session, col, select
 
 from app.models.deck import Deck
 from app.models.practice_deck import PracticeDeck
@@ -63,31 +65,12 @@ def _summaries_for_runs(
             )
         )
 
-    # Snapshots whose deck has since been deleted are counted, not listed — there is no
-    # name or subject left to put in a chip, but the client still has to show *something*
-    # (ADR 015 as amended — a session stranded that way now reads as Completed, and these chips are
-    # what distinguishes it from one the user actually finished).
-    deleted_counts = dict(
-        db.exec(
-            select(PracticeDeck.practice_run_id, func.count())
-            .where(
-                col(PracticeDeck.practice_run_id).in_(session_ids),
-                col(PracticeDeck.deck_id).is_(None),
-            )
-            .group_by(col(PracticeDeck.practice_run_id))
-        ).all()
-    )
-
     # model_validate over the ORM row rather than **model_dump(): `status` is stored in
     # a plain String column, so dumping the table model hands back a bare str and
     # pydantic then complains about the enum field it lands in.
     return [
         PracticeRunSummary.model_validate(
-            session,
-            update={
-                "decks": decks_by_session.get(session.id, []),
-                "deleted_deck_count": deleted_counts.get(session.id, 0),
-            },
+            session, update={"decks": decks_by_session.get(session.id, [])}
         )
         for session in sessions
     ]
@@ -104,9 +87,9 @@ def db_read_practice_runs_with_decks(
     shape as db_read_decks_with_summary).
 
     `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
-    matches if *any* of its snapshots points at a matching deck. That join is inner, so
-    a snapshot whose deck was deleted (deck_id NULL, ADR 015) neither matches a filter
-    nor contributes a chip."""
+    matches if *any* of its snapshots points at a matching deck. A run left with no
+    snapshot at all is deleted alongside its last deck (ADR 047, ADR 048), so there is
+    no dangling snapshot state for this filter to have to account for."""
     query = select(PracticeRun).where(PracticeRun.user_id == user_id)
 
     if subject_id is not None or deck_id is not None:
@@ -140,11 +123,67 @@ def db_read_practice_run_with_decks(
 
 def db_delete_practice_run(db: Session, session: PracticeRun) -> None:
     """The session's practice_cards and practice_decks go with it (ON DELETE CASCADE,
-    ADR 015 as amended) — they are session-owned state, not history. review_log rows are not
-    touched: their practice_card_id nulls out, their card_id/field_def_id stay, and
-    rebuild_mastery replays exactly as before."""
+    ADR 015 as amended) — they are session-owned state, not history. review_log rows
+    are not touched at all: a run is a shell for the reviews inside it, not a resource
+    in its own right, so deleting it costs exactly its own attribution and nothing
+    else (ADR 047)."""
     db.delete(session)
     db.commit()
+
+
+def db_read_run_ids_with_all_decks_in(
+    db: Session, user_id: uuid.UUID, deck_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Runs of user_id with at least one practice_deck, none of whose practice_decks
+    points at a deck outside deck_ids — ADR 051 step 7's first half: a run entirely
+    contained in this closure of decks."""
+    if not deck_ids:
+        return set()
+    has_a_deck = exists().where(PracticeDeck.practice_run_id == PracticeRun.id)
+    has_an_outside_deck = exists().where(
+        PracticeDeck.practice_run_id == PracticeRun.id,
+        col(PracticeDeck.deck_id).not_in(deck_ids),
+    )
+    query = select(PracticeRun.id).where(
+        PracticeRun.user_id == user_id, has_a_deck, ~has_an_outside_deck
+    )
+    return set(db.exec(query).all())
+
+
+def db_read_active_run_ids_naming_fields(
+    db: Session, user_id: uuid.UUID, field_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Active runs of user_id with a practice_deck whose prompt/answer/pool field
+    arrays overlap field_ids — ADR 051 step 7's second half. Completed runs are never
+    touched by a field-only deletion: they still show their attempts, they just don't
+    need to be rateable any more (ADR 047)."""
+    if not field_ids:
+        return set()
+    ids = list(field_ids)
+    query = (
+        select(PracticeRun.id)
+        .join(PracticeDeck, PracticeDeck.practice_run_id == PracticeRun.id)
+        .where(
+            PracticeRun.user_id == user_id,
+            PracticeRun.status == RunStatus.active,
+            or_(
+                PracticeDeck.prompt_field_ids.op("&&")(ids),
+                PracticeDeck.answer_field_ids.op("&&")(ids),
+                PracticeDeck.prompt_pool_ids.op("&&")(ids),
+                PracticeDeck.answer_pool_ids.op("&&")(ids),
+            ),
+        )
+    )
+    return set(db.exec(query).all())
+
+
+def db_delete_practice_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
+    Its practice_decks and practice_cards cascade away with it; every review and
+    mastery value it produced stays (ADR 047, ADR 039)."""
+    if not ids:
+        return
+    db.execute(delete(PracticeRun).where(col(PracticeRun.id).in_(ids)))
 
 
 def db_update_practice_run_status(

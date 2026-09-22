@@ -66,7 +66,6 @@ function session(overrides: Record<string, unknown> = {}) {
     decks: [
       { deck_id: 'd1', deck_name: 'Shared Deck Name', subject_id: 's1', subject_name: 'Alpha' },
     ],
-    deleted_deck_count: 0,
     ...overrides,
   };
 }
@@ -215,28 +214,6 @@ describe('PracticeOverviewPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Active' }));
     expect(screen.getByText('Alpha run')).toBeInTheDocument();
     expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
-  });
-
-  it('states deleted decks as a proportion of the session, not a bare count', async () => {
-    mockLibrary(() => [session({ deleted_deck_count: 1 })]); // one deck left, one gone
-    renderOverview();
-
-    expect(await screen.findByText('1 / 2 decks deleted')).toBeInTheDocument();
-  });
-
-  it('a session whose every deck is gone says so against its own total', async () => {
-    mockLibrary(() => [session({ deleted_deck_count: 3, decks: [] })]);
-    renderOverview();
-
-    expect(await screen.findByText('3 / 3 decks deleted')).toBeInTheDocument();
-  });
-
-  it('says nothing about deleted decks when every deck is intact', async () => {
-    mockLibrary(() => [session()]);
-    renderOverview();
-
-    await screen.findByText('Alpha run');
-    expect(screen.queryByText(/decks deleted/)).not.toBeInTheDocument();
   });
 
   it('a session row links to its details page', async () => {

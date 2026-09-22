@@ -1,5 +1,7 @@
 import uuid
+from collections.abc import Collection
 
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
@@ -77,6 +79,25 @@ def db_update_subject(db: Session, subject: Subject, data: dict) -> Subject:
     return subject
 
 
-def db_delete_subject(db: Session, subject: Subject) -> None:
-    db.delete(subject)
-    db.commit()
+def db_read_owned_subject_ids(
+    db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """The subset of `ids` that exist and belong to user_id — compute_deletion_impact's
+    ownership check (ADR 051 step 1). Missing from the returned set means either
+    foreign or nonexistent; the caller can't tell which and doesn't need to."""
+    if not ids:
+        return set()
+    return set(
+        db.exec(
+            select(Subject.id).where(col(Subject.id).in_(ids), Subject.user_id == user_id)
+        ).all()
+    )
+
+
+def db_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
+    FK cascades remove everything the subject owns; the caller has already computed
+    exactly which decks, fields, cards, configurations, and runs go with them."""
+    if not ids:
+        return
+    db.execute(delete(Subject).where(col(Subject.id).in_(ids)))

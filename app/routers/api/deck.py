@@ -6,12 +6,12 @@ from sqlmodel import Session
 from app.database import SessionDep
 from app.database_ops.card import db_read_cards_for_deck
 from app.database_ops.deck import (
-    db_delete_deck,
     db_read_deck,
     db_read_decks_with_summary,
 )
 from app.database_ops.field_def import db_read_field_defs
 from app.dependencies import CurrentUserDep
+from app.mastery.config import get_mastery_strategy
 from app.models.card import CardRead
 from app.models.deck import Deck, DeckSummary
 from app.models.deck_payloads import (
@@ -22,6 +22,7 @@ from app.models.deck_payloads import (
 )
 from app.services.deck_batch_edit import DeckBatchEditValidationError, apply_deck_batch_edit
 from app.services.deck_create import DeckCreateValidationError, create_deck_atomic
+from app.services.deletion import delete_deck as delete_deck_service
 
 router = APIRouter(prefix="/decks", tags=["Decks"])
 
@@ -95,7 +96,7 @@ def update_deck(
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
-        deck = apply_deck_batch_edit(db, current_user.id, deck, payload)
+        deck = apply_deck_batch_edit(db, current_user.id, deck, payload, get_mastery_strategy())
     except DeckBatchEditValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _deck_detail(db, deck, current_user.id)
@@ -106,4 +107,4 @@ def delete_deck(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    db_delete_deck(db, deck)
+    delete_deck_service(db, get_mastery_strategy(), deck)

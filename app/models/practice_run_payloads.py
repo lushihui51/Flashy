@@ -32,16 +32,12 @@ class PracticeRunSummary(PracticeRunRead):
     so the client can render and filter by subject/deck without a second round trip or a
     client-side join.
 
-    `decks` omits any `practice_deck` whose source deck has since been deleted
-    (`deck_id` is nullable with ON DELETE SET NULL, ADR 015) — the snapshot survives and
-    the session still lists, but a deleted deck has no name or subject left to show and
-    can never match a filter. Those snapshots are counted in `deleted_deck_count`
-    instead, so the client can render them as "deleted deck" chips: with `abandoned`
-    gone, a session stranded by a deck deletion reads as Completed, and the chip is the
-    only thing that tells the two apart (ADR 015 as amended)."""
+    `decks` lists every snapshot of the run — a `practice_deck` no longer outlives its
+    deck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run
+    left owning no snapshot at all is deleted alongside its last one. There is no
+    "deleted deck" state left for a summary to represent."""
 
     decks: list[PracticeRunDeckSummary]
-    deleted_deck_count: int
 
 
 class ResolvedFieldValue(AppModel):
@@ -105,11 +101,10 @@ class BreakdownBucket(str, Enum):
 
 class RatedFieldValue(ResolvedFieldValue):
     """A resolved answer field plus the rating it was given, joined from `review_log`
-    on `review_group_id == practice_card.id` and `field_def_id`. `None` only if that
-    `review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a
-    hard delete) — never for a row that simply hasn't been rated, since a `passed`/
-    `failed` practice_card was rated on every one of its answer fields by construction
-    (`submit_rating`)."""
+    on `review_group_id == practice_card.id` and `field_def_id`. Under ADR 048 a
+    `review_log` row cascades with its field, so the `None` case this type was built
+    to carry can no longer occur; the `int | None` type is kept only so this payload
+    and the frontend branch reading it stay stable (task 013 MD-4)."""
 
     rating: int | None
 

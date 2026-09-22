@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. `card_field_mastery` is the append-only `mastery_log` since ADR 042; the decision here — `review_log` as the sole source of truth, mastery as a rebuildable projection of it — is unchanged.
+Accepted. `card_field_mastery` is the append-only `mastery_log` since ADR 042; the decision here — `review_log` as the sole source of truth, mastery as a rebuildable projection of it — is unchanged. Amended by ADR 048 and ADR 049 (2026-09-21): a review row is owned by its card and field and cascades with them, and a field delete rebuilds its deck; the ledger is append-only in every other respect and remains the sole source mastery is rebuilt from.
 
 ## Context
 

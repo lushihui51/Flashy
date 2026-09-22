@@ -1,5 +1,6 @@
 import uuid
 
+import pytest
 from sqlmodel import col, select
 
 from app.mastery.ema import EmaStrategy
@@ -9,18 +10,18 @@ from app.models.field_def import FieldDef
 from app.models.mastery_log import MasteryLog
 from app.models.practice_card import PracticeCard
 from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import RunStatus
+from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import rebuild_mastery
 
 
 class TestDeckDeleteCascade:
-    """Deleting a deck must cascade through rows it owns (field_def, card,
-    deck_practice_config, and — since a practice_card without a card is meaningless —
-    practice_card too) but never delete review_log, the durable historical record,
-    which SETs its references NULL instead. practice_deck also SETs NULL: it's an
-    immutable session snapshot, not deck-owned state. See the 'deck-delete cascade'
-    migration and AGENTS.md's card_field_value entry."""
+    """Deleting a deck cascades through everything that references its id (ADR 047):
+    field_def, card, deck_practice_config, practice_card (a practice_card without a
+    card is meaningless), practice_deck (an immutable snapshot, but one that no
+    longer outlives its deck), and review_log itself (ADR 048 amends the SET NULL
+    this table used to have — its own history is not exempt from the rule either). A
+    run left owning no practice_deck at all is deleted alongside its last one."""
 
     def _setup(self, db, client, existing_deck, rate=True, extra_cards=0):
         prompt = client.post(
@@ -127,31 +128,115 @@ class TestDeckDeleteCascade:
         )
         assert db.get(PracticeCard, ids["practice_card_id"]) is None
 
-        # review_log — the durable record — survives, decoupled via SET NULL
+        # review_log no longer survives its card/field with nulled references (ADR
+        # 048) — it cascades away with them entirely, same as everything else here.
         surviving_logs = db.exec(
             select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))
         ).all()
-        assert len(surviving_logs) == len(review_log_ids)
-        assert all(row.card_id is None for row in surviving_logs)
-        assert all(row.field_def_id is None for row in surviving_logs)
-        assert all(row.practice_card_id is None for row in surviving_logs)
+        assert surviving_logs == []
 
-        # practice_deck — the session snapshot — also survives, deck_id nulled
-        practice_deck = db.exec(
-            select(PracticeDeck).where(PracticeDeck.practice_run_id == ids["session_id"])
-        ).first()
-        assert practice_deck is not None
-        assert practice_deck.deck_id is None
+        # the session snapshot cascades away too...
+        assert (
+            db.exec(
+                select(PracticeDeck).where(PracticeDeck.practice_run_id == ids["session_id"])
+            ).first()
+            is None
+        )
+        # ...and since this run had only this one deck, the run itself is gone with
+        # it (ADR 048's "a run with no decks is deleted").
+        assert db.exec(select(PracticeRun).where(PracticeRun.id == ids["session_id"])).first() is None
 
-    def test_single_card_delete_cascades_mastery_and_nulls_review_log_card_refs(
+    def test_delete_leaves_a_two_deck_runs_other_snapshot_and_run_intact(
+        self, db, client, existing_subject, existing_deck
+    ):
+        """A run spanning two decks survives a delete of just one of them (ADR 048):
+        the deleted deck's own snapshot cascades away, but the run is not "left with
+        no decks" — its other snapshot is untouched and the run still lists it."""
+        front = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "front", "type": "text"}
+        ).json()["id"]
+        back = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "back", "type": "text"}
+        ).json()["id"]
+        client.post(
+            "/api/cards",
+            json={"deck_id": existing_deck["id"], "values": {front: "Q", back: "A"}},
+        )
+        config1 = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": existing_deck["id"],
+                "name": "cfg1",
+                "prompt_field_ids": [front],
+                "answer_field_ids": [back],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+
+        other_deck = client.post(
+            "/api/decks",
+            json={
+                "name": "Other deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [
+                    {"name": "front", "type": "text"},
+                    {"name": "back", "type": "text"},
+                ],
+            },
+        ).json()
+        other_front, other_back = (fd["id"] for fd in other_deck["field_defs"])
+        client.post(
+            "/api/cards",
+            json={
+                "deck_id": other_deck["id"],
+                "values": {other_front: "Q2", other_back: "A2"},
+            },
+        )
+        config2 = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": other_deck["id"],
+                "name": "cfg2",
+                "prompt_field_ids": [other_front],
+                "answer_field_ids": [other_back],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+
+        run = client.post(
+            "/api/practice_runs",
+            json={
+                "name": "Two decks",
+                "deck_practice_config_ids": [config1["id"], config2["id"]],
+            },
+        ).json()
+
+        deleted = client.delete(f"/api/decks/{existing_deck['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        detail = client.get(f"/api/practice_runs/{run['id']}")
+        assert detail.status_code == 200, detail.text
+        assert [d["deck_id"] for d in detail.json()["decks"]] == [other_deck["id"]]
+
+        remaining_snapshots = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(run["id"]))
+        ).all()
+        assert len(remaining_snapshots) == 1
+        assert remaining_snapshots[0].deck_id == uuid.UUID(other_deck["id"])
+
+    def test_single_card_delete_cascades_mastery_and_review_log_rows(
         self, db, client, existing_deck
     ):
-        """Phase 4.5 (§2.6): DELETE /api/cards/{id} follows the same D12 policy as a
-        deck delete, just scoped to one card — mastery_log for it is gone, and
-        review_log rows keep existing (card_id, practice_card_id SET NULL) rather than
-        being deleted. Unlike a deck delete, the field_def itself isn't touched, so
-        review_log.field_def_id is untouched too — this is the one place that differs
-        from the deck-delete test above."""
+        """DELETE /api/cards/{id} follows the same rule as a deck delete, just scoped
+        to one card (ADR 047, ADR 048): mastery_log for it is gone, and review_log
+        rows about it cascade away entirely too, rather than surviving with a nulled
+        card_id. Unlike a deck delete, the field_def itself isn't touched here."""
         ids = self._setup(db, client, existing_deck)
 
         review_log_ids = list(
@@ -170,40 +255,104 @@ class TestDeckDeleteCascade:
         )
         assert db.get(PracticeCard, ids["practice_card_id"]) is None
         # the deck, its other field_defs, etc. are all untouched — only this one
-        # card's owned state is gone.
+        # card's owned state, and the review rows about it, are gone.
         assert db.get(Card, ids["card_id"]) is None
 
         surviving_logs = db.exec(select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))).all()
-        assert len(surviving_logs) == len(review_log_ids)
-        assert all(row.card_id is None for row in surviving_logs)
-        assert all(row.practice_card_id is None for row in surviving_logs)
-        assert all(row.field_def_id is not None for row in surviving_logs)
+        assert surviving_logs == []
 
-    def test_rebuild_mastery_skips_orphaned_history(self, db, client, existing_deck):
+    def test_rebuild_mastery_after_a_deck_delete_leaves_the_other_decks_rows_equal(
+        self, db, client, existing_subject, existing_deck
+    ):
+        """A user-wide rebuild after a deck delete must not disturb another deck's
+        mastery — invariant 3: replaying reproduces the live rows for every group the
+        deletion didn't touch, value for value."""
         ids = self._setup(db, client, existing_deck)
+
+        other_deck = client.post(
+            "/api/decks",
+            json={
+                "name": "Surviving deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [
+                    {"name": "prompt", "type": "text"},
+                    {"name": "answer", "type": "text"},
+                ],
+            },
+        ).json()
+        other_prompt, other_answer = (fd["id"] for fd in other_deck["field_defs"])
+        other_card = client.post(
+            "/api/cards",
+            json={
+                "deck_id": other_deck["id"],
+                "values": {other_prompt: "Q", other_answer: "A"},
+            },
+        ).json()
+        other_config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": other_deck["id"],
+                "name": "other-config",
+                "prompt_field_ids": [other_prompt],
+                "answer_field_ids": [other_answer],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+        other_run = client.post(
+            "/api/practice_runs",
+            json={"name": "Other run", "deck_practice_config_ids": [other_config["id"]]},
+        ).json()
+        other_practice_card = client.get(
+            f"/api/practice_runs/{other_run['id']}/state"
+        ).json()["current_card"]
+        rate_res = client.post(
+            f"/api/practice_cards/{other_practice_card['practice_card_id']}/rate",
+            json={"ratings": {other_answer: 3}},
+        )
+        assert rate_res.status_code == 200, rate_res.text
+
+        def _ledger(card_id):
+            return {
+                (row.card_id, row.field_def_id): (
+                    row.prompt_mastery,
+                    row.answer_mastery,
+                    row.prompt_review_count,
+                    row.answer_review_count,
+                )
+                for row in db.exec(select(MasteryLog).where(MasteryLog.card_id == card_id)).all()
+            }
+
+        other_card_id = uuid.UUID(other_card["id"])
+        before = _ledger(other_card_id)
+        assert before
+
         response = client.delete(f"/api/decks/{existing_deck['id']}")
         assert response.status_code == 204, response.text
 
-        # must not crash trying to write mastery_log for a card_id that no
-        # longer exists — orphaned review_log rows are excluded from the replay
         rebuild_mastery(db, EmaStrategy())
 
+        after = _ledger(other_card_id)
+        assert set(before.keys()) == set(after.keys())
+        for key, values in before.items():
+            assert after[key] == pytest.approx(values, abs=1e-4)
+
+        # the deleted deck's own card has nothing left to rebuild.
         assert (
-            db.exec(
-                select(MasteryLog).where(MasteryLog.card_id == ids["card_id"])
-            ).all()
-            == []
+            db.exec(select(MasteryLog).where(MasteryLog.card_id == ids["card_id"])).all() == []
         )
 
-    def test_rating_a_card_whose_deck_was_deleted_mid_session_is_rejected(
+    def test_rating_a_card_whose_card_was_deleted_mid_session_is_rejected(
         self, db, client, existing_deck
     ):
-        """A pending practice_card cascade-deletes along with its card when the deck
-        is deleted mid-session — submit_rating sees a plain 'not found', the same path
-        as any other unknown practice_card_id, with no special-case guard needed."""
+        """A pending practice_card cascade-deletes along with its card — submit_rating
+        sees a plain 'not found', the same path as any other unknown
+        practice_card_id, with no special-case guard needed."""
         ids = self._setup(db, client, existing_deck, rate=False)
 
-        response = client.delete(f"/api/decks/{existing_deck['id']}")
+        response = client.delete(f"/api/cards/{ids['card_id']}")
         assert response.status_code == 204, response.text
 
         rate_response = client.post(
@@ -215,15 +364,13 @@ class TestDeckDeleteCascade:
     def test_run_state_completes_session_when_nothing_remains(
         self, db, client, existing_deck
     ):
-        """The read path, not the rate path: once the deck (and with it every pending
+        """The read path, not the rate path: once the card (and with it its pending
         practice_card) is gone, the next GET of run reports `current_card: null` and —
         since the session was still active — session_status already reads completed
-        rather than leaving it active forever against cards that are already gone.
-        There is no `abandoned` to land in (ADR 015 as amended); the session's "deleted
-        deck" chips are what tell this apart from one the user finished."""
+        rather than leaving it active forever against a card that's already gone."""
         ids = self._setup(db, client, existing_deck, rate=False)
 
-        response = client.delete(f"/api/decks/{existing_deck['id']}")
+        response = client.delete(f"/api/cards/{ids['card_id']}")
         assert response.status_code == 204, response.text
 
         run = client.get(f"/api/practice_runs/{ids['session_id']}/state")

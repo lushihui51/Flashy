@@ -1,5 +1,7 @@
 import uuid
+from collections.abc import Collection
 
+from sqlalchemy import delete, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -111,3 +113,44 @@ def db_update_deck_practice_config(
 def db_delete_deck_practice_config(db: Session, config: DeckPracticeConfig) -> None:
     db.delete(config)
     db.commit()
+
+
+def db_read_config_ids_for_decks(
+    db: Session, deck_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Every configuration of these decks — ADR 051 step 6's first half."""
+    if not deck_ids:
+        return set()
+    return set(
+        db.exec(
+            select(DeckPracticeConfig.id).where(col(DeckPracticeConfig.deck_id).in_(deck_ids))
+        ).all()
+    )
+
+
+def db_read_config_ids_naming_fields(
+    db: Session, field_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Every configuration whose prompt/answer/pool field arrays overlap field_ids —
+    ADR 051 step 6's second half. A config naming a field in two of its four arrays
+    (rare, but not disallowed) is still counted once, since this is a set of ids, not
+    a count of matches."""
+    if not field_ids:
+        return set()
+    ids = list(field_ids)
+    query = select(DeckPracticeConfig.id).where(
+        or_(
+            DeckPracticeConfig.prompt_field_ids.op("&&")(ids),
+            DeckPracticeConfig.answer_field_ids.op("&&")(ids),
+            DeckPracticeConfig.prompt_pool_ids.op("&&")(ids),
+            DeckPracticeConfig.answer_pool_ids.op("&&")(ids),
+        )
+    )
+    return set(db.exec(query).all())
+
+
+def db_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    if not ids:
+        return
+    db.execute(delete(DeckPracticeConfig).where(col(DeckPracticeConfig.id).in_(ids)))

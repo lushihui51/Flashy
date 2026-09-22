@@ -28,7 +28,7 @@ def db_fetch_generation_candidates(
         )
         .where(MasteryLog.card_id == card_id, col(MasteryLog.field_def_id).in_(field_ids))
         .distinct(MasteryLog.field_def_id)
-        .order_by(MasteryLog.field_def_id, desc(MasteryLog.id))
+        .order_by(MasteryLog.field_def_id, desc(MasteryLog.reviewed_at))
         .subquery()
     )
     query = (

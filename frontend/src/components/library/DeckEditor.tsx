@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MoreVertical, Plus, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
 import { readSubject, readSubjects } from 'src/api/subject';
+import { readDeletionImpact } from 'src/api/deletion_impact';
 import {
   deckEditorReducer,
   initialDeckEditorState,
@@ -16,6 +17,8 @@ import {
 import { buildDeckBatchEditPayload } from 'src/lib/deckEditorDiff';
 import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
 import { pluralize } from 'src/lib/pluralize';
+import { joinClauses } from 'src/lib/joinClauses';
+import { deletionSummaryText } from 'src/lib/deletionSummary';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import FullScreenDialog from 'src/components/ui/FullScreenDialog';
 import SubjectIcon from 'src/components/library/SubjectIcon';
@@ -335,30 +338,42 @@ type DeckEditorBodyProps = {
   returnTo: string | null;
 };
 
-/** Phase 7.5 §2: counts what the current changeset would actually delete — the only
- * thing the aggregated save confirm needs, and what decides whether it shows at all. */
-/** What a deck delete takes with it, and what it leaves. The cascade is ADR 015's:
- * cards, fields and configurations are deck-owned and go; `review_log` is history and
- * is never deleted, so mastery survives the deck it was earned on. */
-function deleteDeckSummaryText(deck: DeckDetail | undefined): string {
-  const owned = [
-    ...(deck && deck.cards.length > 0 ? [pluralize(deck.cards.length, 'card')] : []),
-    ...(deck && deck.field_defs.length > 0 ? [pluralize(deck.field_defs.length, 'field')] : []),
-    'its practice configurations',
+type ImpactSummaryCounts = {
+  fieldsDeleted: number;
+  cardsDeleted: number;
+  cardsAffected: number;
+  configurationsDeleted: number;
+  runsDeleted: number;
+};
+
+/** Task 013 MD-2: the editor save confirm's one sentence, for a changeset that
+ * deletes fields and/or cards — the same closure a direct field or card delete goes
+ * through (ADR 049, ADR 051), worded from `fieldsDeleted`/`cardsDeleted` (the
+ * changeset itself) plus `configurationsDeleted`/`runsDeleted` (the deletion-impact
+ * query). Phase 7.5's field-count-only version of this sentence is gone — this one
+ * accounts for cards and for what the deletion closure takes with a field. */
+function impactSummaryText({
+  fieldsDeleted,
+  cardsDeleted,
+  cardsAffected,
+  configurationsDeleted,
+  runsDeleted,
+}: ImpactSummaryCounts): string {
+  const clauses = [
+    ...(fieldsDeleted > 0
+      ? [
+          cardsAffected > 0
+            ? `removes ${pluralize(fieldsDeleted, 'field')} from ${pluralize(cardsAffected, 'card')}`
+            : `removes ${pluralize(fieldsDeleted, 'field')}`,
+        ]
+      : []),
+    ...(cardsDeleted > 0 ? [`deletes ${pluralize(cardsDeleted, 'card')}`] : []),
+    ...(configurationsDeleted > 0
+      ? [`deletes ${pluralize(configurationsDeleted, 'deck configuration')}`]
+      : []),
+    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active practice')}`] : []),
   ];
-  const list = owned.length > 1 ? `${owned.slice(0, -1).join(', ')} and ${owned.at(-1)}` : owned[0];
-  return `This also deletes ${list}. Your review history is kept. This can't be undone.`;
-}
-
-function destructiveCounts(state: DeckEditorState) {
-  return { fieldCount: state.fields.filter((f) => f.pendingRemoval).length };
-}
-
-/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3).
- * Archiving a field keeps its existing card values as inert history (ADR 010), which
- * is why this says the field goes and not the content behind it. */
-function destructiveSummaryText({ fieldCount }: ReturnType<typeof destructiveCounts>): string {
-  return `This removes ${pluralize(fieldCount, 'field')} from every card in this deck. This can't be undone.`;
+  return `This ${joinClauses(clauses)}. This can't be undone.`;
 }
 
 function DeckEditorBody({
@@ -389,8 +404,13 @@ function DeckEditorBody({
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [saveConfirm, setSaveConfirm] = useState<ReturnType<typeof destructiveCounts> | null>(null);
+  const [saveConfirm, setSaveConfirm] = useState<ImpactSummaryCounts | null>(null);
+  const [checkingSaveImpact, setCheckingSaveImpact] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletionImpact, setDeletionImpact] = useState<
+    components['schemas']['DeletionImpactRead'] | null
+  >(null);
+  const [checkingDeletionImpact, setCheckingDeletionImpact] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -504,14 +524,69 @@ function DeckEditorBody({
     }
   };
 
-  // §3: the confirm is destructive-changeset-only, and only in edit mode — create
-  // mode has nothing on the server yet for a changeset to destroy.
-  const handleSaveClick = () => {
+  // MD-3: the confirm's wording is a live count, not a guess — fetched fresh on
+  // every click rather than kept around from mount, so it reflects whatever's
+  // changed underneath (a config saved, a card added) since the page loaded. An
+  // error renders through the form's existing error state and never opens the
+  // dialog.
+  const handleDeleteClick = async () => {
+    setCheckingDeletionImpact(true);
+    setSaveError(null);
+    try {
+      const impact = await readDeletionImpact({ deckIds: [deckId!] });
+      setDeletionImpact(impact);
+      setConfirmDeleteOpen(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setCheckingDeletionImpact(false);
+    }
+  };
+
+  // §3 (task 013 MD-2): the confirm is destructive-changeset-only, and only in edit
+  // mode — create mode has nothing on the server yet for a changeset to destroy.
+  // fields_deleted/cards_deleted come straight off the changeset the editor itself
+  // built; configurations_deleted/runs_deleted come from the same deletion-impact
+  // query a direct field delete previews with, fetched only when the changeset
+  // deletes a field (cards.delete is always empty here — buildDeckBatchEditPayload
+  // never sends card ops, see deckEditorDiff.ts — but the check stays symmetric
+  // with the contract in case that ever changes).
+  const handleSaveClick = async () => {
     if (!canSave) return;
     if (mode === 'edit') {
-      const counts = destructiveCounts(state);
-      if (counts.fieldCount > 0) {
-        setSaveConfirm(counts);
+      const payload = buildDeckBatchEditPayload(original, state);
+      const fieldIds = payload.field_defs?.delete ?? [];
+      const cardIds = payload.cards?.delete ?? [];
+      const fieldsDeleted = fieldIds.length;
+      const cardsDeleted = cardIds.length;
+      if (fieldsDeleted > 0 || cardsDeleted > 0) {
+        const cardsAffected = deck?.cards.length ?? 0;
+        if (fieldsDeleted === 0) {
+          setSaveConfirm({
+            fieldsDeleted,
+            cardsDeleted,
+            cardsAffected,
+            configurationsDeleted: 0,
+            runsDeleted: 0,
+          });
+          return;
+        }
+        setCheckingSaveImpact(true);
+        setSaveError(null);
+        try {
+          const impact = await readDeletionImpact({ fieldIds });
+          setSaveConfirm({
+            fieldsDeleted,
+            cardsDeleted,
+            cardsAffected,
+            configurationsDeleted: impact.configurations_deleted,
+            runsDeleted: impact.runs_deleted,
+          });
+        } catch (err) {
+          setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+        } finally {
+          setCheckingSaveImpact(false);
+        }
         return;
       }
     }
@@ -570,8 +645,8 @@ function DeckEditorBody({
           )}
           <button
             type="button"
-            onClick={handleSaveClick}
-            disabled={!canSave}
+            onClick={() => void handleSaveClick()}
+            disabled={!canSave || checkingSaveImpact}
             className="text-sm font-semibold text-(--color-primary) disabled:text-(--color-text-muted)"
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
@@ -623,8 +698,8 @@ function DeckEditorBody({
       {mode === 'edit' && (
         <button
           type="button"
-          onClick={() => setConfirmDeleteOpen(true)}
-          disabled={deleting}
+          onClick={() => void handleDeleteClick()}
+          disabled={deleting || checkingDeletionImpact}
           className="mt-6 h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
         >
           Delete deck
@@ -644,7 +719,6 @@ function DeckEditorBody({
           mode="create"
           subjectId={undefined}
           original={undefined}
-          deckCount={0}
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);
@@ -668,7 +742,7 @@ function DeckEditorBody({
       <ConfirmDialog
         open={saveConfirm !== null}
         title="Save changes?"
-        description={saveConfirm ? destructiveSummaryText(saveConfirm) : ''}
+        description={saveConfirm ? impactSummaryText(saveConfirm) : ''}
         confirmLabel="Save changes"
         destructive
         onConfirm={() => {
@@ -682,10 +756,9 @@ function DeckEditorBody({
         <ConfirmDialog
           open={confirmDeleteOpen}
           title="Delete deck?"
-          // Names everything that goes with it (ADR 015: the deck owns its cards,
-          // fields and configurations, and they cascade), and says what does not —
-          // review history is never deleted, so past practice still counts.
-          description={deleteDeckSummaryText(deck)}
+          // ADR 048: everything that references the deck cascades with it, review
+          // history included — nothing about it survives the delete.
+          description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
           destructive
           onConfirm={() => void handleDeleteDeck()}

@@ -7,6 +7,7 @@ The mastery ledger cycle from the 2026-08-28/29 /plan session: `mastery_log` rep
 Later cycles changed parts of what this file describes; sections are left as written, with current truth here:
 
 - **T3's breakdown/delta models no longer live in `app/models/practice_card.py`.** ADR 046 (task 012 T1) moved every composite run/breakdown/rating shape — including `FieldMasteryDelta` and `BreakdownCard`'s `mastery`/`delta`/`fields` fields this file's own API contract added — into the new `app/models/practice_run_payloads.py`: `practice_card.py` keeps only `PracticeCardStatus`/`PracticeCard`/`PracticeCardRead`, and everything this file's "API — breakdown additions" contract describes is defined in `practice_run_payloads.py` instead. The shapes themselves are byte-for-byte unchanged; only the file moved.
+- **The ledger's order is `reviewed_at`, and `id` is a uuid** (ADR 050, task 013 T1; sync 2026-09-21): in the model block and the delta-semantics contract, "BIGINT IDENTITY", "max(id)", "min id", "`first_id`", and "max-id row" all read as `reviewed_at`; `review_group_id` is stored on every row as provenance only; the contract's wording is otherwise unchanged.
 
 ## ADRs
 

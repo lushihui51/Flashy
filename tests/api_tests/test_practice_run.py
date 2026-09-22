@@ -1023,11 +1023,11 @@ class TestPracticeRunDelete:
         assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
         assert client.get("/api/practice_runs").json() == []
 
-        # History outlives the session: the rows stay, only the practice_card reference
-        # nulls out, so rebuild_mastery still replays them.
+        # History outlives the session, untouched: a run is a shell for the reviews
+        # inside it, not a resource in its own right, so deleting it costs exactly
+        # its own attribution and nothing in review_log (ADR 047).
         surviving = db.exec(select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))).all()
         assert len(surviving) == len(review_log_ids)
-        assert all(row.practice_card_id is None for row in surviving)
         assert all(row.card_id is not None for row in surviving)
         assert all(row.field_def_id is not None for row in surviving)
 
@@ -1051,7 +1051,7 @@ class TestPracticeRunDetailShape:
     chips the list already carries, so the single-session read returns
     PracticeRunSummary too — not a client-side join of the list endpoint."""
 
-    def test_detail_carries_decks_and_deleted_deck_count(self, client, multi_subject_library):
+    def test_detail_carries_decks_after_one_is_deleted(self, client, multi_subject_library):
         lib = multi_subject_library
         created = _start(
             client,
@@ -1067,15 +1067,13 @@ class TestPracticeRunDetailShape:
         data = res.json()
         assert data["name"] == "Both decks"
         assert [deck["subject_name"] for deck in data["decks"]] == ["Beta"]
-        assert data["deleted_deck_count"] == 1
 
-    def test_detail_with_every_deck_intact_counts_zero(self, client, multi_subject_library):
+    def test_detail_with_every_deck_intact(self, client, multi_subject_library):
         created = _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
 
         res = client.get(f"/api/practice_runs/{created['id']}")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["deleted_deck_count"] == 0
         assert data["decks"] == [
             {
                 "deck_id": multi_subject_library["decks"]["a"]["id"],
@@ -1097,39 +1095,45 @@ class TestPracticeRunDetailShape:
         assert client.get(f"/api/practice_runs/{uuid.uuid4()}").status_code == 404
 
 
-class TestDeletedDeckChips:
-    def test_a_snapshot_whose_deck_was_deleted_is_counted_not_listed(
-        self, client, multi_subject_library
-    ):
-        """The session survives its deck (practice_deck.deck_id SET NULL, ADR 015) but
-        has no name or subject left to put in a chip. With `abandoned` gone, this count
-        is the only thing distinguishing a session stranded this way from one the user
-        actually finished."""
+class TestRunEmptiedByDeckDeletion:
+    """ADR 047, ADR 048: a run left owning no practice_deck at all is deleted
+    alongside its last one. A run that still has another deck's snapshot survives
+    the loss of just one, and lists/filters accordingly."""
+
+    def test_run_is_gone_after_its_only_deck_is_deleted(self, client, multi_subject_library):
         lib = multi_subject_library
-        _start(
-            client,
-            "Both decks",
-            [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]],
-        )
+        created = _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
 
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
         assert deleted.status_code == 204, deleted.text
 
-        rows = client.get("/api/practice_runs").json()
-        assert len(rows) == 1
-        assert [deck["subject_name"] for deck in rows[0]["decks"]] == ["Beta"]
-        assert rows[0]["deleted_deck_count"] == 1
+        assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
+        assert client.get("/api/practice_runs").json() == []
 
-    def test_sessions_with_every_deck_intact_count_zero(self, client, multi_subject_library):
-        _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
-        rows = client.get("/api/practice_runs").json()
-        assert rows[0]["deleted_deck_count"] == 0
+    def test_run_is_gone_after_its_only_decks_subject_is_deleted(
+        self, client, multi_subject_library
+    ):
+        """Same rule, one level up: deleting a subject cascades its deck with it, and
+        a run left owning no snapshot goes right along."""
+        lib = multi_subject_library
+        created = _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+
+        deleted = client.delete(f"/api/subjects/{lib['subjects']['a']['id']}")
+        assert deleted.status_code == 204, deleted.text
+
+        assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
+        assert client.get("/api/practice_runs").json() == []
 
     def test_a_deleted_deck_no_longer_matches_its_own_filter(
         self, client, multi_subject_library
     ):
+        """A two-deck run losing one deck survives — the other deck's filter still
+        matches it, but the deleted deck's own filter can't, since there is no
+        snapshot left for it to match."""
         lib = multi_subject_library
-        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
+        _start(
+            client, "Both decks", [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]]
+        )
         assert client.delete(f"/api/decks/{lib['decks']['a']['id']}").status_code == 204
 
         assert client.get("/api/practice_runs").json() != []
@@ -1138,6 +1142,12 @@ class TestDeletedDeckChips:
                 "/api/practice_runs", params={"deck_id": lib["decks"]["a"]["id"]}
             ).json()
             == []
+        )
+        assert (
+            client.get(
+                "/api/practice_runs", params={"deck_id": lib["decks"]["b"]["id"]}
+            ).json()
+            != []
         )
 
 
@@ -2203,13 +2213,17 @@ class TestRerun:
         assert {d.deck_id for d in new_decks} == {uuid.UUID(deck_b["id"])}
 
     def test_rerun_refuses_when_nothing_survives(
-        self, client, existing_user, session_cards, session_config, existing_deck
+        self, client, session_cards, session_config
     ):
+        """Archiving the config's only answer field, not deleting the deck — after
+        ADR 048 a run whose only deck is deleted is gone itself, so there would be no
+        run left to call rerun against at all."""
         session = _start(client, "Doomed run", [session_config["id"]])
         _finish_session(client, session["id"])
 
-        deleted = client.delete(f"/api/decks/{existing_deck['id']}")
-        assert deleted.status_code == 204, deleted.text
+        stale_field_id = session_config["answer_field_ids"][0]
+        archived = client.delete(f"/api/fields/{stale_field_id}")
+        assert archived.status_code == 200, archived.text
 
         res = _rerun(client, session["id"], "Doomed run (rerun)")
         assert res.status_code == 400, res.text

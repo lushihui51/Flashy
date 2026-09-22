@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 from app.database import SessionDep
 from app.database_ops.card import (
     db_create_card,
-    db_delete_card,
     db_read_card,
     db_read_cards_for_deck,
     db_update_card_values,
@@ -17,6 +16,7 @@ from app.mastery.config import get_mastery_strategy
 from app.models.card import CardCreate, CardMasteryRead, CardRead, CardUpdate
 from app.models.deck import Deck
 from app.services.activity import touch
+from app.services.deletion import delete_card as delete_card_service
 from app.services.mastery import card_mastery
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
@@ -131,7 +131,4 @@ def delete_card(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID
     card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    deck = db.get(Deck, card.deck_id)
-    if deck:
-        touch(db, deck)  # D13: card delete bubbles to the deck.
-    db_delete_card(db, card)
+    delete_card_service(db, get_mastery_strategy(), card)

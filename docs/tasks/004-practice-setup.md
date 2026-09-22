@@ -11,6 +11,7 @@ Already shipped on this branch (history, not tasks): backend endpoints + `name` 
 - **`practice_session` is now `practice_run`** (ADR 038, task 009 T2): the vocabulary table's schema term, every `/api/practice_sessions…` path in Contracts (`/api/practice_runs…`), `PracticeSessionRead/Summary`→`PracticeRunRead/Summary` (MD-3, T1), `practice_session_id`→`practice_run_id` in the `practice_deck` uniqueness rule, and T1's `practice_session.py`/`test_practice_session.py`/`practice_session.ts` file names (and T5's `PracticeSessionRow.tsx`, now `PracticeRunRow.tsx`; sync 2026-09-18). The user-facing word "practice" is unchanged (ADR 021).
 - **Carried invariant 1 no longer holds** (sync 2026-09-18): `practice_deck` does have a `source_config_id` — ADR 040 (task 009 T6/T7) added it as nullable, `ON DELETE SET NULL` attribution that is never read by generation, validation, or rerun, and that a material config edit nulls. Run ↔ subject/deck relevance still resolves only through `practice_deck.deck_id → deck → subject`; the other eight invariants stand.
 - **Three "Deferred — do not build" items have since been built** (sync 2026-09-18): the run surface (task 006); Restart, shipped as re-run (006 T4/T9) and then changed by ADR 039 (009 T5) to keep the original run rather than delete it, with a client-supplied name; and removing the deck-create `cards` array (008 T2, executing ADR 023's deferred cleanup). The remaining items — home-page launchers, a "stale" badge, rename from the UI, pointer drag — are still unbuilt.
+- **`deleted_deck_count` is gone from the summary shape** (ADR 048, task 013 T4; sync 2026-09-21): `decks` lists every snapshot, since a snapshot no longer outlives its deck and a run left with no decks is deleted. MD-3 and the list/detail contracts lose the field, and T1's Done-when "carries `decks` and `deleted_deck_count` (including a session whose deck was deleted)" no longer holds — that session is gone. `DELETE …/{id}` still leaves `review_log` untouched, but because `review_log` no longer references `practice_card` at all: the SET NULL mechanism the contract names went with the column.
 
 ## ADRs
 
@@ -35,7 +36,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 
 ### Canonical vocabulary
 
-One word per concept. Middle column is what a user reads; right column is what code and schema call it. Never write "practice config"; never show "pool" or a slot name.
+One word per concept. Middle column is what a user reads; right column is what code and schema call it. Never write "practice config"; never show "pool" or a slot name. Never "in progress" or "ended" for a practice's state.
 
 | Concept | Written as | Entity / field |
 | --- | --- | --- |
@@ -46,6 +47,8 @@ One word per concept. Middle column is what a user reads; right column is what c
 | where a practice is created | **New practice** | — |
 | where a configuration is authored | **New configuration** / **Edit configuration** | — |
 | one practice's own page | practice detail | — |
+| a practice that can still be continued | **active** (badge and tab: **Active**) | `practice_run.status = 'active'` |
+| a practice that has finished | **completed** (badge and tab: **Completed**) | `practice_run.status = 'completed'` |
 | the two halves of a card | **Prompt side** / **Answer side** | prompt/answer assignment |
 | fields on every card | **Always shown** | `prompt_field_ids` / `answer_field_ids` |
 | fields drawn at random per card | **Random draw** | `prompt_pool_ids` / `answer_pool_ids` |

@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import desc
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
+from app.database_ops.mastery_log import db_append_mastery_log
 from app.database_ops.review_log import (
     ReviewGroupInconsistent,
     ReviewGroupWriteOutcome,
@@ -19,7 +21,13 @@ from app.models.card import Card
 from app.models.mastery_log import MasteryLog
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_run import PracticeRun, RunStatus
-from app.services.mastery import apply_rating, rebuild_mastery, record_review_group
+from app.models.review_log import ReviewLog
+from app.services.mastery import (
+    apply_rating,
+    rebuild_deck_mastery,
+    rebuild_mastery,
+    record_review_group,
+)
 
 STRATEGIES = [EmaStrategy()]
 
@@ -49,7 +57,7 @@ def _snapshot(db):
     append-only ledger down to the same shape the old single-row-per-pair cache had,
     so every existing assertion below still reads as "current state" without knowing
     the ledger keeps history underneath."""
-    rows = db.exec(select(MasteryLog).order_by(MasteryLog.id)).all()
+    rows = db.exec(select(MasteryLog).order_by(MasteryLog.reviewed_at)).all()
     latest: dict[tuple, tuple] = {}
     for row in rows:
         latest[(row.card_id, row.field_def_id)] = (
@@ -368,6 +376,92 @@ class TestRecordReviewGroupOutcomes:
         db.rollback()
 
 
+class TestReviewedAtOrder:
+    """ADR 050: the ledger's order is reviewed_at, stamped under the card's advisory
+    lock so it is strictly increasing per card even when the proposed stamp — what
+    datetime.now(UTC) would read — is identical across two appearances."""
+
+    def test_two_appearances_at_the_same_instant_get_strictly_increasing_reviewed_at(
+        self, db, existing_user, mastery_cards
+    ):
+        strategy = EmaStrategy()
+        card_id = mastery_cards["card_ids"][0]
+        field_ids = mastery_cards["field_ids"]
+        # Stands in for two calls to datetime.now(UTC) that happen to read the same
+        # instant — record_review_group must not let their stamps collide.
+        same_instant = datetime.now(UTC)
+
+        first_group = ReviewGroup(
+            review_group_id=uuid.uuid4(),
+            card_id=card_id,
+            reviewed_at=same_instant,
+            ratings=((field_ids[0], 3),),
+            shown_prompt_ids=(field_ids[1],),
+        )
+        second_group = ReviewGroup(
+            review_group_id=uuid.uuid4(),
+            card_id=card_id,
+            reviewed_at=same_instant,
+            ratings=((field_ids[0], 4),),
+            shown_prompt_ids=(field_ids[1],),
+        )
+
+        record_review_group(db, strategy, existing_user.id, first_group, None)
+        db.commit()
+        record_review_group(db, strategy, existing_user.id, second_group, None)
+        db.commit()
+
+        review_rows = db.exec(
+            select(ReviewLog)
+            .where(ReviewLog.card_id == card_id, ReviewLog.field_def_id == field_ids[0])
+            .order_by(ReviewLog.reviewed_at)
+        ).all()
+        assert len(review_rows) == 2
+        assert review_rows[0].reviewed_at < review_rows[1].reviewed_at
+        assert review_rows[0].review_group_id == first_group.review_group_id
+        assert review_rows[1].review_group_id == second_group.review_group_id
+
+        ledger_rows = db.exec(
+            select(MasteryLog)
+            .where(MasteryLog.card_id == card_id, MasteryLog.field_def_id == field_ids[0])
+            .order_by(MasteryLog.reviewed_at)
+        ).all()
+        assert len(ledger_rows) == 2
+        assert ledger_rows[0].reviewed_at < ledger_rows[1].reviewed_at
+
+        # The read path (_snapshot folds down to the max-reviewed_at row per pair)
+        # must report the second appearance's state, not the first's.
+        current = _snapshot(db)[(card_id, field_ids[0])]
+        assert current == (
+            ledger_rows[1].prompt_mastery,
+            ledger_rows[1].answer_mastery,
+            ledger_rows[1].prompt_review_count,
+            ledger_rows[1].answer_review_count,
+        )
+
+    def test_second_row_at_an_existing_reviewed_at_for_a_pair_raises_integrity_error(
+        self, db, existing_user, mastery_cards
+    ):
+        """The UNIQUE (card_id, field_def_id, reviewed_at) backstop: this can only be
+        hit by a write that bypassed record_review_group's lock discipline, so it must
+        surface as a raised IntegrityError, never be silently absorbed."""
+        card_id = mastery_cards["card_ids"][0]
+        field_id = mastery_cards["field_ids"][0]
+        reviewed_at = datetime.now(UTC)
+        state = FieldMasteryState(
+            prompt_mastery=50.0, answer_mastery=50.0, prompt_review_count=1, answer_review_count=1
+        )
+
+        db_append_mastery_log(db, card_id, {field_id: state}, reviewed_at, uuid.uuid4(), None)
+        db.commit()
+
+        with pytest.raises(IntegrityError):
+            db_append_mastery_log(
+                db, card_id, {field_id: state}, reviewed_at, uuid.uuid4(), None
+            )
+        db.rollback()
+
+
 class TestRunAttribution:
     """ADR 042's practice_run_id parameter on the write path: each appended row is
     attributed to the run it happened in, and a retry of an already-logged group
@@ -486,6 +580,52 @@ class TestRebuildOracle:
             assert inc_pc == reb_pc
             assert inc_ac == reb_ac
 
+    def test_rebuild_reproduces_the_whole_ledger_not_just_latest_rows(
+        self, db, existing_user, mastery_cards
+    ):
+        """Invariant 3 (task 013 Contracts): replaying a card's appearances in
+        reviewed_at order reproduces every row untouched, value for value and
+        timestamp for timestamp — not just each pair's latest row. The rebuild never
+        re-stamps (ADR 050), so every (card_id, field_def_id, reviewed_at) key from
+        before rebuild must still be present after, with the same state."""
+        strategy = EmaStrategy()
+        card_id = mastery_cards["card_ids"][0]
+        field_ids = mastery_cards["field_ids"]
+        base_time = datetime(2026, 2, 1, tzinfo=UTC)
+
+        for i in range(5):
+            group = ReviewGroup(
+                review_group_id=uuid.uuid4(),
+                card_id=card_id,
+                reviewed_at=base_time + timedelta(minutes=i),
+                ratings=((field_ids[0], (i % 4) + 1),),
+                shown_prompt_ids=(field_ids[1],),
+            )
+            record_review_group(db, strategy, existing_user.id, group, None)
+            db.commit()
+
+        def _full_ledger():
+            rows = db.exec(select(MasteryLog)).all()
+            return {
+                (row.card_id, row.field_def_id, row.reviewed_at): (
+                    row.prompt_mastery,
+                    row.answer_mastery,
+                    row.prompt_review_count,
+                    row.answer_review_count,
+                )
+                for row in rows
+            }
+
+        before = _full_ledger()
+        assert len(before) == 10  # 5 appearances x (1 answer row + 1 prompt row)
+
+        rebuild_mastery(db, strategy)
+        after = _full_ledger()
+
+        assert set(before.keys()) == set(after.keys())
+        for key, values in before.items():
+            assert after[key] == pytest.approx(values, abs=1e-4)
+
     def test_rebuild_reconstructs_attribution_and_preserves_state(
         self, db, existing_user, mastery_cards
     ):
@@ -558,17 +698,166 @@ class TestRebuildOracle:
         latest_a = db.exec(
             select(MasteryLog)
             .where(MasteryLog.card_id == card_a, MasteryLog.field_def_id == answer_field)
-            .order_by(desc(MasteryLog.id))
+            .order_by(desc(MasteryLog.reviewed_at))
             .limit(1)
         ).first()
         latest_b = db.exec(
             select(MasteryLog)
             .where(MasteryLog.card_id == card_b, MasteryLog.field_def_id == answer_field)
-            .order_by(desc(MasteryLog.id))
+            .order_by(desc(MasteryLog.reviewed_at))
             .limit(1)
         ).first()
         assert latest_a.practice_run_id == surviving_run.id
         assert latest_b.practice_run_id is None
+
+
+class TestDeckScopedRebuild:
+    """ADR 049: rebuild_deck_mastery must reproduce exactly what a user-wide rebuild
+    produces for its one deck, and must not touch any other deck's rows — not even
+    their ids, since a scoped rebuild only clears and re-inserts its own deck's
+    cards' rows (ADR 050 is what makes this safe: order is reviewed_at, not an
+    identity id, so a partial re-insert can't disturb another deck's order)."""
+
+    @staticmethod
+    def _ledger_for_cards(db, card_ids):
+        rows = db.exec(select(MasteryLog).where(col(MasteryLog.card_id).in_(card_ids))).all()
+        return {
+            row.id: (
+                row.card_id,
+                row.field_def_id,
+                row.reviewed_at,
+                row.prompt_mastery,
+                row.answer_mastery,
+                row.prompt_review_count,
+                row.answer_review_count,
+            )
+            for row in rows
+        }
+
+    @staticmethod
+    def _keyed_state_for_cards(db, card_ids):
+        rows = db.exec(select(MasteryLog).where(col(MasteryLog.card_id).in_(card_ids))).all()
+        return {
+            (row.card_id, row.field_def_id, row.reviewed_at): (
+                row.prompt_mastery,
+                row.answer_mastery,
+                row.prompt_review_count,
+                row.answer_review_count,
+            )
+            for row in rows
+        }
+
+    def test_scoped_rebuild_matches_user_wide_rebuild_and_leaves_other_deck_untouched(
+        self, db, client, existing_user, existing_subject, existing_deck, mastery_cards
+    ):
+        strategy = EmaStrategy()
+        deck_a_id = uuid.UUID(existing_deck["id"])
+        deck_a_cards = mastery_cards["card_ids"]
+        deck_a_fields = mastery_cards["field_ids"]
+
+        deck_b = client.post(
+            "/api/decks",
+            json={
+                "name": "Deck B",
+                "subject_id": existing_subject["id"],
+                "field_defs": [
+                    {"name": "front", "type": "text"},
+                    {"name": "back", "type": "text"},
+                ],
+            },
+        ).json()
+        b_front, b_back = (fd["id"] for fd in deck_b["field_defs"])
+        b_card = client.post(
+            "/api/cards",
+            json={"deck_id": deck_b["id"], "values": {b_front: "Q", b_back: "A"}},
+        ).json()
+        b_card_id = uuid.UUID(b_card["id"])
+
+        # Live writes across both decks.
+        for i in range(3):
+            group = ReviewGroup(
+                review_group_id=uuid.uuid4(),
+                card_id=deck_a_cards[i % len(deck_a_cards)],
+                reviewed_at=datetime.now(UTC),
+                ratings=((deck_a_fields[0], (i % 4) + 1),),
+                shown_prompt_ids=(deck_a_fields[1],),
+            )
+            record_review_group(db, strategy, existing_user.id, group, None)
+            db.commit()
+
+        group_b = ReviewGroup(
+            review_group_id=uuid.uuid4(),
+            card_id=b_card_id,
+            reviewed_at=datetime.now(UTC),
+            ratings=((uuid.UUID(b_back), 3),),
+            shown_prompt_ids=(uuid.UUID(b_front),),
+        )
+        record_review_group(db, strategy, existing_user.id, group_b, None)
+        db.commit()
+
+        b_before = self._ledger_for_cards(db, [b_card_id])
+        assert len(b_before) > 0
+
+        rebuild_deck_mastery(db, strategy, deck_a_id)
+        db.commit()
+
+        b_after_scoped = self._ledger_for_cards(db, [b_card_id])
+        assert b_after_scoped == b_before  # byte-identical, including ids — untouched
+
+        a_after_scoped = self._keyed_state_for_cards(db, deck_a_cards)
+        assert len(a_after_scoped) > 0
+
+        # Oracle: what a full user-wide rebuild independently produces for deck A.
+        rebuild_mastery(db, strategy, existing_user.id)
+        a_oracle = self._keyed_state_for_cards(db, deck_a_cards)
+
+        assert set(a_after_scoped.keys()) == set(a_oracle.keys())
+        for key, values in a_after_scoped.items():
+            assert values == pytest.approx(a_oracle[key], abs=1e-4)
+
+    def test_scoped_rebuild_after_a_card_delete_reproduces_the_remaining_rows(
+        self, db, existing_user, existing_deck, mastery_cards
+    ):
+        strategy = EmaStrategy()
+        deck_id = uuid.UUID(existing_deck["id"])
+        card_ids = mastery_cards["card_ids"]
+        field_ids = mastery_cards["field_ids"]
+
+        for i, card_id in enumerate(card_ids):
+            group = ReviewGroup(
+                review_group_id=uuid.uuid4(),
+                card_id=card_id,
+                reviewed_at=datetime.now(UTC),
+                ratings=((field_ids[0], (i % 4) + 1),),
+                shown_prompt_ids=(field_ids[1],),
+            )
+            record_review_group(db, strategy, existing_user.id, group, None)
+            db.commit()
+
+        doomed_card_id = card_ids[0]
+        surviving_card_ids = card_ids[1:]
+
+        before = self._keyed_state_for_cards(db, surviving_card_ids)
+        assert len(before) > 0
+
+        doomed = db.get(Card, doomed_card_id)
+        db.delete(doomed)
+        db.commit()
+
+        rebuild_deck_mastery(db, strategy, deck_id)
+        db.commit()
+
+        after = self._keyed_state_for_cards(db, surviving_card_ids)
+        assert set(before.keys()) == set(after.keys())
+        for key, values in before.items():
+            assert values == pytest.approx(after[key], abs=1e-4)
+
+        # The deleted card's own rows are gone, and the scoped rebuild doesn't
+        # resurrect them — nothing in review_log references it any more.
+        assert (
+            db.exec(select(MasteryLog).where(MasteryLog.card_id == doomed_card_id)).first()
+            is None
+        )
 
 
 MASTERY_ARITHMETIC = re.compile(r"(prompt_mastery|answer_mastery)\s*[+\-*/]")
