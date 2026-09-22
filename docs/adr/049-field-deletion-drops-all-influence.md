@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Supersedes ADR 010's decision that field deletion means archival; the archive column, index, endpoints, and read filters stay in the code, unexposed, as an option not taken. Amends ADR 011: a field delete deletes the field's review rows and rebuilds its deck, so the ledger is rewritten for that deck.
+Accepted. Supersedes ADR 010's decision that field deletion means archival; the archive column, index, endpoints, and read filters stay in the code, unexposed, as an option not taken. Amends ADR 011: a field delete deletes the field's review rows and rebuilds its deck, so the ledger is rewritten for that deck. Amended by ADR 052 (2026-09-22): a completed run's breakdown renders a deleted field's id as a placeholder rather than dropping it; the decision here is otherwise unchanged.
 
 ## Context
 
