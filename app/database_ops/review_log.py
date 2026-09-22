@@ -130,11 +130,11 @@ def db_scrub_shown_prompt_ids(
 ) -> None:
     """Removes each of field_ids from shown_prompt_ids on this deck's own cards' rows
     (ADR 049) — one UPDATE per id, so cost scales with how many fields are being
-    deleted, not with how many review_log rows exist. `@>` (array contains) narrows
-    each UPDATE to rows that actually name the id, the same effect array_remove's own
-    "not present, no-op" gives a single row, applied at the query level so an id
-    nobody used touches nothing. No commit — apply_deletion (ADR 051) owns the
-    transaction."""
+    deleted, not with how many review_log rows exist. `= ANY (shown_prompt_ids)`
+    narrows each UPDATE to rows that actually name the id, the same effect
+    array_remove's own "not present, no-op" gives a single row, applied at the query
+    level so an id nobody used touches nothing. No commit — apply_deletion (ADR 051)
+    owns the transaction."""
     if not field_ids:
         return
     deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)
@@ -143,7 +143,7 @@ def db_scrub_shown_prompt_ids(
             update(ReviewLog)
             .where(
                 col(ReviewLog.card_id).in_(deck_card_ids),
-                ReviewLog.shown_prompt_ids.op("@>")([field_id]),
+                ReviewLog.shown_prompt_ids.any(field_id),
             )
             .values(shown_prompt_ids=func.array_remove(ReviewLog.shown_prompt_ids, field_id))
         )

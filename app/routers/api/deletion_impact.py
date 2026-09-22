@@ -10,9 +10,9 @@ from app.services.deletion import compute_deletion_impact
 
 router = APIRouter(prefix="/deletion-impact", tags=["Deletion"])
 
-# A bare `list[uuid.UUID] = []` default is not enough for this FastAPI version to bind
-# repeated `?x=a&x=b` query keys — without the explicit Query() annotation it silently
-# resolves to the empty default regardless of what's on the query string.
+# FastAPI reads a bare `list[...]` parameter as a request body, not a query
+# parameter, so on a GET that body is absent and the default wins regardless of
+# what's on the query string. Query() is what binds repeated `?x=a&x=b` keys.
 _IdListQuery = Annotated[list[uuid.UUID], Query()]
 
 

@@ -497,9 +497,10 @@ def _resolve_rated_field_values(
 ) -> list[RatedFieldValue]:
     """The breakdown's answer-side resolution: the same id->field_def->value join as
     _resolve_field_values, with each entry's rating attached from the review_log join
-    (db_read_ratings_by_review_group). A field_def_id absent from ratings_by_field means
-    that review_log row was orphaned (contract: `rating: None`) — never that it wasn't
-    rated, since a passed/failed practice_card was rated on every answer field by
+    (db_read_ratings_by_review_group). ratings_by_field.get(...) can still return None
+    for a field_def_id absent from it, but under ADR 048 that case can no longer
+    occur — a review_log row cascades with its field — so every rated field resolves
+    here, since a passed/failed practice_card was rated on every answer field by
     construction (submit_rating)."""
     resolved = _resolve_field_values(field_defs_by_id, values_by_field, field_ids)
     return [

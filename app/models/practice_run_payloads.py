@@ -101,11 +101,10 @@ class BreakdownBucket(str, Enum):
 
 class RatedFieldValue(ResolvedFieldValue):
     """A resolved answer field plus the rating it was given, joined from `review_log`
-    on `review_group_id == practice_card.id` and `field_def_id`. `None` only if that
-    `review_log` row exists but was orphaned (its `field_def_id` went `SET NULL` on a
-    hard delete) — never for a row that simply hasn't been rated, since a `passed`/
-    `failed` practice_card was rated on every one of its answer fields by construction
-    (`submit_rating`)."""
+    on `review_group_id == practice_card.id` and `field_def_id`. Under ADR 048 a
+    `review_log` row cascades with its field, so the `None` case this type was built
+    to carry can no longer occur; the `int | None` type is kept only so this payload
+    and the frontend branch reading it stay stable (task 013 MD-4)."""
 
     rating: int | None
 
