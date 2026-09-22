@@ -20,8 +20,17 @@ type FieldValueProps = {
  * chip/button are never in the DOM at all, so nothing leaks through a screen reader,
  * find-in-page, or a stray tap before the run page's single "Show answer" tap.
  * Shared by the run page's prompt/answer zones and, later, the completion
- * breakdown's detail view (which never passes `hidden`). */
+ * breakdown's detail view (which never passes `hidden`). A `removed` placeholder (ADR
+ * 052 — a field deleted after a completed practice used it) renders only the muted
+ * label "Removed field", never a value or chip, whatever `labeled` and `hidden` say. */
 export default function FieldValue({ field, labeled, hidden }: FieldValueProps) {
+  if (field.removed === true) {
+    return (
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="text-xs font-medium text-(--color-text-muted)">Removed field</div>
+      </div>
+    );
+  }
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       {labeled && <div className="text-xs font-medium text-(--color-text-muted)">{field.name}</div>}

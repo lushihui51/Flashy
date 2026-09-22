@@ -1114,10 +1114,9 @@ export interface components {
         /**
          * RatedFieldValue
          * @description A resolved answer field plus the rating it was given, joined from `review_log`
-         *     on `review_group_id == practice_card.id` and `field_def_id`. Under ADR 048 a
-         *     `review_log` row cascades with its field, so the `None` case this type was built
-         *     to carry can no longer occur; the `int | None` type is kept only so this payload
-         *     and the frontend branch reading it stay stable (task 013 MD-4).
+         *     on `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`
+         *     exactly for a removed field's placeholder, because its review rows cascaded with
+         *     the field (ADR 048).
          */
         RatedFieldValue: {
             /**
@@ -1130,6 +1129,11 @@ export interface components {
             type: components["schemas"]["FieldType"];
             /** Value */
             value: string;
+            /**
+             * Removed
+             * @default false
+             */
+            removed?: boolean;
             /** Rating */
             rating: number | null;
         };
@@ -1153,6 +1157,9 @@ export interface components {
          *     when no card_field_value row exists for this (card, field) pair; it is passed
          *     through as-is even if blank, since a value can go blank *after* the practice_card
          *     was generated (ADR 026 only governs generation-time candidacy, not later edits).
+         *     `removed` is True only for a placeholder the breakdown emits for a stored id whose
+         *     field_def row no longer exists (ADR 052); every other resolution, including the
+         *     live run's current card, leaves it False.
          */
         ResolvedFieldValue: {
             /**
@@ -1165,6 +1172,11 @@ export interface components {
             type: components["schemas"]["FieldType"];
             /** Value */
             value: string;
+            /**
+             * Removed
+             * @default false
+             */
+            removed?: boolean;
         };
         /**
          * RunProgress
