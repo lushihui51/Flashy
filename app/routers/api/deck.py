@@ -96,7 +96,7 @@ def update_deck(
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
-        deck = apply_deck_batch_edit(db, current_user.id, deck, payload)
+        deck = apply_deck_batch_edit(db, current_user.id, deck, payload, get_mastery_strategy())
     except DeckBatchEditValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _deck_detail(db, deck, current_user.id)
