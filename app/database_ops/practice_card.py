@@ -102,10 +102,10 @@ def db_read_ratings_by_review_group(
     """Ratings for a batch of practice_cards at once, keyed `review_group_id ->
     {field_def_id: rating}` — a practice_card's id *is* its review_group_id
     (submit_rating), so this is the completion breakdown's per-answer rating join
-    (ADR 029/031). A `review_log` row whose `field_def_id` went `SET NULL` (the field
-    was hard-deleted) can't be matched back to a specific field and is simply absent
-    from the result — the caller reads a missing entry as an orphaned rating (contract:
-    `rating: None`)."""
+    (ADR 029/031). A field deleted after the run has no review rows left (they
+    cascaded with it, ADR 048), so its id is simply absent from the result; the
+    breakdown renders that id as a removed-field placeholder with `rating: None`
+    (ADR 052)."""
     if not review_group_ids:
         return {}
     rows = db.exec(
@@ -115,8 +115,6 @@ def db_read_ratings_by_review_group(
     ).all()
     ratings: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
     for review_group_id, field_def_id, rating in rows:
-        if field_def_id is None:
-            continue
         ratings.setdefault(review_group_id, {})[field_def_id] = rating
     return ratings
 

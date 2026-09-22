@@ -9,10 +9,11 @@ from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.card import Card
-from app.models.field_def import FieldDef
+from app.models.field_def import FieldDef, FieldType
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice_run_payloads import ResolvedFieldValue
 from app.models.review_log import ReviewLog
 from app.services.mastery import record_review_group
 from app.services.practice_generation import (
@@ -22,6 +23,7 @@ from app.services.practice_generation import (
 from app.services.practice_run import (
     _POSITION_GAP,
     _insertion_position,
+    _resolve_field_values,
     get_practice_run_breakdown,
     run_progress,
     start_practice_run,
@@ -1260,7 +1262,13 @@ class TestRunState:
         assert all(p["type"] == "text" for p in prompts)
 
         assert data["current_card"]["answers"] == [
-            {"field_def_id": answer["id"], "name": "answer", "type": "text", "value": "Answer value"}
+            {
+                "field_def_id": answer["id"],
+                "name": "answer",
+                "type": "text",
+                "value": "Answer value",
+                "removed": False,
+            }
         ]
 
     def test_value_is_passed_through_blank_if_edited_blank_after_generation(
@@ -1299,7 +1307,13 @@ class TestRunState:
 
         run = client.get(f"/api/practice_runs/{session['id']}/state").json()
         assert run["current_card"]["answers"] == [
-            {"field_def_id": answer["id"], "name": "answer", "type": "text", "value": ""}
+            {
+                "field_def_id": answer["id"],
+                "name": "answer",
+                "type": "text",
+                "value": "",
+                "removed": False,
+            }
         ]
 
     def test_archived_field_still_resolves(self, client, existing_deck):
@@ -1337,7 +1351,13 @@ class TestRunState:
 
         run = client.get(f"/api/practice_runs/{session['id']}/state").json()
         assert run["current_card"]["answers"] == [
-            {"field_def_id": answer["id"], "name": "answer", "type": "text", "value": "A"}
+            {
+                "field_def_id": answer["id"],
+                "name": "answer",
+                "type": "text",
+                "value": "A",
+                "removed": False,
+            }
         ]
 
     def test_attempt_increments_on_a_requeued_row(
@@ -1682,6 +1702,7 @@ class TestBreakdown:
             "name": "title",
             "type": "text",
             "value": "",
+            "removed": False,
         }
 
         assert cards_by_id[retry_card]["bucket"] == "passed_after_one_fail"
@@ -1828,6 +1849,140 @@ class TestBreakdown:
 
         assert small_count > 0
         assert small_count == large_count
+
+    def test_removed_fields_stay_as_placeholders_in_every_attempt(self, client, existing_deck):
+        """ADR 052: a field a completed run's practice_cards still name in `prompts`/
+        `answers` but whose row was later deleted stays visible in the breakdown as a
+        placeholder on both sides, instead of silently vanishing from every attempt."""
+        title = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
+        ).json()
+        p1 = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "p1", "type": "text"}
+        ).json()
+        p2 = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "p2", "type": "text"}
+        ).json()
+        a1 = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "a1", "type": "text"}
+        ).json()
+        a2 = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "a2", "type": "text"}
+        ).json()
+
+        config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": existing_deck["id"],
+                "name": "Removed field config",
+                "prompt_field_ids": [p1["id"], p2["id"]],
+                "answer_field_ids": [a1["id"], a2["id"]],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+
+        def make_card(tag):
+            res = client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {
+                        title["id"]: f"{tag} title",
+                        p1["id"]: f"{tag} p1",
+                        p2["id"]: f"{tag} p2",
+                        a1["id"]: f"{tag} a1",
+                        a2["id"]: f"{tag} a2",
+                    },
+                },
+            )
+            assert res.status_code == 201, res.text
+            return res.json()["id"]
+
+        card_one = make_card("one")
+        card_two = make_card("two")
+
+        session = _start(client, "Removed field run", [config["id"]])
+        _finish_session(client, session["id"])
+
+        patch = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "field_defs": {
+                    "create": [],
+                    "update": [],
+                    "delete": [p2["id"], a2["id"]],
+                    "order": [],
+                }
+            },
+        )
+        assert patch.status_code == 200, patch.text
+        assert {fd["name"] for fd in patch.json()["field_defs"]} == {"title", "p1", "a1"}
+
+        res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["passed_first_try"] == 2
+
+        cards_by_id = {c["card_id"]: c for c in data["cards"]}
+        assert set(cards_by_id) == {card_one, card_two}
+
+        p2_placeholder = {
+            "field_def_id": p2["id"],
+            "name": "",
+            "type": "text",
+            "value": "",
+            "removed": True,
+        }
+        a2_placeholder = {**p2_placeholder, "field_def_id": a2["id"], "rating": None}
+
+        for card in cards_by_id.values():
+            assert [fd["name"] for fd in card["fields"]] == ["title", "p1", "a1"]
+            for attempt in card["attempts"]:
+                prompts = attempt["prompts"]
+                assert len(prompts) == 2
+                assert prompts[0]["field_def_id"] == p1["id"]
+                assert prompts[0]["name"] == "p1"
+                assert prompts[0]["removed"] is False
+                assert prompts[1] == p2_placeholder
+
+                answers = attempt["answers"]
+                assert len(answers) == 2
+                assert answers[0]["field_def_id"] == a1["id"]
+                assert answers[0]["name"] == "a1"
+                assert answers[0]["removed"] is False
+                assert answers[0]["rating"] == 4
+                assert answers[1] == a2_placeholder
+
+    def test_resolver_drops_unknown_ids_unless_asked_to_keep_them(self):
+        """_resolve_field_values's keep_removed switch (ADR 052), exercised directly:
+        the HTTP-level test above only ever sees keep_removed=True through the
+        breakdown, so this covers the default (False) drop path and the ordering
+        contract — live entries first by position, placeholders after in stored
+        order — with no HTTP round trip needed."""
+        unknown = uuid.uuid4()
+        assert _resolve_field_values({}, {}, [unknown]) == []
+        assert _resolve_field_values({}, {}, [unknown], keep_removed=True) == [
+            ResolvedFieldValue(
+                field_def_id=unknown, name="", type=FieldType.text, value="", removed=True
+            )
+        ]
+
+        live = FieldDef(
+            id=uuid.uuid4(), deck_id=uuid.uuid4(), name="live", type=FieldType.text, position=0
+        )
+        unknown_a = uuid.uuid4()
+        unknown_b = uuid.uuid4()
+        field_defs_by_id = {live.id: live}
+        field_ids = [unknown_a, unknown_b, live.id]
+
+        resolved = _resolve_field_values(field_defs_by_id, {}, field_ids, keep_removed=True)
+        assert [r.field_def_id for r in resolved] == [live.id, unknown_a, unknown_b]
+        assert resolved[0].removed is False
+        assert resolved[1].removed is True
+        assert resolved[2].removed is True
 
 
 def _make_run(db, user_id, status=RunStatus.completed):
