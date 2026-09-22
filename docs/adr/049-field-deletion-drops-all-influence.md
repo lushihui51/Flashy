@@ -20,7 +20,7 @@ Field removal is a user-facing hard delete whose meaning is that all influence o
 - The field row is deleted; its values, its ledger rows, and the review rows where it was rated cascade (ADR 048).
 - The deck's mastery is rebuilt from the remaining review rows, deck-scoped. The result is exactly what the live path would have written had the same appearances happened without the field: a group where the field was one rated answer among others survives with one fewer rating and one less breadth; a group where it was a shown prompt loses that prompt; a group where it was the only rated answer vanishes.
 
-The save confirm names what goes — cards affected, configurations deleted, practices ended — and never internal rows. Archive stays in the code as an option not implemented: nothing in this decision touches `archived_at`, its partial unique index, `DELETE /fields/{id}`, `DELETE /fields/{id}/hard`, or the archived-row filters.
+The save confirm names what goes — cards affected, configurations deleted, active practices deleted — and never internal rows. Archive stays in the code as an option not implemented: nothing in this decision touches `archived_at`, its partial unique index, `DELETE /fields/{id}`, `DELETE /fields/{id}/hard`, or the archived-row filters.
 
 ## Alternatives considered
 

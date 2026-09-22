@@ -36,7 +36,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 
 ### Canonical vocabulary
 
-One word per concept. Middle column is what a user reads; right column is what code and schema call it. Never write "practice config"; never show "pool" or a slot name.
+One word per concept. Middle column is what a user reads; right column is what code and schema call it. Never write "practice config"; never show "pool" or a slot name. Never "in progress" or "ended" for a practice's state.
 
 | Concept | Written as | Entity / field |
 | --- | --- | --- |
@@ -47,6 +47,8 @@ One word per concept. Middle column is what a user reads; right column is what c
 | where a practice is created | **New practice** | — |
 | where a configuration is authored | **New configuration** / **Edit configuration** | — |
 | one practice's own page | practice detail | — |
+| a practice that can still be continued | **active** (badge and tab: **Active**) | `practice_run.status = 'active'` |
+| a practice that has finished | **completed** (badge and tab: **Completed**) | `practice_run.status = 'completed'` |
 | the two halves of a card | **Prompt side** / **Answer side** | prompt/answer assignment |
 | fields on every card | **Always shown** | `prompt_field_ids` / `answer_field_ids` |
 | fields drawn at random per card | **Random draw** | `prompt_pool_ids` / `answer_pool_ids` |
