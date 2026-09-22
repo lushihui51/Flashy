@@ -17,6 +17,7 @@ import {
 import { buildDeckBatchEditPayload } from 'src/lib/deckEditorDiff';
 import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
 import { pluralize } from 'src/lib/pluralize';
+import { joinClauses } from 'src/lib/joinClauses';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import FullScreenDialog from 'src/components/ui/FullScreenDialog';
@@ -337,17 +338,42 @@ type DeckEditorBodyProps = {
   returnTo: string | null;
 };
 
-/** Phase 7.5 §2: counts what the current changeset would actually delete — the only
- * thing the aggregated save confirm needs, and what decides whether it shows at all. */
-function destructiveCounts(state: DeckEditorState) {
-  return { fieldCount: state.fields.filter((f) => f.pendingRemoval).length };
-}
+type ImpactSummaryCounts = {
+  fieldsDeleted: number;
+  cardsDeleted: number;
+  cardsAffected: number;
+  configurationsDeleted: number;
+  runsDeleted: number;
+};
 
-/** One aggregate sentence, counts only — no per-field breakdown (Phase 7.5 §3).
- * Archiving a field keeps its existing card values as inert history (ADR 010), which
- * is why this says the field goes and not the content behind it. */
-function destructiveSummaryText({ fieldCount }: ReturnType<typeof destructiveCounts>): string {
-  return `This removes ${pluralize(fieldCount, 'field')} from every card in this deck. This can't be undone.`;
+/** Task 013 MD-2: the editor save confirm's one sentence, for a changeset that
+ * deletes fields and/or cards — the same closure a direct field or card delete goes
+ * through (ADR 049, ADR 051), worded from `fieldsDeleted`/`cardsDeleted` (the
+ * changeset itself) plus `configurationsDeleted`/`runsDeleted` (the deletion-impact
+ * query). Phase 7.5's field-count-only version of this sentence is gone — this one
+ * accounts for cards and for what the deletion closure takes with a field. */
+function impactSummaryText({
+  fieldsDeleted,
+  cardsDeleted,
+  cardsAffected,
+  configurationsDeleted,
+  runsDeleted,
+}: ImpactSummaryCounts): string {
+  const clauses = [
+    ...(fieldsDeleted > 0
+      ? [
+          cardsAffected > 0
+            ? `removes ${pluralize(fieldsDeleted, 'field')} from ${pluralize(cardsAffected, 'card')}`
+            : `removes ${pluralize(fieldsDeleted, 'field')}`,
+        ]
+      : []),
+    ...(cardsDeleted > 0 ? [`deletes ${pluralize(cardsDeleted, 'card')}`] : []),
+    ...(configurationsDeleted > 0
+      ? [`deletes ${pluralize(configurationsDeleted, 'deck configuration')}`]
+      : []),
+    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active practice')}`] : []),
+  ];
+  return `This ${joinClauses(clauses)}. This can't be undone.`;
 }
 
 function DeckEditorBody({
@@ -378,7 +404,8 @@ function DeckEditorBody({
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [saveConfirm, setSaveConfirm] = useState<ReturnType<typeof destructiveCounts> | null>(null);
+  const [saveConfirm, setSaveConfirm] = useState<ImpactSummaryCounts | null>(null);
+  const [checkingSaveImpact, setCheckingSaveImpact] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deletionImpact, setDeletionImpact] = useState<
     components['schemas']['DeletionImpactRead'] | null
@@ -516,14 +543,50 @@ function DeckEditorBody({
     }
   };
 
-  // §3: the confirm is destructive-changeset-only, and only in edit mode — create
-  // mode has nothing on the server yet for a changeset to destroy.
-  const handleSaveClick = () => {
+  // §3 (task 013 MD-2): the confirm is destructive-changeset-only, and only in edit
+  // mode — create mode has nothing on the server yet for a changeset to destroy.
+  // fields_deleted/cards_deleted come straight off the changeset the editor itself
+  // built; configurations_deleted/runs_deleted come from the same deletion-impact
+  // query a direct field delete previews with, fetched only when the changeset
+  // deletes a field (cards.delete is always empty here — buildDeckBatchEditPayload
+  // never sends card ops, see deckEditorDiff.ts — but the check stays symmetric
+  // with the contract in case that ever changes).
+  const handleSaveClick = async () => {
     if (!canSave) return;
     if (mode === 'edit') {
-      const counts = destructiveCounts(state);
-      if (counts.fieldCount > 0) {
-        setSaveConfirm(counts);
+      const payload = buildDeckBatchEditPayload(original, state);
+      const fieldIds = payload.field_defs?.delete ?? [];
+      const cardIds = payload.cards?.delete ?? [];
+      const fieldsDeleted = fieldIds.length;
+      const cardsDeleted = cardIds.length;
+      if (fieldsDeleted > 0 || cardsDeleted > 0) {
+        const cardsAffected = deck?.cards.length ?? 0;
+        if (fieldsDeleted === 0) {
+          setSaveConfirm({
+            fieldsDeleted,
+            cardsDeleted,
+            cardsAffected,
+            configurationsDeleted: 0,
+            runsDeleted: 0,
+          });
+          return;
+        }
+        setCheckingSaveImpact(true);
+        setSaveError(null);
+        try {
+          const impact = await readDeletionImpact({ fieldIds });
+          setSaveConfirm({
+            fieldsDeleted,
+            cardsDeleted,
+            cardsAffected,
+            configurationsDeleted: impact.configurations_deleted,
+            runsDeleted: impact.runs_deleted,
+          });
+        } catch (err) {
+          setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+        } finally {
+          setCheckingSaveImpact(false);
+        }
         return;
       }
     }
@@ -582,8 +645,8 @@ function DeckEditorBody({
           )}
           <button
             type="button"
-            onClick={handleSaveClick}
-            disabled={!canSave}
+            onClick={() => void handleSaveClick()}
+            disabled={!canSave || checkingSaveImpact}
             className="text-sm font-semibold text-(--color-primary) disabled:text-(--color-text-muted)"
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
@@ -679,7 +742,7 @@ function DeckEditorBody({
       <ConfirmDialog
         open={saveConfirm !== null}
         title="Save changes?"
-        description={saveConfirm ? destructiveSummaryText(saveConfirm) : ''}
+        description={saveConfirm ? impactSummaryText(saveConfirm) : ''}
         confirmLabel="Save changes"
         destructive
         onConfirm={() => {

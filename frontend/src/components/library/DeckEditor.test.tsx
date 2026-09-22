@@ -509,6 +509,19 @@ describe('DeckEditor — edit mode', () => {
 
   it('rename, add a field, stage a field removal, reorder — Save sends the exact diff and stays on the page', async () => {
     mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 0,
+          fields_deleted: 1,
+          cards_deleted: 0,
+          cards_affected: 1,
+          configurations_deleted: 2,
+          runs_deleted: 1,
+        }),
+      ),
+    );
     let patchCallCount = 0;
     server.use(
       http.patch(`${BASE}/api/decks/:id`, async ({ request }) => {
@@ -563,10 +576,14 @@ describe('DeckEditor — edit mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    // Destructive (a staged field) — the aggregate confirm shows before anything is sent.
+    // Destructive (a staged field) — the aggregate confirm shows before anything is
+    // sent, worded from the changeset (1 field) plus the deletion-impact query (the
+    // 2 configurations and 1 practice the mock above reports for it).
     expect(await screen.findByText('Save changes?')).toBeInTheDocument();
     expect(
-      screen.getByText("This removes 1 field from every card in this deck. This can't be undone."),
+      screen.getByText(
+        "This removes 1 field from 1 card, deletes 2 deck configurations and deletes 1 active practice. This can't be undone.",
+      ),
     ).toBeInTheDocument();
     expect(patchCallCount).toBe(0);
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -605,6 +622,19 @@ describe('DeckEditor — edit mode', () => {
 
   it('save confirm states what the staged field removal costs', async () => {
     mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({
+          subjects_deleted: 0,
+          decks_deleted: 0,
+          fields_deleted: 1,
+          cards_deleted: 0,
+          cards_affected: 1,
+          configurations_deleted: 1,
+          runs_deleted: 0,
+        }),
+      ),
+    );
     const user = userEvent.setup();
     renderEditDeck();
 
@@ -616,9 +646,51 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Save changes?')).toBeInTheDocument();
+    // No active practices in this mock (runs_deleted: 0) — that clause is
+    // omitted entirely, not rendered as "0 practices".
     expect(
-      screen.getByText("This removes 1 field from every card in this deck. This can't be undone."),
+      screen.getByText(
+        "This removes 1 field from 1 card and deletes 1 deck configuration. This can't be undone.",
+      ),
     ).toBeInTheDocument();
+  });
+
+  // No "a card-only deletion opens the confirm with no impact request made" test
+  // here (task 013 T7's Details asks for one): buildDeckBatchEditPayload never
+  // produces a `cards` key (asserted above, "Card entry left this form entirely —
+  // a deck edit never carries card ops"), so there is no way to drive this editor
+  // into a state where cards.delete is non-empty. handleSaveClick still checks for
+  // it, matching the Contracts wording symmetrically with field_defs.delete, in
+  // case a later phase gives this editor card operations of its own — see the
+  // task's Notes line for the full record of this gap.
+
+  it('a failed impact request for the save confirm renders inline and opens nothing', async () => {
+    mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/deletion-impact`, () =>
+        HttpResponse.json({ detail: 'at least one id is required' }, { status: 422 }),
+      ),
+    );
+    let patchCallCount = 0;
+    server.use(
+      http.patch(`${BASE}/api/decks/:id`, () => {
+        patchCallCount += 1;
+        return HttpResponse.json(deckDetail);
+      }),
+    );
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Add field' })); // 3 fields, so Remove is enabled
+    const [, , newFieldInput] = screen.getAllByRole('textbox', { name: 'Field name' });
+    await user.type(newFieldInput!, 'Extra');
+    await user.click(screen.getByRole('button', { name: 'Remove Back' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('at least one id is required');
+    expect(screen.queryByText('Save changes?')).not.toBeInTheDocument();
+    expect(patchCallCount).toBe(0);
   });
 
   it('with three fields, marking one pending then trying to mark another is blocked by the floor', async () => {
