@@ -254,4 +254,79 @@ describe('RunBreakdown', () => {
     expect(within(dialog).getByText('Bonjour')).toBeInTheDocument();
     expect(within(dialog).getByText('Easy')).toBeInTheDocument();
   });
+
+  it('shows a removed field as "Removed field" with no value and no rating', async () => {
+    const user = userEvent.setup();
+    // ADR 052: a field deleted after this practice completed arrives as a placeholder
+    // on each side (empty name/value, `removed: true`, `rating: null` on the answer
+    // side); the Fields section only ever lists the deck's live fields.
+    render(
+      <RunBreakdown
+        breakdown={breakdown({
+          cards: [
+            {
+              card_id: 'card5',
+              bucket: 'passed_first_try',
+              attempt_count: 1,
+              primary_field: {
+                field_def_id: 'front5',
+                name: 'Front',
+                type: 'text',
+                value: 'Merci',
+              },
+              attempts: [
+                {
+                  practice_card_id: 'pc5',
+                  status: 'passed',
+                  created_at: '2026-01-01T00:00:00Z',
+                  prompts: [
+                    { field_def_id: 'front5', name: 'Front', type: 'text', value: 'Merci' },
+                    { field_def_id: 'gone1', name: '', type: 'text', value: '', removed: true },
+                  ],
+                  answers: [
+                    {
+                      field_def_id: 'back5',
+                      name: 'Back',
+                      type: 'text',
+                      value: 'Thanks',
+                      rating: 4,
+                    },
+                    {
+                      field_def_id: 'gone2',
+                      name: '',
+                      type: 'text',
+                      value: '',
+                      removed: true,
+                      rating: null,
+                    },
+                  ],
+                },
+              ],
+              mastery: 70,
+              delta: 5,
+              fields: [
+                { field_def_id: 'front5', name: 'Front', type: 'text', mastery: 65, delta: 5 },
+                { field_def_id: 'back5', name: 'Back', type: 'text', mastery: 75, delta: 5 },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Merci/ }));
+
+    const dialog = await screen.findByRole('dialog');
+    // One placeholder per side, and neither renders a value or a rating badge.
+    expect(within(dialog).getAllByText('Removed field')).toHaveLength(2);
+    expect(within(dialog).getByText('Easy')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Unrated')).not.toBeInTheDocument();
+
+    // The Fields section lists only the live fields, never a placeholder's id.
+    const fieldsSection = within(dialog).getByText('Fields').parentElement!;
+    expect(within(fieldsSection).queryByText('gone1')).not.toBeInTheDocument();
+    expect(within(fieldsSection).queryByText('gone2')).not.toBeInTheDocument();
+    expect(within(fieldsSection).getByText('Front')).toBeInTheDocument();
+    expect(within(fieldsSection).getByText('Back')).toBeInTheDocument();
+  });
 });

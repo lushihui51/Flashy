@@ -54,6 +54,7 @@ One word per concept. Middle column is what a user reads; right column is what c
 | fields drawn at random per card | **Random draw** | `prompt_pool_ids` / `answer_pool_ids` |
 | the allowed draw sizes | **"Each card shows [1] [2] … of these"** | `*_pool_counts` |
 | a field left out | **Not used** | unassigned |
+| a field deleted after a practice used it | **Removed field** | a `practice_card` prompt/answer id with no `field_def` row (`removed: true`) |
 
 ### Carried invariants (from the schema rewrite; still binding)
 
