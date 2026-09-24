@@ -126,12 +126,12 @@ T4 depends on T1 (both edit `practice_run.py` and `test_practice_run.py`). T6, T
 
 ### T3 — Schema guards for the naming convention (MD-1) — no dependencies
 
-- [ ] **Goal:** a dropped `app.database` import in `alembic/env.py`, or a changed naming template, fails the suite.
+- [x] **Goal:** a dropped `app.database` import in `alembic/env.py`, or a changed naming template, fails the suite.
 - **Files:** `tests/api_tests/test_schema_guard.py`.
 - **Details:** The two tests per the Guards contract, appended after `test_no_create_all_or_drop_all_under_app`, each with a docstring citing ADR 054. The first parses `alembic/env.py` (`Path(__file__).resolve().parents[2] / "alembic" / "env.py"`) with `ast` and asserts the import node exists, the assign node exists, and the import's line number is the smaller, with messages naming the file; the second does `import app.database` inside the test body and compares `SQLModel.metadata.naming_convention` to the literal dict.
 - **Out of scope:** any change to `alembic/env.py` or `app/database.py`; any other test file.
 - **Done when:** `uv run pytest tests/api_tests/test_schema_guard.py -q` reports 3 passed; with the `import app.database` line of `alembic/env.py` temporarily commented out, the same command reports the first new test failing, and the line is restored before the commit (`git diff alembic/` is empty).
-- Notes:
+- Notes: none. The five templates are a module-level `NAMING_CONVENTION` constant in the test file rather than a dict literal inline in the assertion, so the failure message stays readable. The negative check ran as specified and `git diff alembic/` is empty. Worth knowing for T10: the second guard's `from sqlmodel import SQLModel` sits inside the test body, but no planned guard scans `tests/`, so it is not at risk.
 
 ### T4 — The 17 non-committing writers gain the `stage_` prefix (ADR 055) — after T1
 
