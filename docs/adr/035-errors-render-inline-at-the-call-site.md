@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Decides the display question ADR 006 left open under "Error normalization".
 
 ## Context
 

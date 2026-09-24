@@ -311,7 +311,7 @@ def rerun_practice_run(
     if session is None:
         raise LookupError(f"practice_run {practice_run_id} not found")
     if session.status != RunStatus.completed:
-        raise RerunError("run_active", "practice session is still active")
+        raise RerunError("run_active", "practice is still active")
 
     surviving_decks: list[tuple[uuid.UUID, dict[str, list], uuid.UUID | None]] = []
     for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):

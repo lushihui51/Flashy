@@ -46,14 +46,14 @@ describe('unwrap', () => {
   it('throws a plain Error, not ApiDetailError, for a string detail', () => {
     let thrown: unknown;
     try {
-      unwrap({ error: { detail: 'Practice session not found' } });
+      unwrap({ error: { detail: 'Practice not found' } });
     } catch (e) {
       thrown = e;
     }
 
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown).not.toBeInstanceOf(ApiDetailError);
-    expect((thrown as Error).message).toBe('Practice session not found');
+    expect((thrown as Error).message).toBe('Practice not found');
   });
 
   it('throws a plain Error, not ApiDetailError, for a 422 validation array detail', () => {
@@ -111,7 +111,7 @@ describe('unwrapVoid', () => {
   it('throws a plain Error for an unstructured error', () => {
     let thrown: unknown;
     try {
-      unwrapVoid({ error: { detail: 'Practice session not found' } });
+      unwrapVoid({ error: { detail: 'Practice not found' } });
     } catch (e) {
       thrown = e;
     }

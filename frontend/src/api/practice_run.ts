@@ -2,8 +2,8 @@ import { client } from 'src/api/client';
 import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
-/** Subject and deck narrow the session list through `practice_deck → deck → subject` —
- * the only relation between a session and a deck (a session has no config lineage). */
+/** Subject and deck narrow the run list through `practice_deck → deck → subject`;
+ * `source_config_id` is attribution only and never a filter (ADR 040). */
 export type PracticeRunFilters = { subjectId?: string; deckId?: string };
 
 export const createPracticeRun = async (payload: components['schemas']['PracticeRunCreate']) =>

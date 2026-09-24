@@ -40,7 +40,7 @@ export default function PracticeDetailsPage() {
   if (sessionQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Practice session not found.</p>
+        <p className="text-(--color-text-muted)">Practice not found.</p>
       </div>
     );
   }
@@ -161,7 +161,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
 
       <ConfirmDialog
         open={confirmDeleteOpen}
-        title="Delete this practice session?"
+        title="Delete this practice?"
         // Same copy the overview uses — deliberately says nothing about decks or
         // configs: deleting a session takes its own cards and snapshots and nothing
         // else (ADR 015, amended), and reviews already logged stay on record.

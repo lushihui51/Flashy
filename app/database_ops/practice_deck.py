@@ -28,8 +28,8 @@ def db_read_practice_decks_for_run(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeDeck]:
     """Every snapshot a session took at start (ADR 013) — the re-run path's only
-    source material (ADR 030), since practice_deck has no source_config_id to look up
-    a live deck_practice_config from. Unscoped by user, like
+    source material (ADR 030); `source_config_id` is attribution only and is never
+    read here (ADR 040). Unscoped by user, like
     db_read_practice_cards_for_run — the caller reaches this session through an
     ownership-checked lookup first."""
     return list(

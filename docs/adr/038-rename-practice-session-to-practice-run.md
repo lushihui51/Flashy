@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Renames ADR 031's `GET .../run` to `GET .../state`. Frontend identifiers (`practiceSessionId` route params, `session` props) were left by task 009's rename map; user-facing copy says "practice" since the 2026-09-23 vocabulary sweep.
 
 ## Context
 

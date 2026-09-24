@@ -135,14 +135,14 @@ export default function PracticeOverviewPage() {
 
       {sessionsQuery.isError && (
         <p role="alert" className="mt-4 text-sm text-(--color-danger)">
-          Could not load practice sessions.
+          Could not load practices.
         </p>
       )}
 
       {sessionsQuery.data && sessions.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-8">
           <p className="text-(--color-text-muted)">
-            {filtered ? 'No practice sessions match these filters.' : 'No practice sessions yet.'}
+            {filtered ? 'No practices match these filters.' : 'No practices yet.'}
           </p>
           {/* No New practice button here — the header's is always on screen. */}
           {filtered && (
@@ -173,7 +173,7 @@ export default function PracticeOverviewPage() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete this practice session?"
+        title="Delete this practice?"
         // Deliberately says nothing about decks or configs: deleting a session takes its
         // own cards and snapshots and nothing else (ADR 015, amended), and reviews
         // already logged stay on record.

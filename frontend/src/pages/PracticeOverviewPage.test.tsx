@@ -285,10 +285,10 @@ describe('PracticeOverviewPage', () => {
     renderOverview('/practice?subject=s1');
 
     expect(
-      await screen.findByText('No practice sessions match these filters.'),
+      await screen.findByText('No practices match these filters.'),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
 
-    expect(await screen.findByText('No practice sessions yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No practices yet.')).toBeInTheDocument();
   });
 });

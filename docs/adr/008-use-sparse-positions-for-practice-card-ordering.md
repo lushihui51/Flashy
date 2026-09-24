@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The minimum-gap follow-up deferred below is decided by ADR 037.
+Accepted. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000.
 
 ## Context
 

@@ -213,7 +213,7 @@ describe('PracticeDetailsPage', () => {
     mockSession(null);
     renderDetails('nope');
 
-    expect(await screen.findByText('Practice session not found.')).toBeInTheDocument();
+    expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
   });
 });

@@ -68,8 +68,8 @@ def read_practice_runs(
 ):
     """Newest first, each row carrying the decks (and their subjects) it snapshotted.
     Filters are the same relation, asked as a question: a session matches a subject or
-    deck if any of its practice_deck rows points at a matching deck (schema invariant 5
-    — there is no config lineage to filter on)."""
+    deck if any of its practice_deck rows points at a matching deck (`source_config_id`
+    is attribution only, never a filter — ADR 040)."""
     return db_read_practice_runs_with_decks(db, current_user.id, subject_id, deck_id)
 
 
@@ -86,7 +86,7 @@ def read_practice_run(
     first beats a client-side join of the list endpoint."""
     session = db_read_practice_run_with_decks(db, practice_run_id, current_user.id)
     if not session:
-        raise HTTPException(status_code=404, detail="Practice session not found")
+        raise HTTPException(status_code=404, detail="Practice not found")
     return session
 
 
@@ -98,7 +98,7 @@ def delete_practice_run(
     status for one to fall out of view into (ADR 015 as amended)."""
     session = db_read_practice_run(db, practice_run_id, current_user.id)
     if not session:
-        raise HTTPException(status_code=404, detail="Practice session not found")
+        raise HTTPException(status_code=404, detail="Practice not found")
     db_delete_practice_run(db, session)
 
 
@@ -115,7 +115,7 @@ def read_practice_run_state(
     is pending, at which point `session_status` already reads "completed"."""
     state = get_practice_run_state(db, practice_run_id, current_user.id)
     if not state:
-        raise HTTPException(status_code=404, detail="Practice session not found")
+        raise HTTPException(status_code=404, detail="Practice not found")
     return state
 
 
@@ -137,7 +137,7 @@ def read_practice_run_breakdown(
     except RunActiveError as e:
         raise HTTPException(status_code=409, detail=e.detail) from e
     if not breakdown:
-        raise HTTPException(status_code=404, detail="Practice session not found")
+        raise HTTPException(status_code=404, detail="Practice not found")
     return breakdown
 
 

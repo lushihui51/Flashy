@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. `card_field_mastery`, named among the dependents below, is the append-only `mastery_log` since ADR 042.
 
 ## Context
 

@@ -43,8 +43,8 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
         foreign_key="practice_run.id", ondelete="CASCADE"
     )
     # NOT NULL, ON DELETE CASCADE — a practice_card without a card is meaningless, so
-    # it can't exist. review_log (not this) is the durable historical record that
-    # outlives a deleted card; this row is operational session state, not history.
+    # it can't exist. Nothing outlives a deleted card: its review_log and mastery_log
+    # rows cascade with it too (ADR 048); this row is operational run state, not history.
     card_id: uuid.UUID = Field(foreign_key="card.id", ondelete="CASCADE")
     position: int = Field(sa_column=Column(BigInteger, nullable=False))
     prompts: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amended by ADR 050 (2026-09-21): the ledger's order is reviewed_at, stamped strictly increasing per card, and the id is a uuid; the rejection of CASCADE on the run foreign key stands.
+Accepted. Amended by ADR 050 (2026-09-21): the ledger's order is reviewed_at, stamped strictly increasing per card, and the id is a uuid; the rejection of CASCADE on the run foreign key stands. Amended by ADR 048 (2026-09-21): a deleted card's review rows cascade with it, so the Consequences' "the raw ratings survive in `review_log`" no longer holds. The ledger and per-card advisory lock here replace ADR 012's row-lock-and-upsert write mechanics.
 
 ## Context
 

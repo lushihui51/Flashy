@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The dormant `DELETE /fields/{id}` and `/fields/{id}/hard` endpoints ADR 049 keeps unexposed are the one deletion path outside the closure.
 
 ## Context
 
