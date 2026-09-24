@@ -371,6 +371,34 @@ class TestCopyDeckErrors:
             )
         db.rollback()
 
+    def test_config_name_collision_on_new_deck_rejected_and_rolled_back(
+        self, db, existing_user, source_setup, target_subject
+    ):
+        """The copy's other database-raised failure: a configuration name already on the
+        new deck. Configuration names are unique per deck, so on a freshly created deck
+        the only way to collide is to select the same configuration twice. The name
+        constraint raises at the staged config create's flush, and copy_deck's handler
+        must turn it into this message and roll back the whole copy, new deck included."""
+        config_id = uuid.UUID(source_setup["config"]["id"])
+        with pytest.raises(
+            ValueError, match="A configuration named 'Source Config' already exists on the new deck"
+        ):
+            copy_deck(
+                db,
+                existing_user.id,
+                uuid.UUID(source_setup["deck"]["id"]),
+                uuid.UUID(target_subject["id"]),
+                deck_practice_config_ids=[config_id, config_id],
+            )
+        db.rollback()
+
+        from app.models.deck import Deck
+
+        decks_in_target = db.exec(
+            select(Deck).where(Deck.subject_id == uuid.UUID(target_subject["id"]))
+        ).all()
+        assert decks_in_target == []
+
     def test_failed_copy_leaves_no_partial_state(
         self, db, client, existing_user, source_setup, target_subject
     ):
