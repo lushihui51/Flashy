@@ -1,6 +1,6 @@
 # 015 — Sole persistence surface and the empty practice
 
-The hardening cycle from the 2026-09-23 /plan session, following the final sync before dogfooding (`docs/cc/2026-09-23-final-sync-before-dogfooding.md`): a practice can no longer be created with zero cards, `database_ops` becomes the only code that touches the database, and two guards close the gaps the sync found. Branch: `feat/persistence-surface`, cut from `main` after `docs/sync-2026-09-23` merges (it needs ADRs 053–054 and this file present).
+The hardening cycle from the 2026-09-23 /plan session, following the final sync before dogfooding (`docs/cc/2026-09-23-final-sync-before-dogfooding.md`): a practice can no longer be created with zero cards, `database_ops` becomes the only code that touches the database, and two guards close the gaps the sync found. Branch: `feat/persistence-surface-and-empty-practice` (it needs ADRs 053–054 and this file present; sync 2026-09-24: `docs/sync-2026-09-23` has not merged to `main`, so this branch carries its commit `700b3c8` ahead of `main`).
 
 Earlier task files affected by name only, for the next sync's Superseded bullets (nothing here invalidates a checked task): task 009's rename map (`_POSITION_CONSTRAINT` moves out of `practice_run.py`; `db_create_practice_*` become `db_stage_create_practice_*`), task 010's write-path contract (`db_append_mastery_log` becomes `db_stage_append_mastery_log`; the card lock is taken through `db_lock_card`), task 013's contracts (`db_scrub_shown_prompt_ids`, the plural `db_delete_*`, `db_clear_mastery_for_deck` gain the `stage_` prefix; `delete_deck` and `delete_card` gain `user_id`). Task 004's carried invariant 2 is restored by T1, which edits its Superseded bullet.
 
@@ -79,7 +79,7 @@ Every function below is a plain module-level function taking `db: Session` first
 
 `app/database_ops/practice_card.py`:
 - `POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"` module constant (replaces `_POSITION_CONSTRAINT` in `practice_run.py`).
-- `db_try_stage_create_practice_card(db, data: dict) -> PracticeCard | None` — inside `with db.begin_nested():` executes `SET CONSTRAINTS {POSITION_CONSTRAINT} IMMEDIATE`, adds `PracticeCard(**data)`, flushes; on `IntegrityError` the savepoint is rolled back by the context manager, the function executes `SET CONSTRAINTS {POSITION_CONSTRAINT} DEFERRED` and returns `None`; on success returns the row and leaves the constraint IMMEDIATE, exactly as `practice_run.py:828-843` behaves today.
+- `db_try_stage_create_practice_card(db, data: dict) -> PracticeCard | None` — inside `with db.begin_nested():` executes `SET CONSTRAINTS {POSITION_CONSTRAINT} IMMEDIATE`, adds `PracticeCard(**data)`, flushes; on `IntegrityError` the savepoint is rolled back by the context manager, the function executes `SET CONSTRAINTS {POSITION_CONSTRAINT} DEFERRED` and returns `None`; on success returns the row and leaves the constraint IMMEDIATE, exactly as `practice_run.py:852-866` (as of task 015 T1; `:828-843` at `700b3c8`) behaves today.
 - `db_read_run_ids_for_practice_cards(db, practice_card_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID | None]` — `{practice_card.id: practice_run_id}` for the ids that exist; empty input returns `{}`.
 
 `app/database_ops/mastery_log.py`:
