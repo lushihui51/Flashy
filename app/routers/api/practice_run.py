@@ -155,7 +155,8 @@ def rerun_run(
     """ADR 039: creates a new run from the completed run's own frozen practice_deck
     snapshots, named verbatim from the request body; the original run is untouched.
     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
-    `nothing_to_rerun` if every snapshot has since gone stale or lost its deck."""
+    `nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400
+    `no_cards` if the surviving snapshots generate no practice card (ADR 056)."""
     strategy = get_mastery_strategy()
     try:
         return rerun_practice_run(db, strategy, current_user.id, practice_run_id, payload.name)

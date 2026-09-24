@@ -82,7 +82,10 @@ class RunStartError(Exception):
     the offending row rather than as a bare toast — a stale config (a field archived
     since it was saved) is fixable, but only if the user is told *which* one to fix. A
     plain message string can't carry that, so the id travels on the exception and is
-    serialized into the error body by the router."""
+    serialized into the error body by the router. Codes: `config_not_found`,
+    `duplicate_deck`, `stale_config`, and `no_cards` when generation wrote no practice
+    card across every selected deck (ADR 056) — that one names no config, since
+    emptiness is a property of the whole practice."""
 
     def __init__(self, code: str, message: str, config_id: uuid.UUID | None = None):
         super().__init__(message)
@@ -124,7 +127,9 @@ class RerunError(Exception):
     live fields, and nothing survived to rebuild a session from. A snapshot naming a
     deleted deck never reaches this check at all — its row cascaded away with the
     deck (ADR 047), and a run left owning no snapshot is deleted alongside its last
-    one (ADR 048), so there is no rerun call left to make against it."""
+    one (ADR 048), so there is no rerun call left to make against it. `no_cards` when
+    the surviving snapshots generated no practice card at all (ADR 056) — a completed
+    practice whose cards were deleted since would otherwise rerun into an empty one."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -229,7 +234,8 @@ def start_practice_run(
     (ADR-008). `name` is stored verbatim; the client formats it. Raises
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
-    validates against its deck's live fields."""
+    validates against its deck's live fields, `no_cards` when generation produced
+    nothing across all of them (ADR 056)."""
     rng = rng or random.Random()
 
     configs = []
@@ -279,6 +285,15 @@ def start_practice_run(
             db, strategy, session.id, config.deck_id, array_values, config.id, rng, next_position
         )
 
+    # ADR 056: emptiness is a property of the whole practice, not of one deck, and it
+    # is only knowable once generation has run — a card can be legal yet blank in every
+    # field one side shows. Raised before the commit, so the refused run and its
+    # snapshots are discarded with the session, exactly as `stale_config` above.
+    if next_position == 0:
+        raise RunStartError(
+            "no_cards", "generation produced no practice cards across the selected decks"
+        )
+
     db.commit()
     db.refresh(session)
     return session
@@ -302,7 +317,8 @@ def rerun_practice_run(
     null; never looked up fresh). `name` is stored verbatim on the new run — the client
     formats it, same as start_practice_run. Raises LookupError for an unknown/foreign
     session (the router 404s); RerunError('run_active') if the session hasn't
-    completed; RerunError('nothing_to_rerun') if every snapshot was dropped. A plain
+    completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
+    RerunError('no_cards') if the survivors generated nothing (ADR 056). A plain
     create: the original run is never touched, so there is nothing to order against a
     delete — one explicit commit at the end, same shape as start_practice_run."""
     rng = rng or random.Random()
@@ -343,6 +359,13 @@ def rerun_practice_run(
             source_config_id,
             rng,
             next_position,
+        )
+
+    # ADR 056, same check as start: a snapshot can survive validation and still have
+    # nothing left to generate from, once its deck's cards are gone.
+    if next_position == 0:
+        raise RerunError(
+            "no_cards", "generation produced no practice cards across the surviving decks"
         )
 
     db.commit()
