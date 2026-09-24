@@ -4,10 +4,14 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
 
 from app.config import settings
 from app.database import SessionDep
+from app.database_ops.app_user import (
+    db_create_app_user,
+    db_read_app_user_by_clerk_id,
+    db_update_app_user_timezone,
+)
 from app.models.app_user import DEFAULT_TIMEZONE, AppUser
 from app.services.timezone import normalize_timezone
 from app.verify_clerk_session import verify_clerk_session
@@ -46,11 +50,7 @@ def _sync_timezone(db: SessionDep, user: AppUser, header_value: str | None) -> A
     zone = normalize_timezone(header_value)
     if zone is None or zone == user.timezone:
         return user
-    user.timezone = zone
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    return db_update_app_user_timezone(db, user, zone)
 
 
 def get_current_app_user(
@@ -71,24 +71,20 @@ def get_current_app_user(
             raise HTTPException(status_code=401, detail="Invalid session token") from e
         clerk_user_id = payload["sub"]
 
-    user = db.exec(select(AppUser).where(AppUser.clerk_user_id == clerk_user_id)).first()
+    user = db_read_app_user_by_clerk_id(db, clerk_user_id)
     if user is not None:
         return _sync_timezone(db, user, x_timezone)
 
-    user = AppUser(
-        clerk_user_id=clerk_user_id, timezone=normalize_timezone(x_timezone) or DEFAULT_TIMEZONE
-    )
-    db.add(user)
     try:
-        db.commit()
+        user = db_create_app_user(
+            db, clerk_user_id, normalize_timezone(x_timezone) or DEFAULT_TIMEZONE
+        )
     except IntegrityError:
         # Concurrent first-sight request already created it — fall back to reading it.
         db.rollback()
-        user = db.exec(select(AppUser).where(AppUser.clerk_user_id == clerk_user_id)).first()
+        user = db_read_app_user_by_clerk_id(db, clerk_user_id)
         assert user is not None, "IntegrityError on clerk_user_id implies a row exists"
         return _sync_timezone(db, user, x_timezone)
-    else:
-        db.refresh(user)
     return user
 
 

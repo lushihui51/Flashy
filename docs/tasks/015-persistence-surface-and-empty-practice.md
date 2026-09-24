@@ -144,12 +144,12 @@ T4 depends on T1 (both edit `practice_run.py` and `test_practice_run.py`). T6, T
 
 ### T5 — `app_user` gets its own module (ADR 055) — no dependencies
 
-- [ ] **Goal:** `app/dependencies.py` reads, creates, and updates the user through `app/database_ops/app_user.py` and issues no statement of its own.
+- [x] **Goal:** `app/dependencies.py` reads, creates, and updates the user through `app/database_ops/app_user.py` and issues no statement of its own.
 - **Files:** `app/database_ops/app_user.py` (new), `app/dependencies.py`.
 - **Details:** The three functions per the contract, with a module docstring naming `app_user` as the table. `_sync_timezone` becomes: compute `zone`; return `user` when `zone is None or zone == user.timezone`; otherwise return `db_update_app_user_timezone(db, user, zone)`. `get_current_app_user`: `user = db_read_app_user_by_clerk_id(db, clerk_user_id)`; if found, sync and return; otherwise `try: user = db_create_app_user(db, clerk_user_id, normalize_timezone(x_timezone) or DEFAULT_TIMEZONE) except IntegrityError: db.rollback(); user = db_read_app_user_by_clerk_id(db, clerk_user_id); assert user is not None, "IntegrityError on clerk_user_id implies a row exists"; return _sync_timezone(db, user, x_timezone)`, then `return user`. The concurrent-first-sight comment stays on the `except`. Remove `from sqlmodel import select`; keep `from sqlalchemy.exc import IntegrityError`.
 - **Out of scope:** the dev-auth bypass and its `TODO(defer:dev-auth-bypass)`; `app/verify_clerk_session.py`; `app/services/timezone.py`; any test change (the existing tests pin the behaviour).
 - **Done when:** `uv run pytest tests/api_tests/test_user_timezone.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_verify_clerk_session.py -q` passes unchanged; `grep -n "select\|db\.exec\|db\.add\|db\.get" app/dependencies.py` returns nothing; `grep -c "^def db_" app/database_ops/app_user.py` prints 3.
-- Notes:
+- Notes: none. `db_update_app_user_timezone` drops the `db.add(user)` the old `_sync_timezone` had, as the contract's wording ("sets `user.timezone`, commits, refreshes") specifies and for the same reason T6 gives for `touch`: the row was loaded by this session, so the assignment is already tracked. Pre-checked against T10's four rules with an `ast` scan: `app/dependencies.py` no longer appears under the statement-import or session-call rules, and all three new functions satisfy the `stage_` rule (one `read` that does not commit, two unprefixed writers that do). 36 pinned tests and 312 backend tests pass.
 
 ### T6 — Routers, deletion, `touch`, and the subject update stop touching the session (ADR 055) — after T4
 
