@@ -59,6 +59,18 @@ def db_next_position(db: Session, deck_id: uuid.UUID) -> int:
     return 0 if max_position is None else max_position + 1
 
 
+def db_stage_create_field_def(
+    db: Session, deck_id: uuid.UUID, name: str, field_type: FieldType, position: int
+) -> FieldDef:
+    """Staged counterpart to db_create_field_def: the caller supplies the position,
+    because a caller building several fields in one transaction already knows each one's
+    slot. An `IntegrityError` from the flush propagates."""
+    field_def = FieldDef(deck_id=deck_id, name=name, type=field_type, position=position)
+    db.add(field_def)
+    db.flush()
+    return field_def
+
+
 def db_create_field_def(
     db: Session, deck_id: uuid.UUID, name: str, field_type: FieldType
 ) -> FieldDef:

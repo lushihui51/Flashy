@@ -17,12 +17,28 @@ def _read_card_with_values(db: Session, card_id: uuid.UUID) -> Card | None:
     ).first()
 
 
-def db_create_card(db: Session, deck_id: uuid.UUID, values: dict[uuid.UUID, str]) -> Card:
+def db_stage_create_card_field_values(
+    db: Session, card_id: uuid.UUID, values: dict[uuid.UUID, str]
+) -> None:
+    """One value row per item, added but not flushed: the caller's next flush or commit
+    writes them together."""
+    for field_def_id, value in values.items():
+        db.add(CardFieldValue(card_id=card_id, field_def_id=field_def_id, value=value))
+
+
+def db_stage_create_card(db: Session, deck_id: uuid.UUID, values: dict[uuid.UUID, str]) -> Card:
+    """The card is flushed so its id exists for the value rows, which are added but not
+    flushed. The returned card does not have `values` loaded; a caller that needs them
+    reads the card back after its own commit, as db_create_card does."""
     card = Card(deck_id=deck_id)
     db.add(card)
     db.flush()
-    for field_def_id, value in values.items():
-        db.add(CardFieldValue(card_id=card.id, field_def_id=field_def_id, value=value))
+    db_stage_create_card_field_values(db, card.id, values)
+    return card
+
+
+def db_create_card(db: Session, deck_id: uuid.UUID, values: dict[uuid.UUID, str]) -> Card:
+    card = db_stage_create_card(db, deck_id, values)
     db.commit()
     return _read_card_with_values(db, card.id)
 
