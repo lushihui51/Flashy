@@ -7,7 +7,6 @@ from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import (
     db_archive_field_def,
     db_count_card_field_values,
-    db_create_field_def,
     db_hard_delete_field_def,
     db_read_field_def,
     db_read_field_defs,
@@ -17,6 +16,7 @@ from app.database_ops.field_def import (
 from app.dependencies import CurrentUserDep
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
 from app.services.activity import touch
+from app.services.field_def_create import create_field_def as create_field_def_service
 
 router = APIRouter(tags=["Field Definitions"])
 
@@ -28,9 +28,8 @@ def create_field_def(
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    touch(db, deck)
     try:
-        return db_create_field_def(db, deck_id, payload.name, payload.type)
+        return create_field_def_service(db, deck, payload.name, payload.type)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
