@@ -4,8 +4,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.database_ops.card import db_read_card, db_read_card_ids_for_deck
@@ -25,6 +23,7 @@ from app.database_ops.practice_card import (
     db_read_ratings_by_review_group,
     db_stage_renumber_pending_practice_cards,
     db_stage_update_practice_card_status,
+    db_try_stage_create_practice_card,
 )
 from app.database_ops.practice_deck import (
     db_stage_create_practice_deck,
@@ -72,7 +71,6 @@ _POSITION_GAP = 1000
 # turn, clamping the mastery-ordered insertion point rather than replacing it — a card
 # whose mastery already puts it deeper than the floor stays at its deeper slot.
 RETRY_SPACING_FLOOR = 3
-_POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"
 
 
 class RunStartError(Exception):
@@ -848,23 +846,19 @@ def _requeue_failed_card(
             [(c, scores[c.card_id].mastery) for c in pending], scores[old_card.card_id].mastery
         )
 
-        try:
-            with db.begin_nested():
-                db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} IMMEDIATE"))
-                new_card = db_stage_create_practice_card(
-                    db,
-                    {
-                        "practice_run_id": old_card.practice_run_id,
-                        "card_id": old_card.card_id,
-                        "position": position,
-                        "prompts": prompts,
-                        "answers": answers,
-                    },
-                )
+        new_card = db_try_stage_create_practice_card(
+            db,
+            {
+                "practice_run_id": old_card.practice_run_id,
+                "card_id": old_card.card_id,
+                "position": position,
+                "prompts": prompts,
+                "answers": answers,
+            },
+        )
+        if new_card is not None:
             return new_card
-        except IntegrityError:
-            db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} DEFERRED"))
-            db_stage_renumber_pending_practice_cards(db, old_card.practice_run_id)
+        db_stage_renumber_pending_practice_cards(db, old_card.practice_run_id)
 
     raise RuntimeError(
         f"could not find a free position for a requeued card in session "

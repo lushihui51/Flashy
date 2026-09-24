@@ -3,16 +3,18 @@ import uuid
 from collections import defaultdict
 from datetime import timedelta
 
-from sqlalchemy import text
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
+from app.database_ops.card import db_read_card_ids_for_decks
 from app.database_ops.mastery_log import (
     db_stage_append_mastery_log,
     db_stage_clear_mastery,
     db_stage_clear_mastery_for_deck,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
+    db_lock_card,
 )
+from app.database_ops.practice_card import db_read_run_ids_for_practice_cards
 from app.database_ops.review_log import (
     ReviewGroupWriteOutcome,
     db_fetch_review_log_for_rebuild,
@@ -21,8 +23,6 @@ from app.database_ops.review_log import (
 )
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import CardScore, FieldMasteryState, ReviewGroup
-from app.models.card import Card
-from app.models.practice_card import PracticeCard
 from app.models.review_log import ReviewLog
 
 
@@ -51,9 +51,7 @@ def apply_rating(
     states — the same pattern db_stage_log_review_group already uses for review_group_id,
     scoped here to card_id instead. Does not commit — the caller owns the
     transaction."""
-    db.execute(
-        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(group.card_id)}
-    )
+    db_lock_card(db, group.card_id)
 
     updates = strategy.expand(group)
     affected_field_ids = {field_def_id for _, field_def_id, _ in updates}
@@ -109,9 +107,7 @@ def record_review_group(
     against the old group-then-card order.
 
     Does not commit — the caller owns the transaction."""
-    db.execute(
-        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(group.card_id)}
-    )
+    db_lock_card(db, group.card_id)
     latest_reviewed_at = db_read_latest_reviewed_at(db, group.card_id)
     if latest_reviewed_at is not None:
         group = dataclasses.replace(
@@ -170,7 +166,7 @@ def deck_mastery(
     stored, never a trigger."""
     if not deck_ids:
         return {}
-    card_ids = list(db.exec(select(Card.id).where(col(Card.deck_id).in_(deck_ids))).all())
+    card_ids = list(db_read_card_ids_for_decks(db, deck_ids))
     rows = db_fetch_mastery_read_rows(db, card_ids)
     scores_by_deck: dict[uuid.UUID, list[float | None]] = {did: [] for did in deck_ids}
     for row in rows:
@@ -211,15 +207,7 @@ def _fetch_run_attribution(
     was deleted gets no entry here and rebuild_mastery treats that as None — the
     accepted asymmetry ADR 042 calls out, which no breakdown can show anyway. (A
     deleted card's review rows cascade with it, ADR 048, so they never reach a replay.)"""
-    if not review_group_ids:
-        return {}
-    return dict(
-        db.exec(
-            select(PracticeCard.id, PracticeCard.practice_run_id).where(
-                col(PracticeCard.id).in_(review_group_ids)
-            )
-        ).all()
-    )
+    return db_read_run_ids_for_practice_cards(db, review_group_ids)
 
 
 def _replay_review_groups(db: Session, strategy: MasteryStrategy, rows: list[ReviewLog]) -> None:

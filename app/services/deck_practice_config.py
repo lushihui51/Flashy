@@ -1,11 +1,11 @@
 import uuid
 
-from sqlmodel import Session, col, select, update
+from sqlmodel import Session
 
 from app.database_ops.deck_practice_config import db_update_deck_practice_config
+from app.database_ops.field_def import db_read_active_field_ids_for_decks
+from app.database_ops.practice_deck import db_stage_unlink_practice_decks_from_config
 from app.models.deck_practice_config import DeckPracticeConfig
-from app.models.field_def import FieldDef
-from app.models.practice_deck import PracticeDeck
 
 _ARRAY_FIELDS = (
     "prompt_field_ids",
@@ -48,15 +48,7 @@ def validate_deck_practice_config(
 
     all_ids = set().union(*(s for _, s in groups))
     if all_ids:
-        live_ids = set(
-            db.exec(
-                select(FieldDef.id).where(
-                    FieldDef.deck_id == deck_id,
-                    col(FieldDef.id).in_(all_ids),
-                    col(FieldDef.archived_at).is_(None),
-                )
-            ).all()
-        )
+        live_ids = all_ids & db_read_active_field_ids_for_decks(db, [deck_id])
         unknown = all_ids - live_ids
         if unknown:
             raise ValueError(
@@ -106,9 +98,5 @@ def update_deck_practice_config(
         field in data and data[field] != getattr(config, field) for field in _ARRAY_FIELDS
     )
     if material:
-        db.exec(
-            update(PracticeDeck)
-            .where(col(PracticeDeck.source_config_id) == config.id)
-            .values(source_config_id=None)
-        )
+        db_stage_unlink_practice_decks_from_config(db, config.id)
     return db_update_deck_practice_config(db, config, data)

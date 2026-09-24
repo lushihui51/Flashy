@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select, update
 
 from app.models.practice_deck import PracticeDeck
 
@@ -11,6 +11,18 @@ def db_stage_create_practice_deck(db: Session, data: dict) -> PracticeDeck:
     db.add(practice_deck)
     db.flush()
     return practice_deck
+
+
+def db_stage_unlink_practice_decks_from_config(db: Session, config_id: uuid.UUID) -> None:
+    """Severs attribution (ADR 040): every snapshot that names this configuration as its
+    source stops naming it. Called before a material configuration edit, so the unlink
+    and the edit commit together in the caller's transaction. Snapshots themselves are
+    never touched otherwise — attribution is the only link a configuration has to them."""
+    db.exec(
+        update(PracticeDeck)
+        .where(col(PracticeDeck.source_config_id) == config_id)
+        .values(source_config_id=None)
+    )
 
 
 def db_read_practice_deck_for_deck(
