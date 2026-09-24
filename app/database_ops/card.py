@@ -53,6 +53,20 @@ def db_read_card(db: Session, card_id: uuid.UUID, user_id: uuid.UUID) -> Card | 
     ).first()
 
 
+def db_read_card_for_deck(db: Session, card_id: uuid.UUID, deck_id: uuid.UUID) -> Card | None:
+    """The card only if it belongs to this deck, `values` loaded. No ownership join: the
+    caller has already ownership-checked the deck, so the deck match is the whole scope.
+
+    `values` is loaded fresh only when this session has not loaded the card before, since
+    an eager load does not overwrite a collection already in the identity map. The batch
+    edit relies on that first load coming after its flush of backfilled rows."""
+    return db.exec(
+        select(Card)
+        .where(Card.id == card_id, Card.deck_id == deck_id)
+        .options(selectinload(Card.values))
+    ).first()
+
+
 def db_read_card_ids_for_deck(db: Session, deck_id: uuid.UUID) -> list[uuid.UUID]:
     return list(db.exec(select(Card.id).where(Card.deck_id == deck_id)).all())
 

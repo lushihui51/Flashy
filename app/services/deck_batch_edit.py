@@ -1,17 +1,24 @@
 import uuid
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
-from app.database_ops.field_def import db_next_position
+from app.database_ops.card import (
+    db_read_card_for_deck,
+    db_read_card_ids_for_deck,
+    db_stage_create_card,
+    db_stage_create_card_field_values,
+)
+from app.database_ops.field_def import (
+    db_next_position,
+    db_read_field_defs,
+    db_stage_create_field_def,
+)
 from app.database_ops.subject import db_read_subject
 from app.mastery.strategy import MasteryStrategy
-from app.models.card import Card
-from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
 from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
-from app.models.subject import Subject
 from app.services.activity import touch
 from app.services.deletion import apply_deletion, compute_deletion_impact
 
@@ -69,17 +76,10 @@ def apply_deck_batch_edit(
     # Snapshot before any card is created/deleted below — this is exactly the set that
     # owes a backfilled row to any field created in this same request (D10); a card
     # created later in this request already gets a dense row set at creation time.
-    existing_card_ids = list(
-        db.exec(select(Card.id).where(Card.deck_id == deck.id)).all()
-    )
+    existing_card_ids = db_read_card_ids_for_deck(db, deck.id)
 
     active_fields: dict[uuid.UUID, FieldDef] = {
-        fd.id: fd
-        for fd in db.exec(
-            select(FieldDef).where(
-                FieldDef.deck_id == deck.id, col(FieldDef.archived_at).is_(None)
-            )
-        ).all()
+        fd.id: fd for fd in db_read_field_defs(db, deck.id, user_id)
     }
     key_to_new_field: dict[str, FieldDef] = {}
 
@@ -98,21 +98,16 @@ def apply_deck_batch_edit(
             field_name = entry.name.strip()
             if not field_name:
                 raise DeckBatchEditValidationError("field_defs.create name must not be empty")
-            row = FieldDef(
-                deck_id=deck.id,
-                name=field_name,
-                type=entry.type,
-                position=db_next_position(db, deck.id),
+            row = db_stage_create_field_def(
+                db, deck.id, field_name, entry.type, db_next_position(db, deck.id)
             )
-            db.add(row)
-            db.flush()
             key_to_new_field[entry.client_key] = row
             active_fields[row.id] = row
             # D10: every existing card owes this new field a "" row, in this same
             # transaction — this is the mechanism that keeps the density invariant
             # true going forward, not just at deck-create time.
             for card_id in existing_card_ids:
-                db.add(CardFieldValue(card_id=card_id, field_def_id=row.id, value=""))
+                db_stage_create_card_field_values(db, card_id, {row.id: ""})
 
         for entry in ops.update:
             field = active_fields.get(entry.id)
@@ -131,7 +126,6 @@ def apply_deck_batch_edit(
                         "field_defs.update name must not be empty"
                     )
                 field.name = field_name
-            db.add(field)
 
         for field_id in ops.delete:
             field = active_fields.get(field_id)
@@ -171,7 +165,6 @@ def apply_deck_batch_edit(
                 )
             for position, field in enumerate(resolved_order):
                 field.position = position
-                db.add(field)
 
         db.flush()
 
@@ -182,9 +175,7 @@ def apply_deck_batch_edit(
             touch_deck = True
 
         for card_id in ops.delete:
-            card = db.exec(
-                select(Card).where(Card.id == card_id, Card.deck_id == deck.id)
-            ).first()
+            card = db_read_card_for_deck(db, card_id, deck.id)
             if card is None:
                 raise DeckBatchEditValidationError(
                     f"cards.delete id {card_id} not found on this deck"
@@ -200,13 +191,14 @@ def apply_deck_batch_edit(
         db.flush()
 
         for entry in ops.update:
-            card = db.exec(
-                select(Card).where(Card.id == entry.id, Card.deck_id == deck.id)
-            ).first()
+            card = db_read_card_for_deck(db, entry.id, deck.id)
             if card is None:
                 raise DeckBatchEditValidationError(
                     f"cards.update id {entry.id} not found on this deck"
                 )
+            # The flush at the end of the field phase precedes this read, so a "" row
+            # backfilled for a field created in this request is already in card.values.
+            existing = {v.field_def_id: v for v in card.values}
             for key, value in entry.values.items():
                 # A same-request client_key is valid here too (Phase 7): field
                 # create -> ... -> card update is the stated order, so a field
@@ -219,16 +211,10 @@ def apply_deck_batch_edit(
                     )
                 field_id = field.id
                 stored_value = "" if _is_blank(value) else value
-                existing = db.get(CardFieldValue, (card.id, field_id))
-                if existing is not None:
-                    existing.value = stored_value
-                    db.add(existing)
+                if field_id in existing:
+                    existing[field_id].value = stored_value
                 else:
-                    db.add(
-                        CardFieldValue(
-                            card_id=card.id, field_def_id=field_id, value=stored_value
-                        )
-                    )
+                    db_stage_create_card_field_values(db, card.id, {field_id: stored_value})
 
         for entry in ops.create:
             if all(_is_blank(v) for v in entry.values.values()):
@@ -241,25 +227,18 @@ def apply_deck_batch_edit(
                         f"cards.create value references unknown field {key!r}"
                     )
                 resolved_values[field.id] = "" if _is_blank(value) else value
-            new_card = Card(deck_id=deck.id)
-            db.add(new_card)
-            db.flush()
-            for field_id in active_fields:
-                db.add(
-                    CardFieldValue(
-                        card_id=new_card.id,
-                        field_def_id=field_id,
-                        value=resolved_values.get(field_id, ""),
-                    )
-                )
+            db_stage_create_card(
+                db,
+                deck.id,
+                {field_id: resolved_values.get(field_id, "") for field_id in active_fields},
+            )
 
     if touch_deck:
         touch(db, deck)
     if touch_subject_ids:
-        subjects = [db.get(Subject, sid) for sid in touch_subject_ids]
+        subjects = [db_read_subject(db, sid, user_id) for sid in touch_subject_ids]
         touch(db, *(s for s in subjects if s is not None))
 
-    db.add(deck)
     try:
         db.commit()
     except IntegrityError as e:
