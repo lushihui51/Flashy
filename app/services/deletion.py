@@ -18,6 +18,7 @@ from app.database_ops.card import (
     db_read_owned_card_ids,
 )
 from app.database_ops.deck import (
+    db_read_deck,
     db_stage_delete_decks,
     db_read_deck_ids_for_subjects,
     db_read_owned_deck_ids,
@@ -39,7 +40,11 @@ from app.database_ops.practice_run import (
     db_read_run_ids_with_all_decks_in,
 )
 from app.database_ops.review_log import db_stage_scrub_shown_prompt_ids
-from app.database_ops.subject import db_stage_delete_subjects, db_read_owned_subject_ids
+from app.database_ops.subject import (
+    db_read_owned_subject_ids,
+    db_read_subject,
+    db_stage_delete_subjects,
+)
 from app.mastery.strategy import MasteryStrategy
 from app.models.card import Card
 from app.models.deck import Deck
@@ -167,21 +172,23 @@ def delete_subject(db: Session, strategy: MasteryStrategy, subject: Subject) -> 
     db.commit()
 
 
-def delete_deck(db: Session, strategy: MasteryStrategy, deck: Deck) -> None:
-    subject = db.get(Subject, deck.subject_id)
+def delete_deck(
+    db: Session, strategy: MasteryStrategy, user_id: uuid.UUID, deck: Deck
+) -> None:
+    subject = db_read_subject(db, deck.subject_id, user_id)
     assert subject is not None, "a deck's subject always exists"
-    impact = compute_deletion_impact(db, subject.user_id, deck_ids=[deck.id])
+    impact = compute_deletion_impact(db, user_id, deck_ids=[deck.id])
     apply_deletion(db, strategy, impact)
     touch(db, subject)
     db.commit()
 
 
-def delete_card(db: Session, strategy: MasteryStrategy, card: Card) -> None:
-    deck = db.get(Deck, card.deck_id)
+def delete_card(
+    db: Session, strategy: MasteryStrategy, user_id: uuid.UUID, card: Card
+) -> None:
+    deck = db_read_deck(db, card.deck_id, user_id)
     assert deck is not None, "a card's deck always exists"
-    subject = db.get(Subject, deck.subject_id)
-    assert subject is not None, "a deck's subject always exists"
-    impact = compute_deletion_impact(db, subject.user_id, card_ids=[card.id])
+    impact = compute_deletion_impact(db, user_id, card_ids=[card.id])
     apply_deletion(db, strategy, impact)
     touch(db, deck)
     db.commit()

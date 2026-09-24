@@ -15,7 +15,6 @@ from app.database_ops.field_def import (
     db_reorder_field_defs,
 )
 from app.dependencies import CurrentUserDep
-from app.models.deck import Deck
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
 from app.services.activity import touch
 
@@ -95,7 +94,7 @@ def update_field_def(
         raise HTTPException(status_code=400, detail="Field type cannot be changed")
     if payload.name is None:
         return field_def
-    deck = db.get(Deck, field_def.deck_id)
+    deck = db_read_deck(db, field_def.deck_id, current_user.id)
     if deck:
         touch(db, deck)
     try:
@@ -115,7 +114,7 @@ def archive_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uu
         active_count = len(db_read_field_defs(db, field_def.deck_id, current_user.id))
         if active_count <= 2:
             raise HTTPException(status_code=422, detail="a deck needs at least two fields")
-        deck = db.get(Deck, field_def.deck_id)
+        deck = db_read_deck(db, field_def.deck_id, current_user.id)
         if deck:
             touch(db, deck)
     return db_archive_field_def(db, field_def)
@@ -134,7 +133,7 @@ def hard_delete_field_def(db: SessionDep, current_user: CurrentUserDep, field_id
         raise HTTPException(
             status_code=400, detail="Field still has card values, cannot hard delete"
         )
-    deck = db.get(Deck, field_def.deck_id)
+    deck = db_read_deck(db, field_def.deck_id, current_user.id)
     if deck:
         touch(db, deck)
     db_hard_delete_field_def(db, field_def)
