@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amends ADR 006: `unwrap` throws a typed `ApiDetailError` for structured error details.
 
 ## Context
 

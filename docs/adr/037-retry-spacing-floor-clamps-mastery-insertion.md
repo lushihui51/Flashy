@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Decides the minimum-gap follow-up ADR 008 deferred.
 
 ## Context
 

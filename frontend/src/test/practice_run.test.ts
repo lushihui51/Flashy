@@ -15,7 +15,7 @@ import type { components } from 'src/api/types';
 const BASE = 'http://localhost:8000';
 
 describe('createPracticeRun', () => {
-  it('sends the payload and returns the created practice session', async () => {
+  it('sends the payload and returns the created practice', async () => {
     const payload: components['schemas']['PracticeRunCreate'] = {
       name: 'Aug 24, 2026, 2:15 PM',
       deck_practice_config_ids: ['00000000-0000-0000-0000-000000000401'],
@@ -148,7 +148,7 @@ describe('readPracticeRuns', () => {
 });
 
 describe('readPracticeRun', () => {
-  it('requests the right id and returns the practice session', async () => {
+  it('requests the right id and returns the practice', async () => {
     server.use(
       http.get(`${BASE}/api/practice_runs/:practice_run_id`, ({ params }) =>
         HttpResponse.json({
@@ -173,11 +173,11 @@ describe('readPracticeRun', () => {
   it('throws the detail string on a 404', async () => {
     server.use(
       http.get(`${BASE}/api/practice_runs/:practice_run_id`, () =>
-        HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
+        HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
       ),
     );
 
-    await expect(readPracticeRun('nope')).rejects.toThrow('Practice session not found');
+    await expect(readPracticeRun('nope')).rejects.toThrow('Practice not found');
   });
 });
 
@@ -239,11 +239,11 @@ describe('readPracticeRunState', () => {
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
       http.get(`${BASE}/api/practice_runs/:practice_run_id/state`, () =>
-        HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
+        HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
       ),
     );
 
-    await expect(readPracticeRunState('ps_7')).rejects.toThrow('Practice session not found');
+    await expect(readPracticeRunState('ps_7')).rejects.toThrow('Practice not found');
   });
 });
 
@@ -308,11 +308,11 @@ describe('readPracticeRunBreakdown', () => {
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
       http.get(`${BASE}/api/practice_runs/:practice_run_id/breakdown`, () =>
-        HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
+        HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
       ),
     );
 
-    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow('Practice session not found');
+    await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow('Practice not found');
   });
 });
 
@@ -373,12 +373,12 @@ describe('rerunPracticeRun', () => {
   it('throws the detail string for an unknown or foreign session', async () => {
     server.use(
       http.post(`${BASE}/api/practice_runs/:practice_run_id/rerun`, () =>
-        HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
+        HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
       ),
     );
 
     await expect(rerunPracticeRun('ps_7', 'Evening run')).rejects.toThrow(
-      'Practice session not found',
+      'Practice not found',
     );
   });
 });

@@ -24,10 +24,9 @@ class MasteryLog(AppModel, table=True):
 
     `practice_run_id` is nullable attribution, ON DELETE SET NULL — deleting a run
     must not rewind mastery, it only loses which run gets credit for the movement.
-    `card_id`/`field_def_id` CASCADE, mirroring the old cache table's semantics: a
-    deleted card's practice_cards cascade away with it and it leaves every breakdown
-    anyway, so its ledger rows are cache-for-nothing (the raw rating history survives
-    in review_log regardless). `review_group_id` is stored as provenance only — which
+    `card_id`/`field_def_id` CASCADE: a deleted card or field takes its review_log
+    rows with it (ADR 048), so its ledger rows would have nothing left to be a
+    projection of. `review_group_id` is stored as provenance only — which
     appearance produced the row — never as an order key; it carries no foreign key and
     is not indexed."""
 

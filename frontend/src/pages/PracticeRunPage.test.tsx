@@ -31,7 +31,7 @@ function mockRun(data: Record<string, unknown> | null = runState()) {
     http.get(`${BASE}/api/practice_runs/:id/state`, () =>
       data
         ? HttpResponse.json(data)
-        : HttpResponse.json({ detail: 'Practice session not found' }, { status: 404 }),
+        : HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
     ),
   );
 }
@@ -212,7 +212,7 @@ describe('PracticeRunPage', () => {
     mockRun(null);
     renderRun('nope');
 
-    expect(await screen.findByText('Practice session not found.')).toBeInTheDocument();
+    expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
   });
 });
 

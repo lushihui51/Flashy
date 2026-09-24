@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The vestigial `cards` array the Consequences keep was removed by task 008.
 
 ## Context
 

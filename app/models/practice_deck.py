@@ -24,8 +24,8 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     __table_args__ = (UniqueConstraint("practice_run_id", "deck_id"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # ON DELETE CASCADE — a snapshot outlives its *deck* (see deck_id below) but not
-    # its session, which owns it outright (ADR 015 as amended).
+    # ON DELETE CASCADE — a snapshot is owned by its run outright and goes with it; it
+    # does not outlive its deck either (see deck_id below; ADR 047, ADR 048).
     practice_run_id: uuid.UUID = Field(
         foreign_key="practice_run.id", ondelete="CASCADE"
     )

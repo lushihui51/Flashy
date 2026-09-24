@@ -37,11 +37,11 @@ export default function PracticeRunPage() {
       >
         <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
         {/* 005 MD-2: static until the session's real name is fetched, then upgraded. */}
-        {runQuery.data?.session_name ?? 'Practice session'}
+        {runQuery.data?.session_name ?? 'Practice'}
       </Link>
 
       {runQuery.isError && (
-        <p className="mt-4 text-(--color-text-muted)">Practice session not found.</p>
+        <p className="mt-4 text-(--color-text-muted)">Practice not found.</p>
       )}
 
       {runQuery.data && (

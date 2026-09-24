@@ -18,7 +18,7 @@ function shape(config: DeckPracticeConfigSummary): string {
     `${pluralize(config.answer_field_ids.length + config.answer_pool_ids.length, 'answer field')}`,
   ];
   const pooled = config.prompt_pool_ids.length + config.answer_pool_ids.length;
-  if (pooled > 0) parts.push('pooled');
+  if (pooled > 0) parts.push('random draw');
   return parts.join(' · ');
 }
 

@@ -207,11 +207,10 @@ def _fetch_run_attribution(
 ) -> dict[uuid.UUID, uuid.UUID | None]:
     """Reconstructs run attribution for a rebuild replay: a group's review_group_id is
     the practice_card.id it was submitted against (submit_rating's construction), so a
-    still-existing practice_card row gives back its practice_run_id; a group whose
-    practice_card is gone (its card, or its whole run, was deleted) gets no entry here
-    and rebuild_mastery treats that as None — the accepted asymmetry ADR 042 calls
-    out: live writes keep attribution when a card is later deleted, a rebuild loses it,
-    which no breakdown can show anyway."""
+    still-existing practice_card row gives back its practice_run_id; a group whose run
+    was deleted gets no entry here and rebuild_mastery treats that as None — the
+    accepted asymmetry ADR 042 calls out, which no breakdown can show anyway. (A
+    deleted card's review rows cascade with it, ADR 048, so they never reach a replay.)"""
     if not review_group_ids:
         return {}
     return dict(

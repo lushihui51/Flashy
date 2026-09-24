@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Supersedes the SET NULL half of ADR 015 — `review_log` rows and `practice_deck` snapshots outliving what they reference, `deleted_deck_count` and the "deleted deck" chip — under the rule of ADR 047. Amends ADR 011: a review row is owned by its card and field and is deleted with them; the ledger stays append-only in every other respect and remains the sole source mastery is rebuilt from.
+Accepted. Supersedes the SET NULL half of ADR 015 — `review_log` rows and `practice_deck` snapshots outliving what they reference, `deleted_deck_count` and the "deleted deck" chip — under the rule of ADR 047. Amends ADR 011: a review row is owned by its card and field and is deleted with them; the ledger stays append-only in every other respect and remains the sole source mastery is rebuilt from. Makes ADR 030's null-`deck_id` rerun branch unreachable: a snapshot goes with its deck, and a run left with no decks is deleted.
 
 ## Context
 
