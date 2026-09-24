@@ -559,6 +559,63 @@ class TestCardsUpdateAlone:
         [updated] = response.json()["cards"]
         assert updated["values"][back_id] == ""
 
+    def test_card_update_same_card_twice_rejected(
+        self, client, existing_deck, existing_field_defs
+    ):
+        """MD-1: a card named twice in cards.update is refused before any entry applies."""
+        front_id, back_id = (fd["id"] for fd in existing_field_defs)
+        card_id = client.post(
+            "/api/cards",
+            json={"deck_id": existing_deck["id"], "values": {front_id: "Bonjour", back_id: "Hello"}},
+        ).json()["id"]
+
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "cards": _cards(
+                    update=[
+                        {"id": card_id, "values": {front_id: "a"}},
+                        {"id": card_id, "values": {front_id: "b"}},
+                    ]
+                )
+            },
+        )
+        assert response.status_code == 422, response.text
+        detail = response.json()["detail"]
+        assert "is duplicated" in detail
+        assert card_id in detail
+
+        deck = client.get(f"/api/decks/{existing_deck['id']}").json()
+        [card] = deck["cards"]
+        assert card["values"][front_id] == "Bonjour"
+
+    def test_card_update_two_different_cards_accepted(
+        self, client, existing_deck, existing_field_defs
+    ):
+        front_id, back_id = (fd["id"] for fd in existing_field_defs)
+        card_ids = [
+            client.post(
+                "/api/cards",
+                json={"deck_id": existing_deck["id"], "values": {front_id: front, back_id: "x"}},
+            ).json()["id"]
+            for front in ("Bonjour", "Merci")
+        ]
+
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "cards": _cards(
+                    update=[
+                        {"id": card_ids[0], "values": {front_id: "Salut"}},
+                        {"id": card_ids[1], "values": {front_id: "Pardon"}},
+                    ]
+                )
+            },
+        )
+        assert response.status_code == 200, response.text
+        fronts = {c["id"]: c["values"][front_id] for c in response.json()["cards"]}
+        assert fronts == {card_ids[0]: "Salut", card_ids[1]: "Pardon"}
+
 
 class TestCardsDeleteAlone:
     def test_card_delete_alone(self, client, existing_deck, existing_field_defs):
@@ -788,3 +845,36 @@ class TestRollback:
         check = client.get(f"/api/decks/{existing_deck['id']}").json()
         assert check["name"] == "Test Deck"
         assert {fd["name"] for fd in check["field_defs"]} == {"front", "back"}
+
+    def test_duplicated_card_update_rolls_back_staged_card_delete(
+        self, client, existing_deck, existing_field_defs
+    ):
+        """MD-1's pre-scan runs after cards.delete is staged and flushed, so the 422 has
+        to roll the delete back with everything else."""
+        front_id, back_id = (fd["id"] for fd in existing_field_defs)
+        doomed_id, kept_id = (
+            client.post(
+                "/api/cards",
+                json={"deck_id": existing_deck["id"], "values": {front_id: front, back_id: "x"}},
+            ).json()["id"]
+            for front in ("Bonjour", "Merci")
+        )
+
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "cards": _cards(
+                    delete=[doomed_id],
+                    update=[
+                        {"id": kept_id, "values": {front_id: "a"}},
+                        {"id": kept_id, "values": {front_id: "b"}},
+                    ],
+                )
+            },
+        )
+        assert response.status_code == 422, response.text
+        assert "is duplicated" in response.json()["detail"]
+
+        check = client.get(f"/api/decks/{existing_deck['id']}").json()
+        fronts = {c["id"]: c["values"][front_id] for c in check["cards"]}
+        assert fronts == {doomed_id: "Bonjour", kept_id: "Merci"}

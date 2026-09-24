@@ -49,9 +49,9 @@ T1 and T2 touch disjoint files and have no dependency on each other; they can ru
 
 ### T2 — The batch edit rejects a repeated card in `cards.update` (MD-1) — no dependencies
 
-- [ ] **Goal:** a batch edit whose `cards.update` names one card twice is refused with a 422 naming the card, before any entry is applied.
+- [x] **Goal:** a batch edit whose `cards.update` names one card twice is refused with a 422 naming the card, before any entry is applied.
 - **Files:** `app/services/deck_batch_edit.py`, `tests/api_tests/test_deck_batch_edit.py`.
 - **Details:** Add the pre-scan per the Contracts, placed immediately above `for entry in ops.update:` in the cards phase, with a one-line comment stating that the values loop builds `existing` from `card.values` once per card and relies on a card appearing once (task 015 T9). Add to `TestCardsUpdateAlone`: `test_card_update_same_card_twice_rejected(self, client, existing_deck, existing_field_defs)`: create a card via POST `/api/cards` with front `Bonjour` and back `Hello`; PATCH with `_cards(update=[{"id": card_id, "values": {front_id: "a"}}, {"id": card_id, "values": {front_id: "b"}}])`; assert 422 and that the detail contains both `is duplicated` and the card id; GET `/api/decks/{deck_id}` and assert the card's front is still `Bonjour`. And `test_card_update_two_different_cards_accepted(self, client, existing_deck, existing_field_defs)`: create two cards, PATCH one update entry for each with a new front value, assert 200 and both new values in the response.
 - **Out of scope:** the same rule on `field_defs.update`, `field_defs.delete`, or `cards.delete` (MD-1); merging entries per card; the values loop's create branch; the commit handler (MD-2); the frontend, which never sends `cards`.
 - **Done when:** `uv run pytest` passes in full, including the two new tests and every existing test in `test_deck_batch_edit.py` unchanged; `grep -n "is duplicated" app/services/deck_batch_edit.py` prints exactly two lines, the `client_key` rule and the new one.
-- Notes:
+- Notes: none. The rejection test was confirmed to fail (200, not 422) without the pre-scan. One test beyond the spec, added at review: `TestRollback.test_duplicated_card_update_rolls_back_staged_card_delete` pins that a duplicate rolls back a `cards.delete` staged in the same request.
