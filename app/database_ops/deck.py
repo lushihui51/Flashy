@@ -107,7 +107,7 @@ def db_read_deck_ids_for_subjects(
     return set(db.exec(select(Deck.id).where(col(Deck.subject_id).in_(subject_ids))).all())
 
 
-def db_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

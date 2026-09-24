@@ -595,7 +595,7 @@ class TestPositionCollisionFallback:
         self, db, existing_user, session_cards, session_config, monkeypatch
     ):
         """Forces the computed insertion position to collide with an existing pending
-        card's position, so the requeue must hit db_renumber_pending_practice_cards
+        card's position, so the requeue must hit db_stage_renumber_pending_practice_cards
         and succeed on the retry. The natural (non-stubbed) insertion formula always
         leaves virtual-boundary gaps of 1000+, so this can't be provoked by just
         wedging existing cards close together — the stub makes it deterministic

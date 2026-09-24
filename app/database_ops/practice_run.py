@@ -11,7 +11,7 @@ from app.models.practice_run_payloads import PracticeRunDeckSummary, PracticeRun
 from app.models.subject import Subject
 
 
-def db_create_practice_run(db: Session, user_id: uuid.UUID, name: str) -> PracticeRun:
+def db_stage_create_practice_run(db: Session, user_id: uuid.UUID, name: str) -> PracticeRun:
     """Does not commit — the caller owns the transaction (session start is one
     explicit transaction: the session, its practice_decks, and its practice_cards)."""
     session = PracticeRun(user_id=user_id, name=name)
@@ -177,7 +177,7 @@ def db_read_active_run_ids_naming_fields(
     return set(db.exec(query).all())
 
 
-def db_delete_practice_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_practice_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
     Its practice_decks and practice_cards cascade away with it; every review and
     mastery value it produced stays (ADR 047, ADR 039)."""

@@ -115,7 +115,7 @@ def db_count_cards_for_decks(
     return db.exec(query).one()
 
 
-def db_delete_cards(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_cards(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

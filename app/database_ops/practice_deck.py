@@ -5,8 +5,8 @@ from sqlmodel import Session, select
 from app.models.practice_deck import PracticeDeck
 
 
-def db_create_practice_deck(db: Session, data: dict) -> PracticeDeck:
-    """Does not commit — see db_create_practice_run."""
+def db_stage_create_practice_deck(db: Session, data: dict) -> PracticeDeck:
+    """Does not commit — see db_stage_create_practice_run."""
     practice_deck = PracticeDeck(**data)
     db.add(practice_deck)
     db.flush()

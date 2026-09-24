@@ -94,7 +94,7 @@ def db_read_owned_subject_ids(
     )
 
 
-def db_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
     FK cascades remove everything the subject owns; the caller has already computed
     exactly which decks, fields, cards, configurations, and runs go with them."""

@@ -13,33 +13,33 @@ from sqlmodel import Session
 
 from app.database_ops.card import (
     db_count_cards_for_decks,
-    db_delete_cards,
+    db_stage_delete_cards,
     db_read_card_ids_for_decks,
     db_read_owned_card_ids,
 )
 from app.database_ops.deck import (
-    db_delete_decks,
+    db_stage_delete_decks,
     db_read_deck_ids_for_subjects,
     db_read_owned_deck_ids,
 )
 from app.database_ops.deck_practice_config import (
-    db_delete_deck_practice_configs,
+    db_stage_delete_deck_practice_configs,
     db_read_config_ids_for_decks,
     db_read_config_ids_naming_fields,
 )
 from app.database_ops.field_def import (
-    db_delete_field_defs,
+    db_stage_delete_field_defs,
     db_read_active_field_ids_for_decks,
     db_read_deck_id_by_field,
     db_read_owned_field_ids,
 )
 from app.database_ops.practice_run import (
-    db_delete_practice_runs,
+    db_stage_delete_practice_runs,
     db_read_active_run_ids_naming_fields,
     db_read_run_ids_with_all_decks_in,
 )
-from app.database_ops.review_log import db_scrub_shown_prompt_ids
-from app.database_ops.subject import db_delete_subjects, db_read_owned_subject_ids
+from app.database_ops.review_log import db_stage_scrub_shown_prompt_ids
+from app.database_ops.subject import db_stage_delete_subjects, db_read_owned_subject_ids
 from app.mastery.strategy import MasteryStrategy
 from app.models.card import Card
 from app.models.deck import Deck
@@ -146,14 +146,14 @@ def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpac
     two-field-floor validation: those are each caller's own job. An object loaded
     before this call is not updated for rows the FK cascades below remove; reload
     after, don't reuse what you read before."""
-    db_delete_practice_runs(db, impact.run_ids)
-    db_delete_deck_practice_configs(db, impact.configuration_ids)
+    db_stage_delete_practice_runs(db, impact.run_ids)
+    db_stage_delete_deck_practice_configs(db, impact.configuration_ids)
     for deck_id, field_ids in impact.explicit_fields_by_deck.items():
-        db_scrub_shown_prompt_ids(db, deck_id, field_ids)
-    db_delete_cards(db, impact.card_ids)
-    db_delete_field_defs(db, impact.field_ids)
-    db_delete_decks(db, impact.deck_ids)
-    db_delete_subjects(db, impact.subject_ids)
+        db_stage_scrub_shown_prompt_ids(db, deck_id, field_ids)
+    db_stage_delete_cards(db, impact.card_ids)
+    db_stage_delete_field_defs(db, impact.field_ids)
+    db_stage_delete_decks(db, impact.deck_ids)
+    db_stage_delete_subjects(db, impact.subject_ids)
     db.flush()
     for deck_id in impact.explicit_fields_by_deck:
         rebuild_deck_mastery(db, strategy, deck_id)

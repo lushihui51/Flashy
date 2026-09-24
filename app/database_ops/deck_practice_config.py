@@ -149,7 +149,7 @@ def db_read_config_ids_naming_fields(
     return set(db.exec(query).all())
 
 
-def db_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

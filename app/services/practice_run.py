@@ -17,22 +17,22 @@ from app.database_ops.mastery_log import (
     db_fetch_run_mastery_log_rows,
 )
 from app.database_ops.practice_card import (
-    db_create_practice_card,
+    db_stage_create_practice_card,
     db_read_current_practice_card,
     db_read_pending_practice_cards,
     db_read_practice_card,
     db_read_practice_cards_for_run,
     db_read_ratings_by_review_group,
-    db_renumber_pending_practice_cards,
-    db_update_practice_card_status,
+    db_stage_renumber_pending_practice_cards,
+    db_stage_update_practice_card_status,
 )
 from app.database_ops.practice_deck import (
-    db_create_practice_deck,
+    db_stage_create_practice_deck,
     db_read_practice_deck_for_deck,
     db_read_practice_decks_for_run,
 )
 from app.database_ops.practice_run import (
-    db_create_practice_run,
+    db_stage_create_practice_run,
     db_read_practice_run,
     db_update_practice_run_status,
 )
@@ -171,7 +171,7 @@ def _snapshot_and_generate_deck(
     attribution — start_practice_run passes the live config's id, rerun_practice_run
     the old snapshot's value verbatim — and is never read back by anything below this
     function."""
-    practice_deck = db_create_practice_deck(
+    practice_deck = db_stage_create_practice_deck(
         db,
         {
             "practice_run_id": session_id,
@@ -205,7 +205,7 @@ def _snapshot_and_generate_deck(
         if resolved is None:
             continue
         prompts, answers = resolved
-        db_create_practice_card(
+        db_stage_create_practice_card(
             db,
             {
                 "practice_run_id": session_id,
@@ -259,7 +259,7 @@ def start_practice_run(
             )
         seen_deck_ids.add(config.deck_id)
 
-    session = db_create_practice_run(db, user_id, name)
+    session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
     for config in configs:
@@ -346,7 +346,7 @@ def rerun_practice_run(
             "no deck from this session still has a live, valid snapshot to rerun",
         )
 
-    new_session = db_create_practice_run(db, user_id, name)
+    new_session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
     for deck_id, array_values, source_config_id in surviving_decks:
@@ -751,7 +751,7 @@ def get_practice_run_breakdown(
         )
 
     # First attempt's position ascending — a chain's first row's position never moves
-    # once written (only pending rows are ever renumbered, db_renumber_pending_practice_cards).
+    # once written (only pending rows are ever renumbered, db_stage_renumber_pending_practice_cards).
     breakdown_cards.sort(key=lambda bc: chains[bc.card_id][0].position)
 
     return PracticeRunBreakdown(
@@ -851,7 +851,7 @@ def _requeue_failed_card(
         try:
             with db.begin_nested():
                 db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} IMMEDIATE"))
-                new_card = db_create_practice_card(
+                new_card = db_stage_create_practice_card(
                     db,
                     {
                         "practice_run_id": old_card.practice_run_id,
@@ -864,7 +864,7 @@ def _requeue_failed_card(
             return new_card
         except IntegrityError:
             db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} DEFERRED"))
-            db_renumber_pending_practice_cards(db, old_card.practice_run_id)
+            db_stage_renumber_pending_practice_cards(db, old_card.practice_run_id)
 
     raise RuntimeError(
         f"could not find a free position for a requeued card in session "
@@ -906,7 +906,7 @@ def submit_rating(
 
     failed = any(rating == 1 for rating in ratings.values())
     new_status = PracticeCardStatus.failed if failed else PracticeCardStatus.passed
-    db_update_practice_card_status(db, practice_card, new_status)
+    db_stage_update_practice_card_status(db, practice_card, new_status)
 
     requeued = None
     if failed:

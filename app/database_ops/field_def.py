@@ -161,7 +161,7 @@ def db_read_active_field_ids_for_decks(
     )
 
 
-def db_delete_field_defs(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_field_defs(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

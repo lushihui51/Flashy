@@ -7,16 +7,16 @@ from sqlalchemy import text
 from sqlmodel import Session, col, select
 
 from app.database_ops.mastery_log import (
-    db_append_mastery_log,
-    db_clear_mastery,
-    db_clear_mastery_for_deck,
+    db_stage_append_mastery_log,
+    db_stage_clear_mastery,
+    db_stage_clear_mastery_for_deck,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
 )
 from app.database_ops.review_log import (
     ReviewGroupWriteOutcome,
     db_fetch_review_log_for_rebuild,
-    db_log_review_group,
+    db_stage_log_review_group,
     db_read_latest_reviewed_at,
 )
 from app.mastery.strategy import MasteryStrategy
@@ -48,7 +48,7 @@ def apply_rating(
 
     Because append-only rows can't serialize a read-modify-append the way the old row
     lock did, this takes a per-card Postgres advisory lock before fetching latest
-    states — the same pattern db_log_review_group already uses for review_group_id,
+    states — the same pattern db_stage_log_review_group already uses for review_group_id,
     scoped here to card_id instead. Does not commit — the caller owns the
     transaction."""
     db.execute(
@@ -66,7 +66,7 @@ def apply_rating(
     for (_, field_def_id, _side), update in updates.items():
         states[field_def_id] = strategy.apply_review(states.get(field_def_id), update)
 
-    db_append_mastery_log(
+    db_stage_append_mastery_log(
         db, group.card_id, states, group.reviewed_at, group.review_group_id, practice_run_id
     )
 
@@ -93,11 +93,11 @@ def record_review_group(
       retry that changed nothing. Because record_review_group recomputes a stamp
       before every attempt, a retry recomputes one too — but since nothing is written
       on a RETRY, the persisted stamp from the first attempt is untouched.
-    - Raises ReviewGroupInconsistent (propagated from db_log_review_group) if the log
+    - Raises ReviewGroupInconsistent (propagated from db_stage_log_review_group) if the log
       has a different set of rated fields on record for this review_group_id already.
 
     Order contract (ADR 050): takes the per-card advisory lock first — before
-    db_log_review_group's own review_group_id lock and before apply_rating's — then
+    db_stage_log_review_group's own review_group_id lock and before apply_rating's — then
     replaces `group.reviewed_at` with the greater of the proposed stamp and the
     card's latest review timestamp plus one microsecond, so the stamp is strictly
     increasing across this card's appearances (a card with no reviews yet keeps the
@@ -131,7 +131,7 @@ def record_review_group(
         }
         for field_def_id, rating in group.ratings
     ]
-    outcome = db_log_review_group(db, group.review_group_id, rows)
+    outcome = db_stage_log_review_group(db, group.review_group_id, rows)
     if outcome is ReviewGroupWriteOutcome.new:
         apply_rating(db, strategy, group, practice_run_id)
     return outcome
@@ -249,7 +249,7 @@ def rebuild_mastery(
     write path apply_rating uses, one appearance at a time, oldest first, reconstructing
     each group's run attribution along the way. Because the strategy is a parameter,
     changing strategies is not a migration — it's a rebuild. Slow is fine."""
-    db_clear_mastery(db, user_id)
+    db_stage_clear_mastery(db, user_id)
     rows = db_fetch_review_log_for_rebuild(db, user_id=user_id)
     _replay_review_groups(db, strategy, rows)
     db.commit()
@@ -263,6 +263,6 @@ def rebuild_deck_mastery(db: Session, strategy: MasteryStrategy, deck_id: uuid.U
     cannot disturb any other deck's order). Every other deck's rows, including their
     ids, are untouched. Does not commit — apply_deletion (task 013 T3) calls this
     inside its own transaction."""
-    db_clear_mastery_for_deck(db, deck_id)
+    db_stage_clear_mastery_for_deck(db, deck_id)
     rows = db_fetch_review_log_for_rebuild(db, deck_id=deck_id)
     _replay_review_groups(db, strategy, rows)

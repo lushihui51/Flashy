@@ -46,7 +46,7 @@ def db_fetch_latest_mastery_states(
     }
 
 
-def db_append_mastery_log(
+def db_stage_append_mastery_log(
     db: Session,
     card_id: uuid.UUID,
     states: dict[uuid.UUID, FieldMasteryState],
@@ -208,7 +208,7 @@ def db_fetch_mastery_before_bound(
     }
 
 
-def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
+def db_stage_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     """Delete-scoped clear for rebuild_mastery. user_id=None clears every row; otherwise
     only rows for cards owned (via deck -> subject) by that user."""
     if user_id is None:
@@ -223,7 +223,7 @@ def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))
 
 
-def db_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
+def db_stage_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
     """Delete-scoped clear for rebuild_deck_mastery (ADR 049): only rows for cards
     belonging to this one deck — every other deck's rows, and their ids, are
     untouched."""

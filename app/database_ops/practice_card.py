@@ -7,8 +7,8 @@ from app.models.practice_run import PracticeRun
 from app.models.review_log import ReviewLog
 
 
-def db_create_practice_card(db: Session, data: dict) -> PracticeCard:
-    """Does not commit — see db_create_practice_run."""
+def db_stage_create_practice_card(db: Session, data: dict) -> PracticeCard:
+    """Does not commit — see db_stage_create_practice_run."""
     card = PracticeCard(**data)
     db.add(card)
     db.flush()
@@ -74,7 +74,7 @@ def db_read_pending_practice_cards(
     )
 
 
-def db_renumber_pending_practice_cards(
+def db_stage_renumber_pending_practice_cards(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Fresh 1000-spaced positions for a session's pending cards, preserving their
@@ -119,7 +119,7 @@ def db_read_ratings_by_review_group(
     return ratings
 
 
-def db_update_practice_card_status(
+def db_stage_update_practice_card_status(
     db: Session, card: PracticeCard, status: PracticeCardStatus
 ) -> PracticeCard:
     card.status = status
