@@ -12,7 +12,9 @@ import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import { ApiDetailError } from 'src/api/unwrap';
 import { formatDateTime } from 'src/lib/datetime';
+import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -84,7 +86,13 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
     },
     onError: (error: Error) => {
       setConfirmRerunOpen(false);
-      setRerunError(error.message);
+      // ADR 056: `no_cards` is the one rerun failure whose sentence the frontend owns
+      // — the backend's message names the mechanism, not the two causes a user can fix.
+      setRerunError(
+        error instanceof ApiDetailError && error.detail.code === 'no_cards'
+          ? NO_CARDS_MESSAGE
+          : error.message,
+      );
     },
   });
 

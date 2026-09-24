@@ -7,6 +7,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
+import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 
 const BASE = 'http://localhost:8000';
 
@@ -331,5 +332,33 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     // Still on ps1 — nothing navigated away, the old session is unchanged.
     expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
+  });
+
+  it('a no_cards rerun failure closes the dialog and shows the no-cards sentence', async () => {
+    mockSession(session({ status: 'completed' }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'no_cards',
+              message: 'generation produced no practice cards across the surviving decks',
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderDetails();
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
+
+    // The frontend's sentence in full, not the backend's message (ADR 056).
+    expect((await screen.findByRole('alert')).textContent).toBe(NO_CARDS_MESSAGE);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
