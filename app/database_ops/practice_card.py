@@ -1,5 +1,8 @@
 import uuid
+from collections.abc import Collection
 
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
 from app.models.practice_card import PracticeCard, PracticeCardStatus
@@ -7,12 +10,55 @@ from app.models.practice_run import PracticeRun
 from app.models.review_log import ReviewLog
 
 
-def db_create_practice_card(db: Session, data: dict) -> PracticeCard:
-    """Does not commit — see db_create_practice_run."""
+# The practice_card position UNIQUE constraint, by its ADR 054 derived name. It is
+# DEFERRABLE INITIALLY DEFERRED so a bulk renumber can pass through intermediate
+# collisions; db_try_stage_create_practice_card switches it to IMMEDIATE for one insert.
+POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"
+
+
+def db_stage_create_practice_card(db: Session, data: dict) -> PracticeCard:
+    """Does not commit — see db_stage_create_practice_run."""
     card = PracticeCard(**data)
     db.add(card)
     db.flush()
     return card
+
+
+def db_try_stage_create_practice_card(db: Session, data: dict) -> PracticeCard | None:
+    """Inserts at `data["position"]`, or reports that the position is taken by returning
+    None — the requeue's one operation, owning its savepoint (ADR 055).
+
+    The position constraint is deferred, so a colliding insert would otherwise surface
+    only at COMMIT, too late to retry without losing the rating already written earlier
+    in the caller's transaction. Switching it to IMMEDIATE inside a savepoint makes the
+    collision raise at the flush, where rolling back the savepoint discards only this
+    insert. On a collision the constraint is set back to DEFERRED so the caller's
+    renumber can pass through intermediate states. On success it is deliberately left
+    IMMEDIATE, exactly as the inline code this replaced behaved: ADR 055 records that
+    asymmetry rather than changing it."""
+    try:
+        with db.begin_nested():
+            db.execute(text(f"SET CONSTRAINTS {POSITION_CONSTRAINT} IMMEDIATE"))
+            return db_stage_create_practice_card(db, data)
+    except IntegrityError:
+        db.execute(text(f"SET CONSTRAINTS {POSITION_CONSTRAINT} DEFERRED"))
+        return None
+
+
+def db_read_run_ids_for_practice_cards(
+    db: Session, practice_card_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, uuid.UUID | None]:
+    """`{practice_card.id: practice_run_id}` for the ids that still exist; a missing id
+    simply has no entry."""
+    if not practice_card_ids:
+        return {}
+    return dict(
+        db.exec(
+            select(PracticeCard.id, PracticeCard.practice_run_id).where(
+                col(PracticeCard.id).in_(practice_card_ids)
+            )
+        ).all()
+    )
 
 
 def db_read_practice_card(
@@ -74,7 +120,7 @@ def db_read_pending_practice_cards(
     )
 
 
-def db_renumber_pending_practice_cards(
+def db_stage_renumber_pending_practice_cards(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Fresh 1000-spaced positions for a session's pending cards, preserving their
@@ -119,7 +165,7 @@ def db_read_ratings_by_review_group(
     return ratings
 
 
-def db_update_practice_card_status(
+def db_stage_update_practice_card_status(
     db: Session, card: PracticeCard, status: PracticeCardStatus
 ) -> PracticeCard:
     card.status = status

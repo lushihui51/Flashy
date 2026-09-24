@@ -10,6 +10,16 @@ from app.models.deck_practice_config import DeckPracticeConfig, DeckPracticeConf
 from app.models.subject import Subject
 
 
+def db_stage_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
+    """Staged counterpart to db_create_deck_practice_config. An `IntegrityError` on the
+    per-deck name constraint propagates rather than becoming a ValueError here, since the
+    caller owns both the transaction and the message."""
+    config = DeckPracticeConfig(**data)
+    db.add(config)
+    db.flush()
+    return config
+
+
 def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
     config = DeckPracticeConfig(**data)
     db.add(config)
@@ -149,7 +159,7 @@ def db_read_config_ids_naming_fields(
     return set(db.exec(query).all())
 
 
-def db_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

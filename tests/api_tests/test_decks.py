@@ -195,3 +195,20 @@ class TestDeckCreateAtomic:
         )
         assert response.status_code == 422
         assert "duplicate" in response.json()["detail"].lower()
+
+    def test_duplicate_deck_name_in_subject_rejected_and_rolled_back(
+        self, client, existing_subject
+    ):
+        """The one create failure that comes from the database rather than from the
+        validation above: the per-subject deck name constraint. It raises at the staged
+        create's flush and create_deck_atomic's handler turns it into a 422, so the
+        rollback must leave only the first deck behind."""
+        first = client.post("/api/decks", json=self._payload(existing_subject["id"]))
+        assert first.status_code == 201, first.text
+
+        second = client.post("/api/decks", json=self._payload(existing_subject["id"]))
+        assert second.status_code == 422, second.text
+        assert "already exists in this subject" in second.json()["detail"]
+
+        decks = client.get("/api/decks", params={"subject_id": existing_subject["id"]}).json()
+        assert [d["name"] for d in decks] == ["Vocab Deck"]

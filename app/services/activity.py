@@ -8,8 +8,8 @@ from app.models.subject import Subject
 def touch(db: Session, *rows: Subject | Deck) -> None:
     """Bumps `last_activity_at` to now on the given rows (D13's sort key), in the
     current transaction — never a separate commit. The one place this column is ever
-    written."""
+    written. Every row must be one this session already loaded: assigning the attribute
+    is what marks it dirty, so a detached row would be silently ignored."""
     now = utcnow()
     for row in rows:
         row.last_activity_at = now
-        db.add(row)

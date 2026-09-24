@@ -1,3 +1,10 @@
+import uuid
+
+from sqlmodel import select
+
+from app.models.card_field_value import CardFieldValue
+
+
 class TestFieldDefLifecycle:
     def test_create_field_def(self, client, existing_deck):
         response = client.post(
@@ -92,6 +99,48 @@ class TestFieldDefLifecycle:
             json={"name": field["name"], "type": field["type"]},
         )
         assert response.status_code == 400
+
+    def test_field_create_backfills_dense_card_field_value_rows(
+        self, client, db, existing_deck, existing_field_defs, existing_card
+    ):
+        """ADR 057: the standalone create writes a "" row for every existing card. Read
+        through the deck detail, which builds `values` from the rows that exist; the
+        standalone card read fabricates "" for a missing row and would hide a gap."""
+        response = client.post(
+            f"/api/decks/{existing_deck['id']}/fields",
+            json={"name": "Extra", "type": "text"},
+        )
+        assert response.status_code == 201, response.text
+        new_field_id = response.json()["id"]
+
+        deck = client.get(f"/api/decks/{existing_deck['id']}").json()
+        card = next(c for c in deck["cards"] if c["id"] == existing_card["id"])
+        front_id, back_id = (fd["id"] for fd in existing_field_defs)
+        assert len(card["values"]) == 3
+        assert card["values"][new_field_id] == ""
+        assert card["values"][front_id] == "Value for front"
+        assert card["values"][back_id] == "Value for back"
+
+        card_id = uuid.UUID(existing_card["id"])
+        rows = db.exec(select(CardFieldValue).where(CardFieldValue.card_id == card_id)).all()
+        assert len(rows) == 3
+
+    def test_duplicate_active_name_leaves_no_rows(
+        self, client, db, existing_deck, existing_field_defs, existing_card
+    ):
+        field = existing_field_defs[0]
+        response = client.post(
+            f"/api/decks/{existing_deck['id']}/fields",
+            json={"name": field["name"], "type": field["type"]},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "An active field with this name already exists"
+
+        card_id = uuid.UUID(existing_card["id"])
+        rows = db.exec(select(CardFieldValue).where(CardFieldValue.card_id == card_id)).all()
+        assert len(rows) == 2
+        deck = client.get(f"/api/decks/{existing_deck['id']}").json()
+        assert len(deck["field_defs"]) == 2
 
     def test_hard_delete_requires_archive_first(self, client, existing_field_defs):
         field_id = existing_field_defs[0]["id"]

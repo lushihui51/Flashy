@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Row, Uuid, column, delete, desc, insert, values
+from sqlalchemy import DateTime, Row, Uuid, column, delete, desc, insert, text, values
 from sqlmodel import Session, col, select
 
 from app.mastery.types import FieldMasteryState
@@ -14,6 +14,13 @@ from app.models.subject import Subject
 # Invariant 8: this module fetches and writes state; it never computes it. Every value
 # written below is already-computed Python data handed in by a MasteryStrategy — no
 # blending, scoring, or aggregation expression appears in any statement here.
+
+
+def db_lock_card(db: Session, card_id: uuid.UUID) -> None:
+    """Takes the per-card transaction-scoped advisory lock that serializes every
+    read-modify-append of a card's ledger (ADR 042, ADR 050): released at commit or
+    rollback, never explicitly. Carries no prefix because it writes nothing (ADR 055)."""
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(card_id)})
 
 
 def db_fetch_latest_mastery_states(
@@ -46,7 +53,7 @@ def db_fetch_latest_mastery_states(
     }
 
 
-def db_append_mastery_log(
+def db_stage_append_mastery_log(
     db: Session,
     card_id: uuid.UUID,
     states: dict[uuid.UUID, FieldMasteryState],
@@ -208,7 +215,7 @@ def db_fetch_mastery_before_bound(
     }
 
 
-def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
+def db_stage_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     """Delete-scoped clear for rebuild_mastery. user_id=None clears every row; otherwise
     only rows for cards owned (via deck -> subject) by that user."""
     if user_id is None:
@@ -223,7 +230,7 @@ def db_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))
 
 
-def db_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
+def db_stage_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
     """Delete-scoped clear for rebuild_deck_mastery (ADR 049): only rows for cards
     belonging to this one deck — every other deck's rows, and their ids, are
     untouched."""

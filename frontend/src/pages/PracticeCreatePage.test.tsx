@@ -7,6 +7,7 @@ import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
+import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 
 const BASE = 'http://localhost:8000';
 
@@ -246,6 +247,34 @@ describe('PracticeCreatePage', () => {
     expect(
       await screen.findByText('This configuration no longer produces any prompts — edit it.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Recall' })).toBeChecked();
+  });
+
+  it('no_cards shows the no-cards sentence above the list and keeps the selection', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/practice_runs`, () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'no_cards',
+              message: 'generation produced no practice cards across the selected decks',
+              config_id: null,
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(NO_CARDS_MESSAGE)).toBeInTheDocument();
+    // The selection survives, so the user can swap the configuration out in place.
     expect(screen.getByRole('radio', { name: 'Recall' })).toBeChecked();
   });
 

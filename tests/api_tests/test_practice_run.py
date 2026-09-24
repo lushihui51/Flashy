@@ -595,7 +595,7 @@ class TestPositionCollisionFallback:
         self, db, existing_user, session_cards, session_config, monkeypatch
     ):
         """Forces the computed insertion position to collide with an existing pending
-        card's position, so the requeue must hit db_renumber_pending_practice_cards
+        card's position, so the requeue must hit db_stage_renumber_pending_practice_cards
         and succeed on the retry. The natural (non-stubbed) insertion formula always
         leaves virtual-boundary gaps of 1000+, so this can't be provoked by just
         wedging existing cards close together — the stub makes it deterministic
@@ -977,6 +977,130 @@ class TestRunStartErrorShape:
         assert detail["code"] == "stale_config"
         assert detail["config_id"] == str(legacy.id)
         assert client.get("/api/practice_runs").json() == []
+
+
+class TestNoCards:
+    """ADR 056: a practice that generates nothing is refused rather than created empty.
+    Emptiness is a property of the whole practice — one cardless deck alongside a deck
+    that generates is fine — and it is only knowable after generation has run, because
+    a card that is legal can still be blank in every field one side shows (ADR 026)."""
+
+    def _config(self, client, existing_deck, prompt_id, answer_id, name="No-cards config"):
+        res = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": existing_deck["id"],
+                "name": name,
+                "prompt_field_ids": [prompt_id],
+                "answer_field_ids": [answer_id],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert res.status_code == 201, res.text
+        return res.json()
+
+    def test_start_refuses_a_deck_with_no_cards(self, client, existing_deck, existing_field_defs):
+        front, back = existing_field_defs
+        config = self._config(client, existing_deck, front["id"], back["id"])
+
+        res = client.post(
+            "/api/practice_runs",
+            json={"name": "Run", "deck_practice_config_ids": [config["id"]]},
+        )
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"] == {
+            "code": "no_cards",
+            "message": "generation produced no practice cards across the selected decks",
+            "config_id": None,
+        }
+        # Nothing persisted: the refusal precedes the only commit, so the run and its
+        # snapshots go out with the discarded session.
+        assert client.get("/api/practice_runs").json() == []
+
+    def test_start_succeeds_when_any_selected_deck_has_cards(
+        self, client, existing_subject, session_cards, session_config
+    ):
+        empty_deck = client.post(
+            "/api/decks",
+            json={
+                "name": "Empty deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [{"name": "q", "type": "text"}, {"name": "a", "type": "text"}],
+            },
+        )
+        assert empty_deck.status_code == 201, empty_deck.text
+        fields = {fd["name"]: fd["id"] for fd in empty_deck.json()["field_defs"]}
+        assert empty_deck.json()["cards"] == []
+
+        empty_config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": empty_deck.json()["id"],
+                "name": "Empty config",
+                "prompt_field_ids": [fields["q"]],
+                "answer_field_ids": [fields["a"]],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert empty_config.status_code == 201, empty_config.text
+
+        res = client.post(
+            "/api/practice_runs",
+            json={
+                "name": "Run",
+                "deck_practice_config_ids": [session_config["id"], empty_config.json()["id"]],
+            },
+        )
+        assert res.status_code == 201, res.text
+
+        state = client.get(f"/api/practice_runs/{res.json()['id']}/state")
+        assert state.status_code == 200, state.text
+        assert state.json()["progress"]["total_cards"] == 3
+
+    def test_start_refuses_when_every_card_is_blank_on_one_side(
+        self, client, existing_deck, existing_field_defs
+    ):
+        """The second cause, invisible to a card count: the deck has a card, but its
+        answer side is blank, and ADR 026 excludes a blank field from generation."""
+        front, back = existing_field_defs
+        card = client.post(
+            "/api/cards",
+            json={"deck_id": existing_deck["id"], "values": {front["id"]: "a", back["id"]: ""}},
+        )
+        assert card.status_code == 201, card.text
+
+        config = self._config(client, existing_deck, front["id"], back["id"])
+
+        res = client.post(
+            "/api/practice_runs",
+            json={"name": "Run", "deck_practice_config_ids": [config["id"]]},
+        )
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "no_cards"
+
+    def test_rerun_refuses_when_no_card_generates(self, client, session_cards, session_config):
+        """The snapshot still validates — its fields are all live — so nothing_to_rerun
+        does not fire; only the post-generation count catches the emptied deck."""
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+
+        for card_id in session_cards:
+            deleted = client.delete(f"/api/cards/{card_id}")
+            assert deleted.status_code == 204, deleted.text
+
+        res = _rerun(client, run["id"], "Again")
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"] == {
+            "code": "no_cards",
+            "message": "generation produced no practice cards across the surviving decks",
+        }
+        assert client.get(f"/api/practice_runs/{run['id']}").status_code == 200
 
 
 class TestPracticeRunDelete:

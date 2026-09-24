@@ -3,9 +3,11 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.database_ops.deck import db_stage_create_deck
+from app.database_ops.field_def import db_stage_create_field_def
 from app.database_ops.subject import db_read_subject
 from app.models.deck import Deck
-from app.models.field_def import FieldDef, FieldDefCreate
+from app.models.field_def import FieldDefCreate
 from app.services.activity import touch
 
 
@@ -50,10 +52,8 @@ def create_deck_atomic(
         seen_names.add(key)
         trimmed_names.append(field_name)
 
-    deck = Deck(subject_id=subject_id, name=name)
-    db.add(deck)
     try:
-        db.flush()
+        deck = db_stage_create_deck(db, subject_id, name)
     except IntegrityError:
         db.rollback()
         raise DeckCreateValidationError(
@@ -61,7 +61,7 @@ def create_deck_atomic(
         ) from None
 
     for position, (field_def, field_name) in enumerate(zip(field_defs, trimmed_names)):
-        db.add(FieldDef(deck_id=deck.id, name=field_name, type=field_def.type, position=position))
+        db_stage_create_field_def(db, deck.id, field_name, field_def.type, position)
     db.flush()
 
     # D13: the deck's own last_activity_at is set at insert (server_default=now(),

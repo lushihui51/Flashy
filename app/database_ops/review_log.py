@@ -51,7 +51,7 @@ def db_read_latest_reviewed_at(db: Session, card_id: uuid.UUID) -> datetime | No
     ).one()
 
 
-def db_insert_review_logs(db: Session, rows: list[dict]) -> None:
+def db_stage_create_review_logs(db: Session, rows: list[dict]) -> None:
     """Idempotent bulk insert — ON CONFLICT DO NOTHING on the (review_group_id,
     field_def_id) key. Does not commit; the caller owns the transaction."""
     if not rows:
@@ -61,7 +61,7 @@ def db_insert_review_logs(db: Session, rows: list[dict]) -> None:
     db.execute(stmt)
 
 
-def db_log_review_group(
+def db_stage_log_review_group(
     db: Session, review_group_id: uuid.UUID, rows: list[dict]
 ) -> ReviewGroupWriteOutcome:
     """Logs one appearance's rows, enforcing that a review_group_id is written exactly
@@ -97,7 +97,7 @@ def db_log_review_group(
     )
 
     if not existing_field_ids:
-        db_insert_review_logs(db, rows)
+        db_stage_create_review_logs(db, rows)
         return ReviewGroupWriteOutcome.new
 
     if existing_field_ids == submitted_field_ids:
@@ -125,7 +125,7 @@ def db_fetch_review_log_for_rebuild(
     return list(db.exec(query).all())
 
 
-def db_scrub_shown_prompt_ids(
+def db_stage_scrub_shown_prompt_ids(
     db: Session, deck_id: uuid.UUID, field_ids: Collection[uuid.UUID]
 ) -> None:
     """Removes each of field_ids from shown_prompt_ids on this deck's own cards' rows

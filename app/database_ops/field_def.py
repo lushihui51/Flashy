@@ -59,22 +59,15 @@ def db_next_position(db: Session, deck_id: uuid.UUID) -> int:
     return 0 if max_position is None else max_position + 1
 
 
-def db_create_field_def(
-    db: Session, deck_id: uuid.UUID, name: str, field_type: FieldType
+def db_stage_create_field_def(
+    db: Session, deck_id: uuid.UUID, name: str, field_type: FieldType, position: int
 ) -> FieldDef:
-    field_def = FieldDef(
-        deck_id=deck_id,
-        name=name,
-        type=field_type,
-        position=db_next_position(db, deck_id),
-    )
+    """The caller supplies the position, because a caller building several fields in one
+    transaction already knows each one's slot, and owns the commit. An `IntegrityError`
+    from the flush propagates."""
+    field_def = FieldDef(deck_id=deck_id, name=name, type=field_type, position=position)
     db.add(field_def)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise ValueError("An active field with this name already exists") from None
-    db.refresh(field_def)
+    db.flush()
     return field_def
 
 
@@ -161,7 +154,7 @@ def db_read_active_field_ids_for_decks(
     )
 
 
-def db_delete_field_defs(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_field_defs(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

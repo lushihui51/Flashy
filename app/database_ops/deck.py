@@ -11,6 +11,16 @@ from app.models.field_def import FieldDef
 from app.models.subject import Subject
 
 
+def db_stage_create_deck(db: Session, subject_id: uuid.UUID, name: str) -> Deck:
+    """Adds and flushes a deck inside the caller's transaction, so its id is available
+    for the fields and cards that follow. An `IntegrityError` on the per-subject name
+    constraint propagates: each caller turns it into its own message."""
+    deck = Deck(subject_id=subject_id, name=name)
+    db.add(deck)
+    db.flush()
+    return deck
+
+
 def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | None:
     return db.exec(
         select(Deck)
@@ -107,7 +117,7 @@ def db_read_deck_ids_for_subjects(
     return set(db.exec(select(Deck.id).where(col(Deck.subject_id).in_(subject_ids))).all())
 
 
-def db_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
     if not ids:
         return

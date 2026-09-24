@@ -7,7 +7,6 @@ from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
 from app.models.subject import Subject, SubjectSummary
-from app.services.activity import touch
 
 
 def db_create_subject(db: Session, data: dict) -> Subject:
@@ -67,8 +66,6 @@ def db_update_subject(db: Session, subject: Subject, data: dict) -> Subject:
         return subject
     for key, value in data.items():
         setattr(subject, key, value)
-    # D13: own-column edit — touch() bumps the recency sort key.
-    touch(db, subject)
     db.add(subject)
     try:
         db.commit()
@@ -94,7 +91,7 @@ def db_read_owned_subject_ids(
     )
 
 
-def db_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
+def db_stage_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
     """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
     FK cascades remove everything the subject owns; the caller has already computed
     exactly which decks, fields, cards, configurations, and runs go with them."""

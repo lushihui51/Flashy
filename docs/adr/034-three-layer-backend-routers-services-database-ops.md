@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by ADR 055 (2026-09-24): every statement and every session call outside commit, rollback, flush, and refresh lives in database_ops, a source-scan guard enforces it, and a non-committing writer is named db_stage_*; the layers, their direction, and the direct-call nuance are unchanged.
 
 ## Context
 

@@ -107,4 +107,4 @@ def delete_deck(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    delete_deck_service(db, get_mastery_strategy(), deck)
+    delete_deck_service(db, get_mastery_strategy(), current_user.id, deck)

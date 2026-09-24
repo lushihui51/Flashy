@@ -4,8 +4,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.database_ops.card import db_read_card, db_read_card_ids_for_deck
@@ -17,22 +15,23 @@ from app.database_ops.mastery_log import (
     db_fetch_run_mastery_log_rows,
 )
 from app.database_ops.practice_card import (
-    db_create_practice_card,
+    db_stage_create_practice_card,
     db_read_current_practice_card,
     db_read_pending_practice_cards,
     db_read_practice_card,
     db_read_practice_cards_for_run,
     db_read_ratings_by_review_group,
-    db_renumber_pending_practice_cards,
-    db_update_practice_card_status,
+    db_stage_renumber_pending_practice_cards,
+    db_stage_update_practice_card_status,
+    db_try_stage_create_practice_card,
 )
 from app.database_ops.practice_deck import (
-    db_create_practice_deck,
+    db_stage_create_practice_deck,
     db_read_practice_deck_for_deck,
     db_read_practice_decks_for_run,
 )
 from app.database_ops.practice_run import (
-    db_create_practice_run,
+    db_stage_create_practice_run,
     db_read_practice_run,
     db_update_practice_run_status,
 )
@@ -72,7 +71,6 @@ _POSITION_GAP = 1000
 # turn, clamping the mastery-ordered insertion point rather than replacing it — a card
 # whose mastery already puts it deeper than the floor stays at its deeper slot.
 RETRY_SPACING_FLOOR = 3
-_POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"
 
 
 class RunStartError(Exception):
@@ -82,7 +80,10 @@ class RunStartError(Exception):
     the offending row rather than as a bare toast — a stale config (a field archived
     since it was saved) is fixable, but only if the user is told *which* one to fix. A
     plain message string can't carry that, so the id travels on the exception and is
-    serialized into the error body by the router."""
+    serialized into the error body by the router. Codes: `config_not_found`,
+    `duplicate_deck`, `stale_config`, and `no_cards` when generation wrote no practice
+    card across every selected deck (ADR 056) — that one names no config, since
+    emptiness is a property of the whole practice."""
 
     def __init__(self, code: str, message: str, config_id: uuid.UUID | None = None):
         super().__init__(message)
@@ -124,7 +125,9 @@ class RerunError(Exception):
     live fields, and nothing survived to rebuild a session from. A snapshot naming a
     deleted deck never reaches this check at all — its row cascaded away with the
     deck (ADR 047), and a run left owning no snapshot is deleted alongside its last
-    one (ADR 048), so there is no rerun call left to make against it."""
+    one (ADR 048), so there is no rerun call left to make against it. `no_cards` when
+    the surviving snapshots generated no practice card at all (ADR 056) — a completed
+    practice whose cards were deleted since would otherwise rerun into an empty one."""
 
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -166,7 +169,7 @@ def _snapshot_and_generate_deck(
     attribution — start_practice_run passes the live config's id, rerun_practice_run
     the old snapshot's value verbatim — and is never read back by anything below this
     function."""
-    practice_deck = db_create_practice_deck(
+    practice_deck = db_stage_create_practice_deck(
         db,
         {
             "practice_run_id": session_id,
@@ -200,7 +203,7 @@ def _snapshot_and_generate_deck(
         if resolved is None:
             continue
         prompts, answers = resolved
-        db_create_practice_card(
+        db_stage_create_practice_card(
             db,
             {
                 "practice_run_id": session_id,
@@ -229,7 +232,8 @@ def start_practice_run(
     (ADR-008). `name` is stored verbatim; the client formats it. Raises
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
-    validates against its deck's live fields."""
+    validates against its deck's live fields, `no_cards` when generation produced
+    nothing across all of them (ADR 056)."""
     rng = rng or random.Random()
 
     configs = []
@@ -253,7 +257,7 @@ def start_practice_run(
             )
         seen_deck_ids.add(config.deck_id)
 
-    session = db_create_practice_run(db, user_id, name)
+    session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
     for config in configs:
@@ -279,6 +283,15 @@ def start_practice_run(
             db, strategy, session.id, config.deck_id, array_values, config.id, rng, next_position
         )
 
+    # ADR 056: emptiness is a property of the whole practice, not of one deck, and it
+    # is only knowable once generation has run — a card can be legal yet blank in every
+    # field one side shows. Raised before the commit, so the refused run and its
+    # snapshots are discarded with the session, exactly as `stale_config` above.
+    if next_position == 0:
+        raise RunStartError(
+            "no_cards", "generation produced no practice cards across the selected decks"
+        )
+
     db.commit()
     db.refresh(session)
     return session
@@ -302,7 +315,8 @@ def rerun_practice_run(
     null; never looked up fresh). `name` is stored verbatim on the new run — the client
     formats it, same as start_practice_run. Raises LookupError for an unknown/foreign
     session (the router 404s); RerunError('run_active') if the session hasn't
-    completed; RerunError('nothing_to_rerun') if every snapshot was dropped. A plain
+    completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
+    RerunError('no_cards') if the survivors generated nothing (ADR 056). A plain
     create: the original run is never touched, so there is nothing to order against a
     delete — one explicit commit at the end, same shape as start_practice_run."""
     rng = rng or random.Random()
@@ -330,7 +344,7 @@ def rerun_practice_run(
             "no deck from this session still has a live, valid snapshot to rerun",
         )
 
-    new_session = db_create_practice_run(db, user_id, name)
+    new_session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
     for deck_id, array_values, source_config_id in surviving_decks:
@@ -343,6 +357,13 @@ def rerun_practice_run(
             source_config_id,
             rng,
             next_position,
+        )
+
+    # ADR 056, same check as start: a snapshot can survive validation and still have
+    # nothing left to generate from, once its deck's cards are gone.
+    if next_position == 0:
+        raise RerunError(
+            "no_cards", "generation produced no practice cards across the surviving decks"
         )
 
     db.commit()
@@ -728,7 +749,7 @@ def get_practice_run_breakdown(
         )
 
     # First attempt's position ascending — a chain's first row's position never moves
-    # once written (only pending rows are ever renumbered, db_renumber_pending_practice_cards).
+    # once written (only pending rows are ever renumbered, db_stage_renumber_pending_practice_cards).
     breakdown_cards.sort(key=lambda bc: chains[bc.card_id][0].position)
 
     return PracticeRunBreakdown(
@@ -825,23 +846,19 @@ def _requeue_failed_card(
             [(c, scores[c.card_id].mastery) for c in pending], scores[old_card.card_id].mastery
         )
 
-        try:
-            with db.begin_nested():
-                db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} IMMEDIATE"))
-                new_card = db_create_practice_card(
-                    db,
-                    {
-                        "practice_run_id": old_card.practice_run_id,
-                        "card_id": old_card.card_id,
-                        "position": position,
-                        "prompts": prompts,
-                        "answers": answers,
-                    },
-                )
+        new_card = db_try_stage_create_practice_card(
+            db,
+            {
+                "practice_run_id": old_card.practice_run_id,
+                "card_id": old_card.card_id,
+                "position": position,
+                "prompts": prompts,
+                "answers": answers,
+            },
+        )
+        if new_card is not None:
             return new_card
-        except IntegrityError:
-            db.execute(text(f"SET CONSTRAINTS {_POSITION_CONSTRAINT} DEFERRED"))
-            db_renumber_pending_practice_cards(db, old_card.practice_run_id)
+        db_stage_renumber_pending_practice_cards(db, old_card.practice_run_id)
 
     raise RuntimeError(
         f"could not find a free position for a requeued card in session "
@@ -883,7 +900,7 @@ def submit_rating(
 
     failed = any(rating == 1 for rating in ratings.values())
     new_status = PracticeCardStatus.failed if failed else PracticeCardStatus.passed
-    db_update_practice_card_status(db, practice_card, new_status)
+    db_stage_update_practice_card_status(db, practice_card, new_status)
 
     requeued = None
     if failed:

@@ -16,7 +16,7 @@ class PracticeCardStatus(str, Enum):
 
 class PracticeCard(AppModel, TimestampMixin, table=True):
     __table_args__ = (
-        # Deferrable — db_renumber_pending_practice_cards reassigns a whole session's
+        # Deferrable — db_stage_renumber_pending_practice_cards reassigns a whole session's
         # pending positions in one transaction, which needs to freely pass through
         # intermediate states that collide with not-yet-updated rows. Checked only at
         # COMMIT, same reasoning as field_def's position constraint.

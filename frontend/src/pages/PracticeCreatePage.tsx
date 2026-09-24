@@ -10,6 +10,7 @@ import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import ConfigurationPickList from 'src/components/practice/ConfigurationPickList';
 import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
+import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 
 type RowError = { configId: string; message: string };
@@ -94,6 +95,12 @@ export default function PracticeCreatePage() {
         if (error.detail.code === 'config_not_found') {
           setTopError('A selected configuration no longer exists.');
           queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
+          return;
+        }
+        // ADR 056: emptiness is a property of the whole practice, so this names no
+        // configuration and renders above the list rather than against a row.
+        if (error.detail.code === 'no_cards') {
+          setTopError(NO_CARDS_MESSAGE);
           return;
         }
       }

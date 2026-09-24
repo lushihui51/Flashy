@@ -7,7 +7,6 @@ from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import (
     db_archive_field_def,
     db_count_card_field_values,
-    db_create_field_def,
     db_hard_delete_field_def,
     db_read_field_def,
     db_read_field_defs,
@@ -15,9 +14,9 @@ from app.database_ops.field_def import (
     db_reorder_field_defs,
 )
 from app.dependencies import CurrentUserDep
-from app.models.deck import Deck
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
 from app.services.activity import touch
+from app.services.field_def_create import create_field_def as create_field_def_service
 
 router = APIRouter(tags=["Field Definitions"])
 
@@ -29,9 +28,8 @@ def create_field_def(
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    touch(db, deck)
     try:
-        return db_create_field_def(db, deck_id, payload.name, payload.type)
+        return create_field_def_service(db, deck, payload.name, payload.type)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -95,7 +93,7 @@ def update_field_def(
         raise HTTPException(status_code=400, detail="Field type cannot be changed")
     if payload.name is None:
         return field_def
-    deck = db.get(Deck, field_def.deck_id)
+    deck = db_read_deck(db, field_def.deck_id, current_user.id)
     if deck:
         touch(db, deck)
     try:
@@ -115,7 +113,7 @@ def archive_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uu
         active_count = len(db_read_field_defs(db, field_def.deck_id, current_user.id))
         if active_count <= 2:
             raise HTTPException(status_code=422, detail="a deck needs at least two fields")
-        deck = db.get(Deck, field_def.deck_id)
+        deck = db_read_deck(db, field_def.deck_id, current_user.id)
         if deck:
             touch(db, deck)
     return db_archive_field_def(db, field_def)
@@ -134,7 +132,7 @@ def hard_delete_field_def(db: SessionDep, current_user: CurrentUserDep, field_id
         raise HTTPException(
             status_code=400, detail="Field still has card values, cannot hard delete"
         )
-    deck = db.get(Deck, field_def.deck_id)
+    deck = db_read_deck(db, field_def.deck_id, current_user.id)
     if deck:
         touch(db, deck)
     db_hard_delete_field_def(db, field_def)

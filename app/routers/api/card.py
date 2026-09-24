@@ -14,7 +14,6 @@ from app.database_ops.field_def import db_read_field_defs
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.card import CardCreate, CardMasteryRead, CardRead, CardUpdate
-from app.models.deck import Deck
 from app.services.activity import touch
 from app.services.deletion import delete_card as delete_card_service
 from app.services.mastery import card_mastery
@@ -110,7 +109,7 @@ def update_card(
     if all(_is_blank(merged.get(field_id, "")) for field_id in active_field_ids):
         raise HTTPException(status_code=422, detail="card has no values")
 
-    deck = db.get(Deck, card.deck_id)
+    deck = db_read_deck(db, card.deck_id, current_user.id)
     if deck:
         touch(db, deck)  # D13: card edit bubbles to the deck (not the subject).
     updated_card = db_update_card_values(db, card, payload.values)
@@ -131,4 +130,4 @@ def delete_card(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID
     card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    delete_card_service(db, get_mastery_strategy(), card)
+    delete_card_service(db, get_mastery_strategy(), current_user.id, card)

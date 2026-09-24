@@ -4,6 +4,10 @@ Groundwork cycle from the 2026-08-28/29 /plan session: the `practice_session` â†
 
 Note on 006: ADR 039 deliberately reverses behavior 006's T4/T9 built and tested (rerun deleting the original session). Those tasks stay checked as history; T5 below supersedes their behavior and rewrites their tests.
 
+## Superseded since (sync 2026-09-24)
+
+- **The three practice-run writers carry the `stage_` prefix** (ADR 055, task 015 T4; sync 2026-09-24): `db_create_practice_run`, `db_create_practice_deck`, and `db_create_practice_card` are `db_stage_create_practice_*`; signatures and bodies are unchanged. `_POSITION_CONSTRAINT` still lives in `app/services/practice_run.py` until task 015 T7 moves it to `app/database_ops/practice_card.py` as `POSITION_CONSTRAINT`, alongside the savepoint it guards.
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.

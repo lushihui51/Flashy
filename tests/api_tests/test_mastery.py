@@ -9,11 +9,11 @@ from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
-from app.database_ops.mastery_log import db_append_mastery_log
+from app.database_ops.mastery_log import db_stage_append_mastery_log
 from app.database_ops.review_log import (
     ReviewGroupInconsistent,
     ReviewGroupWriteOutcome,
-    db_insert_review_logs,
+    db_stage_create_review_logs,
 )
 from app.mastery.ema import EmaStrategy
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
@@ -313,7 +313,7 @@ class TestRecordReviewGroupOutcomes:
 
         # Seed a partial write directly, bypassing record_review_group — simulating
         # whatever bug or race the invariant guards against.
-        db_insert_review_logs(
+        db_stage_create_review_logs(
             db,
             [
                 {
@@ -452,11 +452,11 @@ class TestReviewedAtOrder:
             prompt_mastery=50.0, answer_mastery=50.0, prompt_review_count=1, answer_review_count=1
         )
 
-        db_append_mastery_log(db, card_id, {field_id: state}, reviewed_at, uuid.uuid4(), None)
+        db_stage_append_mastery_log(db, card_id, {field_id: state}, reviewed_at, uuid.uuid4(), None)
         db.commit()
 
         with pytest.raises(IntegrityError):
-            db_append_mastery_log(
+            db_stage_append_mastery_log(
                 db, card_id, {field_id: state}, reviewed_at, uuid.uuid4(), None
             )
         db.rollback()
@@ -548,7 +548,7 @@ class TestRebuildOracle:
                 shown_prompt_ids=tuple(shown_prompt_ids),
             )
 
-            db_insert_review_logs(
+            db_stage_create_review_logs(
                 db,
                 [
                     {

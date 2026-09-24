@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import func, select
 
-from app.database_ops.review_log import db_insert_review_logs
+from app.database_ops.review_log import db_stage_create_review_logs
 from app.models.review_log import ReviewLog
 
 
@@ -23,8 +23,8 @@ class TestReviewLogIdempotency:
             "shown_prompt_ids": [uuid.UUID(existing_field_defs[1]["id"])],
         }
 
-        db_insert_review_logs(db, [row])
-        db_insert_review_logs(db, [row])
+        db_stage_create_review_logs(db, [row])
+        db_stage_create_review_logs(db, [row])
 
         count = db.exec(
             select(func.count())
@@ -49,5 +49,5 @@ class TestReviewLogIdempotency:
         }
 
         with pytest.raises(IntegrityError):
-            db_insert_review_logs(db, [row])
+            db_stage_create_review_logs(db, [row])
         db.rollback()
