@@ -834,9 +834,10 @@ def _requeue_failed_card(
     # needs to pass through intermediate collisions with not-yet-updated rows) — which
     # means a violation from a single bad insert wouldn't surface until COMMIT, too
     # late to retry without losing the review_log insert and mastery blend already done
-    # earlier in this same transaction. SET CONSTRAINTS ... IMMEDIATE forces *this*
-    # insert's check back to statement time, inside a savepoint, so a collision is
-    # catchable and only the failed insert rolls back.
+    # earlier in this same transaction. db_try_stage_create_practice_card owns the
+    # fix: SET CONSTRAINTS ... IMMEDIATE forces *this* insert's check back to statement
+    # time, inside a savepoint, so a collision is catchable, only the failed insert
+    # rolls back, and it returns None for the loop below to renumber and retry.
     for _attempt in range(2):
         pending = db_read_pending_practice_cards(db, old_card.practice_run_id)
         scores = card_mastery(

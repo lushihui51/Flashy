@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The source-scan guard the Consequences ask for exists since task 015 T3 (MD-1): `test_alembic_env_imports_app_database_before_reading_metadata` and `test_metadata_naming_convention_is_the_adr_054_templates` in `tests/api_tests/test_schema_guard.py`.
 
 ## Context
 
