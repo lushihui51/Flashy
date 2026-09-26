@@ -28,9 +28,9 @@ def db_fetch_latest_mastery_states(
 ) -> dict[uuid.UUID, FieldMasteryState]:
     """Latest row per (card, field) among this card's affected fields — DISTINCT ON,
     ordered by reviewed_at descending (the ledger's order, ADR 050). No FOR UPDATE:
-    apply_rating's caller takes a per-card advisory lock instead, since append-only
-    rows have nothing for a row lock to serialize against. Missing rows are simply
-    absent from the returned dict — invariant 4, lazy creation."""
+    apply_rating takes the per-card advisory lock (db_lock_card) instead, since
+    append-only rows have nothing for a row lock to serialize against. Missing rows are
+    simply absent from the returned dict — invariant 4, lazy creation."""
     if not field_def_ids:
         return {}
     rows = db.exec(

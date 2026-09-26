@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amended by ADR 055 (2026-09-24): every statement and every session call outside commit, rollback, flush, and refresh lives in database_ops, a source-scan guard enforces it, and a non-committing writer is named db_stage_*; the layers, their direction, and the direct-call nuance are unchanged.
+Accepted. Amended by ADR 055 (2026-09-24): every statement and every session call outside commit, rollback, flush, and refresh lives in database_ops, a source-scan guard enforces it, and a non-committing writer is named db_stage_*; the layers, their direction, and the direct-call nuance are unchanged. Reads keyed by an already ownership-checked parent (the deletion closure's `*_for_decks`/`*_for_subjects` reads, `db_read_card_for_deck`) and the `app_user` module carry no `user_id` by design, recorded in task 013's and task 015's Contracts; the copy helpers are ADR 014's exception. The function count is 93 as of 2026-09-24.
 
 ## Context
 

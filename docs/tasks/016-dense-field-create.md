@@ -14,7 +14,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 
 - **MD-1**: A `cards.update` list naming the same card more than once is rejected with `DeckBatchEditValidationError` (a 422) naming the card, checked before any update entry is read or applied; `field_defs.update`, `field_defs.delete`, and `cards.delete` are unchanged. Rejected: merging entries per card before the loop; leaving the rule as task 015 T9's Notes caveat.
 - **MD-2**: The batch edit's commit handler keeps mapping every `IntegrityError` to "a conflicting deck or field name already exists"; revisit when a cycle touches that commit path or a second constraint surfaces through it. Rejected: narrowing it by constraint name now.
-- **MD-3**: This cycle is its own task file and branch (`feat/dense-field-create`) rather than two tasks appended to task 015, which is complete and committed on its branch.
+- **MD-3**: This cycle is its own task file and branch (`feat/dense-field-create`) rather than two tasks appended to task 015, which is complete and committed on its branch. As built (sync 2026-09-24, final pass): the branch was never cut; T1 and T2 are `5abae3c` and `633853a` on `feat/persistence-surface-and-empty-practice` and merged with it in PR #29.
 
 ## Contracts
 

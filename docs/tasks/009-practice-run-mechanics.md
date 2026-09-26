@@ -6,7 +6,7 @@ Note on 006: ADR 039 deliberately reverses behavior 006's T4/T9 built and tested
 
 ## Superseded since (sync 2026-09-24)
 
-- **The three practice-run writers carry the `stage_` prefix** (ADR 055, task 015 T4; sync 2026-09-24): `db_create_practice_run`, `db_create_practice_deck`, and `db_create_practice_card` are `db_stage_create_practice_*`; signatures and bodies are unchanged. `_POSITION_CONSTRAINT` still lives in `app/services/practice_run.py` until task 015 T7 moves it to `app/database_ops/practice_card.py` as `POSITION_CONSTRAINT`, alongside the savepoint it guards.
+- **The three practice-run writers carry the `stage_` prefix** (ADR 055, task 015 T4; sync 2026-09-24): `db_create_practice_run`, `db_create_practice_deck`, and `db_create_practice_card` are `db_stage_create_practice_*`; signatures and bodies are unchanged. Since task 015 T7 (sync 2026-09-24, final pass), it is `POSITION_CONSTRAINT` in `app/database_ops/practice_card.py`, beside the savepoint it guards, `db_try_stage_create_practice_card`; the rename map's "(the `_POSITION_CONSTRAINT` string constant must follow)" reads accordingly, and the value did follow.
 
 ## ADRs
 

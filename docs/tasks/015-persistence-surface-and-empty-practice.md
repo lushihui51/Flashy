@@ -4,6 +4,12 @@ The hardening cycle from the 2026-09-23 /plan session, following the final sync 
 
 Earlier task files affected by name only, for the next sync's Superseded bullets (nothing here invalidates a checked task): task 009's rename map (`_POSITION_CONSTRAINT` moves out of `practice_run.py`; `db_create_practice_*` become `db_stage_create_practice_*`), task 010's write-path contract (`db_append_mastery_log` becomes `db_stage_append_mastery_log`; the card lock is taken through `db_lock_card`), task 013's contracts (`db_scrub_shown_prompt_ids`, the plural `db_delete_*`, `db_clear_mastery_for_deck` gain the `stage_` prefix; `delete_deck` and `delete_card` gain `user_id`). Task 004's carried invariant 2 is restored by T1, which edits its Superseded bullet.
 
+## Superseded since (sync 2026-09-24, final pass)
+
+- **`db_create_field_def` is gone** (ADR 057, task 016 T1): the Contracts line "`db_create_field_def` is unchanged" no longer holds; the standalone route goes through `create_field_def` in `app/services/field_def_create.py`, and `db_stage_create_field_def`'s docstring no longer calls itself anything's counterpart.
+- **T9's Notes overstate one divergence and misattribute another** (task 016 intro): "would now add a duplicate row" — the primary key rejects the second row, so the effect was a misleading 422 from the commit handler (task 016 MD-2 keeps that mapping); "consults the identity map" — the old tolerance was `db.get`'s SELECT fallback, the flushed row being unreferenced and already gone from the identity map. The precondition is enforced since task 016 T2: a repeated card in `cards.update` is a 422 before any entry is applied.
+- **The intro's branch note is history**: `docs/sync-2026-09-23` merged as PR #28 before this branch's PR #29.
+
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.
@@ -29,7 +35,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 ### Naming (ADR 055)
 
 | today | after T4 |
-|---|---|
+| --- | --- |
 | `db_create_practice_run` | `db_stage_create_practice_run` |
 | `db_create_practice_deck` | `db_stage_create_practice_deck` |
 | `db_create_practice_card` | `db_stage_create_practice_card` |
@@ -55,34 +61,42 @@ Signatures, bodies, and docstrings are unchanged by the rename except where a do
 Every function below is a plain module-level function taking `db: Session` first. "Staged" means added and flushed inside the caller's open transaction, never committed; `IntegrityError` from the flush propagates to the caller.
 
 `app/database_ops/app_user.py` (new):
+
 - `db_read_app_user_by_clerk_id(db, clerk_user_id: str) -> AppUser | None`
 - `db_create_app_user(db, clerk_user_id: str, timezone: str) -> AppUser` — add, commit, refresh; `IntegrityError` from the commit propagates (the caller rolls back and re-reads, as `dependencies.py` does today).
 - `db_update_app_user_timezone(db, user: AppUser, timezone: str) -> AppUser` — sets `user.timezone`, commits, refreshes.
 
 `app/database_ops/deck.py`:
+
 - `db_stage_create_deck(db, subject_id: uuid.UUID, name: str) -> Deck`
 
 `app/database_ops/field_def.py`:
+
 - `db_stage_create_field_def(db, deck_id: uuid.UUID, name: str, field_type: FieldType, position: int) -> FieldDef`. `db_create_field_def` is unchanged.
 
 `app/database_ops/card.py`:
+
 - `db_stage_create_card_field_values(db, card_id: uuid.UUID, values: dict[uuid.UUID, str]) -> None` — one `CardFieldValue` add per item, no flush.
 - `db_stage_create_card(db, deck_id: uuid.UUID, values: dict[uuid.UUID, str]) -> Card` — `Card` add and flush, then `db_stage_create_card_field_values`; the returned `Card` does not have `values` loaded.
 - `db_read_card_for_deck(db, card_id: uuid.UUID, deck_id: uuid.UUID) -> Card | None` — `Card.id == card_id and Card.deck_id == deck_id`, `values` loaded with `selectinload`, no ownership join (the caller's deck is already ownership-checked).
 - `db_create_card` becomes `db_stage_create_card` followed by `db.commit()` and the existing `_read_card_with_values`; behaviour identical.
 
 `app/database_ops/deck_practice_config.py`:
+
 - `db_stage_create_deck_practice_config(db, data: dict) -> DeckPracticeConfig`. `db_create_deck_practice_config` is unchanged.
 
 `app/database_ops/practice_deck.py`:
+
 - `db_stage_unlink_practice_decks_from_config(db, config_id: uuid.UUID) -> None` — the `UPDATE practice_deck SET source_config_id = NULL WHERE source_config_id = :config_id` that `deck_practice_config.py:109-113` issues today, no commit.
 
 `app/database_ops/practice_card.py`:
+
 - `POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"` module constant (replaces `_POSITION_CONSTRAINT` in `practice_run.py`).
 - `db_try_stage_create_practice_card(db, data: dict) -> PracticeCard | None` — inside `with db.begin_nested():` executes `SET CONSTRAINTS {POSITION_CONSTRAINT} IMMEDIATE`, adds `PracticeCard(**data)`, flushes; on `IntegrityError` the savepoint is rolled back by the context manager, the function executes `SET CONSTRAINTS {POSITION_CONSTRAINT} DEFERRED` and returns `None`; on success returns the row and leaves the constraint IMMEDIATE, exactly as `practice_run.py:852-866` (as of task 015 T1; `:828-843` at `700b3c8`) behaves today.
 - `db_read_run_ids_for_practice_cards(db, practice_card_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID | None]` — `{practice_card.id: practice_run_id}` for the ids that exist; empty input returns `{}`.
 
 `app/database_ops/mastery_log.py`:
+
 - `db_lock_card(db, card_id: uuid.UUID) -> None` — `db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(card_id)})`, the statement `mastery.py:55` and `:113` issue today. Carries no prefix (ADR 055). The statement contains no mastery arithmetic, so `test_no_mastery_arithmetic_outside_strategy`'s scan of this file is unaffected.
 
 ### Service signatures that change (ADR 055)
@@ -93,10 +107,12 @@ Every function below is a plain module-level function taking `db: Session` first
 ### Guards (ADR 055, MD-1)
 
 `tests/api_tests/test_schema_guard.py` gains:
+
 - `test_alembic_env_imports_app_database_before_reading_metadata` — `alembic/env.py` parsed with `ast` has an `ast.Import` whose alias name is `app.database` and an `ast.Assign` whose single target is `ast.Name(id="target_metadata")`, and the import's `lineno` is less than the assign's; a commented-out import is not an `ast.Import`, so it fails.
 - `test_metadata_naming_convention_is_the_adr_054_templates` — after `import app.database`, `SQLModel.metadata.naming_convention == {"ix": "ix_%(column_0_label)s", "uq": "uq_%(table_name)s_%(column_0_name)s", "ck": "ck_%(table_name)s_%(constraint_name)s", "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s", "pk": "pk_%(table_name)s"}`.
 
 `tests/api_tests/test_layering_guard.py` (new), four tests, each failure message naming `path:line`:
+
 - `test_only_database_ops_imports_statement_builders` — over every `app/**/*.py` except `app/database_ops/**`, `app/models/**`, and `app/database.py`, parsed with `ast`: an `Import` or `ImportFrom` whose module starts with `sqlmodel` or `sqlalchemy` is allowed only as `from sqlmodel import Session` or an import from `sqlalchemy.exc`.
 - `test_only_database_ops_calls_the_session` — over every `app/**/*.py` except `app/database_ops/**`, parsed with `ast`: every `ast.Call` whose `func` is an `ast.Attribute` on `ast.Name(id="db")` has `attr` in `{"commit", "rollback", "flush", "refresh"}`; comments and docstrings are never matched.
 - `test_layers_depend_downward_only` — no import under `app/database_ops/` whose module starts with `app.services` or `app.routers`; no import under `app/services/` whose module starts with `app.routers`.
