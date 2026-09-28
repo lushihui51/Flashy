@@ -34,12 +34,12 @@ T1 and T2 share no files and may run in parallel sessions.
 
 ### T1 — The badge reads "Failed" (MD-1) — no dependencies
 
-- [ ] **Goal:** the completion breakdown's badge for a card whose last attempt stayed failed says "Failed", the vocabulary table records the word, and a component test asserts it.
+- [x] **Goal:** the completion breakdown's badge for a card whose last attempt stayed failed says "Failed", the vocabulary table records the word, and a component test asserts it.
 - **Files:** `docs/tasks/004-practice-setup.md`, `frontend/src/components/practice/RunBreakdown.tsx`, `frontend/src/components/practice/RunBreakdown.test.tsx`, `app/models/practice_run_payloads.py`, `frontend/src/api/types.ts` (regenerated).
 - **Details:** Add the vocabulary row first, per the Contracts (ADR 021). Change `BUCKET_LABELS.still_failed` per the Contracts. Change the `BreakdownBucket` docstring per the Contracts and run `npm run gen:api` in `frontend/`; the `types.ts` diff must be the one docstring line and nothing else, otherwise stop and report the diff. In `RunBreakdown.test.tsx`, extend the test `a row shows its outcome badge, rounded mastery, and delta rendering`: after the existing "First try" assertion add `expect(within(screen.getByRole('button', { name: /Adieu/ })).getByText('Failed')).toBeInTheDocument();` (the fixture's `card4`, bucket `still_failed`, primary value "Adieu"). Do not touch `RunProgressBar.tsx`: its lowercase `failed` is the same word in the bar's own style, alongside `passed`, `retrying`, `unseen`.
 - **Out of scope:** any other label; the progress bar; the bucket's semantics or the chain fold; the README (/distill); ADR 029's text (/justify); task 006's "Abandoned" mentions (/sync).
 - **Done when:** in `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean; `uv run pytest` passes; `grep -rn "Abandoned" app/ frontend/src/ docs/tasks/004-practice-setup.md` prints nothing; `git diff --stat` for `frontend/src/api/types.ts` shows one line changed; the commit contains only this task's hunks.
-- Notes:
+- Notes: regenerating `types.ts` also surfaced two endpoint docstrings changed in 700b3c8 and e74c917 without a `gen:api` run; those hunks (and the matching `openapi.json` ones) were committed separately as 8a0f809 before this task's commit, so the task commit's `types.ts` diff is the one docstring line. Otherwise none.
 
 ### T2 — Tests pin the blank-edit path (ADR 060) — no dependencies
 

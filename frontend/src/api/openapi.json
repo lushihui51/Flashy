@@ -3005,7 +3005,7 @@
           "still_failed"
         ],
         "title": "BreakdownBucket",
-        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Abandoned\"."
+        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Failed\"."
       },
       "BreakdownCard": {
         "properties": {

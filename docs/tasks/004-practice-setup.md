@@ -51,6 +51,7 @@ One word per concept. Middle column is what a user reads; right column is what c
 | one practice's own page | practice detail | — |
 | a practice that can still be continued | **active** (badge and tab: **Active**) | `practice_run.status = 'active'` |
 | a practice that has finished | **completed** (badge and tab: **Completed**) | `practice_run.status = 'completed'` |
+| a card whose last attempt was rated Again on a field | **failed** (badge: **Failed**) | a `practice_card` chain whose last row is `failed`; breakdown bucket `still_failed` |
 | the two halves of a card | **Prompt side** / **Answer side** | prompt/answer assignment |
 | fields on every card | **Always shown** | `prompt_field_ids` / `answer_field_ids` |
 | fields drawn at random per card | **Random draw** | `prompt_pool_ids` / `answer_pool_ids` |

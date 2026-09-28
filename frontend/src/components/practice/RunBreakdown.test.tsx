@@ -207,6 +207,7 @@ describe('RunBreakdown', () => {
 
     const row = screen.getByRole('button', { name: /Bonjour/ });
     expect(within(row).getByText('First try')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: /Adieu/ })).getByText('Failed')).toBeInTheDocument();
     expect(within(row).getByText('70')).toBeInTheDocument();
     expect(within(row).getByText('+5')).toBeInTheDocument();
 
