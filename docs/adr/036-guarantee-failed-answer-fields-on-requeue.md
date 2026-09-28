@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Confirmed by ADR 060: a failed field cleared after it was shown drops out of the retry; the guarantee holds for fields still live and non-blank.
 
 ## Context
 

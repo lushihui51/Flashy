@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000. ADR 058 defines the empty-queue case the fallbacks below never covered and removes the no-predecessor fallback.
+Accepted. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000. ADR 058 defines the empty-queue case the fallbacks below never covered and removes the no-predecessor fallback. ADR 059 makes explicit the invariant this assumed: only the current card can be rated.
 
 ## Context
 
