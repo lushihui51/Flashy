@@ -43,9 +43,9 @@ T1 and T2 share no files and may run in parallel sessions.
 
 ### T2 — Tests pin the blank-edit path (ADR 060) — no dependencies
 
-- [ ] **Goal:** two backend tests record that a failed field blanked after it was shown drops out of the retry, and that a card whose only answer field is blanked ends a completed practice on its failed row with the blank value passed through.
+- [x] **Goal:** two backend tests record that a failed field blanked after it was shown drops out of the retry, and that a card whose only answer field is blanked ends a completed practice on its failed row with the blank value passed through.
 - **Files:** `tests/api_tests/test_practice_run.py`.
 - **Details:** Add the two tests per the Contracts, each placed at the end of its class. The first mirrors `test_archived_failed_pool_field_drops_out_and_card_still_requeues` line for line apart from the blanking call, so the two read as a pair; give it a one-sentence docstring saying ADR 036's guarantee is conditional on the field being live and non-blank (ADR 060). The second gets a docstring saying this is the one path a user reaches today to the `still_failed` bucket, since archiving is unexposed (ADR 049) and a hard field delete removes the active practices naming the field; and that the blank value passes through unlabelled (ADR 060). No production code changes: if either test fails against the committed code, stop and report the failure rather than adjusting `app/`.
 - **Out of scope:** any change under `app/`; a prompt-side variant (all prompt fields blanked), which ADR 060 covers by the same rule but no decision asked to pin; a frontend test; the vocabulary row (T1).
 - **Done when:** `uv run pytest` passes in full, including both new tests and all four existing tests in `TestForcedFailedAnswerFields`; `git diff --stat main -- app/` is empty on this branch; the commit contains only this task's hunks.
-- Notes:
+- Notes: both tests passed first run against the committed code, so nothing under `app/` changed for this task. `git diff --stat main -- app/` shows one line on this branch, the `BreakdownBucket` docstring T1 committed in 43c7331; read as "T2's commit touches nothing under `app/`", which holds. Otherwise none.
