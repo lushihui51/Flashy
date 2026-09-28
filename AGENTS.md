@@ -33,7 +33,7 @@
 
 ## Conventions
 
-- Backend layering (ADR 034): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py`; public functions `db_*`-prefixed, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
+- Backend layering (ADR 034, ADR 055; `test_layering_guard.py`): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py`; public functions `db_*`-prefixed, `db_stage_*` when they don't commit, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
 - `app/models/` (ADR 046): `<table>.py` holds the table, its `Base`, and only that table's flat `Create`/`Read`/`Update`/`Summary` shapes; a shape that nests another model or describes a page/flow lives in `app/models/<router>_payloads.py`. A table module imports a sibling's table class only for a `Relationship`, never a shape (`test_models_layout_guard.py`)
 - Array columns are the generic `sqlalchemy.ARRAY`: `.overlap()` does not exist and `.contains()` raises, so overlap is `.op("&&")(ids)` and membership is `.any(id)` (task 013 MD-5)
 - A rule that can drift silently gets a source-scan guard test in `tests/api_tests/`; extend those rather than relying on review
@@ -64,8 +64,8 @@
 The 12 tables under `app/models/`; the model files and the ADRs cited hold the column-level detail.
 
 - `app_user` — the authenticated user (keyed by `clerk_user_id`), root of every ownership chain; `timezone` is their IANA zone, synced from the `X-Timezone` header on every request (ADR 019)
-- `subject` — a user's top-level grouping of decks; owns `deck` rows. `icon` is a key into the curated set in `frontend/src/lib/subjectIcon.ts`. `last_activity_at` (there is no `updated_at`, ADR 018) is the server-side sort key for every subject and deck list — the frontend never re-sorts — written only by `touch()` in `app/services/activity.py`
-- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`, and `deck_practice_config` rows. Always has ≥2 active fields, at least one prompt and one answer, enforced on create, batch edit, and archive (task 003 D3). Deleting a deck deletes everything that references it, review rows and snapshots included, and a run left with no deck goes with it (ADR 047, ADR 048)
+- `subject` — a user's top-level grouping of decks; owns `deck` rows. `icon` is a key into the curated set in `frontend/src/lib/subjectIcon.ts`. `last_activity_at` (there is no `updated_at`, ADR 018) is the server-side sort key for every subject and deck list — the frontend never re-sorts — written after insert only by `touch()` in `app/services/activity.py`
+- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`, and `deck_practice_config` rows. Always has ≥2 active fields, enforced on create, batch edit, and archive (task 003 D3). Deleting a deck deletes everything that references it, review rows and snapshots included, and a run left with no deck goes with it (ADR 047, ADR 048)
 - `field_def` — the sole source of truth for a field (name, `FieldType`, `position`), referenced by id everywhere (ADR 009); removed by a hard delete through the deletion closure, which also deletes the configurations and active runs naming it, scrubs it from `review_log.shown_prompt_ids`, and rebuilds its deck's mastery (ADR 049); `archived_at` and the archive endpoints stay in the code, unexposed. The active field at position 0 is the deck's **primary field**, derived, never stored (ADR 032)
 - `card` — one flashcard in a `deck`; holds no content itself
 - `card_field_value` — a card's per-field content, dense: exactly one row per active `field_def` of the deck, `""` when unfilled, never a missing row (adding a field backfills every existing card in the same transaction); archived fields keep their rows but are excluded from every read path. An all-blank card is never persisted (task 003)
@@ -74,7 +74,7 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 - `deck_practice_config` — a saved, named, mutable template of which fields are prompts/answers and the pool-sampling rules; validated on save and again at run start (ADR 013)
 - `practice_run` — one user's run (`practice_session` before ADR 038; the UI says "practice", ADR 021), `active` or `completed` only, spanning one or more `practice_deck`s; the only status transition is in `get_current_practice_card` (ADR 015 amended). Rerun creates a new run and keeps the original (ADR 039). A run left owning no `practice_deck` is deleted alongside its last deck (ADR 048)
 - `practice_deck` — an immutable snapshot of a `deck_practice_config` taken at run start (ADR 013); cascades with its deck and with its run (ADR 048); `source_config_id` is attribution only (ADR 040)
-- `practice_card` — one generated card instance in a run (`pending`/`passed`/`failed`), ordered by a sparse `position` (ADR 008); a failed card is requeued as a new row, never mutated (ADR 036, ADR 037); cascades with its card and its run (ADR 015)
+- `practice_card` — one generated card instance in a run (`pending`/`passed`/`failed`), ordered by a sparse `position` (ADR 008); a failed card is requeued as a new row, never mutated (ADR 036, ADR 037, ADR 058); only the current card can be rated (ADR 059); cascades with its card and its run (ADR 015)
 
 ## Context
 

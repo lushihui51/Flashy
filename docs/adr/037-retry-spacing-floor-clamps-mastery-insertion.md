@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Decides the minimum-gap follow-up ADR 008 deferred.
+Accepted. Decides the minimum-gap follow-up ADR 008 deferred. Amended by ADR 058: the formula below applies only with at least `RETRY_SPACING_FLOOR` cards pending; with fewer, "the end of the queue" is the run-wide maximum position plus 500.
 
 ## Context
 
