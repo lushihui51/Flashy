@@ -7,6 +7,7 @@ Note on 006: ADR 039 deliberately reverses behavior 006's T4/T9 built and tested
 ## Superseded since (sync 2026-09-24)
 
 - **The three practice-run writers carry the `stage_` prefix** (ADR 055, task 015 T4; sync 2026-09-24): `db_create_practice_run`, `db_create_practice_deck`, and `db_create_practice_card` are `db_stage_create_practice_*`; signatures and bodies are unchanged. Since task 015 T7 (sync 2026-09-24, final pass), it is `POSITION_CONSTRAINT` in `app/database_ops/practice_card.py`, beside the savepoint it guards, `db_try_stage_create_practice_card`; the rename map's "(the `_POSITION_CONSTRAINT` string constant must follow)" reads accordingly, and the value did follow.
+- **The retry insertion contract holds only with at least `RETRY_SPACING_FLOOR` cards pending** (ADR 058, task 017 T1; sync 2026-09-27): with fewer, zero included, the retry goes to the run-wide maximum position over every status plus 500 with no mastery lookup, not to the last pending card plus 500; with the floor's worth or more, `final_index = max(mastery_index, RETRY_SPACING_FLOOR)` with the `min(..., len(pending))` clamp gone and the no-predecessor "gap default" removed. The ADR 037 entry below is amended accordingly. T4 stays checked as history; its collision test was rewritten in task 017 T1.
 
 ## ADRs
 

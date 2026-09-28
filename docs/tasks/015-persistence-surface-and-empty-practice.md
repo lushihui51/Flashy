@@ -9,6 +9,7 @@ Earlier task files affected by name only, for the next sync's Superseded bullets
 - **`db_create_field_def` is gone** (ADR 057, task 016 T1): the Contracts line "`db_create_field_def` is unchanged" no longer holds; the standalone route goes through `create_field_def` in `app/services/field_def_create.py`, and `db_stage_create_field_def`'s docstring no longer calls itself anything's counterpart.
 - **T9's Notes overstate one divergence and misattribute another** (task 016 intro): "would now add a duplicate row" — the primary key rejects the second row, so the effect was a misleading 422 from the commit handler (task 016 MD-2 keeps that mapping); "consults the identity map" — the old tolerance was `db.get`'s SELECT fallback, the flushed row being unreferenced and already gone from the identity map. The precondition is enforced since task 016 T2: a repeated card in `cards.update` is a 422 before any entry is applied.
 - **The intro's branch note is history**: `docs/sync-2026-09-23` merged as PR #28 before this branch's PR #29.
+- **The requeue loop no longer scores on every attempt** (ADR 058, task 017 T1; sync 2026-09-27): with fewer than `RETRY_SPACING_FLOOR` cards pending, the loop body T4's Details describe reads the run's maximum position instead of computing scores; the `db_stage_renumber_pending_practice_cards` call and the `RuntimeError` are unchanged.
 
 ## ADRs
 
