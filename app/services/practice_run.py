@@ -891,7 +891,8 @@ def submit_rating(
     then update practice_card.status, then — if failed — requeue a new row. Raises
     LookupError if the practice_card doesn't exist (including: exists but belongs to
     another user — a foreign id 404s, it doesn't 403), ValueError if it's already been
-    rated or the ratings don't cover exactly its answer fields."""
+    rated, if it is not its run's current card (ADR 059), or if the ratings don't cover
+    exactly its answer fields."""
     rng = rng or random.Random()
 
     practice_card = db_read_practice_card(db, practice_card_id, user_id)
@@ -899,6 +900,9 @@ def submit_rating(
         raise LookupError(f"practice_card {practice_card_id} not found")
     if practice_card.status != PracticeCardStatus.pending:
         raise ValueError("practice_card has already been rated")
+    current = db_read_current_practice_card(db, practice_card.practice_run_id, user_id)
+    if current is None or current.id != practice_card.id:
+        raise ValueError("practice_card is not the current card")
     if set(ratings.keys()) != set(practice_card.answers):
         raise ValueError("ratings must cover exactly this practice_card's answer fields")
 

@@ -181,6 +181,52 @@ class TestPracticeRunHTTPFlow:
         )
         assert second.status_code == 400
 
+    def test_rate_non_current_pending_card_rejected(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        """ADR 059: only the run's current card (its lowest-position pending row) can be
+        rated; any other pending card is a 400 and nothing is written."""
+        start_res = client.post(
+            "/api/practice_runs",
+            json={
+                "name": "Evening run",
+                "user_id": str(existing_user.id),
+                "deck_practice_config_ids": [session_config["id"]],
+            },
+        )
+        run_id = uuid.UUID(start_res.json()["id"])
+        pending = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == run_id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        assert len(pending) >= 2
+
+        not_current = pending[1]
+        res = client.post(
+            f"/api/practice_cards/{not_current.id}/rate",
+            json={"ratings": {str(fid): 4 for fid in not_current.answers}},
+        )
+        assert res.status_code == 400
+        assert res.json()["detail"] == "practice_card is not the current card"
+
+        db.refresh(not_current)
+        assert not_current.status == PracticeCardStatus.pending
+        assert (
+            db.exec(select(ReviewLog).where(ReviewLog.review_group_id == not_current.id)).all()
+            == []
+        )
+
+        current = pending[0]
+        res = client.post(
+            f"/api/practice_cards/{current.id}/rate",
+            json={"ratings": {str(fid): 4 for fid in current.answers}},
+        )
+        assert res.status_code == 200, res.text
+
     def test_fail_and_requeue_via_http(
         self, client, existing_user, session_cards, session_config
     ):
@@ -612,7 +658,9 @@ class TestRetrySpacingFloor:
         session_config,
         session_fields,
     ):
-        self._add_cards(client, existing_deck, session_fields, 3, start_at=3)  # 6 cards total
+        # 8 cards at 0..7000: after the retry reaches the front, enough remain pending
+        # for its second failure to go through the floor again (ADR 058).
+        self._add_cards(client, existing_deck, session_fields, 5, start_at=3)
         strategy = EmaStrategy()
         config_id = uuid.UUID(session_config["id"])
         session = start_practice_run(
@@ -646,8 +694,29 @@ class TestRetrySpacingFloor:
             .order_by(PracticeCard.position)
         ).all()
         assert pending_after_first[3].id == first_requeue.id
+        # Midpoint of 3000 and 4000: the failed card scores below every unreviewed
+        # card, so the floor alone sets the index.
+        assert first_requeue.position == 3500
 
-        # Fail the requeued row itself — a second attempt at the same card_id.
+        # Only the current card can be rated (ADR 059): pass the three cards ahead of
+        # the retry so it reaches the front.
+        for _ in range(3):
+            front = db_read_current_practice_card(db, session.id, existing_user.id)
+            assert front is not None and front.id != first_requeue.id
+            submit_rating(
+                db,
+                strategy,
+                existing_user.id,
+                front.id,
+                {answer_id: 4 for answer_id in front.answers},
+                rng=random.Random(4),
+            )
+            db.commit()
+        current = db_read_current_practice_card(db, session.id, existing_user.id)
+        assert current is not None and current.id == first_requeue.id
+
+        # Fail the requeued row itself, now at the front: a second attempt at the same
+        # card_id.
         ratings_2 = {answer_id: 1 for answer_id in first_requeue.answers}
         _, second_requeue = submit_rating(
             db, strategy, existing_user.id, first_requeue.id, ratings_2, rng=random.Random(3)
@@ -665,8 +734,9 @@ class TestRetrySpacingFloor:
             .order_by(PracticeCard.position)
         ).all()
         # Re-applied fresh against whatever's pending now, not carried over from the
-        # first requeue's own placement.
+        # first requeue's own placement: 4000, 5000, 6000, then the retry, then 7000.
         assert pending_after_second[3].id == second_requeue.id
+        assert second_requeue.position == 6500
 
 
 class TestPositionCollisionFallback:
@@ -1623,7 +1693,10 @@ class TestRunState:
         its only answer field is archived mid-session, so the requeue finds nothing to
         generate from and the chain ends on `failed` with no successor — still_failed,
         alongside one untouched (unseen), one failed-then-requeued (retry_pending), and
-        one passed-first-try card, all counted against the same fixed `total_cards`."""
+        one passed-first-try card, all counted against the same fixed `total_cards`.
+        Roles go by queue position, since only the current card can be rated (ADR 059):
+        the front card fails and requeues, the second passes, the third fails after the
+        archive, the fourth is never seen mid-run."""
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
         ).json()
@@ -1646,10 +1719,7 @@ class TestRunState:
             assert res.status_code == 201, res.text
             return res.json()["id"]
 
-        unseen_card = make_card("unseen")
-        retry_card = make_card("retry")
-        passed_card = make_card("passed")
-        stuck_card = make_card("stuck")
+        card_ids = [make_card(f"card{i}") for i in range(4)]
 
         config = client.post(
             "/api/deck_practice_configs",
@@ -1668,25 +1738,31 @@ class TestRunState:
         session = _start(client, "Progress run", [config["id"]])
         session_id = uuid.UUID(session["id"])
 
-        by_card_id = {
-            str(pc.card_id): pc
-            for pc in db.exec(
-                select(PracticeCard).where(PracticeCard.practice_run_id == session_id)
-            ).all()
-        }
-        assert set(by_card_id) == {unseen_card, retry_card, passed_card, stuck_card}
+        rows = db.exec(select(PracticeCard).where(PracticeCard.practice_run_id == session_id)).all()
+        assert {str(pc.card_id) for pc in rows} == set(card_ids)
+        queue = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session_id,
+                PracticeCard.status == PracticeCardStatus.pending,
+            )
+            .order_by(PracticeCard.position)
+        ).all()
+        assert [pc.position for pc in queue] == [0, 1000, 2000, 3000]
 
-        # retry_card: fails while `answer` is still live -> requeues -> retry_pending.
+        # queue[0]: fails while `answer` is still live -> requeues -> retry_pending.
         fail_retry = client.post(
-            f"/api/practice_cards/{by_card_id[retry_card].id}/rate",
+            f"/api/practice_cards/{queue[0].id}/rate",
             json={"ratings": {answer["id"]: 1}},
         )
         assert fail_retry.status_code == 200, fail_retry.text
-        assert fail_retry.json()["requeued_practice_card"] is not None
+        requeued = fail_retry.json()["requeued_practice_card"]
+        assert requeued is not None
+        assert requeued["position"] == 3500
 
-        # passed_card: passes on the first try -> passed.
+        # queue[1]: passes on the first try -> passed.
         pass_res = client.post(
-            f"/api/practice_cards/{by_card_id[passed_card].id}/rate",
+            f"/api/practice_cards/{queue[1].id}/rate",
             json={"ratings": {answer["id"]: 4}},
         )
         assert pass_res.status_code == 200, pass_res.text
@@ -1695,10 +1771,10 @@ class TestRunState:
         archive_res = client.delete(f"/api/fields/{answer['id']}")
         assert archive_res.status_code == 200, archive_res.text
 
-        # stuck_card: fails after the archival -> zero surviving answer candidates ->
+        # queue[2]: fails after the archival -> zero surviving answer candidates ->
         # no successor -> still_failed.
         fail_stuck = client.post(
-            f"/api/practice_cards/{by_card_id[stuck_card].id}/rate",
+            f"/api/practice_cards/{queue[2].id}/rate",
             json={"ratings": {answer["id"]: 1}},
         )
         assert fail_stuck.status_code == 200, fail_stuck.text
@@ -1715,20 +1791,14 @@ class TestRunState:
             "passed": 1,
             "still_failed": 1,
         }
-        assert mid_data["current_card"] is not None
+        assert mid_data["current_card"]["practice_card_id"] == str(queue[3].id)
 
-        # Clear the two remaining pending rows (unseen_card's original row, and
-        # retry_card's requeued row) to drive the session to completion.
-        remaining = db.exec(
-            select(PracticeCard).where(
-                PracticeCard.practice_run_id == session_id,
-                PracticeCard.status == PracticeCardStatus.pending,
-            )
-        ).all()
-        assert len(remaining) == 2
-        for pc in remaining:
+        # Clear the two remaining pending rows in queue order (queue[3]'s original row,
+        # then queue[0]'s requeued row) to drive the session to completion.
+        for practice_card_id in (str(queue[3].id), requeued["id"]):
             res = client.post(
-                f"/api/practice_cards/{pc.id}/rate", json={"ratings": {answer["id"]: 4}}
+                f"/api/practice_cards/{practice_card_id}/rate",
+                json={"ratings": {answer["id"]: 4}},
             )
             assert res.status_code == 200, res.text
 
@@ -1811,7 +1881,13 @@ class TestBreakdown:
         assert res.status_code == 201, res.text
         return res.json()["id"]
 
-    def test_full_breakdown_all_four_buckets(self, client, db, existing_deck):
+    def test_full_breakdown_all_four_buckets(self, client, db, existing_deck, existing_subject):
+        """The stuck card lives in a second deck whose answer field is archived right
+        after the run starts: only the current card can be rated (ADR 059), and a single
+        deck of four cannot fail one card twice before the archive and still leave
+        another unrated until after it (MD-2). The run is driven from the state
+        endpoint with a per-card rating script, so any starting order gives the same
+        outcome."""
         title, prompt, answer, config = self._setup_deck(client, existing_deck)
 
         first_card = self._make_card(client, existing_deck, title, prompt, answer, "first", "")
@@ -1821,12 +1897,56 @@ class TestBreakdown:
         many_card = self._make_card(
             client, existing_deck, title, prompt, answer, "many", "Many Card"
         )
-        stuck_card = self._make_card(
-            client, existing_deck, title, prompt, answer, "stuck", "Stuck Card"
-        )
 
-        session = _start(client, "Breakdown run", [config["id"]])
+        stuck_deck = client.post(
+            "/api/decks",
+            json={
+                "name": "Stuck deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [
+                    {"name": "prompt", "type": "text"},
+                    {"name": "answer", "type": "text"},
+                    {"name": "filler", "type": "text"},
+                ],
+            },
+        )
+        assert stuck_deck.status_code == 201, stuck_deck.text
+        stuck_deck = stuck_deck.json()
+        stuck_fields = {fd["name"]: fd["id"] for fd in stuck_deck["field_defs"]}
+        stuck_res = client.post(
+            "/api/cards",
+            json={
+                "deck_id": stuck_deck["id"],
+                "values": {
+                    stuck_fields["prompt"]: "stuck prompt",
+                    stuck_fields["answer"]: "stuck answer",
+                    stuck_fields["filler"]: "x",
+                },
+            },
+        )
+        assert stuck_res.status_code == 201, stuck_res.text
+        stuck_card = stuck_res.json()["id"]
+        stuck_config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": stuck_deck["id"],
+                "name": "Stuck config",
+                "prompt_field_ids": [stuck_fields["prompt"]],
+                "answer_field_ids": [stuck_fields["answer"]],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        ).json()
+
+        session = _start(client, "Breakdown run", [config["id"], stuck_config["id"]])
         session_id = uuid.UUID(session["id"])
+
+        # Archive the stuck deck's only answer field: its card's requeue has nothing to
+        # draw from, while the first deck's requeues are unaffected.
+        archived = client.delete(f"/api/fields/{stuck_fields['answer']}")
+        assert archived.status_code == 200, archived.text
 
         by_card_id = {
             str(pc.card_id): pc.id
@@ -1836,50 +1956,35 @@ class TestBreakdown:
         }
         assert set(by_card_id) == {first_card, retry_card, many_card, stuck_card}
 
-        def fail(practice_card_id):
+        # first: passed_first_try; retry: passed_after_one_fail; many:
+        # passed_after_many_fails; stuck: still_failed (its requeue is blocked).
+        script = {
+            first_card: [4],
+            retry_card: [1, 4],
+            many_card: [1, 1, 4],
+            stuck_card: [1],
+        }
+        for _ in range(7):
+            state = client.get(f"/api/practice_runs/{session['id']}/state")
+            assert state.status_code == 200, state.text
+            card = state.json()["current_card"]
+            assert card is not None
+            rating = script[card["card_id"]].pop(0)
             res = client.post(
-                f"/api/practice_cards/{practice_card_id}/rate",
-                json={"ratings": {answer["id"]: 1}},
+                f"/api/practice_cards/{card['practice_card_id']}/rate",
+                json={"ratings": {a["field_def_id"]: rating for a in card["answers"]}},
             )
             assert res.status_code == 200, res.text
             requeued = res.json()["requeued_practice_card"]
-            assert requeued is not None
-            return requeued["id"]
-
-        def rate_pass(practice_card_id):
-            res = client.post(
-                f"/api/practice_cards/{practice_card_id}/rate",
-                json={"ratings": {answer["id"]: 4}},
-            )
-            assert res.status_code == 200, res.text
-            assert res.json()["requeued_practice_card"] is None
-
-        # retry_card: one fail, then pass -> passed_after_one_fail (2 attempts).
-        retry_2 = fail(by_card_id[retry_card])
-        rate_pass(retry_2)
-
-        # many_card: two fails, then pass -> passed_after_many_fails (3 attempts).
-        many_2 = fail(by_card_id[many_card])
-        many_3 = fail(many_2)
-        rate_pass(many_3)
-
-        # first_card: passes immediately -> passed_first_try (1 attempt).
-        rate_pass(by_card_id[first_card])
-
-        # Archive the only answer field so a future requeue has nothing to draw from.
-        archived = client.delete(f"/api/fields/{answer['id']}")
-        assert archived.status_code == 200, archived.text
-
-        # stuck_card: fails after the archival -> requeue blocked -> still_failed (1 attempt).
-        stuck_res = client.post(
-            f"/api/practice_cards/{by_card_id[stuck_card]}/rate",
-            json={"ratings": {answer["id"]: 1}},
-        )
-        assert stuck_res.status_code == 200, stuck_res.text
-        assert stuck_res.json()["requeued_practice_card"] is None
+            if rating == 1 and card["card_id"] != stuck_card:
+                assert requeued is not None
+            else:
+                assert requeued is None
+        assert all(ratings == [] for ratings in script.values())
 
         # The session must now report completed — nothing pending anywhere.
         run = client.get(f"/api/practice_runs/{session['id']}/state")
+        assert run.json()["current_card"] is None
         assert run.json()["session_status"] == "completed"
 
         res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
