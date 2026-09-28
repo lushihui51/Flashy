@@ -95,7 +95,7 @@ class BreakdownBucket(str, Enum):
     splits by chain length so the breakdown can distinguish a card that took retries
     from one that didn't; `still_failed` — a chain whose last row is `failed` with no
     successor, the ADR 013 stale-snapshot case — is unaffected by length and stays one
-    bucket, displayed to the user as "Abandoned"."""
+    bucket, displayed to the user as "Failed"."""
 
     passed_first_try = "passed_first_try"
     passed_after_one_fail = "passed_after_one_fail"

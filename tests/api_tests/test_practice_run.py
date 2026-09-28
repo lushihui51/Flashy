@@ -477,6 +477,43 @@ class TestForcedFailedAnswerFields:
             fid for name, fid in session_fields.items() if name.startswith("pool_a")
         } - {failed_pool}
 
+    def test_blanked_failed_pool_field_drops_out_and_card_still_requeues(
+        self, db, client, existing_user, session_cards, session_config, session_fields
+    ):
+        """The archived-field test's twin through the one path a user reaches: ADR 036's
+        force-include is conditional on the failed field being live and non-blank, so a
+        value cleared after it was shown drops out of the retry (ADR 060)."""
+        strategy, original = self._start_and_first_pending(
+            db, existing_user, session_config["id"], seed=1
+        )
+        fixed = session_fields["answer1"]
+        [failed_pool] = [fid for fid in original.answers if fid != fixed]
+
+        blanked = client.patch(
+            f"/api/cards/{original.card_id}", json={"values": {str(failed_pool): ""}}
+        )
+        assert blanked.status_code == 200, blanked.text
+
+        _, requeued = submit_rating(
+            db,
+            strategy,
+            existing_user.id,
+            original.id,
+            {fixed: 4, failed_pool: 1},
+            rng=random.Random(4),
+        )
+        db.commit()
+
+        assert requeued is not None
+        assert failed_pool not in requeued.answers
+        # The card still generates: the fixed answer survives, and the pool draw fills
+        # its one slot from the two remaining live pool fields.
+        assert requeued.answers[0] == fixed
+        assert len(requeued.answers) == 2
+        assert requeued.answers[1] in {
+            fid for name, fid in session_fields.items() if name.startswith("pool_a")
+        } - {failed_pool}
+
 
 class TestRetrySpacingFloor:
     """ADR 037: RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up,
@@ -2289,6 +2326,111 @@ class TestBreakdown:
         assert resolved[0].removed is False
         assert resolved[1].removed is True
         assert resolved[2].removed is True
+
+    def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
+        """The one path a user reaches today to the `still_failed` bucket: archiving is
+        unexposed (ADR 049) and a hard field delete removes the active practices naming
+        the field, so clearing a card's only answer value while a practice uses it is
+        what leaves the requeue nothing to generate from. The blank value passes through
+        unlabelled in the breakdown's attempt detail (ADR 060)."""
+        fields = {}
+        for name in ("prompt", "answer", "filler"):
+            res = client.post(
+                f"/api/decks/{existing_deck['id']}/fields", json={"name": name, "type": "text"}
+            )
+            assert res.status_code == 201, res.text
+            fields[name] = res.json()["id"]
+
+        card_ids = []
+        for tag in ("one", "two"):
+            res = client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {
+                        fields["prompt"]: f"{tag} prompt",
+                        fields["answer"]: f"{tag} answer",
+                        fields["filler"]: f"{tag} filler",
+                    },
+                },
+            )
+            assert res.status_code == 201, res.text
+            card_ids.append(res.json()["id"])
+
+        config = client.post(
+            "/api/deck_practice_configs",
+            json={
+                "deck_id": existing_deck["id"],
+                "name": "Blanked answer config",
+                "prompt_field_ids": [fields["prompt"]],
+                "answer_field_ids": [fields["answer"]],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert config.status_code == 201, config.text
+        session = _start(client, "Blanked answer run", [config.json()["id"]])
+
+        state = client.get(f"/api/practice_runs/{session['id']}/state")
+        assert state.status_code == 200, state.text
+        blanked_card = state.json()["current_card"]
+        assert blanked_card is not None
+        assert [a["field_def_id"] for a in blanked_card["answers"]] == [fields["answer"]]
+
+        patch = client.patch(
+            f"/api/cards/{blanked_card['card_id']}", json={"values": {fields["answer"]: ""}}
+        )
+        assert patch.status_code == 200, patch.text
+
+        rated = client.post(
+            f"/api/practice_cards/{blanked_card['practice_card_id']}/rate",
+            json={"ratings": {fields["answer"]: 1}},
+        )
+        assert rated.status_code == 200, rated.text
+        assert rated.json()["requeued_practice_card"] is None
+
+        state = client.get(f"/api/practice_runs/{session['id']}/state")
+        assert state.status_code == 200, state.text
+        assert state.json()["progress"] == {
+            "total_cards": 2,
+            "unseen": 1,
+            "retry_pending": 0,
+            "passed": 0,
+            "still_failed": 1,
+        }
+
+        remaining = state.json()["current_card"]
+        assert remaining is not None
+        assert remaining["card_id"] != blanked_card["card_id"]
+        rated = client.post(
+            f"/api/practice_cards/{remaining['practice_card_id']}/rate",
+            json={"ratings": {fields["answer"]: 4}},
+        )
+        assert rated.status_code == 200, rated.text
+
+        state = client.get(f"/api/practice_runs/{session['id']}/state")
+        assert state.status_code == 200, state.text
+        assert state.json()["session_status"] == "completed"
+        assert state.json()["current_card"] is None
+
+        res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["still_failed"] == 1
+        assert data["passed_first_try"] == 1
+
+        cards_by_id = {c["card_id"]: c for c in data["cards"]}
+        assert set(cards_by_id) == set(card_ids)
+        entry = cards_by_id[blanked_card["card_id"]]
+        assert entry["bucket"] == "still_failed"
+        assert entry["attempt_count"] == 1
+        [attempt] = entry["attempts"]
+        assert attempt["status"] == "failed"
+        [answer] = attempt["answers"]
+        assert answer["value"] == ""
+        assert answer["rating"] == 1
 
 
 def _make_run(db, user_id, status=RunStatus.completed):

@@ -20,7 +20,7 @@ const BUCKET_LABELS: Record<BreakdownBucket, string> = {
   passed_first_try: 'First try',
   passed_after_one_fail: 'One retry',
   passed_after_many_fails: '2+ retries',
-  still_failed: 'Abandoned',
+  still_failed: 'Failed',
 };
 
 type SortKey = 'gains' | 'drops' | 'mastery';

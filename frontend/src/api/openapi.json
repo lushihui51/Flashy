@@ -2373,7 +2373,7 @@
           "Practice"
         ],
         "summary": "Read Practice Runs",
-        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (schema invariant 5\n\u2014 there is no config lineage to filter on).",
+        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (`source_config_id`\nis attribution only, never a filter \u2014 ADR 040).",
         "operationId": "read_practice_runs_api_practice_runs_get",
         "parameters": [
           {
@@ -2772,7 +2772,7 @@
           "Practice"
         ],
         "summary": "Rerun Run",
-        "description": "ADR 039: creates a new run from the completed run's own frozen practice_deck\nsnapshots, named verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck.",
+        "description": "ADR 039: creates a new run from the completed run's own frozen practice_deck\nsnapshots, named verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400\n`no_cards` if the surviving snapshots generate no practice card (ADR 056).",
         "operationId": "rerun_run_api_practice_runs__practice_run_id__rerun_post",
         "parameters": [
           {
@@ -3005,7 +3005,7 @@
           "still_failed"
         ],
         "title": "BreakdownBucket",
-        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Abandoned\"."
+        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Failed\"."
       },
       "BreakdownCard": {
         "properties": {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Does not amend or supersede ADR 015 — see the note under Decision. The four-tab grouping is superseded by ADR 044; the outcome-chain semantics remain in force.
+Accepted. Does not amend or supersede ADR 015 — see the note under Decision. The four-tab grouping is superseded by ADR 044; the outcome-chain semantics remain in force. The `still_failed` bucket is displayed as "Failed" since task 018 (MD-1), not "Abandoned". ADR 060 names its reachable trigger: a card value cleared mid-practice, not an archived field.
 
 ## Context
 

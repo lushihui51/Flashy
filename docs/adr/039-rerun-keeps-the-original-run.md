@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Supersedes the delete-the-original half of ADR 030.
+Accepted. Supersedes the delete-the-original half of ADR 030. Reaffirmed by ADR 047.
 
 ## Context
 

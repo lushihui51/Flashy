@@ -280,8 +280,8 @@ export interface paths {
          * Read Practice Runs
          * @description Newest first, each row carrying the decks (and their subjects) it snapshotted.
          *     Filters are the same relation, asked as a question: a session matches a subject or
-         *     deck if any of its practice_deck rows points at a matching deck (schema invariant 5
-         *     — there is no config lineage to filter on).
+         *     deck if any of its practice_deck rows points at a matching deck (`source_config_id`
+         *     is attribution only, never a filter — ADR 040).
          */
         get: operations["read_practice_runs_api_practice_runs_get"];
         put?: never;
@@ -383,7 +383,8 @@ export interface paths {
          * @description ADR 039: creates a new run from the completed run's own frozen practice_deck
          *     snapshots, named verbatim from the request body; the original run is untouched.
          *     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
-         *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck.
+         *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400
+         *     `no_cards` if the surviving snapshots generate no practice card (ADR 056).
          */
         post: operations["rerun_run_api_practice_runs__practice_run_id__rerun_post"];
         delete?: never;
@@ -454,7 +455,7 @@ export interface components {
          *     splits by chain length so the breakdown can distinguish a card that took retries
          *     from one that didn't; `still_failed` — a chain whose last row is `failed` with no
          *     successor, the ADR 013 stale-snapshot case — is unaffected by length and stays one
-         *     bucket, displayed to the user as "Abandoned".
+         *     bucket, displayed to the user as "Failed".
          * @enum {string}
          */
         BreakdownBucket: "passed_first_try" | "passed_after_one_fail" | "passed_after_many_fails" | "still_failed";
