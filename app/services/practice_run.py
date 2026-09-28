@@ -17,6 +17,7 @@ from app.database_ops.mastery_log import (
 from app.database_ops.practice_card import (
     db_stage_create_practice_card,
     db_read_current_practice_card,
+    db_read_max_practice_card_position,
     db_read_pending_practice_cards,
     db_read_practice_card,
     db_read_practice_cards_for_run,
@@ -70,6 +71,7 @@ _POSITION_GAP = 1000
 # ADR 037: a retry may not surface until this many other pending cards have had their
 # turn, clamping the mastery-ordered insertion point rather than replacing it — a card
 # whose mastery already puts it deeper than the floor stays at its deeper slot.
+# Must stay >= 1: _insertion_position always reads a predecessor (ADR 058).
 RETRY_SPACING_FLOOR = 3
 
 
@@ -762,33 +764,35 @@ def get_practice_run_breakdown(
     )
 
 
+def _end_of_queue_position(run_max_position: int) -> int:
+    """Fewer than RETRY_SPACING_FLOOR cards pending (ADR 058): the retry goes above
+    every row the run has placed, at the same +500 ADR 008's no-successor note uses, so
+    it cannot collide."""
+    return run_max_position + _POSITION_GAP // 2
+
+
 def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:
-    """pending: a session's pending cards in position order, each paired with its
-    current mastery score. `mastery_index` — the count of pending cards whose score is
-    strictly below `new_score` — is where the ascending-mastery invariant (ADR-008)
-    alone would insert. ADR 037 then clamps that index up to at least
-    RETRY_SPACING_FLOOR (or the end of the queue, whichever is smaller): a clamp, not a
-    fixed placement, so a card whose mastery already puts it deeper stays at that
-    deeper slot. Finds the midpoint position at the resulting index, keeping the
-    (now floor-clamped) ascending-mastery invariant this function itself maintains by
-    construction."""
+    """pending: a run's pending cards in position order, each paired with its current
+    mastery score; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
+    `_end_of_queue_position` instead, ADR 058). Four steps:
+
+    1. `mastery_index`, the count of pending cards whose score is strictly below
+       `new_score`, is where the ascending-mastery invariant (ADR 008) alone would
+       insert.
+    2. ADR 037 clamps that index up to at least RETRY_SPACING_FLOOR: a clamp, not a
+       fixed placement, so a card whose mastery already puts it deeper stays at that
+       deeper slot.
+    3. With no successor at the resulting index, the retry goes 500 above the last
+       pending card.
+    4. Otherwise it takes the midpoint between its predecessor and successor. A
+       predecessor always exists because RETRY_SPACING_FLOOR >= 1 (ADR 058)."""
+    assert len(pending) >= RETRY_SPACING_FLOOR
     mastery_index = sum(1 for _, score in pending if score < new_score)
-    final_index = max(mastery_index, min(RETRY_SPACING_FLOOR, len(pending)))
+    final_index = max(mastery_index, RETRY_SPACING_FLOOR)
 
-    lower = pending[final_index - 1][0] if final_index > 0 else None
-    upper = pending[final_index][0] if final_index < len(pending) else None
-
-    if lower:
-        lower_pos = lower.position
-    else:
-        lower_pos = upper.position - 2 * _POSITION_GAP if upper else -_POSITION_GAP
-
-    if upper:
-        upper_pos = upper.position
-    else:
-        upper_pos = lower.position + _POSITION_GAP if lower else _POSITION_GAP
-
-    return (lower_pos + upper_pos) // 2
+    if final_index == len(pending):
+        return pending[-1][0].position + _POSITION_GAP // 2
+    return (pending[final_index - 1][0].position + pending[final_index][0].position) // 2
 
 
 def _requeue_failed_card(
@@ -801,7 +805,9 @@ def _requeue_failed_card(
 ) -> PracticeCard | None:
     """Inserts a fresh practice_card row for the same card_id — never mutates
     old_card, which stays 'failed'. Position reflects the card's mastery *after* this
-    submission's blend, so a badly-missed card resurfaces sooner. `failed_field_ids`
+    submission's blend, so a badly-missed card resurfaces sooner, when at least
+    RETRY_SPACING_FLOOR cards are pending; with fewer, the retry goes to the end of the
+    queue (ADR 058). `failed_field_ids`
     (the answer fields rated "Again", ADR 036) are forced into the new row's answer
     set ahead of pool sampling, so the retry always re-asks what was missed — a failed
     field archived or blanked since drops out of the generation filters like any other.
@@ -840,12 +846,18 @@ def _requeue_failed_card(
     # rolls back, and it returns None for the loop below to renumber and retry.
     for _attempt in range(2):
         pending = db_read_pending_practice_cards(db, old_card.practice_run_id)
-        scores = card_mastery(
-            db, strategy, [c.card_id for c in pending] + [old_card.card_id], field_ids
-        )
-        position = _insertion_position(
-            [(c, scores[c.card_id].mastery) for c in pending], scores[old_card.card_id].mastery
-        )
+        if len(pending) < RETRY_SPACING_FLOOR:
+            run_max = db_read_max_practice_card_position(db, old_card.practice_run_id)
+            assert run_max is not None, "the row just rated exists in this transaction"
+            position = _end_of_queue_position(run_max)
+        else:
+            scores = card_mastery(
+                db, strategy, [c.card_id for c in pending] + [old_card.card_id], field_ids
+            )
+            position = _insertion_position(
+                [(c, scores[c.card_id].mastery) for c in pending],
+                scores[old_card.card_id].mastery,
+            )
 
         new_card = db_try_stage_create_practice_card(
             db,

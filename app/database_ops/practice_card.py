@@ -120,6 +120,17 @@ def db_read_pending_practice_cards(
     )
 
 
+def db_read_max_practice_card_position(db: Session, practice_run_id: uuid.UUID) -> int | None:
+    """Highest position among every row of the run, in every status, or None for a run
+    with no rows. The end of the queue for a retry (ADR 058) and the base of a renumber
+    both start above it."""
+    return db.exec(
+        select(func.max(PracticeCard.position)).where(
+            PracticeCard.practice_run_id == practice_run_id
+        )
+    ).one()
+
+
 def db_stage_renumber_pending_practice_cards(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
@@ -129,11 +140,7 @@ def db_stage_renumber_pending_practice_cards(
     than restarting at 0: passed/failed rows keep their old position forever, so
     renumbering from 0 would routinely collide with one of them."""
     cards = db_read_pending_practice_cards(db, practice_run_id)
-    max_position = db.exec(
-        select(func.max(PracticeCard.position)).where(
-            PracticeCard.practice_run_id == practice_run_id
-        )
-    ).one()
+    max_position = db_read_max_practice_card_position(db, practice_run_id)
     base = (max_position or 0) + 1000
     for i, card in enumerate(cards):
         card.position = base + i * 1000

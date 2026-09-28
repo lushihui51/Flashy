@@ -22,6 +22,8 @@ from app.services.practice_generation import (
 )
 from app.services.practice_run import (
     _POSITION_GAP,
+    RETRY_SPACING_FLOOR,
+    _end_of_queue_position,
     _insertion_position,
     _resolve_field_values,
     get_practice_run_breakdown,
@@ -462,6 +464,70 @@ class TestRetrySpacingFloor:
             answers=[],
         )
 
+    def test_last_pending_card_requeues_via_http(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        """ADR 058: rating "Again" on a run's only pending card requeues it above every
+        row the run has placed (run max + 500) instead of raising, and a retry of that
+        retry chains above it. Positions are exact because the fixture generates 3 cards
+        at 0, 1000, 2000 and nothing else moves them."""
+        start_res = client.post(
+            "/api/practice_runs",
+            json={
+                "name": "Last card run",
+                "user_id": str(existing_user.id),
+                "deck_practice_config_ids": [session_config["id"]],
+            },
+        )
+        assert start_res.status_code == 201, start_res.text
+        run_id = start_res.json()["id"]
+
+        def current():
+            state = client.get(f"/api/practice_runs/{run_id}/state")
+            assert state.status_code == 200, state.text
+            return state.json()
+
+        def rate(card_id, answers, rating):
+            res = client.post(
+                f"/api/practice_cards/{card_id}/rate",
+                json={"ratings": {a["field_def_id"]: rating for a in answers}},
+            )
+            assert res.status_code == 200, res.text
+            return res.json()
+
+        for _ in range(2):
+            card = current()["current_card"]
+            result = rate(card["practice_card_id"], card["answers"], 4)
+            assert result["requeued_practice_card"] is None
+
+        last = current()["current_card"]
+        result = rate(last["practice_card_id"], last["answers"], 1)
+        requeued = result["requeued_practice_card"]
+        assert requeued is not None
+        assert requeued["status"] == "pending"
+        assert requeued["position"] == 2500
+
+        state = current()
+        assert state["session_status"] == "active"
+        assert state["current_card"]["practice_card_id"] == requeued["id"]
+        assert state["current_card"]["attempt"] == 2
+
+        retry = state["current_card"]
+        result = rate(retry["practice_card_id"], retry["answers"], 1)
+        second = result["requeued_practice_card"]
+        assert second is not None
+        assert second["position"] == 3000
+
+        retry = current()["current_card"]
+        assert retry["practice_card_id"] == second["id"]
+        result = rate(retry["practice_card_id"], retry["answers"], 4)
+        assert result["requeued_practice_card"] is None
+
+        state = current()
+        assert state["session_status"] == "completed"
+        assert state["current_card"] is None
+        assert state["progress"]["passed"] == 3
+
     def test_hard_fail_lands_after_exactly_three_pending_with_four_or_more(
         self,
         db,
@@ -522,6 +588,19 @@ class TestRetrySpacingFloor:
         position = _insertion_position(pending, new_score=100.0)
 
         assert position > pending[-1][0].position
+
+    def test_end_of_queue_position_is_run_max_plus_half_gap(self):
+        assert _end_of_queue_position(53000) == 53500
+
+    def test_insertion_position_requires_the_floors_worth_of_pending(self):
+        with pytest.raises(AssertionError):
+            _insertion_position([(self._card_at(0), 0.5)], 0.0)
+
+    def test_retry_spacing_floor_is_at_least_one(self):
+        """`_insertion_position` indexes `pending[final_index - 1]` whenever it runs,
+        which needs the floor to be at least 1 (ADR 058); a floor of 0 would need the
+        no-predecessor branch back."""
+        assert RETRY_SPACING_FLOOR >= 1
 
     def test_failing_the_same_card_again_reapplies_the_floor(
         self,
@@ -592,16 +671,26 @@ class TestRetrySpacingFloor:
 
 class TestPositionCollisionFallback:
     def test_renumber_and_retry_on_collision(
-        self, db, existing_user, session_cards, session_config, monkeypatch
+        self,
+        db,
+        client,
+        existing_user,
+        existing_deck,
+        session_cards,
+        session_config,
+        session_fields,
+        monkeypatch,
     ):
         """Forces the computed insertion position to collide with an existing pending
         card's position, so the requeue must hit db_stage_renumber_pending_practice_cards
-        and succeed on the retry. The natural (non-stubbed) insertion formula always
-        leaves virtual-boundary gaps of 1000+, so this can't be provoked by just
-        wedging existing cards close together — the stub makes it deterministic
-        instead of trying to engineer mastery scores precisely enough to collide."""
+        and succeed on the retry. The natural (non-stubbed) insertion formula never
+        collides on its own with the gaps a fresh run leaves, so the stub makes the
+        collision deterministic instead of trying to engineer mastery scores precisely
+        enough to collide. Five cards, so four stay pending after the fail and the
+        requeue takes the enough-cards branch that calls `_insertion_position` (ADR 058)."""
         import app.services.practice_run as practice_run_module
 
+        TestRetrySpacingFloor._add_cards(client, existing_deck, session_fields, 2, start_at=3)
         strategy = EmaStrategy()
         config_id = uuid.UUID(session_config["id"])
 
@@ -618,19 +707,15 @@ class TestPositionCollisionFallback:
             )
             .order_by(PracticeCard.position)
         ).all()
-        assert len(pending) >= 2
+        assert len(pending) == 5
 
-        # Pin one pending card to position 0 — not the one being rated — so the
-        # stubbed insertion point below collides with it on the first attempt.
-        occupied = pending[0]
-        occupied.position = 0
-        db.add(occupied)
-        db.commit()
+        target, occupied = pending[0], pending[1]
+        collision = occupied.position
+        assert collision == 1000
 
-        target = pending[1]
-        assert target.id != occupied.id
-
-        monkeypatch.setattr(practice_run_module, "_insertion_position", lambda *a, **k: 0)
+        monkeypatch.setattr(
+            practice_run_module, "_insertion_position", lambda *a, **k: collision
+        )
 
         ratings = {answer_id: 1 for answer_id in target.answers}
         rated, requeued = submit_rating(
@@ -641,19 +726,11 @@ class TestPositionCollisionFallback:
         assert rated.status == PracticeCardStatus.failed
         assert requeued is not None
         assert requeued.status == PracticeCardStatus.pending
-        # Succeeded only because renumbering moved `occupied` off of 0, freeing the
+        # Succeeded only because renumbering moved `occupied` off of 1000, freeing the
         # position the (stubbed) insertion logic keeps insisting on.
-        assert requeued.position == 0
+        assert requeued.position == collision
         db.refresh(occupied)
-        assert occupied.position != 0
-
-        positions = db.exec(
-            select(PracticeCard.position).where(
-                PracticeCard.practice_run_id == session.id,
-                PracticeCard.status == PracticeCardStatus.pending,
-            )
-        ).all()
-        assert len(positions) == len(set(positions))
+        assert occupied.position != collision
 
         positions = db.exec(
             select(PracticeCard.position).where(
