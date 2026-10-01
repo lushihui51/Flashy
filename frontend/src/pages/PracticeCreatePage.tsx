@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
@@ -12,13 +12,24 @@ import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
 import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
+import {
+  readSelectedConfigIds,
+  selectConfig,
+  toggleConfig,
+  withSelectedConfigIds,
+} from 'src/lib/practiceSelection';
 
 type RowError = { configId: string; message: string };
 
+/** The overview's own params — the only ones Cancel hands back, so the draft never
+ * leaves this page (ADR 061). */
+const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
+
 /**
- * `/practice/new`: filter, pick one configuration per deck, name, create. Create *is*
- * start (invariant 2) — there is no draft state, so a successful post lands straight on
- * the new session's own page.
+ * `/practice/new`: filter, tick at most one configuration per deck, name, create. The
+ * selection rides the URL as repeated `config` params (ADR 061), so it survives every
+ * round trip, a refresh, and back. Create *is* start (invariant 2) — a successful post
+ * lands straight on the new session's own page.
  */
 export default function PracticeCreatePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,10 +40,8 @@ export default function PracticeCreatePage() {
 
   const subjectId = searchParams.get('subject');
   const deckId = searchParams.get('deck');
+  const selectedIds = readSelectedConfigIds(searchParams);
 
-  // Per MD-4, selection lives in component state rather than the URL: it must survive
-  // filter changes, which the URL-driven subject/deck params deliberately don't.
-  const [selection, setSelection] = useState<Record<string, string>>({});
   // Prefilled with the moment the page opened (ADR 019's one sanctioned formatter) —
   // the same call DeckConfigurationEditor makes for a config name.
   const [name, setName] = useState(() => formatDateTime(new Date()));
@@ -46,7 +55,9 @@ export default function PracticeCreatePage() {
   const [returnedConfigId] = useState(
     () => (location.state as { configurationId?: string } | null)?.configurationId ?? null,
   );
-  const [appliedReturnedConfig, setAppliedReturnedConfig] = useState(false);
+  // A ref, not state: the effect below writes the URL, and a state flag would put a
+  // setState inside that same effect.
+  const appliedReturnedConfig = useRef(false);
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
@@ -58,26 +69,34 @@ export default function PracticeCreatePage() {
 
   const groups = groupConfigurationsByDeck(configsQuery.data ?? []);
 
-  // Adjusting state during render, the same pattern DeckConfigurationEditor uses to
-  // resync its board once a deck's fields land: run once the returned config actually
-  // appears in the fetched list, guarded so it never reapplies. Consumed only on a
-  // match: after the builder round trip this page remounts onto the *stale cached*
-  // list first (the invalidated refetch is still in flight), and a freshly created
-  // configuration is only in the refetched one — spending the one-shot on the stale
-  // render would drop the auto-select.
-  if (!appliedReturnedConfig && returnedConfigId && configsQuery.data) {
+  // Consumed only once the returned config actually appears in the fetched list: after
+  // the builder round trip this page remounts onto the *stale cached* list first (the
+  // invalidated refetch is still in flight), and a freshly created configuration is
+  // only in the refetched one — spending the one-shot on the stale render would drop
+  // the auto-select. An effect rather than render-time state adjustment because
+  // `setSearchParams` is a navigation.
+  useEffect(() => {
+    if (appliedReturnedConfig.current || !returnedConfigId || !configsQuery.data) return;
     const match = configsQuery.data.find((config) => config.id === returnedConfigId);
-    if (match) {
-      setSelection((current) => ({ ...current, [match.deck_id]: match.id }));
-      setAppliedReturnedConfig(true);
-    }
-  }
+    if (!match) return;
+    appliedReturnedConfig.current = true;
+    const deckConfigIds = configsQuery.data
+      .filter((config) => config.deck_id === match.deck_id)
+      .map((config) => config.id);
+    setSearchParams(
+      withSelectedConfigIds(
+        searchParams,
+        selectConfig(readSelectedConfigIds(searchParams), deckConfigIds, match.id),
+      ),
+      { replace: true },
+    );
+  }, [returnedConfigId, configsQuery.data, searchParams, setSearchParams]);
 
   const createMutation = useMutation({
     mutationFn: () =>
       createPracticeRun({
         name: name.trim(),
-        deck_practice_config_ids: Object.values(selection),
+        deck_practice_config_ids: selectedIds,
       }),
     onSuccess: async (session) => {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
@@ -104,11 +123,12 @@ export default function PracticeCreatePage() {
           return;
         }
       }
-      // duplicate_deck (unreachable through the radio UI) and anything else.
+      // duplicate_deck (reachable only from a hand-edited URL, MD-8) and anything else.
       setSaveError(error.message);
     },
   });
 
+  // Changes only its own params, so the draft's `config` ids ride along (ADR 061).
   const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
     const params = new URLSearchParams(searchParams);
     if (next.subjectId) params.set('subject', next.subjectId);
@@ -128,7 +148,16 @@ export default function PracticeCreatePage() {
     navigate({ pathname: '/deck-configurations/new', search: params.toString() });
   };
 
-  const selectedCount = Object.keys(selection).length;
+  const cancel = () => {
+    const params = new URLSearchParams();
+    for (const key of OVERVIEW_PARAMS) {
+      const value = searchParams.get(key);
+      if (value !== null) params.set(key, value);
+    }
+    navigate({ pathname: '/practice', search: params.toString() });
+  };
+
+  const selectedCount = selectedIds.length;
   const nameMissing = name.trim() === '';
   const canCreate = selectedCount > 0 && !nameMissing && !createMutation.isPending;
   const filtered = subjectId !== null || deckId !== null;
@@ -145,7 +174,7 @@ export default function PracticeCreatePage() {
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
         <button
           type="button"
-          onClick={() => navigate({ pathname: '/practice', search: searchParams.toString() })}
+          onClick={cancel}
           className="text-sm font-medium text-(--color-text-secondary)"
         >
           Cancel
@@ -200,7 +229,7 @@ export default function PracticeCreatePage() {
           {filtered ? (
             <button
               type="button"
-              onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
+              onClick={() => setFilters({ subjectId: null, deckId: null })}
               className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
             >
               Clear filters
@@ -212,9 +241,21 @@ export default function PracticeCreatePage() {
       ) : (
         <ConfigurationPickList
           groups={groups}
-          selection={selection}
+          selectedIds={new Set(selectedIds)}
           rowError={rowError}
-          onSelect={(deck, config) => setSelection((current) => ({ ...current, [deck]: config }))}
+          onToggle={(group, configId) =>
+            setSearchParams(
+              withSelectedConfigIds(
+                searchParams,
+                toggleConfig(
+                  selectedIds,
+                  group.configs.map((config) => config.id),
+                  configId,
+                ),
+              ),
+              { replace: true },
+            )
+          }
         />
       )}
 

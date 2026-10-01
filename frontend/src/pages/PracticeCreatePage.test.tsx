@@ -104,9 +104,26 @@ function mockLibrary(configsFor: (query: URLSearchParams) => unknown[] = () => A
   return requests;
 }
 
+/** A landing route's stand-in: shows where a navigation away from the page ended. */
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+}
+
+/** Rendered outside `<Routes>`, so it reports the current location whichever route is
+ * showing — the page's own URL writes (ADR 061) included. */
+function CurrentLocationProbe() {
+  const location = useLocation();
+  return (
+    <span data-testid="current-location">{`${location.pathname}${location.search}`}</span>
+  );
+}
+
+/** Decoded via URLSearchParams, never compared as an encoded string literal (ADR 024). */
+function currentLocation() {
+  const full = screen.getByTestId('current-location').textContent ?? '';
+  const [pathname, search = ''] = full.split('?');
+  return { full, pathname, params: new URLSearchParams(search) };
 }
 
 /** Stands in for DeckConfigurationEditor's create route: records where it was carried
@@ -135,12 +152,15 @@ function NewConfigStub() {
 
 function renderCreate(initialPath = '/practice/new') {
   return renderWithProviders(
-    <Routes>
-      <Route path="/practice/new" element={<PracticeCreatePage />} />
-      <Route path="/practice" element={<LocationProbe />} />
-      <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
-      <Route path="/deck-configurations/new" element={<NewConfigStub />} />
-    </Routes>,
+    <>
+      <CurrentLocationProbe />
+      <Routes>
+        <Route path="/practice/new" element={<PracticeCreatePage />} />
+        <Route path="/practice" element={<LocationProbe />} />
+        <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
+        <Route path="/deck-configurations/new" element={<NewConfigStub />} />
+      </Routes>
+    </>,
     [initialPath],
   );
 }
@@ -167,18 +187,47 @@ describe('PracticeCreatePage', () => {
     expect(within(betaGroup).getByText('Basics')).toBeInTheDocument();
   });
 
-  it('enforces one selected configuration per deck', async () => {
+  it('a checkbox per configuration: at most one ticked per deck, and a tick can be cleared (MD-1)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
-    expect(screen.getByRole('radio', { name: 'Recall' })).toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
 
-    await user.click(screen.getByRole('radio', { name: 'Recognition' }));
-    expect(screen.getByRole('radio', { name: 'Recognition' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Recall' })).not.toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Recognition' }));
+    expect(screen.getByRole('checkbox', { name: 'Recognition' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recognition' }));
+    expect(screen.getByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
+    expect(screen.queryByText(/\d+ selected/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it('the selection rides the URL as repeated config params, in tick order (ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
+
+    expect(currentLocation().pathname).toBe('/practice/new');
+    expect(currentLocation().params.getAll('config')).toEqual(['c1', 'c3']);
+  });
+
+  it('mounting with config params shows them ticked and counted (ADR 061)', async () => {
+    mockLibrary();
+    renderCreate('/practice/new?config=c1&config=c3');
+
+    expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 
   it('Create stays disabled with the unmet condition shown, mirroring the builder’s Save', async () => {
@@ -191,7 +240,7 @@ describe('PracticeCreatePage', () => {
     expect(create).toBeDisabled();
     expect(screen.getByText('Select at least one configuration to practise.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     expect(create).toBeEnabled(); // the name arrives prefilled, so nothing else is left
 
     await user.clear(screen.getByLabelText('Name'));
@@ -215,8 +264,8 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' })); // deck d1
-    await user.click(screen.getByRole('radio', { name: 'Basics' })); // deck d2
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' })); // deck d2
     const nameInput = screen.getByLabelText('Name');
     await user.clear(nameInput);
     await user.type(nameInput, 'Study run');
@@ -241,13 +290,13 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(
       await screen.findByText('This configuration no longer produces any prompts — edit it.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
   });
 
   it('no_cards shows the no-cards sentence above the list and keeps the selection', async () => {
@@ -270,12 +319,12 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText(NO_CARDS_MESSAGE)).toBeInTheDocument();
     // The selection survives, so the user can swap the configuration out in place.
-    expect(screen.getByRole('radio', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
   });
 
   it('config_not_found shows a top-of-list message and refetches the list', async () => {
@@ -298,7 +347,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByText('Recall');
     const callsAfterLoad = calls;
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(
@@ -318,7 +367,7 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
@@ -343,6 +392,20 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
+  it('Clear filters drops only the filters, keeping the selection (ADR 061)', async () => {
+    mockLibrary((query) => (query.get('subject_id') === 's1' ? [] : ALL_CONFIGS));
+    const user = userEvent.setup();
+    renderCreate('/practice/new?subject=s1&config=c3');
+    await screen.findByText('No configurations match these filters.');
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    expect(currentLocation().pathname).toBe('/practice/new');
+    expect(currentLocation().params.has('subject')).toBe(false);
+    expect(currentLocation().params.getAll('config')).toEqual(['c3']);
+    expect(await screen.findByRole('checkbox', { name: 'Basics' })).toBeChecked();
+  });
+
   it('the selected count stays correct even once its group is filtered out of view (MD-4)', async () => {
     mockLibrary((query) => {
       const subjectId = query.get('subject_id');
@@ -353,9 +416,9 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('radio', { name: 'Recall' })); // deck d1, subject s1
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1, subject s1
 
-    // Filtering to subject s2 drops d1's group — and the Recall radio — from view.
+    // Filtering to subject s2 drops d1's group — and the Recall checkbox — from view.
     await user.click(screen.getByPlaceholderText('All subjects'));
     await user.click(await screen.findByRole('option', { name: 'Beta' }));
 
@@ -381,17 +444,53 @@ describe('PracticeCreatePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Finish new config' }));
 
-    expect(await screen.findByRole('radio', { name: 'Recognition' })).toBeChecked();
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Recognition' })).toBeChecked(),
+    );
+    expect(currentLocation().params.getAll('config')).toEqual(['c2']);
   });
 
-  it('Cancel returns to the practice list, keeping the current filters', async () => {
+  it('the New configuration round trip keeps the draft, and the returned config replaces its deck’s tick (ADR 061)', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1');
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' })); // deck d2
+    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+
+    // The draft left with the returnTo, so it comes back with it.
+    const params = new URLSearchParams(
+      (screen.getByTestId('new-config-location').textContent ?? '').split('?')[1],
+    );
+    expect(params.get('returnTo')).toBe('/practice/new?config=c1&config=c3');
+
+    // The stub hands back c2 — Recognition, in Recall's deck d1.
+    await user.click(screen.getByRole('button', { name: 'Finish new config' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Recognition' })).toBeChecked(),
+    );
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
+  });
+
+  it('Cancel returns to the practice list with the overview’s own params and none of the draft (ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/practice/new?subject=s1&status=completed&config=c1');
     await screen.findByText('Recall');
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice?subject=s1');
+    const landed = currentLocation();
+    expect(landed.pathname).toBe('/practice');
+    expect(landed.params.get('subject')).toBe('s1');
+    expect(landed.params.get('status')).toBe('completed');
+    expect(landed.params.has('config')).toBe(false);
+    expect([...landed.params.keys()].sort()).toEqual(['status', 'subject']);
   });
 });

@@ -357,7 +357,7 @@ describe('practice pre-filter chains', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new?subject=s1&deck=d1');
-    await screen.findByRole('radio', { name: 'Recall' });
+    await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
     await screen.findByRole('region', { name: 'Not used' });
@@ -385,20 +385,20 @@ describe('practice pre-filter chains', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(currentLocation().full).toBe('/practice/new?subject=s1&deck=d1'));
     expect(await screen.findByRole('heading', { name: 'New practice' })).toBeInTheDocument();
-    await screen.findByRole('radio', { name: 'Recall' });
+    await screen.findByRole('checkbox', { name: 'Recall' });
     await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Alpha'));
     expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
   });
 
-  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections gone (MD-5, MD-6)', async () => {
+  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5, ADR 061)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');
 
-    // Two selections before leaving — per MD-6 these are draft state and will NOT
-    // survive the round trip; only the returned configuration's auto-select should.
-    await user.click(await screen.findByRole('radio', { name: 'Recall' }));
-    await user.click(screen.getByRole('radio', { name: 'Basics' }));
+    // Two selections before leaving — per ADR 061 the draft rides the URL, so both
+    // come back on the return leg alongside the returned configuration's auto-select.
+    await user.click(await screen.findByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
@@ -428,12 +428,15 @@ describe('practice pre-filter chains', () => {
     await user.type(screen.getByLabelText('Name'), 'Fresh Config');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    // Back on New practice: the new configuration is auto-selected; the two selections
-    // made before leaving are gone (MD-6) — only the auto-selected one is checked.
-    await waitFor(() => expect(currentLocation().full).toBe('/practice/new'));
-    expect(await screen.findByRole('radio', { name: 'Fresh Config' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Recall' })).not.toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Basics' })).not.toBeChecked();
-    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    // Back on New practice: the new configuration is auto-selected and the two
+    // selections made before leaving are still there (ADR 061), in tick order.
+    await waitFor(() => expect(currentLocation().pathname).toBe('/practice/new'));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Fresh Config' })).toBeChecked(),
+    );
+    expect(currentLocation().params.getAll('config')).toEqual(['c1', 'c2', 'c9']);
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
   });
 });

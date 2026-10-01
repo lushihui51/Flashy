@@ -173,7 +173,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
 
 ### T1 — The selection is a checkbox list held in the URL (MD-1, ADR 061, MD-8) — no dependencies
 
-- [ ] **Goal:** New practice's selection moves from component state to repeated `config` URL params and is toggled through checkboxes, so it can be cleared and survives every round trip.
+- [x] **Goal:** New practice's selection moves from component state to repeated `config` URL params and is toggled through checkboxes, so it can be cleared and survives every round trip.
 - **Files:**
   - `frontend/src/lib/practiceSelection.ts` (new)
   - `frontend/src/lib/practiceSelection.test.ts` (new)
@@ -229,7 +229,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `fix: new practice selection is a checkbox list in the URL (task 019 T1)`
-- Notes:
+- Notes: in `practicePrefilterChain.test.tsx` Basics is `c2` and the created configuration is `c9`, so the save-direction walk asserts `config` equal to `c1`, `c2`, `c9`; this file's `c3` was the page test's fixture id. "Clear filters" calls the existing `setFilters` with both filters null, which already deletes exactly `subject` and `deck` from a copy with `replace`. The existing auto-select test also asserts the URL ends with `config=c2`, and both round-trip tests wait for the tick rather than asserting on first render, since the one-shot now lands in an effect. Otherwise none.
 
 ### T2 — The name sits at the top and rides the URL (ADR 061, MD-7) — depends on T1
 
