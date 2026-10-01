@@ -8,7 +8,7 @@ Feature cycle from the 2026-09-29 /plan session, prompted by the app freezing wh
 - **Pages misreport.** Eight pages render every failed load as "not found", and `LibraryPage` has no error branch at all.
 - **A silent database hangs requests.** The engine in `app/database.py` sets no `connect_timeout`, so a database host that stops answering hangs each request until the OS gives up, about two minutes.
 
-Branch: `feat/connection-status`, cut from `main`. T3 edits `frontend/src/components/library/DeckConfigurationEditor.tsx` and its test, which task 019 also edits; whichever branch merges second rebases onto the first.
+Branch: `feat/connection-status`, cut from `main`. T3 edits `frontend/src/components/library/DeckConfigurationEditor.tsx` and its test, which task 019 also edits; task 019 merged first (PR #33) and this branch merged `main` before T3 ran, so no rebase was needed.
 
 Recorded by /justify: ADR 062 amends ADR 035, ADR 064 amends ADR 055, and ADR 065 amends ADR 006 and ADR 022; each amended ADR's Status line names its amendment. ADR 063 stays consistent with ADR 033, since its recovery refetch only reruns queries that pages own.
 
