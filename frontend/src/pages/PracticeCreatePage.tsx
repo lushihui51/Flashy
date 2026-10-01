@@ -220,6 +220,14 @@ export default function PracticeCreatePage() {
       { replace: true },
     );
 
+  // The draft rides this page's URL, so a returnTo of the full location brings it back
+  // intact (ADR 061). An edit's Save hands back no result, so nothing gets auto-selected.
+  const editConfiguration = (configId: string) => {
+    const params = new URLSearchParams();
+    params.set('returnTo', `${location.pathname}${location.search}`);
+    navigate({ pathname: `/deck-configurations/${configId}/edit`, search: params.toString() });
+  };
+
   const cancel = () => {
     const params = new URLSearchParams();
     for (const key of OVERVIEW_PARAMS) {
@@ -369,6 +377,7 @@ export default function PracticeCreatePage() {
               { replace: true },
             )
           }
+          onEdit={editConfiguration}
         />
       )}
     </div>

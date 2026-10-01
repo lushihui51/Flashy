@@ -172,6 +172,7 @@ function renderCreate(initialPath = '/practice/new') {
         <Route path="/practice" element={<LocationProbe />} />
         <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
         <Route path="/deck-configurations/new" element={<NewConfigStub />} />
+        <Route path="/deck-configurations/:configId/edit" element={<LocationProbe />} />
       </Routes>
     </>,
     [initialPath],
@@ -762,6 +763,31 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
+  });
+
+  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6, ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/practice/new?subject=s1&config=c1&name=Exam');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
+
+    const landed = currentLocation();
+    expect(landed.pathname).toBe('/deck-configurations/c2/edit');
+    expect(landed.params.get('returnTo')).toBe('/practice/new?subject=s1&config=c1&name=Exam');
+  });
+
+  it('tapping a row’s label still ticks it and stays on the page (MD-6)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('checkbox', { name: 'Recognition' });
+
+    await user.click(screen.getByText('Recognition'));
+
+    expect(screen.getByRole('checkbox', { name: 'Recognition' })).toBeChecked();
+    expect(currentLocation().pathname).toBe('/practice/new');
   });
 
   it('Cancel returns to the practice list with the overview’s own params and none of the draft (ADR 061)', async () => {

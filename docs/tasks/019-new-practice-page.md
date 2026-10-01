@@ -342,7 +342,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
 
 ### T5 — Edit a configuration from New practice and come back (MD-6, ADR 061) — depends on T1; after T4 (shared file)
 
-- [ ] **Goal:** each configuration row gets a pencil that opens Edit configuration and returns to New practice with the draft intact, and an edit's Save no longer auto-selects the edited configuration.
+- [x] **Goal:** each configuration row gets a pencil that opens Edit configuration and returns to New practice with the draft intact, and an edit's Save no longer auto-selects the edited configuration.
 - **Files:**
   - `frontend/src/components/practice/ConfigurationPickList.tsx`
   - `frontend/src/pages/PracticeCreatePage.tsx`
@@ -384,7 +384,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: edit a configuration from new practice and return to the draft (task 019 T5)`
-- Notes:
+- Notes: `practicePrefilterChain.test.tsx`'s fixtures had no Recognition, so a `c3` Recognition in deck `d1` was added for the edit walk; the earlier chains are unaffected. Restoring the always-hand-back Save fails both the editor's edit-mode test and the chain walk. Browser walk (2026-10-01, headless Chromium at 390px against the dev servers, ADR 007 bypass): named the practice, ticked Command to Purpose (Commands) and Port Number to Protocol Name (Ports); the pencil on Test purpose → Cancel returned to the identical URL with the name and both ticks intact; pencil → Save with no change returned to the identical URL, intact, Test purpose unticked, "2 selected"; ✕ on the Ports row unticked its checkbox, removed the row, and read "1 selected". No page errors. The script was run twice, because the first run read step 4 before the update rendered, which a screenshot showed had succeeded; so Test purpose received four no-change PATCHes and is otherwise unchanged. Create was never pressed and nothing was deleted. Otherwise none.
 
 ## Deferred — do not build
 

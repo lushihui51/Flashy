@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react';
 import type { ConfigurationGroup } from 'src/lib/practiceConfigurationGroups';
 
 type ConfigurationPickListProps = {
@@ -11,6 +12,8 @@ type ConfigurationPickListProps = {
   /** One tap on a row's checkbox. `group` is the row's deck group, so the page can
    * untick that deck's other configuration (MD-1). */
   onToggle: (group: ConfigurationGroup, configId: string) => void;
+  /** The row's pencil: open this configuration for editing (task 019 MD-6). */
+  onEdit: (configId: string) => void;
 };
 
 /**
@@ -29,6 +32,7 @@ export default function ConfigurationPickList({
   selectedIds,
   rowError,
   onToggle,
+  onEdit,
 }: ConfigurationPickListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -42,15 +46,28 @@ export default function ConfigurationPickList({
               const inputId = `config-${config.id}`;
               return (
                 <div key={config.id} className="flex flex-col gap-1 py-2">
-                  <label htmlFor={inputId} className="flex min-h-11 items-center gap-3">
-                    <input
-                      id={inputId}
-                      type="checkbox"
-                      checked={selectedIds.has(config.id)}
-                      onChange={() => onToggle(group, config.id)}
-                    />
-                    <span className="text-[15px] text-(--color-text)">{config.name}</span>
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor={inputId}
+                      className="flex min-h-11 min-w-0 flex-1 items-center gap-3"
+                    >
+                      <input
+                        id={inputId}
+                        type="checkbox"
+                        checked={selectedIds.has(config.id)}
+                        onChange={() => onToggle(group, config.id)}
+                      />
+                      <span className="text-[15px] text-(--color-text)">{config.name}</span>
+                    </label>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${config.name}`}
+                      onClick={() => onEdit(config.id)}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+                    >
+                      <Pencil aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                  </div>
                   {rowError?.configId === config.id && (
                     <p role="alert" className="pl-7 text-sm text-(--color-danger)">
                       {rowError.message}

@@ -124,6 +124,21 @@ const initialConfigs = [
     subject_id: 's2',
     subject_name: 'Beta',
   },
+  {
+    id: 'c3',
+    deck_id: 'd1',
+    name: 'Recognition',
+    created_at: '',
+    prompt_field_ids: ['f2'],
+    answer_field_ids: ['f1'],
+    prompt_pool_ids: [] as string[],
+    prompt_pool_counts: [] as number[],
+    answer_pool_ids: [] as string[],
+    answer_pool_counts: [] as number[],
+    deck_name: 'Alpha Deck',
+    subject_id: 's1',
+    subject_name: 'Alpha',
+  },
 ];
 
 /** A small in-memory library the handlers read AND write — the save-direction walk
@@ -168,6 +183,18 @@ function mockLibrary() {
             (!deckId || config.deck_id === deckId),
         ),
       );
+    }),
+    http.get(`${BASE}/api/deck_practice_configs/:configId`, ({ params }) => {
+      const config = configs.find((c) => c.id === params.configId);
+      return config
+        ? HttpResponse.json(config)
+        : HttpResponse.json({ detail: 'Configuration not found' }, { status: 404 });
+    }),
+    http.patch(`${BASE}/api/deck_practice_configs/:configId`, async ({ params, request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      const index = configs.findIndex((c) => c.id === params.configId);
+      configs[index] = { ...configs[index]!, ...body };
+      return HttpResponse.json(configs[index]);
     }),
     http.post(`${BASE}/api/decks`, async ({ request }) => {
       const body = (await request.json()) as {
@@ -252,6 +279,10 @@ function renderChain(initialPath: string) {
         <Route
           path="/deck-configurations/new"
           element={<DeckConfigurationEditor mode="create" />}
+        />
+        <Route
+          path="/deck-configurations/:configId/edit"
+          element={<DeckConfigurationEditor mode="edit" />}
         />
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         {/* T5 owns the real details page; the chains never land there. */}
@@ -443,5 +474,40 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
     expect(screen.getByText('3 selected')).toBeInTheDocument();
+  });
+
+  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6, ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderChain('/practice/new');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
+    const nameInput = screen.getByLabelText('Name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Exam cram');
+    const draft = currentLocation().full;
+
+    // Edit → Cancel: back on exactly the draft left behind.
+    await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
+    expect(currentLocation().pathname).toBe('/deck-configurations/c3/edit');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(currentLocation().full).toBe(draft));
+    expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByLabelText('Name')).toHaveValue('Exam cram');
+
+    // Edit → Save with no change: the same draft, and the edited configuration is not
+    // ticked — an edit hands nothing back (ADR 061).
+    await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(currentLocation().full).toBe(draft));
+    expect(await screen.findByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 });
