@@ -191,7 +191,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 
 ### T2 — API errors carry their status and read plainly (ADR 065) — no dependencies
 
-- [ ] **Goal:** every failed response throws an `ApiError` carrying its status, empty-body failures included, and a request that got no response throws readable text.
+- [x] **Goal:** every failed response throws an `ApiError` carrying its status, empty-body failures included, and a request that got no response throws readable text.
 - **Files:**
   - `frontend/src/api/unwrap.ts`
   - `frontend/src/api/client.ts`
@@ -230,7 +230,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
   - Every case listed above exists and passes.
   - `grep -n "if (error)" src/api/unwrap.ts` prints nothing.
   - The commit contains only this task's hunks.
-- Notes:
+- Notes: none
 
 ### T3 — Pages stop misreporting failed loads (ADR 065) — depends on T2
 
