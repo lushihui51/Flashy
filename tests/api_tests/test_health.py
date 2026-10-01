@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 from sqlalchemy.exc import OperationalError
 
 from app.database import _CONNECT_ARGS, DB_CONNECT_TIMEOUT_SECONDS, engine
@@ -34,3 +37,14 @@ def test_engine_fails_fast_and_pre_pings():
     """Task 020 MD-1."""
     assert _CONNECT_ARGS["connect_timeout"] == DB_CONNECT_TIMEOUT_SECONDS == 3
     assert engine.pool._pre_ping is True
+
+
+def test_db_connect_timeout_is_shorter_than_the_probe_timeout():
+    """ADR 063: a silent database must answer 503 before the frontend probe gives up,
+    so it reads as server trouble rather than can't connect."""
+    repo_root = Path(__file__).resolve().parents[2]
+    source = (repo_root / "frontend/src/api/health.ts").read_text()
+    match = re.search(r"HEALTH_PROBE_TIMEOUT_MS = ([\d_]+);", source)
+    assert match, "HEALTH_PROBE_TIMEOUT_MS not found in frontend/src/api/health.ts"
+    probe_timeout_ms = int(match.group(1).replace("_", ""))
+    assert probe_timeout_ms > DB_CONNECT_TIMEOUT_SECONDS * 1000

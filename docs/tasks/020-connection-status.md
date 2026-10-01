@@ -266,7 +266,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 
 ### T4 — The probe reports connection status and heals failed queries (ADR 062, ADR 063) — depends on T1, T2
 
-- [ ] **Goal:** `useConnectionStatus()` returns the connection state derived from `onlineManager` and the health probe, and refetches failed queries when the probe recovers.
+- [x] **Goal:** `useConnectionStatus()` returns the connection state derived from `onlineManager` and the health probe, and refetches failed queries when the probe recovers.
 - **Files:**
   - `frontend/src/api/health.ts` (new)
   - `frontend/src/api/client.ts`
@@ -308,7 +308,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
   - `uv run pytest tests/api_tests/test_health.py` passes.
   - `grep -rn "setOnline" src --include=*.ts --include=*.tsx | grep -v "\.test\."` prints nothing.
   - The commit contains only this task's hunks.
-- Notes:
+- Notes: none
 
 ### T5 — AppShell shows the connection banner (ADR 062) — depends on T4
 
