@@ -4,3 +4,7 @@
  * real causes because the API cannot tell them apart. */
 export const NO_CARDS_MESSAGE =
   'This practice would have no cards. Either the selected decks have no cards, or every card is blank in every field its configuration shows on one side.';
+
+/** Task 019 MD-4: both paths that drop a selected configuration which no longer exists
+ * — the settled list lacking it, and Create's `config_not_found` — say the same thing. */
+export const MISSING_CONFIGURATION_MESSAGE = 'A selected configuration no longer exists.';

@@ -1,13 +1,21 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
-import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 
 const BASE = 'http://localhost:8000';
 
@@ -426,10 +434,103 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(
-      await screen.findByText('A selected configuration no longer exists.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
     await waitFor(() => expect(calls).toBeGreaterThan(callsAfterLoad));
+    // Removed from the selection the same way the settled-list check removes it (MD-4).
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
+    expect(currentLocation().params.getAll('config')).not.toContain('c1');
+  });
+
+  it('a selection the settled list lacks is removed with the sentence, the rest kept (MD-4)', async () => {
+    mockLibrary();
+    let posted = false;
+    server.use(
+      http.post(`${BASE}/api/practice_runs`, () => {
+        posted = true;
+        return HttpResponse.json({}, { status: 500 });
+      }),
+    );
+    renderCreate('/practice/new?config=c1&config=gone');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
+    await waitFor(() => expect(currentLocation().params.getAll('config')).toEqual(['c1']));
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole(
+      'listitem',
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent('Recall');
+    expect(posted).toBe(false);
+  });
+
+  it('a selection that vanished entirely still warns, and leaves nothing selected (MD-4)', async () => {
+    mockLibrary();
+    renderCreate('/practice/new?config=gone');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
+    await waitFor(() => expect(currentLocation().params.has('config')).toBe(false));
+    expect(screen.queryByText(/\d+ selected/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(
+      within(screen.getByRole('region', { name: 'Selected' })).getByText(
+        'Select at least one configuration to practise.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('a selection missing only from the cached list is kept: only settled data counts (MD-4)', async () => {
+    mockLibrary(); // the server has all three
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // A stale cache that predates Basics, as after a round trip that created it.
+    queryClient.setQueryData(['deck_practice_configs', null, null], [configRecall]);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/practice/new?config=c3']}>
+          <CurrentLocationProbe />
+          <Routes>
+            <Route path="/practice/new" element={<PracticeCreatePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(currentLocation().params.getAll('config')).toEqual(['c3']);
+    expect(screen.queryByText(MISSING_CONFIGURATION_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('when the list of all configurations fails to load, nothing is removed and Create sends the selection', async () => {
+    mockLibrary();
+    let sent: Record<string, unknown> | null = null;
+    server.use(
+      http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
+        const query = new URL(request.url).searchParams;
+        if (!query.has('subject_id') && !query.has('deck_id')) {
+          return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+        }
+        return HttpResponse.json([configRecall, configRecognition]);
+      }),
+      http.post(`${BASE}/api/practice_runs`, async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(
+          { id: 'ps9', user_id: 'u1', name: sent.name, status: 'active', created_at: '' },
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderCreate('/practice/new?subject=s1&config=c1');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+    await screen.findByText('Could not load your selected configurations.');
+
+    expect(screen.queryByText(MISSING_CONFIGURATION_MESSAGE)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent!.deck_practice_config_ids).toEqual(['c1']);
   });
 
   it('duplicate_deck and any other error render as a banner above the configuration list', async () => {

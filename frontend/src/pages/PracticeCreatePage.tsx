@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
@@ -11,7 +11,7 @@ import ConfigurationPickList from 'src/components/practice/ConfigurationPickList
 import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
-import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
   readSelectedConfigIds,
@@ -88,28 +88,53 @@ export default function PracticeCreatePage() {
     selectedIdSet.has(config.id),
   );
 
-  // Consumed only once the returned config actually appears in the fetched list: after
-  // the builder round trip this page remounts onto the *stale cached* list first (the
-  // invalidated refetch is still in flight), and a freshly created configuration is
-  // only in the refetched one — spending the one-shot on the stale render would drop
-  // the auto-select. An effect rather than render-time state adjustment because
+  // Selected ids the list of all configurations shows gone (MD-4). Judged only on
+  // settled data: after a round trip this page remounts onto the cached list while the
+  // invalidated refetch runs, and a configuration created on that trip is only in the
+  // refetched one — judging the cached list would remove it.
+  // Memoised so the effect below re-runs only when the URL or the settled list changes.
+  const settledConfigs = allConfigsQuery.isFetching ? undefined : allConfigsQuery.data;
+  const missingIds = useMemo(() => {
+    if (!settledConfigs) return [];
+    const knownIds = new Set(settledConfigs.map((config) => config.id));
+    return readSelectedConfigIds(searchParams).filter((id) => !knownIds.has(id));
+  }, [settledConfigs, searchParams]);
+
+  // Adjusting state during render, as DeckConfigurationEditor does once a deck's
+  // fields land, so no setState runs in the effect below. Stays until the next Create
+  // press clears it, as every topError does.
+  if (missingIds.length > 0 && topError !== MISSING_CONFIGURATION_MESSAGE) {
+    setTopError(MISSING_CONFIGURATION_MESSAGE);
+  }
+
+  // The one effect that writes the URL in reaction to fetched data (ADR 061): two
+  // `setSearchParams` calls after one render both start from that render's params, and
+  // the second would overwrite the first. It drops `missingIds`, then applies the
+  // returned-configuration one-shot if due, then writes once — an effect because
   // `setSearchParams` is a navigation.
+  //
+  // The "New configuration…" one-shot is consumed only once the returned config
+  // actually appears in the filtered list: after the builder round trip this page
+  // remounts onto the *stale cached* list first, and a freshly created configuration is
+  // only in the refetched one — spending the one-shot on the stale render would drop
+  // the auto-select.
   useEffect(() => {
-    if (appliedReturnedConfig.current || !returnedConfigId || !configsQuery.data) return;
-    const match = configsQuery.data.find((config) => config.id === returnedConfigId);
-    if (!match) return;
-    appliedReturnedConfig.current = true;
-    const deckConfigIds = configsQuery.data
-      .filter((config) => config.deck_id === match.deck_id)
-      .map((config) => config.id);
-    setSearchParams(
-      withSelectedConfigIds(
-        searchParams,
-        selectConfig(readSelectedConfigIds(searchParams), deckConfigIds, match.id),
-      ),
-      { replace: true },
-    );
-  }, [returnedConfigId, configsQuery.data, searchParams, setSearchParams]);
+    const match =
+      !appliedReturnedConfig.current && returnedConfigId
+        ? configsQuery.data?.find((config) => config.id === returnedConfigId)
+        : undefined;
+    if (missingIds.length === 0 && !match) return;
+
+    let ids = readSelectedConfigIds(searchParams).filter((id) => !missingIds.includes(id));
+    if (match && configsQuery.data) {
+      appliedReturnedConfig.current = true;
+      const deckConfigIds = configsQuery.data
+        .filter((config) => config.deck_id === match.deck_id)
+        .map((config) => config.id);
+      ids = selectConfig(ids, deckConfigIds, match.id);
+    }
+    setSearchParams(withSelectedConfigIds(searchParams, ids), { replace: true });
+  }, [missingIds, returnedConfigId, configsQuery.data, searchParams, setSearchParams]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -131,7 +156,19 @@ export default function PracticeCreatePage() {
           return;
         }
         if (error.detail.code === 'config_not_found') {
-          setTopError('A selected configuration no longer exists.');
+          // MD-4: removed from the URL the same way the settled-list check removes it,
+          // so pressing Create again proceeds with the rest.
+          setTopError(MISSING_CONFIGURATION_MESSAGE);
+          const goneId = error.detail.config_id;
+          if (goneId) {
+            setSearchParams(
+              withSelectedConfigIds(
+                searchParams,
+                selectedIds.filter((id) => id !== goneId),
+              ),
+              { replace: true },
+            );
+          }
           queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
           return;
         }

@@ -303,7 +303,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
 
 ### T4 — A selection that no longer exists is removed with a warning (MD-4) — depends on T3
 
-- [ ] **Goal:** a selected configuration that no longer exists is removed from the URL, with a warning, as soon as the settled list of all configurations shows it gone, and Create's `config_not_found` path removes it the same way.
+- [x] **Goal:** a selected configuration that no longer exists is removed from the URL, with a warning, as soon as the settled list of all configurations shows it gone, and Create's `config_not_found` path removes it the same way.
 - **Files:**
   - `frontend/src/lib/practiceCopy.ts`
   - `frontend/src/pages/PracticeCreatePage.tsx`
@@ -338,7 +338,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `fix: a selected configuration that no longer exists is removed with a warning (task 019 T4)`
-- Notes:
+- Notes: `missingIds` is wrapped in `useMemo` over the settled list and `searchParams`, since `react-hooks/exhaustive-deps` flags an array rebuilt each render as an effect dependency. The `config_not_found` branch skips the URL write when `detail.config_id` is null. The settled-data test was checked by removing the `isFetching` guard, under which it fails. Otherwise none.
 
 ### T5 — Edit a configuration from New practice and come back (MD-6, ADR 061) — depends on T1; after T4 (shared file)
 
