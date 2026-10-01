@@ -11,7 +11,7 @@ SESSION_ALLOWLIST = {"commit", "rollback", "flush", "refresh"}
 
 # ADR 055: verbs that name a function which writes nothing. It carries no stage_
 # prefix and never commits, whatever else its name says.
-NON_WRITING_VERBS = {"read", "fetch", "count", "next", "lock"}
+NON_WRITING_VERBS = {"read", "fetch", "count", "next", "lock", "ping"}
 
 
 def _rel(path: Path) -> str:

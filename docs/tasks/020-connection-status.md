@@ -155,7 +155,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 
 ### T1 — The health endpoint and a hardened engine (ADR 064, MD-1) — no dependencies
 
-- [ ] **Goal:** `GET /api/health` reports, without auth, whether the API can reach its database, and the engine fails fast when the database host goes silent.
+- [x] **Goal:** `GET /api/health` reports, without auth, whether the API can reach its database, and the engine fails fast when the database host goes silent.
 - **Files:**
   - `app/routers/api/health.py` (new)
   - `app/database_ops/health.py` (new)
@@ -187,7 +187,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
   - In `frontend/`, `npx vitest run`, `npm run lint` and `npm run build` are clean.
   - With `fastapi dev` running, `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/health` prints `200`.
   - The commit contains only this task's hunks.
-- Notes:
+- Notes: The comment above `NON_WRITING_VERBS` names no verbs, so "add `ping` to the list of verbs it names" had nothing to edit; only the set changed. The frontend checks ran while T2's in-progress `unwrap.ts` and `client.ts` edits were in the shared tree. Otherwise none.
 
 ### T2 — API errors carry their status and read plainly (ADR 065) — no dependencies
 
