@@ -105,6 +105,17 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
+/** The landing route's router state: what a Save handed back, if anything (ADR 061). */
+function StateProbe() {
+  const location = useLocation();
+  return (
+    <>
+      <span data-testid="landed-path">{location.pathname}</span>
+      <span data-testid="landed-state">{JSON.stringify(location.state)}</span>
+    </>
+  );
+}
+
 // ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams.get(),
 // never compared as an encoded string literal.
 function ReturnToProbe() {
@@ -411,6 +422,37 @@ describe('DeckConfigurationEditor — create', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
+  it('a create’s Save returns to returnTo handing back the saved configuration (ADR 061)', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json({ ...savedConfig, id: 'c7' }, { status: 201 }),
+      ),
+    );
+    const user = userEvent.setup();
+    const params = new URLSearchParams({ deck: 'd1', returnTo: '/practice/new' });
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/deck-configurations/new"
+          element={<DeckConfigurationEditor mode="create" />}
+        />
+        <Route path="/practice/new" element={<StateProbe />} />
+      </Routes>,
+      [`/deck-configurations/new?${params.toString()}`],
+    );
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByTestId('landed-path')).toHaveTextContent('/practice/new');
+    expect(JSON.parse(screen.getByTestId('landed-state').textContent ?? 'null')).toEqual({
+      configurationId: 'c7',
+    });
+  });
+
   it('renders a duplicate-name rejection on the name input, keeping the board', async () => {
     mockLibrary();
     server.use(
@@ -547,6 +589,32 @@ describe('DeckConfigurationEditor — edit', () => {
       prompt_field_ids: ['f1'],
       answer_field_ids: ['f2', 'f3'],
     });
+  });
+
+  it('an edit’s Save returns to returnTo with no configuration handed back (ADR 061)', async () => {
+    mockLibrary();
+    mockConfig();
+    server.use(
+      http.patch(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(savedConfig)),
+    );
+    const user = userEvent.setup();
+    const params = new URLSearchParams({ returnTo: '/practice/new' });
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/deck-configurations/:configId/edit"
+          element={<DeckConfigurationEditor mode="edit" />}
+        />
+        <Route path="/practice/new" element={<StateProbe />} />
+      </Routes>,
+      [`/deck-configurations/c1/edit?${params.toString()}`],
+    );
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByTestId('landed-path')).toHaveTextContent('/practice/new');
+    expect(screen.getByTestId('landed-state')).toHaveTextContent('null');
   });
 
   it('shows a not-found message instead of crashing for a missing config', async () => {
