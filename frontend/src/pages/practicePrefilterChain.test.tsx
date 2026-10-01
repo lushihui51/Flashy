@@ -295,10 +295,12 @@ describe('practice pre-filter chains', () => {
     expect(currentLocation().pathname).toBe('/practice/new');
     expect(currentLocation().params.get('subject')).toBe('s2');
 
-    // The filter reached the server and the list: only Beta's group renders.
+    // The filter reached the server and the list: only Beta's group renders. Some
+    // request, not the last — New practice also asks for every configuration,
+    // unfiltered, for its Selected section (task 019 MD-3).
     await screen.findByRole('group', { name: 'Beta Deck · Beta' });
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
-    expect(configRequests.at(-1)?.get('subject_id')).toBe('s2');
+    expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
 
     // New practice → the builder: subject param and returnTo both ride along, and the
     // context subject's decks sort first in the picker.
@@ -336,9 +338,12 @@ describe('practice pre-filter chains', () => {
 
     await screen.findByRole('group', { name: 'Alpha Deck · Alpha' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
-    const lastRequest = configRequests.at(-1);
-    expect(lastRequest?.get('subject_id')).toBe('s1');
-    expect(lastRequest?.get('deck_id')).toBe('d1');
+    // Some request, not the last (task 019 MD-3, as above).
+    expect(
+      configRequests.some(
+        (query) => query.get('subject_id') === 's1' && query.get('deck_id') === 'd1',
+      ),
+    ).toBe(true);
 
     // New practice → the builder: the deck arrives pre-selected, straight to its board.
     await user.click(screen.getByRole('button', { name: 'New configuration' }));

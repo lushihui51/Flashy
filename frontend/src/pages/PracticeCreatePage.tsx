@@ -8,6 +8,7 @@ import { createPracticeRun } from 'src/api/practice_run';
 import { ApiDetailError } from 'src/api/unwrap';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import ConfigurationPickList from 'src/components/practice/ConfigurationPickList';
+import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
 import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
@@ -37,10 +38,12 @@ export default function PracticeCreatePage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
+  const selectedHeadingId = useId();
 
   const subjectId = searchParams.get('subject');
   const deckId = searchParams.get('deck');
   const selectedIds = readSelectedConfigIds(searchParams);
+  const selectedIdSet = new Set(selectedIds);
 
   // Read from the URL once, at mount (ADR 061): the `name` param is absent until the
   // first edit, so a fresh page is prefilled with the moment it opened (ADR 019's one
@@ -71,7 +74,19 @@ export default function PracticeCreatePage() {
       readDeckPracticeConfigs({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
   });
 
+  // Every configuration, unfiltered (MD-3): the Selected section resolves ids against
+  // this, since the filtered list lacks any selection a filter hides. The same key the
+  // filtered query uses with no filter set, so an unfiltered page makes one request.
+  const allConfigsQuery = useQuery({
+    queryKey: ['deck_practice_configs', null, null],
+    queryFn: () => readDeckPracticeConfigs(),
+  });
+
   const groups = groupConfigurationsByDeck(configsQuery.data ?? []);
+  // Filtering keeps the backend's subject → deck → name order (MD-5).
+  const selectedConfigs = (allConfigsQuery.data ?? []).filter((config) =>
+    selectedIdSet.has(config.id),
+  );
 
   // Consumed only once the returned config actually appears in the fetched list: after
   // the builder round trip this page remounts onto the *stale cached* list first (the
@@ -159,6 +174,15 @@ export default function PracticeCreatePage() {
     navigate({ pathname: '/deck-configurations/new', search: params.toString() });
   };
 
+  const removeSelection = (configId: string) =>
+    setSearchParams(
+      withSelectedConfigIds(
+        searchParams,
+        selectedIds.filter((id) => id !== configId),
+      ),
+      { replace: true },
+    );
+
   const cancel = () => {
     const params = new URLSearchParams();
     for (const key of OVERVIEW_PARAMS) {
@@ -224,6 +248,23 @@ export default function PracticeCreatePage() {
         )}
       </div>
 
+      <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1">
+        <h2 id={selectedHeadingId} className="text-sm font-medium text-(--color-text)">
+          Selected
+        </h2>
+        {selectedCount === 0 ? (
+          <p className="text-sm text-(--color-text-muted)">
+            Select at least one configuration to practise.
+          </p>
+        ) : allConfigsQuery.isError ? (
+          <p role="alert" className="text-sm text-(--color-danger)">
+            Could not load your selected configurations.
+          </p>
+        ) : (
+          <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
+        )}
+      </section>
+
       <div className="mt-3">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
@@ -276,7 +317,7 @@ export default function PracticeCreatePage() {
       ) : (
         <ConfigurationPickList
           groups={groups}
-          selectedIds={new Set(selectedIds)}
+          selectedIds={selectedIdSet}
           rowError={rowError}
           onToggle={(group, configId) =>
             setSearchParams(
@@ -292,12 +333,6 @@ export default function PracticeCreatePage() {
             )
           }
         />
-      )}
-
-      {selectedCount === 0 && (
-        <p className="mt-3 text-sm text-(--color-text-muted)">
-          Select at least one configuration to practise.
-        </p>
       )}
     </div>
   );

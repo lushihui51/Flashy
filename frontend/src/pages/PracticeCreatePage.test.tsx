@@ -309,7 +309,7 @@ describe('PracticeCreatePage', () => {
   it('an empty name param gives an empty input, the name hint, and a disabled Create', async () => {
     mockLibrary();
     renderCreate('/practice/new?name=&config=c1');
-    await screen.findByText('Recall');
+    await screen.findByRole('checkbox', { name: 'Recall' });
 
     expect(screen.getByLabelText('Name')).toHaveValue('');
     expect(screen.getByText('Give this practice a name to create it.')).toBeInTheDocument();
@@ -484,7 +484,7 @@ describe('PracticeCreatePage', () => {
     expect(await screen.findByRole('checkbox', { name: 'Basics' })).toBeChecked();
   });
 
-  it('the selected count stays correct even once its group is filtered out of view (MD-4)', async () => {
+  it('a selection a filter hides stays listed under Selected and counted (MD-3, MD-5)', async () => {
     mockLibrary((query) => {
       const subjectId = query.get('subject_id');
       if (!subjectId) return ALL_CONFIGS;
@@ -500,8 +500,115 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByPlaceholderText('All subjects'));
     await user.click(await screen.findByRole('option', { name: 'Beta' }));
 
-    await waitFor(() => expect(screen.queryByText('Recall')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
+    );
+    const selected = screen.getByRole('region', { name: 'Selected' });
+    expect(within(selected).getByText('Recall')).toBeInTheDocument();
     expect(screen.getByText('1 selected')).toBeInTheDocument();
+  });
+
+  it('Selected lists every selection subject → deck → name, with its deck and subject (MD-5)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+
+    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole(
+      'listitem',
+    );
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('Recall');
+    expect(items[0]).toHaveTextContent('Shared Deck Name · Alpha');
+    expect(items[1]).toHaveTextContent('Basics');
+    expect(items[1]).toHaveTextContent('Shared Deck Name · Beta');
+  });
+
+  it('Remove unticks the configuration, drops its row, and drops it from the URL', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/practice/new?config=c1&config=c3');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+    const selected = screen.getByRole('region', { name: 'Selected' });
+    await within(selected).findByText('Recall');
+
+    await user.click(screen.getByRole('button', { name: 'Remove Recall' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
+    expect(within(selected).queryByText('Recall')).not.toBeInTheDocument();
+    expect(within(selected).getByText('Basics')).toBeInTheDocument();
+    expect(currentLocation().params.getAll('config')).toEqual(['c3']);
+  });
+
+  it('unticking a checkbox removes its Selected row', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/practice/new?config=c1');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+    const selected = screen.getByRole('region', { name: 'Selected' });
+    await within(selected).findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+
+    expect(within(selected).queryByText('Recall')).not.toBeInTheDocument();
+  });
+
+  it('a selected id that resolves to nothing lists no row', async () => {
+    mockLibrary();
+    renderCreate('/practice/new?config=gone');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    expect(
+      within(screen.getByRole('region', { name: 'Selected' })).queryAllByRole('listitem'),
+    ).toHaveLength(0);
+  });
+
+  it('a failed load of all configurations shows its own error under Selected, and the filtered list still renders (MD-9)', async () => {
+    mockLibrary();
+    server.use(
+      http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
+        const query = new URL(request.url).searchParams;
+        if (!query.has('subject_id') && !query.has('deck_id')) {
+          return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+        }
+        return HttpResponse.json([configRecall, configRecognition]);
+      }),
+    );
+    renderCreate('/practice/new?subject=s1&config=c1');
+
+    expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    const selected = screen.getByRole('region', { name: 'Selected' });
+    expect(
+      await within(selected).findByText('Could not load your selected configurations.'),
+    ).toBeInTheDocument();
+    expect(within(selected).queryAllByRole('listitem')).toHaveLength(0);
+  });
+
+  it('with nothing selected, the select hint renders inside Selected', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    expect(
+      within(screen.getByRole('region', { name: 'Selected' })).getByText(
+        'Select at least one configuration to practise.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('a filtered page also requests every configuration, unfiltered (MD-3)', async () => {
+    const requests = mockLibrary();
+    renderCreate('/practice/new?subject=s1');
+    await screen.findByText('Recall');
+
+    await waitFor(() =>
+      expect(
+        requests.some((query) => !query.has('subject_id') && !query.has('deck_id')),
+      ).toBe(true),
+    );
   });
 
   it('New configuration carries the current filters, and auto-selects the config it returns', async () => {
@@ -560,7 +667,7 @@ describe('PracticeCreatePage', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&status=completed&config=c1');
-    await screen.findByText('Recall');
+    await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 

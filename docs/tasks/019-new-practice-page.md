@@ -268,7 +268,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
 
 ### T3 — A Selected section lists every selection (MD-3, MD-5, MD-9) — depends on T2
 
-- [ ] **Goal:** a Selected section under the name lists every selected configuration, including those a filter hides, each removable with ✕.
+- [x] **Goal:** a Selected section under the name lists every selected configuration, including those a filter hides, each removable with ✕.
 - **Files:**
   - `frontend/src/components/practice/SelectedConfigurationList.tsx` (new)
   - `frontend/src/pages/PracticeCreatePage.tsx`
@@ -299,7 +299,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: new practice lists its selected configurations (task 019 T3)`
-- Notes:
+- Notes: `practicePrefilterChain.test.tsx` is also in this commit, outside the task's Files: its first two chains asserted the filter on the *last* recorded configurations request, and the unfiltered query (MD-3) now arrives last, so they assert that *some* request carries the filter (confirmed in the build session). The section's branch follows the layout contract's order, so the select hint wins over the load error when nothing is selected. Otherwise none.
 
 ### T4 — A selection that no longer exists is removed with a warning (MD-4) — depends on T3
 
