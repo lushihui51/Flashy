@@ -312,7 +312,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 
 ### T5 — AppShell shows the connection banner (ADR 062) — depends on T4
 
-- [ ] **Goal:** AppShell renders `ConnectionBanner` at the top of its sticky header whenever `useConnectionStatus()` is not `'online'`.
+- [x] **Goal:** AppShell renders `ConnectionBanner` at the top of its sticky header whenever `useConnectionStatus()` is not `'online'`.
 - **Files:**
   - `frontend/src/components/shell/ConnectionBanner.tsx` (new)
   - `frontend/src/components/shell/AppShell.tsx`
@@ -342,4 +342,4 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
   - The four browser observations hold and are recorded in Notes.
   - `grep -rn "TODO(defer:" app/ frontend/src/` shows no new tag besides T1's `db-unavailable-503`.
   - The commit contains only this task's hunks.
-- Notes:
+- Notes: none. Browser check on 2026-10-01 against `/library` with headless Chromium: (1) no banner once the first probe answered; (2) the offline text appeared 6ms after `setOffline(true)` and cleared 4ms after `setOffline(false)`; (3) with the probe aborted, the can't-connect text appeared 89ms after reload and cleared 5.3s after `unroute`, on the 5s failing poll; (4) with a fulfilled 503, the server-trouble text appeared 107ms after reload.
