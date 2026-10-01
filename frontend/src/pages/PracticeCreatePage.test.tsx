@@ -119,6 +119,11 @@ function CurrentLocationProbe() {
   );
 }
 
+/** True when `first` comes before `second` in the document. */
+function precedes(first: Element, second: Element) {
+  return Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 /** Decoded via URLSearchParams, never compared as an encoded string literal (ADR 024). */
 function currentLocation() {
   const full = screen.getByTestId('current-location').textContent ?? '';
@@ -230,22 +235,93 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 
-  it('Create stays disabled with the unmet condition shown, mirroring the builder’s Save', async () => {
+  it('Create stays disabled with each unmet condition shown by its own hint, mirroring the builder’s Save', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
     await screen.findByText('Recall');
     const create = screen.getByRole('button', { name: 'Create' });
+    const selectHint = 'Select at least one configuration to practise.';
+    const nameHint = 'Give this practice a name to create it.';
 
     expect(create).toBeDisabled();
-    expect(screen.getByText('Select at least one configuration to practise.')).toBeInTheDocument();
+    expect(screen.getByText(selectHint)).toBeInTheDocument();
+    expect(screen.queryByText(nameHint)).not.toBeInTheDocument(); // the name arrives prefilled
 
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
-    expect(create).toBeEnabled(); // the name arrives prefilled, so nothing else is left
+    expect(create).toBeEnabled();
+    expect(screen.queryByText(selectHint)).not.toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Name'));
-    expect(screen.getByText('Give this practice a name to create it.')).toBeInTheDocument();
+    expect(screen.getByText(nameHint)).toBeInTheDocument();
+    expect(screen.queryByText(selectHint)).not.toBeInTheDocument();
     expect(create).toBeDisabled();
+
+    // The two hints are independent (MD-7): with neither condition met, both show.
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    expect(screen.getByText(nameHint)).toBeInTheDocument();
+    expect(screen.getByText(selectHint)).toBeInTheDocument();
+    expect(create).toBeDisabled();
+  });
+
+  it('the Name input sits under the header, above the filters (MD-7)', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    expect(precedes(screen.getByLabelText('Name'), screen.getByPlaceholderText('All subjects'))).toBe(
+      true,
+    );
+  });
+
+  it('the name is prefilled with no name param, and an edit writes the name param (ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    const nameInput = screen.getByLabelText('Name');
+    expect(nameInput).not.toHaveValue('');
+    expect(currentLocation().params.has('name')).toBe(false);
+
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Exam cram');
+
+    expect(nameInput).toHaveValue('Exam cram');
+    expect(currentLocation().params.get('name')).toBe('Exam cram');
+  });
+
+  it('the typed name survives the New configuration round trip (ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    const nameInput = screen.getByLabelText('Name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Exam cram');
+    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'Finish new config' }));
+
+    expect(await screen.findByLabelText('Name')).toHaveValue('Exam cram');
+  });
+
+  it('an empty name param gives an empty input, the name hint, and a disabled Create', async () => {
+    mockLibrary();
+    renderCreate('/practice/new?name=&config=c1');
+    await screen.findByText('Recall');
+
+    expect(screen.getByLabelText('Name')).toHaveValue('');
+    expect(screen.getByText('Give this practice a name to create it.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+
+  it('a name param fills the input', async () => {
+    mockLibrary();
+    renderCreate('/practice/new?name=Exam%20cram');
+    await screen.findByText('Recall');
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Exam cram');
   });
 
   it('creates a session from the selected configs and name, then navigates to it', async () => {
@@ -356,7 +432,7 @@ describe('PracticeCreatePage', () => {
     await waitFor(() => expect(calls).toBeGreaterThan(callsAfterLoad));
   });
 
-  it('duplicate_deck and any other error render as a banner above Create', async () => {
+  it('duplicate_deck and any other error render as a banner above the configuration list', async () => {
     mockLibrary();
     server.use(
       http.post(`${BASE}/api/practice_runs`, () =>
@@ -370,7 +446,9 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Something went wrong');
+    expect(precedes(alert, screen.getByRole('checkbox', { name: 'Recall' }))).toBe(true);
   });
 
   it('no configurations at all shows the true-empty state with a New configuration button', async () => {

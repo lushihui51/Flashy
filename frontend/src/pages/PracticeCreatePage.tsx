@@ -26,10 +26,10 @@ type RowError = { configId: string; message: string };
 const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
 
 /**
- * `/practice/new`: filter, tick at most one configuration per deck, name, create. The
- * selection rides the URL as repeated `config` params (ADR 061), so it survives every
- * round trip, a refresh, and back. Create *is* start (invariant 2) — a successful post
- * lands straight on the new session's own page.
+ * `/practice/new`: name, filter, tick at most one configuration per deck, create. The
+ * draft rides the URL — repeated `config` params and a `name` param (ADR 061) — so it
+ * survives every round trip, a refresh, and back. Create *is* start (invariant 2) — a
+ * successful post lands straight on the new session's own page.
  */
 export default function PracticeCreatePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,9 +42,13 @@ export default function PracticeCreatePage() {
   const deckId = searchParams.get('deck');
   const selectedIds = readSelectedConfigIds(searchParams);
 
-  // Prefilled with the moment the page opened (ADR 019's one sanctioned formatter) —
-  // the same call DeckConfigurationEditor makes for a config name.
-  const [name, setName] = useState(() => formatDateTime(new Date()));
+  // Read from the URL once, at mount (ADR 061): the `name` param is absent until the
+  // first edit, so a fresh page is prefilled with the moment it opened (ADR 019's one
+  // sanctioned formatter — the same call DeckConfigurationEditor makes for a config
+  // name), while a round trip or refresh comes back to whatever was typed, empty
+  // included. The input stays bound to this local buffer, which mirrors each change to
+  // the URL; binding it to the URL would route every keystroke through a navigation.
+  const [name, setName] = useState(() => searchParams.get('name') ?? formatDateTime(new Date()));
   const [rowError, setRowError] = useState<RowError | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -138,6 +142,13 @@ export default function PracticeCreatePage() {
     setSearchParams(params, { replace: true });
   };
 
+  const changeName = (value: string) => {
+    setName(value);
+    const params = new URLSearchParams(searchParams);
+    params.set('name', value);
+    setSearchParams(params, { replace: true });
+  };
+
   const newConfiguration = () => {
     const params = new URLSearchParams();
     if (subjectId) params.set('subject', subjectId);
@@ -195,6 +206,24 @@ export default function PracticeCreatePage() {
         </div>
       </div>
 
+      <div className="mt-3 flex flex-col gap-1">
+        <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+          Name
+        </label>
+        <input
+          id={nameInputId}
+          type="text"
+          value={name}
+          onChange={(event) => changeName(event.target.value)}
+          className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+        />
+        {nameMissing && (
+          <p className="text-sm text-(--color-text-muted)">
+            Give this practice a name to create it.
+          </p>
+        )}
+      </div>
+
       <div className="mt-3">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
@@ -218,6 +247,12 @@ export default function PracticeCreatePage() {
       {topError && (
         <p role="alert" className="text-sm text-(--color-danger)">
           {topError}
+        </p>
+      )}
+
+      {saveError && (
+        <p role="alert" className="text-sm text-(--color-danger)">
+          {saveError}
         </p>
       )}
 
@@ -259,30 +294,9 @@ export default function PracticeCreatePage() {
         />
       )}
 
-      <div className="mt-4 flex flex-col gap-1">
-        <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
-          Name
-        </label>
-        <input
-          id={nameInputId}
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
-        />
-      </div>
-
-      {(selectedCount === 0 || nameMissing) && (
+      {selectedCount === 0 && (
         <p className="mt-3 text-sm text-(--color-text-muted)">
-          {selectedCount === 0
-            ? 'Select at least one configuration to practise.'
-            : 'Give this practice a name to create it.'}
-        </p>
-      )}
-
-      {saveError && (
-        <p role="alert" className="mt-3 text-sm text-(--color-danger)">
-          {saveError}
+          Select at least one configuration to practise.
         </p>
       )}
     </div>

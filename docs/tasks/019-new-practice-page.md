@@ -233,7 +233,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
 
 ### T2 — The name sits at the top and rides the URL (ADR 061, MD-7) — depends on T1
 
-- [ ] **Goal:** the Name input moves under the sticky header and persists through round trips as the `name` param, and the general Create error moves up beside Create's other errors.
+- [x] **Goal:** the Name input moves under the sticky header and persists through round trips as the `name` param, and the general Create error moves up beside Create's other errors.
 - **Files:**
   - `frontend/src/pages/PracticeCreatePage.tsx`
   - `frontend/src/pages/PracticeCreatePage.test.tsx`
@@ -264,7 +264,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `fix: new practice name at the top, kept in the URL (task 019 T2)`
-- Notes:
+- Notes: the name state reads `searchParams.get('name') ?? formatDateTime(new Date())`, which is the Contracts' `has`/`get!` expression without the non-null assertion, since `get` is `null` only when the param is absent. The independent-hints test also unticks the selection with the name cleared, so both hints are asserted at once. Otherwise none.
 
 ### T3 — A Selected section lists every selection (MD-3, MD-5, MD-9) — depends on T2
 
