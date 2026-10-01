@@ -257,4 +257,27 @@ describe('SubjectForm — edit mode', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('subject 1 not found');
     expect(screen.queryByText('Delete subject?')).not.toBeInTheDocument();
   });
+
+  it('shows a not-found message for a missing subject', async () => {
+    server.use(
+      http.get(`${BASE}/api/subjects/:id`, () =>
+        HttpResponse.json({ detail: 'Subject not found' }, { status: 404 }),
+      ),
+    );
+    renderForm('/subjects/nope/edit');
+
+    expect(await screen.findByText('Subject not found.')).toBeInTheDocument();
+  });
+
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    server.use(
+      http.get(`${BASE}/api/subjects/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderForm('/subjects/s1/edit');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this subject.');
+    expect(screen.queryByText('Subject not found.')).not.toBeInTheDocument();
+  });
 });

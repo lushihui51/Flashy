@@ -12,6 +12,7 @@ import RatingChip from 'src/components/practice/RatingChip';
 import RunProgressBar from 'src/components/practice/RunProgressBar';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
@@ -40,9 +41,14 @@ export default function PracticeRunPage() {
         {runQuery.data?.session_name ?? 'Practice'}
       </Link>
 
-      {runQuery.isError && (
-        <p className="mt-4 text-(--color-text-muted)">Practice not found.</p>
-      )}
+      {runQuery.isError &&
+        (isNotFound(runQuery.error) ? (
+          <p className="mt-4 text-(--color-text-muted)">Practice not found.</p>
+        ) : (
+          <p role="alert" className="mt-4 text-sm text-(--color-danger)">
+            Could not load this practice.
+          </p>
+        ))}
 
       {runQuery.data && (
         <>

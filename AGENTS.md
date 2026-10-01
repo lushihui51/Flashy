@@ -3,7 +3,7 @@
 ## Project
 
 - Flashy — flashcard SaaS. Frontend: React/TypeScript/Vite (`frontend/`). Backend: FastAPI/SQLModel/PostgreSQL (`app/`)
-- Auth: Clerk (ADR 007). Every router depends on `CurrentUserDep` (`app/dependencies.py`); ownership is scoped in the query, and a foreign or unknown id is a 404, never a 403. The local bypass needs both `DEV_AUTH_USER_ID` and `ENV=development` and is never set outside local dev
+- Auth: Clerk (ADR 007). Every router but `GET /api/health` (ADR 064) depends on `CurrentUserDep` (`app/dependencies.py`); ownership is scoped in the query, and a foreign or unknown id is a 404, never a 403. The local bypass needs both `DEV_AUTH_USER_ID` and `ENV=development` and is never set outside local dev
 - Frontend auth: `@clerk/react` (not `@clerk/clerk-react`) — it has no `<SignedIn>`/`<SignedOut>`; branch on `useUser()`'s `isLoaded`/`isSignedIn` instead
 
 ## Commands
@@ -34,12 +34,12 @@
 
 ## Conventions
 
-- Backend layering (ADR 034, ADR 055; `test_layering_guard.py`): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py`; public functions `db_*`-prefixed, `db_stage_*` when they don't commit, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
+- Backend layering (ADR 034, ADR 055, ADR 064; `test_layering_guard.py`): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py` and `health.py`; public functions `db_*`-prefixed, `db_stage_*` when they don't commit, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
 - `app/models/` (ADR 046): `<table>.py` holds the table, its `Base`, and only that table's flat `Create`/`Read`/`Update`/`Summary` shapes; a shape that nests another model or describes a page/flow lives in `app/models/<router>_payloads.py`. A table module imports a sibling's table class only for a `Relationship`, never a shape (`test_models_layout_guard.py`)
 - Array columns are the generic `sqlalchemy.ARRAY`: `.overlap()` does not exist and `.contains()` raises, so overlap is `.op("&&")(ids)` and membership is `.any(id)` (task 013 MD-5)
 - A rule that can drift silently gets a source-scan guard test in `tests/api_tests/`; extend those rather than relying on review
 - Frontend dates go through `formatDate`/`formatDateTime` in `src/lib/datetime.ts`, which pins `timeZone`; ESLint blocks `toLocale*String` and `Intl.DateTimeFormat` everywhere else (ADR 019)
-- Server data is fetched through TanStack Query only (ADR 033) and lives in the query cache, never copied into long-lived component state. Reusable components and everything in `ui/` never fetch: data arrives as props and the page owns the query
+- Server data is fetched through TanStack Query only (ADR 033) and lives in the query cache, never copied into long-lived component state. Reusable components and everything in `ui/` never fetch: data arrives as props and the page, or `AppShell`, owns the query
 - Routing is declarative react-router: `<Routes>` in `App.tsx`, never the data router's loaders or actions (ADR 053)
 - Extend an existing component with props rather than forking a near-duplicate; a genuinely new component is named for its purpose, never a generic name that leaves two similar components indistinguishable at the import site
 - Layout: one directory per functional area under `src/components/` (`shell/`, `library/`, `practice/`) plus `ui/` for domain-free primitives (see the directory — the inventory drifts). Pages are `src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (see `App.tsx`)
@@ -50,7 +50,8 @@
 - Imports are absolute from `src/` (alias in `vite.config.ts` and `tsconfig.app.json`), never relative `../..` chains
 - Routed pages render below `AppShell`'s sticky header — never size them with `min-h-dvh`/`h-screen`/full-height `flex-1`, or bottom controls land below the fold
 - Modals/sheets are Radix Dialog (ADR 016), never a hand-rolled focus trap or scroll lock. A trigger that isn't a `Dialog.Trigger` descendant needs `SideDrawer.tsx`'s `triggerRef` + `onPointerDownOutside` pattern, or Radix silently blocks it while the dialog is open
-- `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`) and never side-effect (ADR 006); a structured `{code, message}` detail throws `ApiDetailError`, which shape-aware callers `instanceof`-check (ADR 022). Errors render inline at the call site — a failed query as a banner in place of its content, a failed mutation next to its control; no ErrorBoundary, global cache handlers, or toasts (ADR 035)
+- `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`) and never side-effect (ADR 006): every non-ok response throws an `ApiError` carrying its status, a structured `{code, message}` detail an `ApiDetailError` that shape-aware callers `instanceof`-check, and a page says "not found" only when `isNotFound` holds (ADR 022, ADR 065). Errors render inline at the call site; the connectivity banner is the one app-level channel, and there is no ErrorBoundary, global cache handler, or toast (ADR 035, ADR 062)
+- Connection state is `AppShell`'s `useConnectionStatus` alone: pages never read it, and nothing outside tests calls `onlineManager.setOnline` (ADR 063)
 - `// TODO(defer:<tag>)` marks every deliberately deferred item, backend included; `grep -rn "TODO(defer:" app/ frontend/src/` before calling a task or PR done
 - Component tests: the Vitest environment is `node`; a DOM test opts in per file with `// @vitest-environment jsdom` (ADR 017). Reuse `src/test/testUtils.tsx` (`renderWithRouter`, `renderWithProviders`) and `src/test/mocks/clerk.ts` rather than re-mocking. RTL auto-cleanup doesn't fire (no `globals: true`); `test/setup.ts`'s `afterEach(cleanup)` does — don't remove it
 

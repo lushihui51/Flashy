@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 006: `unwrap` throws a typed `ApiDetailError` for structured error details.
+Accepted. Amends ADR 006: `unwrap` throws a typed `ApiDetailError` for structured error details. Amended by ADR 065 (2026-09-29): `ApiDetailError` extends `ApiError`, so every thrown API failure carries its HTTP status.
 
 ## Context
 

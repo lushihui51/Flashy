@@ -628,4 +628,19 @@ describe('DeckConfigurationEditor — edit', () => {
 
     expect(await screen.findByText('Deck configuration not found.')).toBeInTheDocument();
   });
+
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    mockLibrary();
+    server.use(
+      http.get(`${BASE}/api/deck_practice_configs/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderEdit();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load this deck configuration.',
+    );
+    expect(screen.queryByText('Deck configuration not found.')).not.toBeInTheDocument();
+  });
 });

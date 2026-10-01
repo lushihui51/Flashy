@@ -12,6 +12,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummary'];
 
@@ -68,7 +69,13 @@ export default function DeckDetailPage() {
   if (deckQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Deck not found.</p>
+        {isNotFound(deckQuery.error) ? (
+          <p className="text-(--color-text-muted)">Deck not found.</p>
+        ) : (
+          <p role="alert" className="text-sm text-(--color-danger)">
+            Could not load this deck.
+          </p>
+        )}
       </div>
     );
   }

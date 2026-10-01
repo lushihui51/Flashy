@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import { server } from 'src/test/server';
 import { mockSignedOut, mockSignedIn } from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
 
@@ -106,5 +108,64 @@ describe('AppShell', () => {
     // overlays can't both be open through the UI.
     expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
+  });
+});
+
+describe('AppShell connection banner (ADR 062)', () => {
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
+  it('shows no banner while the health probe answers ok', async () => {
+    let probed = false;
+    server.use(
+      http.get('*/api/health', () => {
+        probed = true;
+        return HttpResponse.json({ status: 'ok' });
+      }),
+    );
+    renderShell();
+
+    await waitFor(() => expect(probed).toBe(true));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('shows the server-trouble banner when the probe answers 503', async () => {
+    server.use(
+      http.get('*/api/health', () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'database_unavailable',
+              message: 'Flashy is temporarily unavailable.',
+            },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    renderShell();
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Flashy is having trouble right now. Retrying automatically.',
+    );
+  });
+
+  it("shows the can't-connect banner when the probe gets no response", async () => {
+    server.use(http.get('*/api/health', () => HttpResponse.error()));
+    renderShell();
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      "Can't reach Flashy. Check your connection; retrying automatically.",
+    );
+  });
+
+  it('shows the offline banner when the browser goes offline', async () => {
+    renderShell();
+    act(() => onlineManager.setOnline(false));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      "You're offline. Flashy will reconnect automatically.",
+    );
   });
 });

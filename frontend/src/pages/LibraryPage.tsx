@@ -96,6 +96,11 @@ export default function LibraryPage() {
             </h2>
             <CreateButton label="New subject" to="/subjects/new" />
           </div>
+          {subjectsQuery.isError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              Could not load subjects.
+            </p>
+          )}
 
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
             <EmptyState
@@ -131,6 +136,11 @@ export default function LibraryPage() {
             </h2>
             <CreateButton label="New deck" to="/decks/new" />
           </div>
+          {decksQuery.isError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              Could not load decks.
+            </p>
+          )}
 
           {decksQuery.data && decksQuery.data.length === 0 ? (
             <EmptyState copy="No decks yet." createLabel="New deck" createTo="/decks/new" />

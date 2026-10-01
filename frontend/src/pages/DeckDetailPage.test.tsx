@@ -348,6 +348,19 @@ describe('DeckDetailPage', () => {
     expect(await screen.findByText('Deck not found.')).toBeInTheDocument();
   });
 
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    mockDeck();
+    server.use(
+      http.get(`${BASE}/api/decks/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderAtDeckRoute();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this deck.');
+    expect(screen.queryByText('Deck not found.')).not.toBeInTheDocument();
+  });
+
   describe('Configurations tab', () => {
     it("starts on Cards and switches to this deck's configurations", async () => {
       const configRequests = mockDeck({ configurations: [configuration()] });

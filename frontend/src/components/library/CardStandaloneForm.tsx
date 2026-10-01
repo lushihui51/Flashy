@@ -7,6 +7,7 @@ import PickerCombobox from 'src/components/ui/PickerCombobox';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -33,7 +34,13 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
     if (cardQuery.isError) {
       return (
         <div className="p-4">
-          <p className="text-(--color-text-muted)">Card not found.</p>
+          {isNotFound(cardQuery.error) ? (
+            <p className="text-(--color-text-muted)">Card not found.</p>
+          ) : (
+            <p role="alert" className="text-sm text-(--color-danger)">
+              Could not load this card.
+            </p>
+          )}
         </div>
       );
     }

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amended by ADR 022 (`unwrap` throws a typed `ApiDetailError` for structured error details); the display question left open under "Error normalization" is decided by ADR 035 (inline at the call site, no global handler).
+Accepted. Amended by ADR 022 (`unwrap` throws a typed `ApiDetailError` for structured error details); the display question left open under "Error normalization" is decided by ADR 035 (inline at the call site, no global handler). Amended by ADR 065 (2026-09-29): failure is decided by `response.ok`, not by whether `error` is set, and a request that got no response is turned into readable text by `client.ts`'s `onError` middleware.
 
 ## Context
 
