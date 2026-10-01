@@ -185,9 +185,13 @@ function DeckConfigurationEditorBody({
         queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] }),
         queryClient.invalidateQueries({ queryKey: ['deck_practice_config', saved.id] }),
       ]);
-      navigate(returnTo ?? `/decks/${saved.deck_id}?tab=configurations`, {
-        state: { configurationId: saved.id },
-      });
+      // `{configurationId}` is a create-only hand-back (ADR 061): building a
+      // configuration from New practice means wanting to use it, so New practice
+      // auto-selects it; an edit says nothing about wanting it and returns with no result.
+      navigate(
+        returnTo ?? `/decks/${saved.deck_id}?tab=configurations`,
+        mode === 'create' ? { state: { configurationId: saved.id } } : undefined,
+      );
     },
     onError: (error: Error) => {
       // A duplicate name is the one failure the user fixes in place, so it belongs on

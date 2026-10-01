@@ -124,6 +124,21 @@ const initialConfigs = [
     subject_id: 's2',
     subject_name: 'Beta',
   },
+  {
+    id: 'c3',
+    deck_id: 'd1',
+    name: 'Recognition',
+    created_at: '',
+    prompt_field_ids: ['f2'],
+    answer_field_ids: ['f1'],
+    prompt_pool_ids: [] as string[],
+    prompt_pool_counts: [] as number[],
+    answer_pool_ids: [] as string[],
+    answer_pool_counts: [] as number[],
+    deck_name: 'Alpha Deck',
+    subject_id: 's1',
+    subject_name: 'Alpha',
+  },
 ];
 
 /** A small in-memory library the handlers read AND write — the save-direction walk
@@ -168,6 +183,18 @@ function mockLibrary() {
             (!deckId || config.deck_id === deckId),
         ),
       );
+    }),
+    http.get(`${BASE}/api/deck_practice_configs/:configId`, ({ params }) => {
+      const config = configs.find((c) => c.id === params.configId);
+      return config
+        ? HttpResponse.json(config)
+        : HttpResponse.json({ detail: 'Configuration not found' }, { status: 404 });
+    }),
+    http.patch(`${BASE}/api/deck_practice_configs/:configId`, async ({ params, request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      const index = configs.findIndex((c) => c.id === params.configId);
+      configs[index] = { ...configs[index]!, ...body };
+      return HttpResponse.json(configs[index]);
     }),
     http.post(`${BASE}/api/decks`, async ({ request }) => {
       const body = (await request.json()) as {
@@ -253,6 +280,10 @@ function renderChain(initialPath: string) {
           path="/deck-configurations/new"
           element={<DeckConfigurationEditor mode="create" />}
         />
+        <Route
+          path="/deck-configurations/:configId/edit"
+          element={<DeckConfigurationEditor mode="edit" />}
+        />
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         {/* T5 owns the real details page; the chains never land there. */}
         <Route path="/practice/:practiceSessionId" element={<span>practice detail</span>} />
@@ -295,10 +326,12 @@ describe('practice pre-filter chains', () => {
     expect(currentLocation().pathname).toBe('/practice/new');
     expect(currentLocation().params.get('subject')).toBe('s2');
 
-    // The filter reached the server and the list: only Beta's group renders.
+    // The filter reached the server and the list: only Beta's group renders. Some
+    // request, not the last — New practice also asks for every configuration,
+    // unfiltered, for its Selected section (task 019 MD-3).
     await screen.findByRole('group', { name: 'Beta Deck · Beta' });
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
-    expect(configRequests.at(-1)?.get('subject_id')).toBe('s2');
+    expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
 
     // New practice → the builder: subject param and returnTo both ride along, and the
     // context subject's decks sort first in the picker.
@@ -336,9 +369,12 @@ describe('practice pre-filter chains', () => {
 
     await screen.findByRole('group', { name: 'Alpha Deck · Alpha' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
-    const lastRequest = configRequests.at(-1);
-    expect(lastRequest?.get('subject_id')).toBe('s1');
-    expect(lastRequest?.get('deck_id')).toBe('d1');
+    // Some request, not the last (task 019 MD-3, as above).
+    expect(
+      configRequests.some(
+        (query) => query.get('subject_id') === 's1' && query.get('deck_id') === 'd1',
+      ),
+    ).toBe(true);
 
     // New practice → the builder: the deck arrives pre-selected, straight to its board.
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
@@ -357,7 +393,7 @@ describe('practice pre-filter chains', () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new?subject=s1&deck=d1');
-    await screen.findByRole('radio', { name: 'Recall' });
+    await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
     await screen.findByRole('region', { name: 'Not used' });
@@ -385,20 +421,20 @@ describe('practice pre-filter chains', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(currentLocation().full).toBe('/practice/new?subject=s1&deck=d1'));
     expect(await screen.findByRole('heading', { name: 'New practice' })).toBeInTheDocument();
-    await screen.findByRole('radio', { name: 'Recall' });
+    await screen.findByRole('checkbox', { name: 'Recall' });
     await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Alpha'));
     expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
   });
 
-  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections gone (MD-5, MD-6)', async () => {
+  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5, ADR 061)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');
 
-    // Two selections before leaving — per MD-6 these are draft state and will NOT
-    // survive the round trip; only the returned configuration's auto-select should.
-    await user.click(await screen.findByRole('radio', { name: 'Recall' }));
-    await user.click(screen.getByRole('radio', { name: 'Basics' }));
+    // Two selections before leaving — per ADR 061 the draft rides the URL, so both
+    // come back on the return leg alongside the returned configuration's auto-select.
+    await user.click(await screen.findByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
@@ -428,12 +464,50 @@ describe('practice pre-filter chains', () => {
     await user.type(screen.getByLabelText('Name'), 'Fresh Config');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    // Back on New practice: the new configuration is auto-selected; the two selections
-    // made before leaving are gone (MD-6) — only the auto-selected one is checked.
-    await waitFor(() => expect(currentLocation().full).toBe('/practice/new'));
-    expect(await screen.findByRole('radio', { name: 'Fresh Config' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Recall' })).not.toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Basics' })).not.toBeChecked();
-    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    // Back on New practice: the new configuration is auto-selected and the two
+    // selections made before leaving are still there (ADR 061), in tick order.
+    await waitFor(() => expect(currentLocation().pathname).toBe('/practice/new'));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Fresh Config' })).toBeChecked(),
+    );
+    expect(currentLocation().params.getAll('config')).toEqual(['c1', 'c2', 'c9']);
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
+  });
+
+  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6, ADR 061)', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderChain('/practice/new');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
+    const nameInput = screen.getByLabelText('Name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Exam cram');
+    const draft = currentLocation().full;
+
+    // Edit → Cancel: back on exactly the draft left behind.
+    await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
+    expect(currentLocation().pathname).toBe('/deck-configurations/c3/edit');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(currentLocation().full).toBe(draft));
+    expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
+    expect(screen.getByLabelText('Name')).toHaveValue('Exam cram');
+
+    // Edit → Save with no change: the same draft, and the edited configuration is not
+    // ticked — an edit hands nothing back (ADR 061).
+    await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(currentLocation().full).toBe(draft));
+    expect(await screen.findByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 });
