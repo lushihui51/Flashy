@@ -426,6 +426,19 @@ describe('DeckEditor — edit mode', () => {
     expect(await screen.findByText('Deck not found.')).toBeInTheDocument();
   });
 
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    mockEditDeck();
+    server.use(
+      http.get(`${BASE}/api/decks/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderEditDeck();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this deck.');
+    expect(screen.queryByText('Deck not found.')).not.toBeInTheDocument();
+  });
+
   it('remove is disabled once only two fields remain, same as create mode (D3)', async () => {
     mockEditDeck();
     renderEditDeck();

@@ -285,6 +285,19 @@ describe('SubjectDetailPage', () => {
     expect(await screen.findByText('Subject not found.')).toBeInTheDocument();
   });
 
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    mockSubject();
+    server.use(
+      http.get(`${BASE}/api/subjects/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderAtSubjectRoute();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this subject.');
+    expect(screen.queryByText('Subject not found.')).not.toBeInTheDocument();
+  });
+
   it('issues a bounded number of deck-list requests regardless of deck count, never one per deck', async () => {
     mockSubject({
       decksData: Array.from({ length: 6 }, (_, i) => ({

@@ -195,4 +195,26 @@ describe('LibraryPage', () => {
     expect(screen.getByText('2 decks')).toBeInTheDocument();
     expect(screen.getByText('1 deck')).toBeInTheDocument();
   });
+
+  it('a failed subjects load says so instead of rendering an empty list', async () => {
+    mockLibrary();
+    server.use(
+      http.get(`${BASE}/api/subjects`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderWithProviders(<LibraryPage />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load subjects.');
+  });
+
+  it('a failed decks load says so on the Decks tab', async () => {
+    mockLibrary();
+    server.use(
+      http.get(`${BASE}/api/decks`, () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
+    );
+    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load decks.');
+  });
 });

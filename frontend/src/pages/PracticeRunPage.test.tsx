@@ -214,6 +214,18 @@ describe('PracticeRunPage', () => {
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
   });
+
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    server.use(
+      http.get(`${BASE}/api/practice_runs/:id/state`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderRun('ps1');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this practice.');
+    expect(screen.queryByText('Practice not found.')).not.toBeInTheDocument();
+  });
 });
 
 describe('PracticeRunPage pre-reveal answer zone (MD-6)', () => {

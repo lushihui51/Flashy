@@ -7,6 +7,7 @@ import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
+import { isNotFound } from 'src/api/unwrap';
 
 /** First two field names, `+N` for the rest — computed by count, not measured text,
  * so it's deterministic regardless of how the names actually render. The row no
@@ -39,7 +40,13 @@ export default function SubjectDetailPage() {
   if (subjectQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Subject not found.</p>
+        {isNotFound(subjectQuery.error) ? (
+          <p className="text-(--color-text-muted)">Subject not found.</p>
+        ) : (
+          <p role="alert" className="text-sm text-(--color-danger)">
+            Could not load this subject.
+          </p>
+        )}
       </div>
     );
   }

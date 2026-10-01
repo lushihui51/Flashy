@@ -26,6 +26,7 @@ import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -306,7 +307,13 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
     if (deckQuery.isError) {
       return (
         <div className="p-4">
-          <p className="text-(--color-text-muted)">Deck not found.</p>
+          {isNotFound(deckQuery.error) ? (
+            <p className="text-(--color-text-muted)">Deck not found.</p>
+          ) : (
+            <p role="alert" className="text-sm text-(--color-danger)">
+              Could not load this deck.
+            </p>
+          )}
         </div>
       );
     }

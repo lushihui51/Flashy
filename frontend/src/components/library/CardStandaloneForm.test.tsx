@@ -309,4 +309,17 @@ describe('CardStandaloneForm — edit mode', () => {
 
     expect(await screen.findByText('Card not found.')).toBeInTheDocument();
   });
+
+  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
+    server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)));
+    server.use(
+      http.get(`${BASE}/api/cards/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    renderForm('/cards/c1/edit');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this card.');
+    expect(screen.queryByText('Card not found.')).not.toBeInTheDocument();
+  });
 });

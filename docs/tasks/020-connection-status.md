@@ -234,7 +234,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 
 ### T3 — Pages stop misreporting failed loads (ADR 065) — depends on T2
 
-- [ ] **Goal:** eight pages say "not found" only for a real 404 and "Could not load …" for any other failure, and LibraryPage shows its failed loads.
+- [x] **Goal:** eight pages say "not found" only for a real 404 and "Could not load …" for any other failure, and LibraryPage shows its failed loads.
 - **Files:**
   - `frontend/src/components/library/SubjectForm.tsx` and `.test.tsx`
   - `frontend/src/pages/SubjectDetailPage.tsx` and `.test.tsx`
@@ -262,7 +262,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
   - All the new tests pass.
   - `grep -rln "not found\.</p>" src --include=*.tsx | grep -v test` lists exactly the eight files, and each one contains `isNotFound(`.
   - The commit contains only this task's hunks.
-- Notes:
+- Notes: none.
 
 ### T4 — The probe reports connection status and heals failed queries (ADR 062, ADR 063) — depends on T1, T2
 

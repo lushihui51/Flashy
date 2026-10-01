@@ -12,7 +12,7 @@ import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import { ApiDetailError } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { formatDateTime } from 'src/lib/datetime';
 import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import type { components } from 'src/api/types';
@@ -42,7 +42,13 @@ export default function PracticeDetailsPage() {
   if (sessionQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Practice not found.</p>
+        {isNotFound(sessionQuery.error) ? (
+          <p className="text-(--color-text-muted)">Practice not found.</p>
+        ) : (
+          <p role="alert" className="text-sm text-(--color-danger)">
+            Could not load this practice.
+          </p>
+        )}
       </div>
     );
   }

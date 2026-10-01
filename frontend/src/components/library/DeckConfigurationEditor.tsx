@@ -26,6 +26,7 @@ import {
 import { formatDateTime } from 'src/lib/datetime';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -82,7 +83,13 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
   if (mode === 'edit' && configQuery.isError) {
     return (
       <div className="p-4">
-        <p className="text-(--color-text-muted)">Deck configuration not found.</p>
+        {isNotFound(configQuery.error) ? (
+          <p className="text-(--color-text-muted)">Deck configuration not found.</p>
+        ) : (
+          <p role="alert" className="text-sm text-(--color-danger)">
+            Could not load this deck configuration.
+          </p>
+        )}
       </div>
     );
   }
