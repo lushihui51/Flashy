@@ -258,7 +258,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
 
 ### T5 — The configuration builder derives its default name (ADR 067) — depends on T4
 
-- [ ] **Goal:** New configuration's Name input follows the board until the user types; Edit configuration keeps the stored name.
+- [x] **Goal:** New configuration's Name input follows the board until the user types; Edit configuration keeps the stored name.
 - **Files:**
   - `frontend/src/components/library/DeckConfigurationEditor.tsx`
   - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
@@ -282,7 +282,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: new configuration derives its name from the board (task 022 T5)`
-- Notes:
+- Notes: Browser walk at 390px on the Ports deck (four fields): Name empty on open and with only a prompt field; "Port Number → Protocol Name" once both sides had one; "Port Number → Protocol Name, Protocol Function" after a random-draw answer; typed "My Ports Drill" kept through a fourth assignment; Cancel returned to the deck's Configurations tab, nothing saved. The servers on 5173 and 8000 ran from the main checkout's branch, so the walk used this worktree's Vite on port 5174 against that backend, which this frontend-only task does not depend on. Otherwise none.
 
 ### T6 — Practice rows and the detail page name their configurations (MD-2, MD-3, MD-4) — depends on T3 and T4
 

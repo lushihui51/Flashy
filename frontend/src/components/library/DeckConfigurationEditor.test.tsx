@@ -277,20 +277,60 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
 
-  it('prefills the name with the current local date-time, editable', async () => {
+  it('the name follows the board until it is typed in', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    const input = screen.getByLabelText('Name');
+
+    // ADR 067: empty while either side has no field.
+    expect(input).toHaveValue('');
+    await assign(user, 'Term', 'prompt_fields');
+    expect(input).toHaveValue('');
+
+    await assign(user, 'Meaning', 'answer_fields');
+    expect(input).toHaveValue('Term → Meaning');
+
+    await assign(user, 'Reading', 'answer_pool');
+    expect(input).toHaveValue('Term → Meaning, Reading');
+  });
+
+  it('a typed name stays through further assignments', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    const input = screen.getByLabelText('Name');
+
+    await assign(user, 'Term', 'prompt_fields');
+    await user.type(input, 'Recall');
+    await assign(user, 'Meaning', 'answer_fields');
+    expect(input).toHaveValue('Recall');
+
+    // Cleared is still the user's: it does not snap back to the derived name.
+    await user.clear(input);
+    expect(input).toHaveValue('');
+    expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
+  });
+
+  it('a typed name survives a deck change', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
 
-    const input = screen.getByLabelText('Name');
-    // Whatever the browser's zone renders, it is a real timestamp, not a placeholder.
-    expect((input as HTMLInputElement).value).toMatch(/\d{4}/);
-    expect((input as HTMLInputElement).value).not.toBe('');
+    await assign(user, 'Term', 'prompt_fields');
+    await user.type(screen.getByLabelText('Name'), 'Recall');
 
-    await user.clear(input);
-    await user.type(input, 'Recall');
-    expect(input).toHaveValue('Recall');
+    await user.click(screen.getByPlaceholderText('Deck'));
+    await user.click(await screen.findByRole('option', { name: /Beta Deck/ }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Change deck' }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Beta Deck'));
+    await screen.findByRole('region', { name: 'Not used' });
+    expect(screen.getByLabelText('Name')).toHaveValue('Recall');
   });
 
   it('assigning moves a field rather than copying it', async () => {
@@ -376,7 +416,8 @@ describe('DeckConfigurationEditor — create', () => {
     expect(save).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    expect(save).toBeEnabled(); // the name arrives prefilled, so nothing is left to do
+    // The name is derived once both sides have a field (ADR 067), so nothing is left to do.
+    expect(save).toBeEnabled();
 
     await user.clear(screen.getByLabelText('Name'));
     expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
@@ -525,6 +566,7 @@ describe('DeckConfigurationEditor — edit', () => {
   it('pre-populates the name and every row from the saved config', async () => {
     mockLibrary();
     mockConfig();
+    const user = userEvent.setup();
     renderEdit();
 
     await screen.findByRole('region', { name: 'Not used' });
@@ -540,6 +582,10 @@ describe('DeckConfigurationEditor — edit', () => {
     expect(
       within(screen.getByRole('region', { name: 'Not used' })).getByText('Reading'),
     ).toBeInTheDocument();
+
+    // Edit mode keeps the stored name; the board never re-derives it (ADR 067).
+    await assign(user, 'Reading', 'answer_fields');
+    expect(screen.getByLabelText('Name')).toHaveValue('Recall');
   });
 
   it('never shows a field the config references but the deck has since archived', async () => {

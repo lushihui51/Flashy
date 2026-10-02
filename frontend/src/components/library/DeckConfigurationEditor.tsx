@@ -15,6 +15,7 @@ import {
   boardFromConfig,
   boardToPayload,
   boardValidationError,
+  defaultConfigurationName,
   emptyBoard,
   hasAnyAssignment,
   moveField,
@@ -23,7 +24,6 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
-import { formatDateTime } from 'src/lib/datetime';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 
@@ -132,11 +132,11 @@ function DeckConfigurationEditorBody({
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
   const [deckId, setDeckId] = useState<string | null>(config?.deck_id ?? contextDeckId);
-  // Prefilled with the moment it was opened, in the browser's zone (ADR 019 — the one
-  // sanctioned formatter). A config name only has to be unique per deck, and a timestamp
-  // is both unique and better than "Untitled" for someone who never renames it. Computed
-  // once, at mount: it names when the config was built, not when it was last re-rendered.
-  const [name, setName] = useState(() => config?.name ?? formatDateTime(new Date()));
+  // ADR 067: in create mode the name follows the board — derived from its layout — until
+  // the user types, after which it is theirs through further assignments and a deck
+  // change. Edit mode starts with the stored name, so it is never re-derived.
+  // null until the user types (create mode); the stored name from the start (edit mode).
+  const [typedName, setTypedName] = useState<string | null>(config?.name ?? null);
   const [board, setBoard] = useState<BoardState | null>(null);
   const [pendingDeck, setPendingDeck] = useState<DeckOption | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -161,6 +161,8 @@ function DeckConfigurationEditorBody({
   const selectedDeck = deckOptions.find((deck) => deck.id === deckId) ?? null;
 
   const deck: DeckDetail | undefined = deckQuery.data;
+  const name =
+    typedName ?? (deck && board ? defaultConfigurationName(board, deck.field_defs) : '');
   // Built during render once the chosen deck's fields land, and cleared back to null by
   // every deck change — the field set *is* the board, so there is nothing to build from
   // before then. (Adjusting state while rendering rather than in an effect, the same
@@ -294,7 +296,7 @@ function DeckConfigurationEditorBody({
               type="text"
               value={name}
               onChange={(event) => {
-                setName(event.target.value);
+                setTypedName(event.target.value);
                 setNameError(null);
               }}
               aria-invalid={nameError !== null}
