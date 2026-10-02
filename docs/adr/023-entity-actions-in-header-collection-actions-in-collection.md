@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The vestigial `cards` array the Consequences keep was removed by task 008.
+Accepted. The vestigial `cards` array the Consequences keep was removed by task 008. Rule 2's "repeated in the collection's empty state" is superseded by ADR 066: the add control renders once, in the collection's toolbar row, and the empty state carries none; the Consequences line "empty states own their add affordances" goes with it. Rules 1 and 3 remain in force.
 
 ## Context
 
