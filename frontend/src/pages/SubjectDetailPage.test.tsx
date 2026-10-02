@@ -218,15 +218,16 @@ describe('SubjectDetailPage', () => {
     });
   });
 
-  it('shows an empty state, not an empty section label, when the subject has no decks', async () => {
+  it('renders the Decks row and its Add deck button above the empty state', async () => {
     mockSubject({ decksData: [] });
     renderAtSubjectRoute();
 
     expect(await screen.findByText('No decks in this subject yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Decks')).not.toBeInTheDocument();
-    // The empty state carries the only add control here — the list it would otherwise
-    // sit above does not exist yet.
-    expect(screen.getAllByRole('button', { name: 'Add deck' })).toHaveLength(1);
+    expect(screen.getByText('Decks')).toBeInTheDocument();
+    // The row's button is the one add control; the empty state is its text alone
+    // (ADR 066). getByRole throws on a second match.
+    expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('the header carries subject-level actions only; adding a deck belongs to the deck list', async () => {

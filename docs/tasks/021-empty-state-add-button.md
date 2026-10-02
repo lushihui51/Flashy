@@ -53,11 +53,11 @@ T1 and T2 are independent: no shared files, safe to build in parallel sessions.
 
 ### T2 — The subject page's Decks row renders regardless of count
 
-- [ ] **Goal:** The subject page always renders its "Decks" row with the "Add deck" button, and an empty subject shows the sentence alone beneath it (ADR 066).
+- [x] **Goal:** The subject page always renders its "Decks" row with the "Add deck" button, and an empty subject shows the sentence alone beneath it (ADR 066).
 - **Files:** `frontend/src/pages/SubjectDetailPage.tsx`, `frontend/src/pages/SubjectDetailPage.test.tsx`.
 - **Details:**
   - The `mt-4` block renders the `flex items-center justify-between` row (`<h2>Decks</h2>` and `<AddButton label="Add deck">`) unconditionally, keeping its comment. Below it, the existing `decks && decks.length === 0` condition chooses between the sentence and the `<ul>`: when loaded and empty, `<p className="py-8 text-(--color-text-muted)">No decks in this subject yet.</p>` (the `py-8` the empty-state wrapper had; no button, ADR 066); otherwise the `<ul>` with its `mt-1 … border-t` classes exactly as today, which renders empty while `decks` is still undefined, as it does today.
   - `SubjectDetailPage.test.tsx`: `'shows an empty state, not an empty section label, when the subject has no decks'` becomes `'renders the Decks row and its Add deck button above the empty state'`: `findByText('No decks in this subject yet.')` present, `getByText('Decks')` present, `getByRole('button', { name: 'Add deck' })` present, `queryByRole('list')` null. Its comment is rewritten: the toolbar's button is the one add control (ADR 066).
 - **Out of scope:** hiding the "Decks" label while empty (rejected by ADR 066); restyling the row or the list; every T1 file.
 - **Done when:** `grep -c 'label="Add deck"' frontend/src/pages/SubjectDetailPage.tsx` prints `1`; `grep -n "not an empty section label" frontend/src/pages/SubjectDetailPage.test.tsx` prints nothing; the rewritten test and `'the header carries subject-level actions only; adding a deck belongs to the deck list'` pass; in `/frontend`, `npx vitest run`, `npm run lint`, and `npm run build` are clean. _Browser check_: a subject with no decks shows "Decks" and one "Add deck" button on one row, the sentence beneath, and tapping the button opens the deck form with the subject preselected.
-- Notes:
+- Notes: none. The browser check stubbed the subject's deck list to `[]` in Playwright rather than adding an empty subject to the dev database; no subject there has zero decks.

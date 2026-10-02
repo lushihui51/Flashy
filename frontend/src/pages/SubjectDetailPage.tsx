@@ -111,34 +111,30 @@ export default function SubjectDetailPage() {
       </div>
 
       <div className="mt-4">
+        {/* The add control sits with the collection it adds to, carrying this
+            subject so the deck form opens with it preselected. */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
+          <AddButton label="Add deck" onClick={addDeck} />
+        </div>
         {decks && decks.length === 0 ? (
-          <div className="flex flex-col items-start gap-3 py-8">
-            <p className="text-(--color-text-muted)">No decks in this subject yet.</p>
-            <AddButton label="Add deck" onClick={addDeck} />
-          </div>
+          // No button here — the row's above is the one add control (ADR 066).
+          <p className="py-8 text-(--color-text-muted)">No decks in this subject yet.</p>
         ) : (
-          <>
-            {/* The add control sits with the collection it adds to, carrying this
-                subject so the deck form opens with it preselected. */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
-              <AddButton label="Add deck" onClick={addDeck} />
-            </div>
-            <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
-              {(decks ?? []).map((deck) => (
-                <li key={deck.id}>
-                  <ListRow
-                    title={deck.name}
-                    subtitle={
-                      deck.field_names.length > 0 ? formatFieldNames(deck.field_names) : undefined
-                    }
-                    meta={deckMeta(deck.card_count)}
-                    to={`/decks/${deck.id}`}
-                  />
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
+            {(decks ?? []).map((deck) => (
+              <li key={deck.id}>
+                <ListRow
+                  title={deck.name}
+                  subtitle={
+                    deck.field_names.length > 0 ? formatFieldNames(deck.field_names) : undefined
+                  }
+                  meta={deckMeta(deck.card_count)}
+                  to={`/decks/${deck.id}`}
+                />
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
