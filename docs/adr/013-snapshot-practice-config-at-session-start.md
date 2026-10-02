@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged. ADR 060 names the trigger for the mid-practice stale case in Consequences: the archive endpoint is unexposed since ADR 049, and the case is reached by clearing a card's value while a practice uses it.
+Accepted. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged. ADR 060 names the trigger for the mid-practice stale case in Consequences: the archive endpoint is unexposed since ADR 049, and the case is reached by clearing a card's value while a practice uses it. Amended by ADR 066: the snapshot also copies the configuration's name, read for a label only.
 
 ## Context
 
