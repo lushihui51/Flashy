@@ -997,6 +997,7 @@ class TestPracticeRunList:
                 "deck_name": "Shared Deck Name",
                 "subject_id": lib["subjects"]["b"]["id"],
                 "subject_name": "Beta",
+                "configuration_name": "Config B",
             }
         ]
 
@@ -1390,6 +1391,7 @@ class TestPracticeRunDetailShape:
                 "deck_name": "Shared Deck Name",
                 "subject_id": multi_subject_library["subjects"]["a"]["id"],
                 "subject_name": "Alpha",
+                "configuration_name": "Config A",
             }
         ]
 
@@ -2860,8 +2862,9 @@ class TestRerun:
 class TestConfigLineage:
     """practice_deck.source_config_id (ADR 040) — attribution-only: written at run
     start, copied through rerun verbatim, nulled (snapshot untouched) if the source
-    config is later deleted. Never read by generation, validation, or rerun logic, and
-    not exposed on any payload here — these tests reach it straight off the ORM row."""
+    config is later deleted. Never read by generation, validation, or rerun logic. The
+    link itself is not exposed on any payload — these tests reach it straight off the
+    ORM row — though the name it resolves to is, as `configuration_name` (ADR 066)."""
 
     def test_start_writes_the_configs_id_onto_the_snapshot(
         self, client, db, session_cards, session_config
@@ -3136,3 +3139,84 @@ class TestConfigRenamePropagates:
         db.refresh(other)
         assert renamed.source_config_name == "Renamed"
         assert other.source_config_name == "Second Config"
+
+
+class TestConfigurationLabel:
+    """ADR 066 (task 022 T3): each summary deck's `configuration_name` is the live
+    configuration name while the snapshot is linked, else the stored name, else None."""
+
+    @staticmethod
+    def _label(client, session_id):
+        res = client.get(f"/api/practice_runs/{session_id}")
+        assert res.status_code == 200, res.text
+        return res.json()["decks"][0]["configuration_name"]
+
+    @staticmethod
+    def _rename(client, config_id, name):
+        res = client.patch(f"/api/deck_practice_configs/{config_id}", json={"name": name})
+        assert res.status_code == 200, res.text
+
+    def test_label_is_the_live_name_after_a_rename(
+        self, client, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_keeps_the_last_linked_name_after_a_material_edit(
+        self, client, session_cards, session_config, session_fields
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"prompt_pool_ids": [str(session_fields["pool_p1"])]},
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_keeps_the_last_linked_name_after_the_config_is_deleted(
+        self, client, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+        res = client.delete(f"/api/deck_practice_configs/{session_config['id']}")
+        assert res.status_code == 204, res.text
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_prefers_the_live_name_over_a_stale_stored_one(
+        self, client, db, session_cards, session_config
+    ):
+        # Every API path keeps the two equal while linked (T2), so only a direct write
+        # can tell the live read apart from the stored fallback.
+        session = _start(client, "Label run", [session_config["id"]])
+        snapshot = _snapshot(db, session["id"])
+        snapshot.source_config_name = "Stale"
+        db.add(snapshot)
+        db.commit()
+
+        assert self._label(client, session["id"]) == "Session Config"
+
+    def test_label_is_null_without_link_or_stored_name(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        snapshot = _snapshot(db, session["id"])
+        snapshot.source_config_id = None
+        snapshot.source_config_name = None
+        db.add(snapshot)
+        db.commit()
+
+        assert self._label(client, session["id"]) is None
+
+    def test_list_carries_each_decks_label(self, client, multi_subject_library):
+        configs = multi_subject_library["configs"]
+        created = _start(client, "Both decks", [configs["a"]["id"], configs["b"]["id"]])
+
+        res = client.get("/api/practice_runs")
+        assert res.status_code == 200, res.text
+        run = next(r for r in res.json() if r["id"] == created["id"])
+        assert [d["configuration_name"] for d in run["decks"]] == ["Config A", "Config B"]

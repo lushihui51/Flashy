@@ -16,15 +16,17 @@ from app.models.practice_run import PracticeRunRead, RunStatus
 class PracticeRunDeckSummary(AppModel):
     """One deck a session touches, resolved through `practice_deck → deck → subject`.
 
-    This chain is the only link this payload exposes between a session and a
-    subject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is
-    attribution-only, unread by any query in this cycle, and not surfaced on any API
-    payload — so "which sessions relate to this deck" is still only askable this way."""
+    This chain is the only link between a session and a subject/deck, and the only thing
+    the filters use. `practice_deck.source_config_id` (ADR 040) is read here for the
+    label only (ADR 066): `configuration_name` is the live configuration's name while
+    the link resolves, else the snapshot's stored `source_config_name`, else None. The
+    link is never read for filtering, generation, validation or rerun."""
 
     deck_id: uuid.UUID
     deck_name: str
     subject_id: uuid.UUID
     subject_name: str
+    configuration_name: str | None
 
 
 class PracticeRunSummary(PracticeRunRead):

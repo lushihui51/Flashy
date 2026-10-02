@@ -205,7 +205,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
 
 ### T3 — The summary carries each deck's configuration label (ADR 066) — depends on T2
 
-- [ ] **Goal:** `PracticeRunDeckSummary` gains `configuration_name`, live through the link and otherwise the stored name, on both the list and the detail reads.
+- [x] **Goal:** `PracticeRunDeckSummary` gains `configuration_name`, live through the link and otherwise the stored name, on both the list and the detail reads.
 - **Files:**
   - `app/models/practice_run_payloads.py`
   - `app/database_ops/practice_run.py`
@@ -232,7 +232,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: practice summaries carry each deck's configuration name (task 022 T3)`
-- Notes:
+- Notes: `test_lists_newest_first_with_name_and_deck_context` also compares whole deck dicts, so its expected dict gained `"configuration_name": "Config B"` too. One test beyond Details, `test_label_prefers_the_live_name_over_a_stale_stored_one`: T2 keeps the stored name equal to the live one on every API path, so none of the listed tests failed when the query read the stored name alone; this one overwrites the stored name directly and expects the live name. `gen:api` also rewrites `frontend/src/api/openapi.json`, committed with `types.ts`. Otherwise none.
 
 ### T4 — The capped-list helper and the derived configuration name (ADR 067) — no dependencies
 
