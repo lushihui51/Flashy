@@ -1,4 +1,5 @@
 import type { components } from 'src/api/types';
+import { formatCappedNames } from 'src/lib/capList';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
 type DeckPracticeConfigCreate = components['schemas']['DeckPracticeConfigCreate'];
@@ -187,4 +188,17 @@ export function boardValidationError(state: BoardState): string | null {
     return 'The answer side needs at least one field — always shown or random draw.';
   }
   return null;
+}
+
+/** The ADR 067 default: "<prompt names> → <answer names>", each side `formatCappedNames` over
+ * always-shown then random-draw fields in deck order (ADR 067). "" while either side is empty. */
+export function defaultConfigurationName(state: BoardState, fieldDefs: DeckFieldDef[]): string {
+  const names = new Map(fieldDefs.map((f) => [f.id, f.name]));
+  const side = (always: BoardSlot, draw: BoardSlot) =>
+    [...fieldsIn(state, always), ...fieldsIn(state, draw)].map((id) => names.get(id) ?? '');
+
+  const prompt = side('prompt_fields', 'prompt_pool');
+  const answer = side('answer_fields', 'answer_pool');
+  if (prompt.length === 0 || answer.length === 0) return '';
+  return `${formatCappedNames(prompt)} → ${formatCappedNames(answer)}`;
 }
