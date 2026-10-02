@@ -64,7 +64,13 @@ function session(overrides: Record<string, unknown> = {}) {
     status: 'active',
     created_at: '2026-08-24T12:00:00Z',
     decks: [
-      { deck_id: 'd1', deck_name: 'Shared Deck Name', subject_id: 's1', subject_name: 'Alpha' },
+      {
+        deck_id: 'd1',
+        deck_name: 'Shared Deck Name',
+        subject_id: 's1',
+        subject_name: 'Alpha',
+        configuration_name: 'Config A',
+      },
     ],
     ...overrides,
   };
@@ -75,7 +81,15 @@ const betaRun = session({
   id: 'ps2',
   name: 'Beta run',
   status: 'completed',
-  decks: [{ deck_id: 'd2', deck_name: 'Shared Deck Name', subject_id: 's2', subject_name: 'Beta' }],
+  decks: [
+    {
+      deck_id: 'd2',
+      deck_name: 'Shared Deck Name',
+      subject_id: 's2',
+      subject_name: 'Beta',
+      configuration_name: 'Config B',
+    },
+  ],
 });
 
 /** Records what the page asked the server for — the subject/deck filters are the
@@ -123,15 +137,50 @@ afterEach(() => {
 });
 
 describe('PracticeOverviewPage', () => {
-  it('lists sessions with their status badge, deck/subject chips and created date', async () => {
+  it('lists sessions with their status badge, deck · configuration entries and no date', async () => {
     mockLibrary();
     renderOverview();
 
     const row = (await screen.findByText('Alpha run')).closest('div')!;
     expect(within(row).getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Shared Deck Name')).toBeInTheDocument();
-    expect(screen.getByText('Beta · Shared Deck Name')).toBeInTheDocument();
-    expect(screen.getAllByText('Aug 24, 2026').length).toBe(2);
+    expect(screen.getByText('Shared Deck Name · Config A')).toBeInTheDocument();
+    expect(screen.getByText('Shared Deck Name · Config B')).toBeInTheDocument();
+    expect(screen.queryByText('Aug 24, 2026')).not.toBeInTheDocument();
+  });
+
+  it('a practice over three decks shows two entries and +1', async () => {
+    const threeDecks = session({
+      decks: [
+        ...alphaRun.decks,
+        ...betaRun.decks,
+        {
+          deck_id: 'd3',
+          deck_name: 'Third Deck',
+          subject_id: 's2',
+          subject_name: 'Beta',
+          configuration_name: 'Config C',
+        },
+      ],
+    });
+    mockLibrary(() => [threeDecks]);
+    renderOverview();
+
+    const row = (await screen.findByText('Alpha run')).closest('div')!;
+    expect(within(row).getByText('Shared Deck Name · Config A')).toBeInTheDocument();
+    expect(within(row).getByText('Shared Deck Name · Config B')).toBeInTheDocument();
+    expect(within(row).getByText('+1')).toBeInTheDocument();
+    expect(within(row).queryByText(/Third Deck/)).not.toBeInTheDocument();
+  });
+
+  it('a deck whose snapshot has no configuration name shows the deck alone', async () => {
+    const unnamed = session({
+      decks: [{ ...alphaRun.decks[0], configuration_name: null }],
+    });
+    mockLibrary(() => [unnamed]);
+    renderOverview();
+
+    const row = (await screen.findByText('Alpha run')).closest('div')!;
+    expect(within(row).getByText('Shared Deck Name')).toBeInTheDocument();
   });
 
   it('sends no filters when the URL has none', async () => {
@@ -284,9 +333,7 @@ describe('PracticeOverviewPage', () => {
     const user = userEvent.setup();
     renderOverview('/practice?subject=s1');
 
-    expect(
-      await screen.findByText('No practices match these filters.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No practices match these filters.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     expect(await screen.findByText('No practices yet.')).toBeInTheDocument();

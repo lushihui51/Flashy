@@ -286,7 +286,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
 
 ### T6 — Practice rows and the detail page name their configurations (MD-2, MD-3, MD-4) — depends on T3 and T4
 
-- [ ] **Goal:** the overview row lists capped "Deck · Configuration" entries and no date; the detail page lists every deck as "Subject · Deck · Configuration".
+- [x] **Goal:** the overview row lists capped "Deck · Configuration" entries and no date; the detail page lists every deck as "Subject · Deck · Configuration".
 - **Files:**
   - `frontend/src/components/practice/SessionDeckChips.tsx`
   - `frontend/src/components/practice/PracticeRunRow.tsx`
@@ -317,7 +317,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: practice rows and detail name their configurations (task 022 T6)`
-- Notes:
+- Notes: Browser walk at 390px against this worktree's own servers (backend on 8001, Vite on 5174 with `VITE_API_BASE_URL`), because the servers on 8000/5173 ran from the main checkout without T3; same dev database, nothing created or deleted. All 13 practice rows showed name, badge and one "Deck · Configuration" chip and no date; the newest row showed its date-named configuration ("Ports · Oct 1, 2026 at 1:18 PM"); the Sep 22, 2:57 PM row, whose snapshot has no stored name, showed "Ports" alone; no horizontal scroll. The Sep 28, 6:34 PM detail page showed "CompTIA A+ · Commands · Purpose to Command". Every dev practice has one deck, so "+N" was checked only by the unit tests. Otherwise none.
 
 ## Deferred — do not build
 
