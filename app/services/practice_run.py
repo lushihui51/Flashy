@@ -157,6 +157,7 @@ def _snapshot_and_generate_deck(
     deck_id: uuid.UUID,
     array_values: dict[str, list],
     source_config_id: uuid.UUID | None,
+    source_config_name: str | None,
     rng: random.Random,
     next_position: int,
 ) -> int:
@@ -170,13 +171,15 @@ def _snapshot_and_generate_deck(
     sources. `source_config_id` (ADR 040) rides along into the snapshot purely for
     attribution — start_practice_run passes the live config's id, rerun_practice_run
     the old snapshot's value verbatim — and is never read back by anything below this
-    function."""
+    function. `source_config_name` (ADR 066) rides into the snapshot next to it, the
+    same way, and is likewise read by nothing below."""
     practice_deck = db_stage_create_practice_deck(
         db,
         {
             "practice_run_id": session_id,
             "deck_id": deck_id,
             "source_config_id": source_config_id,
+            "source_config_name": source_config_name,
             **array_values,
         },
     )
@@ -282,7 +285,15 @@ def start_practice_run(
 
         array_values = {field: getattr(config, field) for field in _ARRAY_FIELDS}
         next_position = _snapshot_and_generate_deck(
-            db, strategy, session.id, config.deck_id, array_values, config.id, rng, next_position
+            db,
+            strategy,
+            session.id,
+            config.deck_id,
+            array_values,
+            config.id,
+            config.name,
+            rng,
+            next_position,
         )
 
     # ADR 056: emptiness is a property of the whole practice, not of one deck, and it
@@ -312,12 +323,12 @@ def rerun_practice_run(
     coupling to its source config, ADR 013). Per snapshot: dropped if its field ids no
     longer validate against the deck's live fields; the rest are re-snapshotted and
     regenerated exactly like session start, via the same _snapshot_and_generate_deck
-    helper, each carrying its old snapshot's
-    `source_config_id` forward verbatim (ADR 040 — attribution only, possibly already
-    null; never looked up fresh). `name` is stored verbatim on the new run — the client
-    formats it, same as start_practice_run. Raises LookupError for an unknown/foreign
-    session (the router 404s); RerunError('run_active') if the session hasn't
-    completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
+    helper, each carrying its old snapshot's `source_config_id` forward verbatim (ADR
+    040 — attribution only, possibly already null; never looked up fresh), and its
+    `source_config_name` likewise (ADR 066). `name` is stored verbatim on the new run —
+    the client formats it, same as start_practice_run. Raises LookupError for an
+    unknown/foreign session (the router 404s); RerunError('run_active') if the session
+    hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
     RerunError('no_cards') if the survivors generated nothing (ADR 056). A plain
     create: the original run is never touched, so there is nothing to order against a
     delete — one explicit commit at the end, same shape as start_practice_run."""
@@ -329,7 +340,9 @@ def rerun_practice_run(
     if session.status != RunStatus.completed:
         raise RerunError("run_active", "practice is still active")
 
-    surviving_decks: list[tuple[uuid.UUID, dict[str, list], uuid.UUID | None]] = []
+    surviving_decks: list[
+        tuple[uuid.UUID, dict[str, list], uuid.UUID | None, str | None]
+    ] = []
     for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
         array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
         try:
@@ -337,7 +350,12 @@ def rerun_practice_run(
         except ValueError:
             continue
         surviving_decks.append(
-            (practice_deck.deck_id, array_values, practice_deck.source_config_id)
+            (
+                practice_deck.deck_id,
+                array_values,
+                practice_deck.source_config_id,
+                practice_deck.source_config_name,
+            )
         )
 
     if not surviving_decks:
@@ -349,7 +367,7 @@ def rerun_practice_run(
     new_session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
-    for deck_id, array_values, source_config_id in surviving_decks:
+    for deck_id, array_values, source_config_id, source_config_name in surviving_decks:
         next_position = _snapshot_and_generate_deck(
             db,
             strategy,
@@ -357,6 +375,7 @@ def rerun_practice_run(
             deck_id,
             array_values,
             source_config_id,
+            source_config_name,
             rng,
             next_position,
         )

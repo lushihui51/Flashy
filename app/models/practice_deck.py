@@ -19,7 +19,9 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     nulls it (this column's own ON DELETE SET NULL). Deleting the source *deck* is
     different: `deck_id` is `NOT NULL ON DELETE CASCADE` (ADR 047, ADR 048) — this
     snapshot goes with it, and a run left owning no `PracticeDeck` at all is deleted
-    alongside its last one (`compute_deletion_impact`'s run closure, ADR 051)."""
+    alongside its last one (`compute_deletion_impact`'s run closure, ADR 051).
+    `source_config_name` (ADR 066) is the fallback for the configuration label once the
+    link is gone, read only by the practice summary query (task 022 T3)."""
 
     __table_args__ = (UniqueConstraint("practice_run_id", "deck_id"),)
 
@@ -38,6 +40,13 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     source_config_id: uuid.UUID | None = Field(
         default=None, foreign_key="deck_practice_config.id", ondelete="SET NULL"
     )
+    # ADR 066: the configuration's name as of the last moment the link existed.
+    # 1. Written at run start with the config's name.
+    # 2. Set to the new name on every linked snapshot by a non-material update that
+    #    carries a name (task 022 T2, `update_deck_practice_config`).
+    # 3. Copied verbatim by rerun, possibly null.
+    # 4. Touched by nothing else: a material edit and a delete only null the link.
+    source_config_name: str | None = Field(default=None)
     prompt_field_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
     answer_field_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
     prompt_pool_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))

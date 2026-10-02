@@ -2933,6 +2933,48 @@ class TestConfigLineage:
         ).one()
         assert new_snapshot.source_config_id is None
 
+    def test_start_writes_the_configs_name_onto_the_snapshot(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        assert snapshot.source_config_name == "Session Config"
+
+    def _rerun_with_stored_name(self, client, db, session_config, stored_name):
+        """Start, overwrite the snapshot's stored name directly (bypassing the API, as
+        the null-lineage test above does), finish, rerun; returns the new snapshot."""
+        session = _start(client, "Stored name run", [session_config["id"]])
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        snapshot.source_config_name = stored_name
+        db.add(snapshot)
+        db.commit()
+
+        _finish_session(client, session["id"])
+        res = _rerun(client, session["id"], "Stored name run (rerun)")
+        assert res.status_code == 201, res.text
+        return db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(res.json()["id"]))
+        ).one()
+
+    def test_rerun_copies_the_old_snapshots_source_config_name_verbatim(
+        self, client, db, session_cards, session_config
+    ):
+        # "Stored Name" differs from the live config's "Session Config", so a match
+        # proves rerun copied the snapshot rather than looking the config up.
+        new_snapshot = self._rerun_with_stored_name(client, db, session_config, "Stored Name")
+        assert new_snapshot.source_config_name == "Stored Name"
+
+    def test_a_snapshot_without_a_stored_name_reruns_with_it_null(
+        self, client, db, session_cards, session_config
+    ):
+        new_snapshot = self._rerun_with_stored_name(client, db, session_config, None)
+        assert new_snapshot.source_config_name is None
+
 
 class TestConfigEditSeversLineage:
     """ADR 040 (task 009 T7): materially editing a config nulls source_config_id on
