@@ -26,19 +26,10 @@ function CreateButton({ label, to }: { label: string; to: string }) {
   );
 }
 
-function EmptyState({
-  copy,
-  createLabel,
-  createTo,
-}: {
-  copy: string;
-  createLabel: string;
-  createTo: string;
-}) {
+function EmptyState({ copy }: { copy: string }) {
   return (
-    <div className="flex flex-col items-start gap-3 py-8">
+    <div className="py-8">
       <p className="text-(--color-text-muted)">{copy}</p>
-      <CreateButton label={createLabel} to={createTo} />
     </div>
   );
 }
@@ -96,13 +87,14 @@ export default function LibraryPage() {
             </h2>
             <CreateButton label="New subject" to="/subjects/new" />
           </div>
+          {subjectsQuery.isError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              Could not load subjects.
+            </p>
+          )}
 
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
-            <EmptyState
-              copy="No subjects yet."
-              createLabel="New subject"
-              createTo="/subjects/new"
-            />
+            <EmptyState copy="No subjects yet." />
           ) : (
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
               {(subjectsQuery.data ?? []).map((subject) => (
@@ -131,9 +123,14 @@ export default function LibraryPage() {
             </h2>
             <CreateButton label="New deck" to="/decks/new" />
           </div>
+          {decksQuery.isError && (
+            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+              Could not load decks.
+            </p>
+          )}
 
           {decksQuery.data && decksQuery.data.length === 0 ? (
-            <EmptyState copy="No decks yet." createLabel="New deck" createTo="/decks/new" />
+            <EmptyState copy="No decks yet." />
           ) : (
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
               {(decksQuery.data ?? []).map((deck) => (

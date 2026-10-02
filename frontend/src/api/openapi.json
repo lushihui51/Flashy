@@ -2937,6 +2937,32 @@
         }
       }
     },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Read Health",
+        "description": "The one route without `CurrentUserDep`: the frontend's health probe must answer\nsigned-out visitors and must not depend on Clerk (ADR 064). 503\n`database_unavailable` when the database does not answer.",
+        "operationId": "read_health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Read Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Read Root",

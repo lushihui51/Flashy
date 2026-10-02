@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Decides the display question ADR 006 left open under "Error normalization".
+Accepted. Decides the display question ADR 006 left open under "Error normalization". Amended by ADR 062 (2026-09-29): connectivity is the one global error channel, reported by an app-level banner; every other error still renders inline at its call site.
 
 ## Context
 

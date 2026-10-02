@@ -6,6 +6,7 @@ import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import type { components } from 'src/api/types';
+import { isNotFound } from 'src/api/unwrap';
 
 type SubjectFormProps = {
   mode: 'create' | 'edit';
@@ -28,7 +29,13 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
     if (subjectQuery.isError) {
       return (
         <div className="p-4">
-          <p className="text-(--color-text-muted)">Subject not found.</p>
+          {isNotFound(subjectQuery.error) ? (
+            <p className="text-(--color-text-muted)">Subject not found.</p>
+          ) : (
+            <p role="alert" className="text-sm text-(--color-danger)">
+              Could not load this subject.
+            </p>
+          )}
         </div>
       );
     }

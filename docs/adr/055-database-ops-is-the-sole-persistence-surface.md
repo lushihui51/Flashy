@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 034: its "contains all SQL" clause becomes a mechanical rule covering every statement and every session call, enforced by a source-scan guard; the three-layer layout, the downward dependency rule, and the direct-call nuance are unchanged.
+Accepted. Amends ADR 034: its "contains all SQL" clause becomes a mechanical rule covering every statement and every session call, enforced by a source-scan guard; the three-layer layout, the downward dependency rule, and the direct-call nuance are unchanged. Amended by ADR 064 (2026-09-29): a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing.
 
 ## Context
 

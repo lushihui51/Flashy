@@ -19,9 +19,17 @@ SQLModel.metadata.naming_convention = {
 # host and `...+00:00` on another. The instant is identical either way, but pinning it
 # keeps the API's representation deterministic and stops a host's local zone from
 # leaking into responses. The user's zone is applied at render time, never here.
-_CONNECT_ARGS = {"options": "-c timezone=utc"}
+# Task 020 MD-1: a database host that stops answering fails a new connection in
+# seconds instead of the OS's ~2 minutes. Must stay below the frontend health probe's
+# timeout (ADR 063; test_db_connect_timeout_is_shorter_than_the_probe_timeout).
+DB_CONNECT_TIMEOUT_SECONDS = 3
 
-engine = create_engine(settings.database_url, echo=False, connect_args=_CONNECT_ARGS)
+_CONNECT_ARGS = {"options": "-c timezone=utc", "connect_timeout": DB_CONNECT_TIMEOUT_SECONDS}
+
+# pool_pre_ping replaces pooled connections a database restart left dead (MD-1).
+engine = create_engine(
+    settings.database_url, echo=False, pool_pre_ping=True, connect_args=_CONNECT_ARGS
+)
 
 
 def get_session():
