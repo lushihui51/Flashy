@@ -181,7 +181,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
 
 ### T2 — A rename reaches every linked snapshot (ADR 066) — depends on T1
 
-- [ ] **Goal:** a non-material configuration update that carries a name writes it onto every snapshot still linked, in the update's transaction; a material update severs and propagates nothing.
+- [x] **Goal:** a non-material configuration update that carries a name writes it onto every snapshot still linked, in the update's transaction; a material update severs and propagates nothing.
 - **Files:**
   - `app/database_ops/practice_deck.py`
   - `app/services/deck_practice_config.py`
@@ -201,7 +201,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - `uv run pytest tests/api_tests/test_practice_run.py tests/api_tests/test_layering_guard.py` passes with the four tests above; a full `uv run pytest` passes.
   - The commit contains only this task's hunks.
 - **Commit:** `feat: a configuration rename updates its linked snapshots' stored name (task 022 T2)`
-- Notes:
+- Notes: The unlink function's docstring lost its "snapshots are never touched otherwise" sentence, which ADR 066 makes false; it now names the rename function instead. The new tests `db.refresh()` each snapshot after the PATCH so the test session's identity map cannot hide the UPDATE. The full `pytest` was run by the user (the build session's permission classifier denied the run); clean. Otherwise none.
 
 ### T3 — The summary carries each deck's configuration label (ADR 066) — depends on T2
 

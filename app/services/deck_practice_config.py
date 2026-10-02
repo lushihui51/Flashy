@@ -4,7 +4,10 @@ from sqlmodel import Session
 
 from app.database_ops.deck_practice_config import db_update_deck_practice_config
 from app.database_ops.field_def import db_read_active_field_ids_for_decks
-from app.database_ops.practice_deck import db_stage_unlink_practice_decks_from_config
+from app.database_ops.practice_deck import (
+    db_stage_set_practice_deck_source_config_name,
+    db_stage_unlink_practice_decks_from_config,
+)
 from app.models.deck_practice_config import DeckPracticeConfig
 
 _ARRAY_FIELDS = (
@@ -93,10 +96,19 @@ def update_deck_practice_config(
     comparison runs against the stored row before `db_update_deck_practice_config`
     mutates it; the unlink UPDATE and the config update commit together in that call's
     own transaction, so a failure there (or a validation failure upstream, which never
-    reaches this function at all) leaves every snapshot's source_config_id untouched."""
+    reaches this function at all) leaves every snapshot's source_config_id untouched.
+
+    A non-material update that carries a name writes it onto every snapshot still linked
+    to this configuration (ADR 066), even when the name is unchanged; no comparison is
+    made. A material update takes precedence: it severs and propagates nothing, even
+    when it also carries a name, so a practice keeps the name that described the layout
+    it ran. Either UPDATE commits with the config update in
+    db_update_deck_practice_config's own transaction."""
     material = any(
         field in data and data[field] != getattr(config, field) for field in _ARRAY_FIELDS
     )
     if material:
         db_stage_unlink_practice_decks_from_config(db, config.id)
+    elif "name" in data:
+        db_stage_set_practice_deck_source_config_name(db, config.id, data["name"])
     return db_update_deck_practice_config(db, config, data)
