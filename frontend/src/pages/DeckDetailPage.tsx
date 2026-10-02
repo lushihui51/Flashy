@@ -192,9 +192,8 @@ export default function DeckDetailPage() {
             />
           )}
           {deck.cards.length === 0 && (
-            <div className="flex flex-col items-start gap-3 px-3 py-8">
+            <div className="px-3 py-8">
               <p className="text-(--color-text-muted)">No cards in this deck yet.</p>
-              <AddButton label="Add card" onClick={addCard} />
             </div>
           )}
         </div>
@@ -211,12 +210,11 @@ export default function DeckDetailPage() {
           )}
 
           {configurationsQuery.data && configurations.length === 0 ? (
-            <div className="flex flex-col items-start gap-3 py-8">
+            <div className="py-8">
               <p className="text-(--color-text-muted)">
                 No configurations yet. One says which of this deck&apos;s fields are prompts and
                 which are answers; a practice is built out of them.
               </p>
-              <AddButton label="New configuration" onClick={newConfiguration} />
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">

@@ -347,7 +347,8 @@ export default function PracticeCreatePage() {
           <p className="text-(--color-text-muted)">
             {filtered ? 'No configurations match these filters.' : 'No deck configurations yet.'}
           </p>
-          {filtered ? (
+          {/* No New configuration button here — the toolbar's is always on screen. */}
+          {filtered && (
             <button
               type="button"
               onClick={() => setFilters({ subjectId: null, deckId: null })}
@@ -355,8 +356,6 @@ export default function PracticeCreatePage() {
             >
               Clear filters
             </button>
-          ) : (
-            <AddButton label="New configuration" onClick={newConfiguration} />
           )}
         </div>
       ) : (

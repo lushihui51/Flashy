@@ -144,9 +144,9 @@ describe('LibraryPage', () => {
     renderWithProviders(<LibraryPage />);
 
     expect(await screen.findByText('No subjects yet.')).toBeInTheDocument();
-    // the tab header's create button and the empty state's own button both read
-    // "New subject" now — both real, both should be present.
-    expect(screen.getAllByRole('button', { name: 'New subject' })).toHaveLength(2);
+    // The count row's create button is the only one; the empty state is its text
+    // alone (ADR 066). getByRole throws on a second match.
+    expect(screen.getByRole('button', { name: 'New subject' })).toBeInTheDocument();
   });
 
   it('shows an empty state with a create button when there are no decks', async () => {
@@ -158,7 +158,8 @@ describe('LibraryPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Decks' }));
 
     expect(await screen.findByText('No decks yet.')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'New deck' })).toHaveLength(2);
+    // The count row's create button is the only one (ADR 066).
+    expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
   });
 
   it('the Subjects tab create button is present and sized for touch', async () => {

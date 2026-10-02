@@ -38,7 +38,7 @@ T1 and T2 are independent: no shared files, safe to build in parallel sessions.
 
 ### T1 — Drop the empty-state button on the deck, Library, and New practice pages
 
-- [ ] **Goal:** On the five surfaces that render two add controls when empty, the empty state renders its text alone (ADR 066).
+- [x] **Goal:** On the five surfaces that render two add controls when empty, the empty state renders its text alone (ADR 066).
 - **Files:** `frontend/src/pages/DeckDetailPage.tsx`, `frontend/src/pages/DeckDetailPage.test.tsx`, `frontend/src/pages/LibraryPage.tsx`, `frontend/src/pages/LibraryPage.test.tsx`, `frontend/src/pages/PracticeCreatePage.tsx`, `frontend/src/pages/PracticeCreatePage.test.tsx`.
 - **Details:**
   - `DeckDetailPage.tsx`: in the Cards tab's empty state, remove `<AddButton label="Add card">` and keep the wrapper's `px-3 py-8` (the `px-3` aligns the sentence with the table's pinned first column); in the Configurations tab's empty state, remove `<AddButton label="New configuration">` and keep `py-8`. The `flex flex-col items-start gap-3` classes go with the buttons. The toolbar row above each tab, and the comment above the Cards toolbar, are unchanged.
@@ -49,7 +49,7 @@ T1 and T2 are independent: no shared files, safe to build in parallel sessions.
   - `PracticeCreatePage.test.tsx`: `'no configurations at all shows the true-empty state with a New configuration button'` asserts `getByRole` for the one "New configuration" button and keeps its "Clear filters" absence assertion.
 - **Out of scope:** `SubjectDetailPage.tsx` (T2); `PracticeOverviewPage.tsx`; replacing `CreateButton` with `AddButton` (MD-1); any change to empty-state copy; hiding the Library's "0 subjects" / "0 decks" count row; ADR 023 and the task 003/004 lines named in the intro (/justify and /sync).
 - **Done when:** `grep -c 'label="Add card"' frontend/src/pages/DeckDetailPage.tsx` prints `1`; `grep -c 'label="New configuration"' frontend/src/pages/DeckDetailPage.tsx` prints `1`; `grep -c 'label="New configuration"' frontend/src/pages/PracticeCreatePage.tsx` prints `1`; `grep -c "<CreateButton" frontend/src/pages/LibraryPage.tsx` prints `2`; `grep -n "toHaveLength(2)" frontend/src/pages/LibraryPage.test.tsx frontend/src/pages/DeckDetailPage.test.tsx` prints nothing, and `grep -n "'New configuration' })).toHaveLength" frontend/src/pages/PracticeCreatePage.test.tsx` prints nothing; in `/frontend`, `npx vitest run`, `npm run lint`, and `npm run build` are clean. _Browser check_ (ADR 007 bypass, `localhost:5173`): a deck with no cards shows one "Add card" button above the column headers and the sentence below them; its Configurations tab with no configurations shows one "New configuration" button above the two-sentence text.
-- Notes:
+- Notes: none. The comment in `PracticeCreatePage.tsx` reads "No New configuration button here — the toolbar's is always on screen."; test names are unchanged, only their assertions and comments.
 
 ### T2 — The subject page's Decks row renders regardless of count
 

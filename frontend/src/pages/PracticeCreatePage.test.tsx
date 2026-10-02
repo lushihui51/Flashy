@@ -558,9 +558,9 @@ describe('PracticeCreatePage', () => {
     renderCreate();
 
     expect(await screen.findByText('No deck configurations yet.')).toBeInTheDocument();
-    // The always-visible add control above the list, repeated in the empty state
-    // itself (ADR 023 rule 2) — two buttons, same label, is the intended shape.
-    expect(screen.getAllByRole('button', { name: 'New configuration' })).toHaveLength(2);
+    // The always-visible add control above the list is the only one; the empty
+    // state is its text alone (ADR 066). getByRole throws on a second match.
+    expect(screen.getByRole('button', { name: 'New configuration' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
   });
 
