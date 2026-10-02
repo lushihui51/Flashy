@@ -1,10 +1,11 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import delete, exists, or_
+from sqlalchemy import delete, exists, func, or_
 from sqlmodel import Session, col, select
 
 from app.models.deck import Deck
+from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.practice_run_payloads import PracticeRunDeckSummary, PracticeRunSummary
@@ -47,21 +48,28 @@ def _summaries_for_runs(
             Deck.name,
             Subject.id,
             Subject.name,
+            func.coalesce(DeckPracticeConfig.name, PracticeDeck.source_config_name),
         )
         .join(Deck, Deck.id == PracticeDeck.deck_id)
         .join(Subject, Subject.id == Deck.subject_id)
+        # ADR 066: the label only — live name while linked, else the stored name.
+        .outerjoin(
+            DeckPracticeConfig,
+            col(DeckPracticeConfig.id) == PracticeDeck.source_config_id,
+        )
         .where(col(PracticeDeck.practice_run_id).in_(session_ids))
         .order_by(col(Subject.name), col(Deck.name))
     ).all()
 
     decks_by_session: dict[uuid.UUID, list[PracticeRunDeckSummary]] = {}
-    for session_id, deck_id_, deck_name, subject_id_, subject_name in rows:
+    for session_id, deck_id_, deck_name, subject_id_, subject_name, config_name in rows:
         decks_by_session.setdefault(session_id, []).append(
             PracticeRunDeckSummary(
                 deck_id=deck_id_,
                 deck_name=deck_name,
                 subject_id=subject_id_,
                 subject_name=subject_name,
+                configuration_name=config_name,
             )
         )
 

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
-import { formatDate } from 'src/lib/datetime';
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import type { components } from 'src/api/types';
@@ -12,8 +11,9 @@ type PracticeRunRowProps = {
   onDelete: () => void;
 };
 
-/** Not a ListRow: this row carries deck/subject chips and a destructive action of its
- * own, neither of which fits that row's identity-shape-size grammar. */
+/** Not a ListRow: this row carries capped "Deck · Configuration" entries (MD-2) and a
+ * destructive action of its own, neither of which fits that row's identity-shape-size
+ * grammar. No date: the name already is one unless typed (MD-4). */
 export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProps) {
   return (
     <div className="flex items-center gap-2">
@@ -27,10 +27,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         </span>
 
         <span className="flex flex-wrap items-center gap-1">
-          <SessionDeckChips decks={session.decks} />
-          <span className="text-[11px] text-(--color-text-muted)">
-            {formatDate(session.created_at)}
-          </span>
+          <SessionDeckChips decks={session.decks} variant="summary" />
         </span>
       </Link>
 

@@ -997,6 +997,7 @@ class TestPracticeRunList:
                 "deck_name": "Shared Deck Name",
                 "subject_id": lib["subjects"]["b"]["id"],
                 "subject_name": "Beta",
+                "configuration_name": "Config B",
             }
         ]
 
@@ -1390,6 +1391,7 @@ class TestPracticeRunDetailShape:
                 "deck_name": "Shared Deck Name",
                 "subject_id": multi_subject_library["subjects"]["a"]["id"],
                 "subject_name": "Alpha",
+                "configuration_name": "Config A",
             }
         ]
 
@@ -2860,8 +2862,9 @@ class TestRerun:
 class TestConfigLineage:
     """practice_deck.source_config_id (ADR 040) — attribution-only: written at run
     start, copied through rerun verbatim, nulled (snapshot untouched) if the source
-    config is later deleted. Never read by generation, validation, or rerun logic, and
-    not exposed on any payload here — these tests reach it straight off the ORM row."""
+    config is later deleted. Never read by generation, validation, or rerun logic. The
+    link itself is not exposed on any payload — these tests reach it straight off the
+    ORM row — though the name it resolves to is, as `configuration_name` (ADR 066)."""
 
     def test_start_writes_the_configs_id_onto_the_snapshot(
         self, client, db, session_cards, session_config
@@ -2933,39 +2936,84 @@ class TestConfigLineage:
         ).one()
         assert new_snapshot.source_config_id is None
 
+    def test_start_writes_the_configs_name_onto_the_snapshot(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Lineage run", [session_config["id"]])
+
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        assert snapshot.source_config_name == "Session Config"
+
+    def _rerun_with_stored_name(self, client, db, session_config, stored_name):
+        """Start, overwrite the snapshot's stored name directly (bypassing the API, as
+        the null-lineage test above does), finish, rerun; returns the new snapshot."""
+        session = _start(client, "Stored name run", [session_config["id"]])
+        snapshot = db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session["id"]))
+        ).one()
+        snapshot.source_config_name = stored_name
+        db.add(snapshot)
+        db.commit()
+
+        _finish_session(client, session["id"])
+        res = _rerun(client, session["id"], "Stored name run (rerun)")
+        assert res.status_code == 201, res.text
+        return db.exec(
+            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(res.json()["id"]))
+        ).one()
+
+    def test_rerun_copies_the_old_snapshots_source_config_name_verbatim(
+        self, client, db, session_cards, session_config
+    ):
+        # "Stored Name" differs from the live config's "Session Config", so a match
+        # proves rerun copied the snapshot rather than looking the config up.
+        new_snapshot = self._rerun_with_stored_name(client, db, session_config, "Stored Name")
+        assert new_snapshot.source_config_name == "Stored Name"
+
+    def test_a_snapshot_without_a_stored_name_reruns_with_it_null(
+        self, client, db, session_cards, session_config
+    ):
+        new_snapshot = self._rerun_with_stored_name(client, db, session_config, None)
+        assert new_snapshot.source_config_name is None
+
+
+def _second_config(client, session_config, session_fields):
+    """A second configuration on session_config's deck with the same layout, so a run
+    can start on each and the two snapshots differ only in their link."""
+    f = session_fields
+    payload = {
+        "deck_id": session_config["deck_id"],
+        "name": "Second Config",
+        "prompt_field_ids": [str(f["prompt1"])],
+        "answer_field_ids": [str(f["answer1"])],
+        "prompt_pool_ids": [str(f["pool_p1"]), str(f["pool_p2"]), str(f["pool_p3"])],
+        "prompt_pool_counts": [1],
+        "answer_pool_ids": [str(f["pool_a1"]), str(f["pool_a2"]), str(f["pool_a3"])],
+        "answer_pool_counts": [1],
+    }
+    res = client.post("/api/deck_practice_configs", json=payload)
+    assert res.status_code == 201, res.text
+    return res.json()
+
+
+def _snapshot(db, session_id: str):
+    """The one practice_deck of a single-deck run."""
+    return db.exec(
+        select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
+    ).one()
+
 
 class TestConfigEditSeversLineage:
     """ADR 040 (task 009 T7): materially editing a config nulls source_config_id on
     every snapshot cut from it — a rename alone, or an update that fails validation,
     leaves every link untouched."""
 
-    @staticmethod
-    def _second_config(client, session_config, session_fields):
-        f = session_fields
-        payload = {
-            "deck_id": session_config["deck_id"],
-            "name": "Second Config",
-            "prompt_field_ids": [str(f["prompt1"])],
-            "answer_field_ids": [str(f["answer1"])],
-            "prompt_pool_ids": [str(f["pool_p1"]), str(f["pool_p2"]), str(f["pool_p3"])],
-            "prompt_pool_counts": [1],
-            "answer_pool_ids": [str(f["pool_a1"]), str(f["pool_a2"]), str(f["pool_a3"])],
-            "answer_pool_counts": [1],
-        }
-        res = client.post("/api/deck_practice_configs", json=payload)
-        assert res.status_code == 201, res.text
-        return res.json()
-
-    @staticmethod
-    def _snapshot(db, session_id: str):
-        return db.exec(
-            select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
-        ).one()
-
     def test_editing_a_pool_array_nulls_only_that_configs_snapshots(
         self, client, db, session_cards, session_config, session_fields
     ):
-        other_config = self._second_config(client, session_config, session_fields)
+        other_config = _second_config(client, session_config, session_fields)
         edited_session = _start(client, "Edited config run", [session_config["id"]])
         other_session = _start(client, "Other config run", [other_config["id"]])
 
@@ -2977,8 +3025,8 @@ class TestConfigEditSeversLineage:
         )
         assert res.status_code == 200, res.text
 
-        assert self._snapshot(db, edited_session["id"]).source_config_id is None
-        assert self._snapshot(db, other_session["id"]).source_config_id == uuid.UUID(
+        assert _snapshot(db, edited_session["id"]).source_config_id is None
+        assert _snapshot(db, other_session["id"]).source_config_id == uuid.UUID(
             other_config["id"]
         )
 
@@ -2992,7 +3040,7 @@ class TestConfigEditSeversLineage:
         )
         assert res.status_code == 200, res.text
 
-        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+        assert _snapshot(db, session["id"]).source_config_id == uuid.UUID(
             session_config["id"]
         )
 
@@ -3010,6 +3058,165 @@ class TestConfigEditSeversLineage:
         )
         assert res.status_code == 400, res.text
 
-        assert self._snapshot(db, session["id"]).source_config_id == uuid.UUID(
+        assert _snapshot(db, session["id"]).source_config_id == uuid.UUID(
             session_config["id"]
         )
+
+
+class TestConfigRenamePropagates:
+    """ADR 066 (task 022 T2): a non-material update carrying a name writes it onto every
+    snapshot still linked to that configuration; a material update severs and writes
+    nothing, even when it also carries a name."""
+
+    def test_a_rename_updates_the_stored_name_on_linked_snapshots(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Rename run", [session_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}", json={"name": "Renamed"}
+        )
+        assert res.status_code == 200, res.text
+
+        snapshot = _snapshot(db, session["id"])
+        db.refresh(snapshot)
+        assert snapshot.source_config_name == "Renamed"
+        assert snapshot.source_config_id == uuid.UUID(session_config["id"])
+
+    def test_a_rename_reaches_only_snapshots_still_linked(
+        self, client, db, session_cards, session_config
+    ):
+        run_a = _start(client, "Unlinked run", [session_config["id"]])
+        snapshot_a = _snapshot(db, run_a["id"])
+        snapshot_a.source_config_id = None
+        db.add(snapshot_a)
+        db.commit()
+        run_b = _start(client, "Linked run", [session_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}", json={"name": "Renamed"}
+        )
+        assert res.status_code == 200, res.text
+
+        snapshot_a = _snapshot(db, run_a["id"])
+        snapshot_b = _snapshot(db, run_b["id"])
+        db.refresh(snapshot_a)
+        db.refresh(snapshot_b)
+        assert snapshot_a.source_config_name == "Session Config"
+        assert snapshot_b.source_config_name == "Renamed"
+
+    def test_a_material_edit_with_a_name_severs_and_does_not_propagate(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        session = _start(client, "Material run", [session_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"name": "Renamed", "prompt_pool_ids": [str(session_fields["pool_p1"])]},
+        )
+        assert res.status_code == 200, res.text
+
+        snapshot = _snapshot(db, session["id"])
+        db.refresh(snapshot)
+        assert snapshot.source_config_id is None
+        assert snapshot.source_config_name == "Session Config"
+
+    def test_a_rename_touches_no_other_configs_snapshots(
+        self, client, db, session_cards, session_config, session_fields
+    ):
+        other_config = _second_config(client, session_config, session_fields)
+        renamed_session = _start(client, "Renamed config run", [session_config["id"]])
+        other_session = _start(client, "Other config run", [other_config["id"]])
+
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}", json={"name": "Renamed"}
+        )
+        assert res.status_code == 200, res.text
+
+        renamed = _snapshot(db, renamed_session["id"])
+        other = _snapshot(db, other_session["id"])
+        db.refresh(renamed)
+        db.refresh(other)
+        assert renamed.source_config_name == "Renamed"
+        assert other.source_config_name == "Second Config"
+
+
+class TestConfigurationLabel:
+    """ADR 066 (task 022 T3): each summary deck's `configuration_name` is the live
+    configuration name while the snapshot is linked, else the stored name, else None."""
+
+    @staticmethod
+    def _label(client, session_id):
+        res = client.get(f"/api/practice_runs/{session_id}")
+        assert res.status_code == 200, res.text
+        return res.json()["decks"][0]["configuration_name"]
+
+    @staticmethod
+    def _rename(client, config_id, name):
+        res = client.patch(f"/api/deck_practice_configs/{config_id}", json={"name": name})
+        assert res.status_code == 200, res.text
+
+    def test_label_is_the_live_name_after_a_rename(
+        self, client, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_keeps_the_last_linked_name_after_a_material_edit(
+        self, client, session_cards, session_config, session_fields
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+        res = client.patch(
+            f"/api/deck_practice_configs/{session_config['id']}",
+            json={"prompt_pool_ids": [str(session_fields["pool_p1"])]},
+        )
+        assert res.status_code == 200, res.text
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_keeps_the_last_linked_name_after_the_config_is_deleted(
+        self, client, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        self._rename(client, session_config["id"], "Renamed")
+        res = client.delete(f"/api/deck_practice_configs/{session_config['id']}")
+        assert res.status_code == 204, res.text
+
+        assert self._label(client, session["id"]) == "Renamed"
+
+    def test_label_prefers_the_live_name_over_a_stale_stored_one(
+        self, client, db, session_cards, session_config
+    ):
+        # Every API path keeps the two equal while linked (T2), so only a direct write
+        # can tell the live read apart from the stored fallback.
+        session = _start(client, "Label run", [session_config["id"]])
+        snapshot = _snapshot(db, session["id"])
+        snapshot.source_config_name = "Stale"
+        db.add(snapshot)
+        db.commit()
+
+        assert self._label(client, session["id"]) == "Session Config"
+
+    def test_label_is_null_without_link_or_stored_name(
+        self, client, db, session_cards, session_config
+    ):
+        session = _start(client, "Label run", [session_config["id"]])
+        snapshot = _snapshot(db, session["id"])
+        snapshot.source_config_id = None
+        snapshot.source_config_name = None
+        db.add(snapshot)
+        db.commit()
+
+        assert self._label(client, session["id"]) is None
+
+    def test_list_carries_each_decks_label(self, client, multi_subject_library):
+        configs = multi_subject_library["configs"]
+        created = _start(client, "Both decks", [configs["a"]["id"], configs["b"]["id"]])
+
+        res = client.get("/api/practice_runs")
+        assert res.status_code == 200, res.text
+        run = next(r for r in res.json() if r["id"] == created["id"])
+        assert [d["configuration_name"] for d in run["decks"]] == ["Config A", "Config B"]

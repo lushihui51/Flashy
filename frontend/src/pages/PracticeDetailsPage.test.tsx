@@ -19,7 +19,13 @@ function session(overrides: Record<string, unknown> = {}) {
     status: 'active',
     created_at: '2026-08-24T12:00:00Z',
     decks: [
-      { deck_id: 'd1', deck_name: 'Shared Deck Name', subject_id: 's1', subject_name: 'Alpha' },
+      {
+        deck_id: 'd1',
+        deck_name: 'Shared Deck Name',
+        subject_id: 's1',
+        subject_name: 'Alpha',
+        configuration_name: 'Config A',
+      },
     ],
     ...overrides,
   };
@@ -120,7 +126,44 @@ describe('PracticeDetailsPage', () => {
     // machine running this test happens to sit in (ADR 019), so a fixed instant can
     // land on a different hour, though never a different calendar day for this one.
     expect(screen.getByText(/Aug 24, 2026/)).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Shared Deck Name')).toBeInTheDocument();
+    expect(screen.getByText('Alpha · Shared Deck Name · Config A')).toBeInTheDocument();
+  });
+
+  it('lists every deck with no cap', async () => {
+    const deck = (n: number) => ({
+      deck_id: `d${n}`,
+      deck_name: `Deck ${n}`,
+      subject_id: 's1',
+      subject_name: 'Alpha',
+      configuration_name: `Config ${n}`,
+    });
+    mockSession(session({ decks: [deck(1), deck(2), deck(3)] }));
+    renderDetails();
+
+    await screen.findByRole('heading', { name: 'Alpha run' });
+    expect(screen.getByText('Alpha · Deck 1 · Config 1')).toBeInTheDocument();
+    expect(screen.getByText('Alpha · Deck 2 · Config 2')).toBeInTheDocument();
+    expect(screen.getByText('Alpha · Deck 3 · Config 3')).toBeInTheDocument();
+    expect(screen.queryByText('+1')).not.toBeInTheDocument();
+  });
+
+  it('a deck with no configuration name shows subject and deck', async () => {
+    mockSession(
+      session({
+        decks: [
+          {
+            deck_id: 'd1',
+            deck_name: 'Shared Deck Name',
+            subject_id: 's1',
+            subject_name: 'Alpha',
+            configuration_name: null,
+          },
+        ],
+      }),
+    );
+    renderDetails();
+
+    expect(await screen.findByText('Alpha · Shared Deck Name')).toBeInTheDocument();
   });
 
   it('an active session shows Start practice, and it navigates to the run stub', async () => {

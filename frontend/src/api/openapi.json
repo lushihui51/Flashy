@@ -4322,6 +4322,17 @@
           "subject_name": {
             "type": "string",
             "title": "Subject Name"
+          },
+          "configuration_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Name"
           }
         },
         "type": "object",
@@ -4329,10 +4340,11 @@
           "deck_id",
           "deck_name",
           "subject_id",
-          "subject_name"
+          "subject_name",
+          "configuration_name"
         ],
         "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link this payload exposes between a session and a\nsubject/deck. `practice_deck.source_config_id` (ADR 040) does exist, but it is\nattribution-only, unread by any query in this cycle, and not surfaced on any API\npayload \u2014 so \"which sessions relate to this deck\" is still only askable this way."
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` (ADR 040) is read here for the\nlabel only (ADR 066): `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
       },
       "PracticeRunRead": {
         "properties": {

@@ -16,12 +16,25 @@ def db_stage_create_practice_deck(db: Session, data: dict) -> PracticeDeck:
 def db_stage_unlink_practice_decks_from_config(db: Session, config_id: uuid.UUID) -> None:
     """Severs attribution (ADR 040): every snapshot that names this configuration as its
     source stops naming it. Called before a material configuration edit, so the unlink
-    and the edit commit together in the caller's transaction. Snapshots themselves are
-    never touched otherwise — attribution is the only link a configuration has to them."""
+    and the edit commit together in the caller's transaction. Otherwise a configuration
+    reaches its snapshots only to rename them (ADR 066,
+    db_stage_set_practice_deck_source_config_name)."""
     db.exec(
         update(PracticeDeck)
         .where(col(PracticeDeck.source_config_id) == config_id)
         .values(source_config_id=None)
+    )
+
+
+def db_stage_set_practice_deck_source_config_name(
+    db: Session, config_id: uuid.UUID, name: str
+) -> None:
+    """ADR 066: every snapshot still linked to this configuration takes its new name. No
+    commit — the caller's update commits both."""
+    db.exec(
+        update(PracticeDeck)
+        .where(col(PracticeDeck.source_config_id) == config_id)
+        .values(source_config_name=name)
     )
 
 
