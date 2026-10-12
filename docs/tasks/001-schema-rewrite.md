@@ -290,7 +290,7 @@ Strictly sequential: every task depends on all tasks before it; none are safe to
 ### T9 (Phase 7) — Contract validation and frontend survey
 
 - [x] **Goal:** regenerate the contract, restore exactly one end-to-end smoke path, and write the survey that seeds the frontend rewrite — nothing more.
-- **Files:** regenerated OpenAPI types; the smoke path's screens/hooks; MSW handlers for the smoke path's endpoints only; `docs/cc/2026-08-19-frontend-rewrite-survey.md`.
+- **Files:** regenerated OpenAPI types; the smoke path's screens/hooks; MSW handlers for the smoke path's endpoints only; `docs/reports/2026-08-19-frontend-rewrite-survey.md`.
 - **Details:** a full frontend rewrite follows this plan as its own execution document (task files 002/003). This task does **not** bring the existing UI to parity with the new API; its outputs are the regenerated contract, one working smoke path, and a written survey. Any work beyond that is waste — it will be rebuilt.
   - Regenerate OpenAPI types. Let TypeScript enumerate the breakage, but treat the errors as a **reading exercise before a fixing exercise**: anywhere the generated types are awkward to consume — payloads that force client-side joins, shapes that don't match how a screen would use them, endpoints missing an obvious list/detail variant — fix the **API**, not the frontend. This is the last cheap moment to change the contract.
   - Restore exactly **one end-to-end happy path** and keep it compiling and working: create subject → deck → fields → cards → run a practice session → rate → see mastery change. Ugly is fine. This is a smoke surface for the backend during the frontend rewrite, not a product.
@@ -300,12 +300,12 @@ Strictly sequential: every task depends on all tasks before it; none are safe to
 - **Out of scope:** fixing any screen outside the smoke path; deleting salvageable components; parity work of any kind.
 - **Done when:** `tsc` passes; the smoke path works in the browser against the local backend; MSW-backed tests for the smoke path pass; the survey exists and covers every current screen.
 - **Commit:** `refactor: regenerate contract, restore smoke path, survey frontend for rewrite` (`86e53b5`)
-- Notes: the survey was migrated into the `docs/cc/` convention by `5d8db2d`.
+- Notes: the survey was migrated into the `docs/reports/` convention by `5d8db2d`.
 
 ### T10 (Phase 8) — Documentation
 
 - [x] **Goal:** record the schema's reasoning as ADRs and update AGENTS.md so assistance stops suggesting old shapes.
-- **Files:** `docs/adr/` (field promotion, lazy mastery, log-as-source-of-truth, the mastery strategy pattern — SQL stores, Python computes —, config snapshotting, archival over deletion, copy-not-share), `AGENTS.md` (new entity vocabulary).
+- **Files:** `docs/adrs/` (field promotion, lazy mastery, log-as-source-of-truth, the mastery strategy pattern — SQL stores, Python computes —, config snapshotting, archival over deletion, copy-not-share), `AGENTS.md` (new entity vocabulary).
 - **Details:** record the _reasoning_, not just the shape — it is invisible in the models otherwise. See the ADRs section above for what landed.
 - **Out of scope:** any code change.
 - **Done when:** the ADRs listed above exist; AGENTS.md carries the new entity vocabulary.

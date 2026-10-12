@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 037: its insertion formula applies only with at least `RETRY_SPACING_FLOOR` cards pending, and the "end of the queue" it promises for fewer is now defined. Amends ADR 008's status note: the no-successor fallback stays; the no-predecessor fallback is removed. Diagnosis and reproduction in `docs/cc/2026-09-27-requeue-last-card-collision.md`; implemented by task 017.
+Accepted. Amends ADR 037: its insertion formula applies only with at least `RETRY_SPACING_FLOOR` cards pending, and the "end of the queue" it promises for fewer is now defined. Amends ADR 008's status note: the no-successor fallback stays; the no-predecessor fallback is removed. Diagnosis and reproduction in `docs/reports/2026-09-27-requeue-last-card-collision.md`; implemented by task 017.
 
 ## Context
 

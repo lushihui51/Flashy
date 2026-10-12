@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-06. The session ran from 2026-10-05 into 2026-10-06.
 
-**Prompted by:** the documentation reform on `refactor/doc-lifecycle`, continuing from the comment session recorded in `docs/cc/2026-10-03-comment-vocabulary-and-rules.md`. The user had studied Nygard's 2011 article "Documenting Architecture Decisions" and wanted ground rules for ADRs that adopt most of its conventions. They suspected two gaps in the repo's practice: no neutral consequence, and modifications made inside an ADR's content where only its Status should change.
+**Prompted by:** the documentation reform on `refactor/doc-lifecycle`, continuing from the comment session recorded in `docs/reports/2026-10-03-comment-vocabulary-and-rules.md`. The user had studied Nygard's 2011 article "Documenting Architecture Decisions" and wanted ground rules for ADRs that adopt most of its conventions. They suspected two gaps in the repo's practice: no neutral consequence, and modifications made inside an ADR's content where only its Status should change.
 
 **Outcome:** diagnosis only, no code changes. Twenty-five decisions (D1 to D25) are confirmed on what a decision record is, how it lives and dies, and how two record types relate. The second type, the Product Decision Record (PDR), originated with the user in this session. The decisions are pending /code-decompose and /code-justify. Where the rules live was deferred, and no existing record is reformed by this session.
 
@@ -144,7 +144,7 @@ Rule 4 of the comment rules admits a PDR number as it admits an ADR number.
 
 ## Rules for ADRs only
 
-No confirmed rule applies to ADRs alone. The directory docs/adr/, the "ADR NNN"
+No confirmed rule applies to ADRs alone. The directory docs/adrs/, the "ADR NNN"
 prefix and the sequence were not decided in this session and continue as they
 are.
 ```
@@ -188,14 +188,14 @@ Before any record is marked Superseded or Deprecated, the agent shows the table 
 
 A short noun phrase naming the option chosen and what it was chosen for.
 
-- **Why:** the user's reason: a sentence title presents what is recorded as a fact rather than a decision; "there should be nouns". The session added that a superseded file's title stays in the directory listing, where a noun phrase names an option once chosen and a sentence keeps asserting. `docs/adr/015-deck-delete-cascades-owned-rows-preserves-history.md:1` still reads "preserves history", which `docs/adr/048-review-history-and-snapshots-cascade-with-their-owner.md` reversed.
+- **Why:** the user's reason: a sentence title presents what is recorded as a fact rather than a decision; "there should be nouns". The session added that a superseded file's title stays in the directory listing, where a noun phrase names an option once chosen and a sentence keeps asserting. `docs/adrs/015-deck-delete-cascades-owned-rows-preserves-history.md:1` still reads "preserves history", which `docs/adrs/048-review-history-and-snapshots-cascade-with-their-owner.md` reversed.
 - **Rejected:** sentence titles, 41 of 68 today; imperative "Use X for Y" titles, 18 today.
 
 ### D6: grouping and worth are the user's judgment
 
 Which choices form one record, and whether they earn one, is a single judgment the user makes case by case. The agent proposes a grouping with its reasons and the alternative split. No written test decides it. Nygard's "a single decision" is the stated aim.
 
-- **Why:** worth belongs to the group, not to the parts. In `docs/adr/015-deck-delete-cascades-owned-rows-preserves-history.md:15-21` the SET NULL rule would pass a split test and fail on worth alone, yet with the cascade it answers one question. The user: the triage depends on the scenario and cannot be generalised.
+- **Why:** worth belongs to the group, not to the parts. In `docs/adrs/015-deck-delete-cascades-owned-rows-preserves-history.md:15-21` the SET NULL rule would pass a split test and fail on worth alone, yet with the cascade it answers one question. The user: the triage depends on the scenario and cannot be generalised.
 - **Rejected:** the session's reversal test, "a part of the Decision that would still stand if the titled choice were reversed is a separate decision"; a test requiring every rejected alternative to replace the whole decision; the agent merging related decisions on its own judgment and telling the user afterwards.
 
 ### D7: the Product Decision Record
@@ -203,7 +203,7 @@ Which choices form one record, and whether they earn one, is a single judgment t
 Product decisions get their own record type, the PDR. A PDR records a decision about what the app does for its user. An ADR records a decision about how the app is built. A PDR follows every rule decided for ADRs unless a later decision says otherwise.
 
 - **Why:** the user is product owner as well as engineer and wants to be able to answer "why did I design the app this way". A PDR serves that role as Nygard says an ADR serves the engineer. The ADR set narrows to Nygard's scope. The session had recommended against a second record type, on the cost of a boundary call per decision; the user's role argument, and D9, answered it.
-- **Rejected:** keeping product decisions in `docs/adr/` with a line drawn inside it, which the session had recommended; moving them to comments only; a living behaviour document.
+- **Rejected:** keeping product decisions in `docs/adrs/` with a line drawn inside it, which the session had recommended; moving them to comments only; a living behaviour document.
 
 ### D8: no central requirements document
 
@@ -217,7 +217,7 @@ No central product requirements document is kept. The accepted PDRs are the requ
 
 The test is applied to each rejected alternative on its own: if that alternative were built perfectly, could a person using the app tell the difference? Yes marks a PDR candidate, no marks an ADR candidate. "Built perfectly" means only differences the alternative cannot avoid count; it removes bugs, slowness and risk from the comparison. "A user" is a person using the app. Whether a candidate earns a record is D6's judgment.
 
-- **Why:** the user's rule, offered as a hard rule for the split. It operationalises D7. Run over the 68 records from their alternative headings, it sorted better than the session's hand sort: `docs/adr/013-snapshot-practice-config-at-session-start.md` becomes a PDR candidate, because a user would notice a practice changing under them, and `docs/adr/059-only-the-current-card-can-be-rated.md` becomes an ADR candidate, because the interface never offers another card. Per-alternative application is the session's addition, confirmed with it; it is what handles the mixed third, both true hybrids such as ADR 015 and a product decision with one build alternative attached, such as `docs/adr/021-user-facing-vocabulary-never-exposes-schema-terms.md`, where reusing schema names as labels is visible and renaming the schema to match is not.
+- **Why:** the user's rule, offered as a hard rule for the split. It operationalises D7. Run over the 68 records from their alternative headings, it sorted better than the session's hand sort: `docs/adrs/013-snapshot-practice-config-at-session-start.md` becomes a PDR candidate, because a user would notice a practice changing under them, and `docs/adrs/059-only-the-current-card-can-be-rated.md` becomes an ADR candidate, because the interface never offers another card. Per-alternative application is the session's addition, confirmed with it; it is what handles the mixed third, both true hybrids such as ADR 015 and a product decision with one build alternative attached, such as `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md`, where reusing schema names as labels is visible and renaming the schema to match is not.
 - **Rejected:** typing a whole decision at once; Nygard's list of kinds, "structure, non-functional characteristics, dependencies, interfaces, or construction techniques", as the type test.
 - **Consequence confirmed with it:** quality targets move to the product side. An alternative that is unavoidably slower or less available in a way a person notices marks a PDR candidate, and the mechanism that meets the target stays an ADR. Nygard counts non-functional characteristics as architecture.
 - **Amended in place at the user's request, after this report was first written:** the sentence "Doing nothing counts as an alternative" is dropped from D9. Doing nothing is not an alternative. A record exists because its context made a decision necessary, so whether a decision is needed is never the decider's question; Context says why it is needed (D19). The rules block above carries the amended text.
@@ -252,7 +252,7 @@ Status holds a state and record pointers, nothing else. The states were "Accepte
 
 Consequences lists what becomes true because of the decision and what a later decision or a reader of the code must reckon with, in three labelled groups, "Positive", "Negative" and "Neutral", one full sentence per line. The test for a line is that something must reckon with it. A line that restates the decision does not belong. Any group may be empty, and an empty group is left out.
 
-- **Why:** the user's first original concern. Two labels shut the neutral kind out, so resulting context was filed as cost: `docs/adr/038-rename-practice-session-to-practice-run.md:37`, `docs/adr/059-only-the-current-card-can-be-rated.md:39`, `docs/adr/067-a-configurations-default-name-is-derived-from-its-layout.md:50`. Labels make a writer look for each kind. Nygard names the three kinds and uses no labels; the labels are the session's recommendation, confirmed.
+- **Why:** the user's first original concern. Two labels shut the neutral kind out, so resulting context was filed as cost: `docs/adrs/038-rename-practice-session-to-practice-run.md:37`, `docs/adrs/059-only-the-current-card-can-be-rated.md:39`, `docs/adrs/067-a-configurations-default-name-is-derived-from-its-layout.md:50`. Labels make a writer look for each kind. Nygard names the three kinds and uses no labels; the labels are the session's recommendation, confirmed.
 - **Rejected:** prose with no labels; keeping "Benefits" and "Costs" with a third label added; any wording in the rule that steers whether "Negative" is filled. The user's stress: whether a group is empty is the writer's call and the user's review, and nothing in the instruction may influence it.
 
 ### D15: sections and alternatives
@@ -267,7 +267,7 @@ A record has these sections in this order: Title, Status, Context, Decision, Alt
 
 The Decision is written in full sentences, active voice, "We will". It states what was decided at the level the record stands or falls by. The test for a sentence is that changing what it says would be worth superseding the record. A sentence that fails it lives at the code.
 
-- **Why:** "We will" marks a choice rather than a fact, as D5 does for titles. D1 makes every Decision sentence expensive, and today's Decisions carry mechanism that changes cheaply: 23 name a file path, 4 name a file that no longer exists, 4 state a constant's value or a numeric tunable. A function's name survives the test only when the name itself is what was decided, as in `docs/adr/054-metadata-naming-convention-for-constraints-and-indexes.md`.
+- **Why:** "We will" marks a choice rather than a fact, as D5 does for titles. D1 makes every Decision sentence expensive, and today's Decisions carry mechanism that changes cheaply: 23 name a file path, 4 name a file that no longer exists, 4 state a constant's value or a numeric tunable. A function's name survives the test only when the name itself is what was decided, as in `docs/adrs/054-metadata-naming-convention-for-constraints-and-indexes.md`.
 - **Rejected:** present-tense statements, which all 68 records use; a blanket ban on names and values in the Decision, because some decisions are about a name.
 
 ### D17: significance by cost of change
@@ -295,7 +295,7 @@ Context states the forces the decision answers and the tension between them, as 
 
 An ADR names a PDR in its Context when that PDR is a force on it, the behaviour it exists to deliver or must not break, and states the behaviour in its own words. A PDR never points at an ADR, a file or a symbol, and never says how the app is built. A compromise lives in the ADR: the PDR keeps the intent, and the ADR that cannot deliver it in full names the PDR in Context and records the shortfall as a Negative consequence in the user's terms. Same-type citations sit in Context, as forces. Status holds only the pointers its rule allows.
 
-- **Why:** the user asked when an ADR should point at a PDR, whether a PDR should point at an ADR at all (their answer: no), and where a compromise is recorded. The person who owns a PDR must not need to know how the app is built. Under D1 a body is frozen, so a link can only be written from the newer record to the older, and product decisions usually come first. For the compromise, `docs/adr/019-utc-instants-rendered-in-stored-user-timezone.md` would say, as a Negative consequence, that after a zone change the app shows the old zone until the next request, while the PDR keeps "dates render in the user's local time".
+- **Why:** the user asked when an ADR should point at a PDR, whether a PDR should point at an ADR at all (their answer: no), and where a compromise is recorded. The person who owns a PDR must not need to know how the app is built. Under D1 a body is frozen, so a link can only be written from the newer record to the older, and product decisions usually come first. For the compromise, `docs/adrs/019-utc-instants-rendered-in-stored-user-timezone.md` would say, as a Negative consequence, that after a zone change the app shows the old zone until the next request, while the PDR keeps "dates render in the user's local time".
 - **Rejected:** a PDR citing the ADR that constrains it; a third record type for compromises; a PDR amended for a technical reason; the session's first compromise proposal, which put the constraint in the PDR.
 - **Cost accepted:** when an ADR is superseded, nothing mechanical finds the PDRs it fell short of; that check has to be read. The other direction is one grep.
 
@@ -347,8 +347,8 @@ This is the evidence the session gathered, all at `5fc5a02`. Counts come from sh
 
 ### The 68 files
 
-- `docs/adr/` holds 68 files. Two share the number 066: `docs/adr/066-a-snapshot-carries-its-configurations-name.md`, landed in `32001e5` on 2026-10-02, and `docs/adr/066-one-add-control-per-collection.md`, landed in `1446fba` on 2026-10-02, from parallel branches.
-- Every file has Status, Context, Decision and Consequences, with Status first. 49 have an "Alternatives considered" section; 17 name their alternatives as subsections inside Decision; 2 name none (`002`, `005`). Three carry a dated "Amendment" section: `docs/adr/008-use-sparse-positions-for-practice-card-ordering.md:45`, `docs/adr/010-archive-fields-instead-of-hard-deleting.md:44`, `docs/adr/015-deck-delete-cascades-owned-rows-preserves-history.md:51`.
+- `docs/adrs/` holds 68 files. Two share the number 066: `docs/adrs/066-a-snapshot-carries-its-configurations-name.md`, landed in `32001e5` on 2026-10-02, and `docs/adrs/066-one-add-control-per-collection.md`, landed in `1446fba` on 2026-10-02, from parallel branches.
+- Every file has Status, Context, Decision and Consequences, with Status first. 49 have an "Alternatives considered" section; 17 name their alternatives as subsections inside Decision; 2 name none (`002`, `005`). Three carry a dated "Amendment" section: `docs/adrs/008-use-sparse-positions-for-practice-card-ordering.md:45`, `docs/adrs/010-archive-fields-instead-of-hard-deleting.md:44`, `docs/adrs/015-deck-delete-cascades-owned-rows-preserves-history.md:51`.
 
 | Title form, by hand count | ADRs |
 | --- | --- |
@@ -367,9 +367,9 @@ This is the evidence the session gathered, all at `5fc5a02`. Counts come from sh
 | "Confirmed by", "Reaffirms", "Consistent with", "Decides" | about 12 |
 | "Proposed" or "Deprecated" | 0 |
 
-- The longest Status is about 89 words (`docs/adr/048-review-history-and-snapshots-cascade-with-their-owner.md:5`).
-- One whole supersession: `docs/adr/010-archive-fields-instead-of-hard-deleting.md:5` by ADR 049, written "Accepted; amended ...; Superseded by ADR 049".
-- Four records are part in force and part superseded: `015:5`, `docs/adr/023-entity-actions-in-header-collection-actions-in-collection.md:5`, `docs/adr/029-retrospection-at-completion-grouped-by-outcome-chain.md:5`, `docs/adr/030-rerun-recreates-session-from-frozen-snapshots.md:5`.
+- The longest Status is about 89 words (`docs/adrs/048-review-history-and-snapshots-cascade-with-their-owner.md:5`).
+- One whole supersession: `docs/adrs/010-archive-fields-instead-of-hard-deleting.md:5` by ADR 049, written "Accepted; amended ...; Superseded by ADR 049".
+- Four records are part in force and part superseded: `015:5`, `docs/adrs/023-entity-actions-in-header-collection-actions-in-collection.md:5`, `docs/adrs/029-retrospection-at-completion-grouped-by-outcome-chain.md:5`, `docs/adrs/030-rerun-recreates-session-from-frozen-snapshots.md:5`.
 - 34 of 68 Status sections differ from their first committed version.
 
 ### Edits inside bodies after acceptance
@@ -378,24 +378,24 @@ Compared section by section between each file's first commit and `5fc5a02`, with
 
 | ADR | What changed | Commit |
 | --- | --- | --- |
-| 005 | `docs/adr/005-use-tailwind-css-for-styling.md:15` "Colour tokens" subsection added to Decision | `12a9aa2`, 2026-08-24 |
-| 006 | `docs/adr/006-use-openapi-fetch-for-typed-api-client.md:29` "Error normalization" subsection added to Decision | `12a9aa2` |
-| 007 | `docs/adr/007-use-clerk-for-authentication.md:25,29,33` three "Implementation note" subsections appended | `12a9aa2`, `bae7608`, `f8a5ea3` |
+| 005 | `docs/adrs/005-use-tailwind-css-for-styling.md:15` "Colour tokens" subsection added to Decision | `12a9aa2`, 2026-08-24 |
+| 006 | `docs/adrs/006-use-openapi-fetch-for-typed-api-client.md:29` "Error normalization" subsection added to Decision | `12a9aa2` |
+| 007 | `docs/adrs/007-use-clerk-for-authentication.md:25,29,33` three "Implementation note" subsections appended | `12a9aa2`, `bae7608`, `f8a5ea3` |
 | 008, 010, 015 | dated "Amendment" sections appended | `9e9401f` (008, 2026-08-19), `f8a5ea3` (010, 2026-09-18), `6fe4ec0` (015, 2026-08-24) |
-| 049 | `docs/adr/049-field-deletion-drops-all-influence.md:23` one sentence reworded, "practices ended" to "active practices deleted" | `b0b1e44`, 2026-09-22 |
+| 049 | `docs/adrs/049-field-deletion-drops-all-influence.md:23` one sentence reworded, "practices ended" to "active practices deleted" | `b0b1e44`, 2026-09-22 |
 
 None since 2026-09-22. Everything after went into Status.
 
 ### Consequences
 
-- 67 files use the labels "Benefits:" and "Costs:"; `docs/adr/002-use-fastapi-for-backend.md` uses prose and "Costs accepted:". No file has a neutral group.
-- Neutral facts filed as costs: `docs/adr/038-rename-practice-session-to-practice-run.md:37` (older records keep the old term), `docs/adr/059-only-the-current-card-can-be-rated.md:39` (a future feature must revisit the record), `docs/adr/067-a-configurations-default-name-is-derived-from-its-layout.md:50` (a rename does not reach a saved name).
+- 67 files use the labels "Benefits:" and "Costs:"; `docs/adrs/002-use-fastapi-for-backend.md` uses prose and "Costs accepted:". No file has a neutral group.
+- Neutral facts filed as costs: `docs/adrs/038-rename-practice-session-to-practice-run.md:37` (older records keep the old term), `docs/adrs/059-only-the-current-card-can-be-rated.md:39` (a future feature must revisit the record), `docs/adrs/067-a-configurations-default-name-is-derived-from-its-layout.md:50` (a rename does not reach a saved name).
 
 ### Decision sections
 
 - 0 of 68 use "We will". All state the decision in the present tense.
 - 23 name a file path. 4 name a file that no longer exists: `010` and `012` name `app/database_ops/card_field_mastery.py`; `013` and `015` name `app/services/practice_session.py`.
-- 4 state a constant's value or a numeric tunable: `008`, `037`, `056`, `058`. Examples of mechanism in a Decision: `docs/adr/037-retry-spacing-floor-clamps-mastery-insertion.md:13` gives the floor's value and file; `docs/adr/062-connectivity-is-the-one-app-level-error-banner.md:28` gives the banner component and its position in the header; `docs/adr/067-a-configurations-default-name-is-derived-from-its-layout.md:15` gives the file the derivation lives in.
+- 4 state a constant's value or a numeric tunable: `008`, `037`, `056`, `058`. Examples of mechanism in a Decision: `docs/adrs/037-retry-spacing-floor-clamps-mastery-insertion.md:13` gives the floor's value and file; `docs/adrs/062-connectivity-is-the-one-app-level-error-banner.md:28` gives the banner component and its position in the header; `docs/adrs/067-a-configurations-default-name-is-derived-from-its-layout.md:15` gives the file the derivation lives in.
 
 ### Length and style
 
@@ -420,9 +420,9 @@ D9 applied to every rejected alternative, from the alternative headings only. A 
 | Alternatives on both sides | about 20 |
 | No alternative listed | 2 |
 
-- True hybrid: `docs/adr/015-deck-delete-cascades-owned-rows-preserves-history.md:15` (owned rows cascade) and `:21` (history rows SET NULL). Refusing to delete a deck with history is visible; nulling a practice card's reference is not.
-- Product decision with one build alternative attached: `docs/adr/021-user-facing-vocabulary-never-exposes-schema-terms.md`, whose second alternative, renaming the schema, no user could see.
-- `docs/adr/062-connectivity-is-the-one-app-level-error-banner.md:45` lists "Inline only, leaving ADR 035 unchanged" as its first rejected alternative; `docs/adr/049-field-deletion-drops-all-influence.md:7` opens its Context with what ADR 010 decided and what had drifted. Both are the shape D2 and D19 ask for.
+- True hybrid: `docs/adrs/015-deck-delete-cascades-owned-rows-preserves-history.md:15` (owned rows cascade) and `:21` (history rows SET NULL). Refusing to delete a deck with history is visible; nulling a practice card's reference is not.
+- Product decision with one build alternative attached: `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md`, whose second alternative, renaming the schema, no user could see.
+- `docs/adrs/062-connectivity-is-the-one-app-level-error-banner.md:45` lists "Inline only, leaving ADR 035 unchanged" as its first rejected alternative; `docs/adrs/049-field-deletion-drops-all-influence.md:7` opens its Context with what ADR 010 decided and what had drifted. Both are the shape D2 and D19 ask for.
 
 ### Citations of records
 
@@ -442,9 +442,9 @@ D9 applied to every rejected alternative, from the alternative headings only. A 
 
 Noted during the D8 discussion as a different problem from decision records, and left to the task-file part of the reform.
 
-- The vocabulary table: `docs/adr/021-user-facing-vocabulary-never-exposes-schema-terms.md:13` and `AGENTS.md:46` point into `docs/tasks/004-practice-setup.md`.
+- The vocabulary table: `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md:13` and `AGENTS.md:46` point into `docs/tasks/004-practice-setup.md`.
 - The delta-semantics contract: `AGENTS.md:63` points into `docs/tasks/010-mastery-log.md`.
-- The banner wording: `docs/adr/062-connectivity-is-the-one-app-level-error-banner.md:39` says it lives in task 020's Contracts.
+- The banner wording: `docs/adrs/062-connectivity-is-the-one-app-level-error-banner.md:39` says it lives in task 020's Contracts.
 
 ### What the skills say today
 
@@ -527,8 +527,8 @@ None of these is decided. Nothing here should become a default downstream.
 
 ## Related
 
-- **`docs/cc/2026-10-03-comment-vocabulary-and-rules.md`.** D11 here extends its D5 (rule 4). Its D6 (present state) is what D25's "a repointed site shows no history" relies on. Its reader, who "has not read any ADR or task file", is paralleled by D22's readers here. Its open question 1, where the rules live, is the same as open question 1 here.
-- **`docs/cc/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 put a rule in `AGENTS.md:33` that code references in ADRs name the file and the symbol, never a line. D16 and D20 go further for the Decision section and for PDRs. Whether that rule survives the reform, and in what form, was not decided here.
-- **`README.md:51`** says every design decision is in `docs/adr/`, and `README.md:55` says decisions are recorded as architecture decision records. D7 makes both untrue once the first PDR exists.
-- **ADRs.** None is contradicted. Every decision here applies to records written from now on; the existing 68 are untouched by this session, and their reform is open question 3. `docs/adr/038-rename-practice-session-to-practice-run.md:37`, which leaves older records saying "session", was cited in discussion as the precedent for leaving legacy records alone, and the user's preference went the other way.
+- **`docs/reports/2026-10-03-comment-vocabulary-and-rules.md`.** D11 here extends its D5 (rule 4). Its D6 (present state) is what D25's "a repointed site shows no history" relies on. Its reader, who "has not read any ADR or task file", is paralleled by D22's readers here. Its open question 1, where the rules live, is the same as open question 1 here.
+- **`docs/reports/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 put a rule in `AGENTS.md:33` that code references in ADRs name the file and the symbol, never a line. D16 and D20 go further for the Decision section and for PDRs. Whether that rule survives the reform, and in what form, was not decided here.
+- **`README.md:51`** says every design decision is in `docs/adrs/`, and `README.md:55` says decisions are recorded as architecture decision records. D7 makes both untrue once the first PDR exists.
+- **ADRs.** None is contradicted. Every decision here applies to records written from now on; the existing 68 are untouched by this session, and their reform is open question 3. `docs/adrs/038-rename-practice-session-to-practice-run.md:37`, which leaves older records saying "session", was cited in discussion as the precedent for leaving legacy records alone, and the user's preference went the other way.
 - **Skills.** Named under "What the skills say today". The user rewrites them.

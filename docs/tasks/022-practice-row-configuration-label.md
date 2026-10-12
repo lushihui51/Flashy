@@ -1,6 +1,6 @@
 # 022 — Practice rows name their configurations, and configurations name themselves
 
-Fix cycle from the 2026-10-01 /code-plan session, prompted by `docs/cc/2026-09-29-practice-row-configuration-label.md`: each practice row shows subject · deck chips and a date, and both a practice and a configuration default to a timestamp, so neither says what it contains. Backend and frontend: one new nullable column on `practice_deck`, one migration, one new payload field, and a regenerated `frontend/src/api/types.ts`. Branch: `fix/practice-row-configuration-label`, cut from `main`.
+Fix cycle from the 2026-10-01 /code-plan session, prompted by `docs/reports/2026-09-29-practice-row-configuration-label.md`: each practice row shows subject · deck chips and a date, and both a practice and a configuration default to a timestamp, so neither says what it contains. Backend and frontend: one new nullable column on `practice_deck`, one migration, one new payload field, and a regenerated `frontend/src/api/types.ts`. Branch: `fix/practice-row-configuration-label`, cut from `main`.
 
 Earlier task files affected, recorded here for the next sync's Superseded bullets; this file does not edit them:
 

@@ -13,7 +13,7 @@ A practice spans one `practice_deck` snapshot per deck, each cut from one `deck_
 
 A run has no way to name its configuration. The snapshot copies the six arrays but not the name. ADR 040's `source_config_id` reaches the live configuration, but a material edit nulls it on every snapshot cut from that configuration, and so does deleting the configuration; only a rename keeps it. A label read through the link alone vanishes from every past practice the moment the user adjusts that configuration's layout, and snapshots from before ADR 040 have no link at all.
 
-Investigation: `docs/cc/2026-09-29-practice-row-configuration-label.md`.
+Investigation: `docs/reports/2026-09-29-practice-row-configuration-label.md`.
 
 ## Decision
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-07.
 
-**Prompted by:** the documentation reform on `process/reform`, continuing from the comment session in `docs/cc/2026-10-03-comment-vocabulary-and-rules.md` and the record session in `docs/cc/2026-10-06-adr-pdr-ground-rules.md`. The engineer wants task files to be the spec in a spec-driven process in which they never touch code and only review and guide the spec, and asked for ground rules so builders are less confused and build better. The session was to settle an audience and a purpose first, then one small, concrete decision at a time.
+**Prompted by:** the documentation reform on `process/reform`, continuing from the comment session in `docs/reports/2026-10-03-comment-vocabulary-and-rules.md` and the record session in `docs/reports/2026-10-06-adr-pdr-ground-rules.md`. The engineer wants task files to be the spec in a spec-driven process in which they never touch code and only review and guide the spec, and asked for ground rules so builders are less confused and build better. The session was to settle an audience and a purpose first, then one small, concrete decision at a time.
 
 **Outcome:** diagnosis only, no code changes. Nineteen decisions (D1 to D19) are confirmed on what a task file is, who reads it, what it is for, and what each of its parts holds. They are pending /code-decompose and /code-justify. Where the rules live was deferred, as in both earlier sessions. No existing task file, record, AGENTS.md line, or skill is changed by this session.
 
@@ -24,7 +24,7 @@ main, the file is complete and is never edited again. It stays in the
 repository for debugging only: to see what the builder was asked and what
 it reported. The test: after the merge, deleting the file would lose
 nothing the repository still needs. No tracked file cites a task file, as a
-rule or as history; the only exceptions are a docs/cc report and a commit
+rule or as history; the only exceptions are a docs/reports report and a commit
 message. (D1)
 
 Readers. A task file is written for the builder of its cycle: an agent that
@@ -131,7 +131,7 @@ Each entry gives what was decided, why, and what was rejected. Where the session
 
 ### D1: lifetime
 
-A task file serves one cycle, is complete and frozen once the cycle's work is merged to main, and is kept for debugging only. The test is that deleting it after the merge would lose nothing the repository still needs. No tracked file cites it, as a rule or as history; a docs/cc report and a commit message are the only exceptions.
+A task file serves one cycle, is complete and frozen once the cycle's work is merged to main, and is kept for debugging only. The test is that deleting it after the merge would lose nothing the repository still needs. No tracked file cites it, as a rule or as history; a docs/reports report and a commit message are the only exceptions.
 
 - **Why:** the engineer's choice of spec-first, in Böckeler's sense: the spec is written before the code and not maintained after. Today's files are authored once and then patched for weeks, and a builder reading one cannot tell an instruction from history from a rule still in force. The durable homes already exist: the record session's D8 makes the PDRs the requirements, and its D16 sends mechanism to the code.
 - **Rejected:** a living spec per area, maintained across cycles, which contradicts the record session's D8 and would pay its D1 restatement cost a second time; a split into a per-cycle work order plus a new living-spec type; "even as history" applied to reports and commit messages, which the engineer carved out because a report is the debugging use and a commit message is not a tracked file.
@@ -308,13 +308,13 @@ Evidence gathered at `1d97ef3`. Counts come from shell passes; treat them as app
 | `frontend/src/` lines, non-generated | 16 |
 | `frontend/src/api/types.ts` lines, generated | 5 |
 | Test names citing a task, MD, T or phase | 19 |
-| docs/cc reports, of 19 | 12 |
+| docs/reports reports, of 19 | 12 |
 | Commit subjects on any branch, "(task NNN" | 62 |
 
 - Two AGENTS.md lines point at rules that live only in a task file: `AGENTS.md:46` at the vocabulary table in `docs/tasks/004-practice-setup.md:40-61`, and `AGENTS.md:63` at the delta-semantics contract in `docs/tasks/010-mastery-log.md`. The record session's report noted these as living contracts inside task files and left them to this part of the reform; the engineer put their relocation outside this session.
 - `AGENTS.md:85` describes task files as "(one per cycle, per-task Notes, "Superseded since" corrections)".
 - `README.md:55` says the task file "pins the contracts the tasks share and gives every task checkable done-criteria".
-- Context citations in records: `docs/adr/057-every-field-create-writes-the-dense-value-rows.md:11` opens with "The 2026-09-24 investigation of task 015 T9's Notes line found the gap"; `docs/adr/045-alembic-is-the-only-schema-path.md:13` says "happened during the mastery-ledger cycle (task 010)"; `docs/adr/064-the-health-endpoint-is-the-one-unauthenticated-route.md:61` defers to "task 020 MD-1".
+- Context citations in records: `docs/adrs/057-every-field-create-writes-the-dense-value-rows.md:11` opens with "The 2026-09-24 investigation of task 015 T9's Notes line found the gap"; `docs/adrs/045-alembic-is-the-only-schema-path.md:13` says "happened during the mastery-ledger cycle (task 010)"; `docs/adrs/064-the-health-endpoint-is-the-one-unauthenticated-route.md:61` defers to "task 020 MD-1".
 - Code citations: `app/models/practice_deck.py:46` names "task 022 T2"; `frontend/src/components/practice/ConfigurationPickList.tsx:15` names "task 019 MD-6"; `app/routers/api/deletion_impact.py:28` names "task 013 MD-2".
 
 ### What the skills say today
@@ -335,7 +335,7 @@ D1, D4, D5, D9, D16 and D19 each change what one or more of these lines describe
 None of these is decided. Nothing here should become a default downstream.
 
 1. **Where the rules live.** Deferred, as in both earlier sessions. The same options stand: the full text in `AGENTS.md`; a rules file in the repo with one pointer line in `AGENTS.md` and a record for the reasoning; or a record alone. The three sets of rules now deferred on the same question are the comment rules, the record rules, and these. It blocks /code-decompose for all three.
-2. **The living contracts.** The vocabulary table (`docs/tasks/004-practice-setup.md:40-61`, pointed at by `AGENTS.md:46` and `docs/adr/021-user-facing-vocabulary-never-exposes-schema-terms.md:13`) and the delta-semantics contract (`docs/tasks/010-mastery-log.md`, pointed at by `AGENTS.md:63`) violate D1's deletion test today. The engineer put their review outside this session; the rules apply to task files written from now on.
+2. **The living contracts.** The vocabulary table (`docs/tasks/004-practice-setup.md:40-61`, pointed at by `AGENTS.md:46` and `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md:13`) and the delta-semantics contract (`docs/tasks/010-mastery-log.md`, pointed at by `AGENTS.md:63`) violate D1's deletion test today. The engineer put their review outside this session; the rules apply to task files written from now on.
 3. **Retrofit of existing citations.** The 37 records, 41 source and test lines, 19 test names, and 6 AGENTS.md lines that cite a task file are reform work for their own planning, like the record session's open question 3.
 4. **The build skill's task selection.** An "in progress" state was dropped because the build skill will be reformed; whether two sessions in one checkout can pick the same task is then the skill's problem.
 5. **Task size and slicing.** `code-decompose/SKILL.md:21-22` requires vertical slices sized by review effort. Not raised in this session; it is a rule about how tasks are cut, and whether it is a property of the file or of the decompose step was not decided.
@@ -343,8 +343,8 @@ None of these is decided. Nothing here should become a default downstream.
 
 ## Related
 
-- **`docs/cc/2026-10-03-comment-vocabulary-and-rules.md`.** Its D5 left open "a line forbidding references to task files and to MD, T, D, phase, or section numbers" until task files were redefined. D1 here closes it: a comment is in a tracked file, so it never cites a task file or any number inside one. Its D2 reader, who "has not read any ADR or task file", is consistent with D2 here.
-- **`docs/cc/2026-10-06-adr-pdr-ground-rules.md`.** Its open question 2, task-file citations inside records, is closed by D1 here: a record never cites a task file. Its D18, a decision a builder could reverse inside a task gets a comment at the code, is what D4 relies on in dropping "Minor decisions". Its D22 names a reader per record type; D2 here does the same for task files. Its "Living contracts inside task files" section is open question 2 here.
+- **`docs/reports/2026-10-03-comment-vocabulary-and-rules.md`.** Its D5 left open "a line forbidding references to task files and to MD, T, D, phase, or section numbers" until task files were redefined. D1 here closes it: a comment is in a tracked file, so it never cites a task file or any number inside one. Its D2 reader, who "has not read any ADR or task file", is consistent with D2 here.
+- **`docs/reports/2026-10-06-adr-pdr-ground-rules.md`.** Its open question 2, task-file citations inside records, is closed by D1 here: a record never cites a task file. Its D18, a decision a builder could reverse inside a task gets a comment at the code, is what D4 relies on in dropping "Minor decisions". Its D22 names a reader per record type; D2 here does the same for task files. Its "Living contracts inside task files" section is open question 2 here.
 - **`AGENTS.md`.** Lines `:39`, `:46`, `:63`, `:71`, `:74` and `:85` cite task files or describe their old shape and stop being true under D1 and D4 once the rules are in force. None is changed here.
 - **`README.md:55`.** "pins the contracts the tasks share" stops being true under the amended D4 and D5.
 - **ADRs.** No record decides anything about task files, so none is contradicted and /code-justify starts from nothing. The 37 that cite task files are open question 3.

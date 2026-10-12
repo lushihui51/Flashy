@@ -250,7 +250,7 @@ None of these is decided. Nothing here should become a default downstream.
 ## Related
 
 - **AGENTS.md.** D6 keeps the `TODO(defer:<tag>)` convention at `AGENTS.md:55` by exception. D2 makes AGENTS.md part of what every comment may assume, which raises the cost of a stale line there.
-- **`docs/cc/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 governs references from ADRs and task files into code: file and symbol, never a line. D5 here governs the other direction, from a comment to an ADR.
+- **`docs/reports/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 governs references from ADRs and task files into code: file and symbol, never a line. D5 here governs the other direction, from a comment to an ADR.
 - **ADRs.** None is contradicted. No ADR records a decision about comments, so /code-justify starts from nothing.
 
 ### The plan file's proposals and what became of them
@@ -277,4 +277,4 @@ The plan file sits outside the repo, so its survey is copied here. It was made o
 - Interface-comment coverage: services 27 of 29, database_ops 65 of 96, routers 10 of 38, `src/api` functions 5 of 45, components 37 of 49.
 - Two comments were found stale: `frontend/src/api/client.ts:8` says "hence `any`" and the file has no `any`; `frontend/src/components/library/CardTable.tsx:11` says "currently a placeholder" and `frontend/src/pages/DeckDetailPage.tsx:191` passes a real route. The first was read here at `:6-8`; the second half of each claim was not re-checked.
 - No tooling checks comments. Two guard tests scan raw text, comments included: `tests/api_tests/test_schema_guard.py` and `tests/api_tests/test_mastery.py:863`.
-- Two files share ADR number 066. Re-verified here: `docs/adr/066-a-snapshot-carries-its-configurations-name.md` and `docs/adr/066-one-add-control-per-collection.md`.
+- Two files share ADR number 066. Re-verified here: `docs/adrs/066-a-snapshot-carries-its-configurations-name.md` and `docs/adrs/066-one-add-control-per-collection.md`.

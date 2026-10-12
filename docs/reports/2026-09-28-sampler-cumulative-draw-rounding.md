@@ -68,7 +68,7 @@ The only tests that pin a drawn count do so under `random.Random(1)`: `test_blan
 
 ## Where the docs and the code disagree
 
-- **ADR 036** (`docs/adr/036-guarantee-failed-answer-fields-on-requeue.md:13`): "The answer count therefore stays consistent with the drawn pool count; only when the failed fields alone outnumber the drawn count does the total exceed it." A short draw makes the answer count one below the drawn count, which this sentence excludes.
+- **ADR 036** (`docs/adrs/036-guarantee-failed-answer-fields-on-requeue.md:13`): "The answer count therefore stays consistent with the drawn pool count; only when the failed fields alone outnumber the drawn count does the total exceed it." A short draw makes the answer count one below the drawn count, which this sentence excludes.
 - **Task 001** (`docs/tasks/001-schema-rewrite.md:261`): "Clamp the drawn count to what survives" is the only stated reason for returning fewer than the count. The sampler's docstring (`app/services/practice_generation.py:29`, "up to k") reads the same way. The rounding short-fall is a second, unrecorded reason.
 - Nothing in any ADR, task file, or comment records that the draw depends on `sum()` and the sequential loop agreeing, that the behaviour differs between Python 3.11 and 3.12+, or that `REAL` columns reach Python as full-precision doubles rather than float32 values.
 
