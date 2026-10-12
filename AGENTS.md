@@ -156,5 +156,5 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 
 ## Context
 
-- Design decisions: see docs/adrs/
-- Task files (one per cycle, per-task Notes, "Superseded since" corrections): see docs/tasks/
+- Before writing or editing a record, read `docs/rules/record-rules.md`; ADRs are in `docs/adrs/`, PDRs in `docs/pdrs/`
+- Before writing or editing a task file in `docs/tasks/`, read `docs/rules/task-rules.md`
