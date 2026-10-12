@@ -27,6 +27,7 @@
 - Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session is mid-run
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
 - Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary, never a path outside the repo (copy one in before the session ends). `reports` is the only directory under `docs/` you may write to without asking. Each report:
+- Never edit a file in `docs/rules/` without the engineer's explicit permission
   - `YYYY-MM-DD-short-slug.md`, one file per investigation — never append to an earlier one; write a new one and link back
   - Opens with date, what prompted it, and a one-line outcome (`diagnosis only, no code changes` / `bug found and fixed in <commit>` / `deferred, see <plan>`); cites code as `path:LINE-LINE` against a commit it names, and states what it does now, not what it should do
   - Records the decision and its reasoning — a "deferred" outcome says what would need to be true to revisit — and names any ADR, plan phase, or test assertion it contradicts or extends
