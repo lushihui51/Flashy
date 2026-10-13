@@ -26,11 +26,8 @@
 - Timestamps are server-stamped UTC instants; the user's timezone is a rendering input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, never store, order, or compare instants in anything but UTC, and compute every user-facing date in `app_user.timezone` at read time
 - Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session is mid-run
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
-- Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary, never a path outside the repo (copy one in before the session ends). `reports` is the only directory under `docs/` you may write to without asking. Each report:
+- Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
-  - `YYYY-MM-DD-short-slug.md`, one file per investigation — never append to an earlier one; write a new one and link back
-  - Opens with date, what prompted it, and a one-line outcome (`diagnosis only, no code changes` / `bug found and fixed in <commit>` / `deferred, see <plan>`); cites code as `path:LINE-LINE` against a commit it names, and states what it does now, not what it should do
-  - Records the decision and its reasoning — a "deferred" outcome says what would need to be true to revisit — and names any ADR, plan phase, or test assertion it contradicts or extends
 - Code references in ADRs and task files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
 
 ## Conventions
@@ -159,3 +156,4 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 
 - Before writing or editing a record, read `docs/rules/record-rules.md`; ADRs are in `docs/adrs/`, PDRs in `docs/pdrs/`
 - Before writing or editing a task file in `docs/tasks/`, read `docs/rules/task-rules.md`
+- Before writing a report in `docs/reports/`, read `docs/rules/report-rules.md`
