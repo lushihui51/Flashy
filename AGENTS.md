@@ -11,7 +11,7 @@
 - Frontend (in /frontend): `npm run dev`; tests `npx vitest run` (`npm run test` is watch mode and never exits); regenerate API types `npm run gen:api`
 - Backend: `fastapi dev`; tests `pytest`. The app never creates tables — a fresh database needs `alembic upgrade head` first (ADR 045)
 - Migrations: `alembic revision --autogenerate -m "message"`, read the generated file, verify it on a `pg_dump` copy of the dev database, then `alembic upgrade head` against the dev database at once, `fastapi dev` running or not, while `alembic heads` shows a single head. Constraint and index names come from the naming convention in `app/database.py`, hand-written operations included (ADR 054)
-- CI (`.github/workflows/ci.yml`, ADR 041) runs `pytest`, the alembic chain from an empty database, `vitest`, lint, and build on every PR and push to `main`; the `protect-main` ruleset requires both checks, so changes reach `main` through PRs
+- CI (`.github/workflows/ci.yml`, ADR 041) runs `pytest`, the alembic chain from an empty database, `vitest`, lint, and build on every PR and push to `main`; changes reach `main` only through a PR with both checks green, never by a direct push
 - Browser checks: with the ADR 007 bypass on, headless Chromium (`playwright-core` in the session scratchpad, browser build in `~/.cache/ms-playwright`) can drive the signed-out app at `localhost:5173` against the real backend
 
 ## Hard rules
