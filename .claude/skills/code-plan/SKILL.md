@@ -90,7 +90,7 @@ For each task, read the files in its Files first for context.
 - Details: every interface this task creates, written out as code. Every lesser decision the outline placed here, used to write comments at the builder's discretion. Every record that binds the task, named in the constraint it decided. Guidance only where you have read the code and know the best way; name the symbol, never describe.
 - Out of scope: what a reasonable builder might be tempted to add here but must not, based on what's been decided.
 - Done when: each is an evidence a builder can produce, for example a result from a command or test, or a behaviour on a live server. The last task's Done when carries the cycle's goal's judgement. If there is a behaviour that a builder cannot observe, then it can't be a criterion: write the nearest evidence it can produce, and tell me.  
-- Report: "None."
+- Debrief: "None."
 
 #### Cycle file
 

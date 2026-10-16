@@ -38,8 +38,8 @@ the cycle: what to build; why, through the records it names; how, as
 constraints the build must keep and guidance on the best way to build it;
 and what must be true when each task is done. For the engineer, it is the
 instrument of approval before building and of supervision during it: each
-task is judged from the builder's report against the file and by testing
-the app on a live server, and code is read only if the report points to
+task is judged from the builder's debrief against the file and by testing
+the app on a live server, and code is read only if the debrief points to
 it. (D3)
 
 Sections. Title; Goal, the cycle's single outcome, its scope, and how the
@@ -65,7 +65,7 @@ tasks that must be done first, and which of their interfaces this task
 uses; Files, the paths it may touch; Details, guidance on the best way to
 build it, and every interface it creates, written out exactly; Out of
 scope, what it must not do; Done when, what must be true when it is done;
-Report, what the builder reports when it is done. In that order. Every
+Debrief, what the builder reports when it is done. In that order. Every
 part appears; one with nothing to hold reads "None." (D5)
 
 Task heading. A task is headed by its number, T1 upward in the order the
@@ -76,7 +76,7 @@ Status. A task's status is one of three: not started, "- [ ]"; done,
 "- [x]", set in the task's commit, once every Done-when criterion holds
 and the engineer has approved the task; blocked, "[BLOCKED]" after the
 checkbox, set when the builder stops on something the file cannot settle,
-with the reason in the Report. (D9)
+with the reason in the Debrief. (D9)
 
 Goal of a task. One sentence: what is true once the task is done that was
 not before. Never how. (D10)
@@ -93,7 +93,7 @@ counts. A path not listed is touched only with the engineer's approval.
 Details. A sentence is one of two kinds, told apart by its wording: a
 constraint, "must" or "never", which the builder keeps; or guidance, the
 best way the planner knows, which the builder may depart from and then
-says so in the Report. An interface is written as code. A constraint that
+says so in the Debrief. An interface is written as code. A constraint that
 a record decided names the record; never restate its reasons. Never
 restate what the code shows; name the file or symbol to read instead.
 (D13)
@@ -103,12 +103,12 @@ one line each, with where it belongs: another task by number, a later
 cycle, or never. (D14)
 
 Done when. One line per criterion, each checkable by the builder alone and
-each yielding evidence for the Report: a command and its exact expected
+each yielding evidence for the Debrief: a command and its exact expected
 output, a test by name that must pass, or a behaviour to observe and
 where. Never a judgement such as "works correctly". Never a check
 AGENTS.md already requires of every commit. (D15)
 
-Report. Written by the builder, in the file, when the task is done or
+Debrief. Written by the builder, in the file, when the task is done or
 blocked. Done: the evidence for each Done-when criterion, in order; every
 departure from Details or Files; and what in the code the engineer should
 read, if anything, and why. Blocked: what was attempted, what was found,
@@ -121,7 +121,7 @@ the planner cannot state exactly is an unsettled decision and is raised,
 never written around. (D18)
 
 Edits before the merge. Until the cycle's merge, the builder writes only a
-task's Status and Report; every other edit is the planner's, made in a
+task's Status and Debrief; every other edit is the planner's, made in a
 planning session. (D19)
 ```
 
@@ -147,10 +147,10 @@ Written for the builder of its cycle, an agent that has read AGENTS.md, can read
 
 ### D3: purpose
 
-For the builder, the whole of what it is told: what, why through records, how as constraints and guidance, and what must be true when done. For the engineer, approval before and supervision during, judged from the report and by testing on a live server, reading code only if the report points to it.
+For the builder, the whole of what it is told: what, why through records, how as constraints and guidance, and what must be true when done. For the engineer, approval before and supervision during, judged from the debrief and by testing on a live server, reading code only if the debrief points to it.
 
-- **Why:** the engineer does not actively read the diff; they read the builder's report and test the app, and open code only when pointed to. The engineer added the "why" and "how" items: the records paint the picture, and the file may constrain and guide how the builder builds.
-- **Rejected:** the session's draft with what and done-when only, which left "how" open; "where the report points" in favour of "if the report points to it".
+- **Why:** the engineer does not actively read the diff; they read the builder's debrief and test the app, and open code only when pointed to. The engineer added the "why" and "how" items: the records paint the picture, and the file may constrain and guide how the builder builds.
+- **Rejected:** the session's draft with what and done-when only, which left "how" open; "where the debrief points" in favour of "if the debrief points to it".
 
 ### D4: sections
 
@@ -162,9 +162,9 @@ Title, Goal, Records, Tasks, in that order; every section appears, with "None." 
 
 ### D5: parts of a task
 
-Status, Goal, Dependencies, Files, Details, Out of scope, Done when, Report, in that order; every part appears, with "None." when empty.
+Status, Goal, Dependencies, Files, Details, Out of scope, Done when, Debrief, in that order; every part appears, with "None." when empty.
 
-- **Why:** today's structure, with Dependencies lifted out of the heading, and Notes renamed Report because D1 keeps the file "to see what the builder was asked and what it reported" and D3 makes the report the engineer's evidence.
+- **Why:** today's structure, with Dependencies lifted out of the heading, and Notes renamed Debrief because D1 keeps the file "to see what the builder was asked and what it reported" and D3 makes the debrief the engineer's evidence.
 - **Rejected:** cycle 022's "Commit" line, by omission from the list; a "Minor decisions" part.
 - **History:** amended in place with D4 to "every part appears"; amended again to carry what the withdrawn Contracts section held: Dependencies gained "and which of their interfaces this task uses", Details gained "and every interface it creates, written out exactly". The session's first wording of the Dependencies clause was rejected as confusing; the engineer's "the tasks that must be done first and their interfaces this task uses" became the confirmed form.
 
@@ -199,7 +199,7 @@ One line per record in force, number and title; never restate the decision or it
 
 ### D9: Status
 
-Not started, done, or blocked. Done is set in the task's commit, once every Done-when criterion holds and the engineer has approved the task. Blocked carries its reason in the Report.
+Not started, done, or blocked. Done is set in the task's commit, once every Done-when criterion holds and the engineer has approved the task. Blocked carries its reason in the Debrief.
 
 - **Why:** the engineer added approval and the commit to "done". Today's build skill checks a task off when the criteria pass and commits after the engineer confirms (`code-build/SKILL.md:21`); under D9 the checkbox and the commit are one event, after approval.
 - **Rejected:** the session's first wording, which did not say whose status it was; an "in progress" state, raised as an open point because `code-build/SKILL.md:16` lets a session pick "the next unchecked task whose dependencies are all checked off" and AGENTS.md allows several sessions in one checkout. The engineer dropped it: the build skill will be reformed.
@@ -235,15 +235,15 @@ What a builder would be tempted to add and must not, one line each, with where i
 
 ### D15: Done when
 
-One line per criterion, checkable by the builder alone, each yielding evidence for the Report: a command and its exact expected output, a test by name, or a behaviour and where to observe it. Never a judgement word. Never a check AGENTS.md already requires of every commit.
+One line per criterion, checkable by the builder alone, each yielding evidence for the Debrief: a command and its exact expected output, a test by name, or a behaviour and where to observe it. Never a judgement word. Never a check AGENTS.md already requires of every commit.
 
-- **Why:** D3 makes the report the engineer's evidence, so a criterion whose only check is reading the code cannot be judged. The last sentence follows from D2: the builder has read AGENTS.md, so today's per-task repetition of `npx vitest run`, `npm run lint` and `npm run build` is noise.
+- **Why:** D3 makes the debrief the engineer's evidence, so a criterion whose only check is reading the code cannot be judged. The last sentence follows from D2: the builder has read AGENTS.md, so today's per-task repetition of `npx vitest run`, `npm run lint` and `npm run build` is noise.
 
-### D16: Report
+### D16: Debrief
 
 Written by the builder, in the file, when the task is done or blocked. Done: evidence per criterion in order, every departure from Details or Files, and what in the code the engineer should read and why. Blocked: what was attempted, what was found, why the file cannot settle it. Never restate the task.
 
-- **Why:** D1 keeps the file for "what it reported"; D3 has the engineer judge from the report and read code only where it points; D9 and D13 send the blocked reason and guidance departures here. Today the report is a one-line Notes entry plus a chat message that is lost (`code-build/SKILL.md:20-21`).
+- **Why:** D1 keeps the file for "what it reported"; D3 has the engineer judge from the debrief and read code only where it points; D9 and D13 send the blocked reason and guidance departures here. Today the report is a one-line Notes entry plus a chat message that is lost (`code-build/SKILL.md:20-21`).
 
 ### D17: task heading
 
@@ -259,7 +259,7 @@ Every sentence a statement or an imperative; the banned words; what cannot be st
 
 ### D19: edits before the merge
 
-Until the merge, the builder writes only Status and Report; every other edit is the planner's, in a planning session.
+Until the merge, the builder writes only Status and Debrief; every other edit is the planner's, in a planning session.
 
 - **Why:** D1 covers the file after the merge; this covers it before. It is `code-build/SKILL.md:10` restated as a property of the file.
 

@@ -38,10 +38,10 @@ Confirmed decisions reach `product-record` in the same conversation, from contex
 
 ### D4: what is built is read from the cycle files, what-parts only
 
-For each cycle file the skill reads only its Goal, and for each task only its Status, Goal and Report (`.claude/skills/product-decide/SKILL.md:21`).
+For each cycle file the skill reads only its Goal, and for each task only its Status, Goal and Debrief (`.claude/skills/product-decide/SKILL.md:21`).
 
-- **Why:** chosen by the engineer over whole files, the running app, or asking the owner. The other parts say how the app was built and checked, and every path and interface in them would enter the owner's conversation. The engineer corrected the session's first wording, which named a Contracts section, against `docs/reports/2026-10-07-cycle-file-ground-rules.md:155-171`: a cycle file is Title, Goal, Records and Tasks, and a task is Status, Goal, Dependencies, Files, Details, Out of scope, Done when and Report. The engineer then trimmed the line to the imperative form it has now.
-- **Known consequence:** the files already in the repository have a Notes line where the rules put Report, and "Superseded since" sections; under "read only" an agent maps Notes on its own or skips it, and skips "Superseded since". Nothing is lost that the rule is for, since later files' Goals say what stands.
+- **Why:** chosen by the engineer over whole files, the running app, or asking the owner. The other parts say how the app was built and checked, and every path and interface in them would enter the owner's conversation. The engineer corrected the session's first wording, which named a Contracts section, against `docs/reports/2026-10-07-cycle-file-ground-rules.md:155-171`: a cycle file is Title, Goal, Records and Tasks, and a task is Status, Goal, Dependencies, Files, Details, Out of scope, Done when and Debrief. The engineer then trimmed the line to the imperative form it has now.
+- **Known consequence:** the files already in the repository have a Notes line where the rules put Debrief, and "Superseded since" sections; under "read only" an agent maps Notes on its own or skips it, and skips "Superseded since". Nothing is lost that the rule is for, since later files' Goals say what stands.
 
 ### D5: a build-only decision is parked for the code side
 
@@ -96,7 +96,7 @@ The session's assessment of the six-skill brainstorm, given before anything was 
 
 1. **Sub-record product decisions have no path to the builder.** B leaves a decision that earns no PDR as it is, but C, D and E take only PDRs as input. B's output needs to be the PDRs written plus the product decisions below record level, and C must accept both.
 2. **C only opens from a PDR.** Bug fixes, refactors, this reform, a replan after a blocked task, and the review of the ADRs that named a superseded PDR all start with no new PDR.
-3. **E only creates.** `docs/rules/cycle-rules.md:39` makes every edit except Status and Report the planner's, so replans need E to amend, and an unsettled decision found while decomposing needs a way back to C and D.
+3. **E only creates.** `docs/rules/cycle-rules.md:39` makes every edit except Status and Debrief the planner's, so replans need E to amend, and an unsettled decision found while decomposing needs a way back to C and D.
 4. **The type test runs nowhere on the code side.** `product-decide` now applies the category test live; `code-decide` needs the same, and each flow needs a route to the other flow's writer.
 5. **Five step rules parked by `docs/reports/2026-10-12-where-the-rules-live.md:52-58`** have no home yet: the fate table before marking a record Superseded or Deprecated (B and D); the review of every record citing the superseded one (B and D, and for B that means reading ADRs, which the product flow forbids, so B may only list them and hand the review to C); the grouping proposal with the reversal cost in the type's currency (B and D); repointing every live site off a superseded record, code edits becoming a task (the superseding step, so B's repoint work must reach E); a builder who meets a record-level decision mid-task stops (F).
 6. **The checkpoint skills are missing from the brainstorm.** Nobody in A to F owns AGENTS.md or README, and `docs/reports/2026-10-06-adr-pdr-ground-rules.md:525` proposed a sync pass for discrepancies across the two record folders.

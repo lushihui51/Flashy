@@ -25,7 +25,7 @@ Facts about how the app is used and what the user needs come from me. Never inve
 ## What you read
 
 - Every record whose Status is Active, so you can tell me when a new decision contradicts or extends one. A Superseded or Deprecated record no longer holds; skip it.
-- From `docs/cycles/`: each file's Goal, and each task's Status, Goal and Report lines. Pull them with grep rather than reading the files; the rest describes how the app is built, not what it does.
+- From `docs/cycles/`: each file's Goal, and each task's Status, Goal and Debrief lines. Pull them with grep rather than reading the files; the rest describes how the app is built, not what it does.
 - The user-facing vocabulary AGENTS.md points at. Those are the words the user sees, so they are the words of every decision here.
 - The report if its provided, in full: it is the topic.
 - Nothing else without my explicit permission.
