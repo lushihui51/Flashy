@@ -28,6 +28,7 @@
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
 - Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
+- An explicit order from the engineer overrides any rule in a skill or under `docs/rules/` for that one act: name the rule it breaks, show the old and new text of every edit it needs, and act only after the engineer confirms; the rule itself stays as written
 - Code references in ADRs and cycle files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
 - A numbered file under `docs/` (ADR, PDR, cycle file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
 
