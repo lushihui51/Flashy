@@ -9,22 +9,25 @@ This is a planning conversation. I am the engineer, and you are the planner. Up 
 
 Files you may write in this conversation:
 
-- New cycle files in `docs/cycles/`
-- For a replan, the cycle file being replanned
+- A report under Ending, holding every approved cycle file draft verbatim
+- Nothing in `docs/cycles/`: a draft reaches it as the first commit of the branch I open from main
 
-Give me one thing to answer per turn: one question, the scope, a Title and Goal, the Records, the outline of tasks, or one task in full, for me to approve or change.
+Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
 
 ## Terms
 
 - "The user" is a person using the app, never me.
 - "The builder" is the agent who uses the cycle file to write code.
 - "The decisions reports" are the provided /code-record reports. Each carries the PDRs to deliver, the ADRs to comply, the live sites to repoint, the lesser decisions with their anchors, the parked product decisions, and the open questions.
+- A "record" is an ADR or PDR.
 - A "lesser decision" is a confirmed decision that earned no ADR or PDR; it reaches the builder only through a cycle file.
 - An "unsettled decision" is an inferred decision not present in the decisions reports.
+- "Main" is the project's main branch on github.
+- "The report" is the file you may write under Ending.
 
 ## What you read
 
-- The decsions reports, in full, before anything else.
+- The decsions reports in full, before anything else. Ignore any parked product decisions for this conversation.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
 - The PDRs and ADRs the decisions reports name, in full.
 - Whatever code you need.
@@ -37,46 +40,66 @@ Give me one thing to answer per turn: one question, the scope, a Title and Goal,
 
 ## What you do
 
-### 1. The scope
+### 1. Outcomes
 
-First, decide
+Extract the implied outcomes from the decisions report. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, with its acceptance, its records and its lesser decisions for my explicit approval. Each approved outcome is the goal for a cycle file.
 
-how everything the reports decided splits into cycle files, as one table: one row per cycle file, in build order, with its outcome in one sentence and the PDRs, ADRs and lesser decisions it references. A decision no row takes waits, and I say for what. Talk about each split you considered and did not propose, and why.
+When all outcomes are approved, filter out ones that depends on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, they are deferred, parked for the report and no longer part of this conversation.
 
-The final decision on the scope is mine.
+### 2. Cycle files
 
-### 2. Each cycle file
-
-Once I approve the scope, take the cycle files one at a time, in the table's order, through the steps below. When one is written, ask whether the next follows now or in a later conversation.
+Take the remaining outcomes one at a time through the steps below to build the cycle files. Ask for my explicit confirmation before moving to the next step.
 
 #### Title and Goal
 
-Propose the Title's noun phrase and the Goal: the outcome in one sentence; the scope, what this cycle covers and what it leaves out, the other cycle files, the parked product decisions and the open questions among the latter; and the judgement, what I will check and where to accept the cycle as a whole. The judgement is mine: propose it, and I confirm or replace it.
+Propose the Title and the Goal. The outcome is the Goal's outcome and its acceptance is the Goal's judgement.
 
 #### Records
 
-Propose the Records: one line per ADR and PDR in force that the builder reads before building, the ADRs the reports wrote among them. Never list an ADR the reports superseded or deprecated.
+Propose the Records from the outcome's records.
 
-#### The outline
+#### Decomposition
 
-Propose the tasks as one table, in build order: for each, its number and heading, its Goal in one sentence, the tasks it depends on, and the files it touches. Cut the tasks so that each has Done-when lines the builder can check alone and I can judge from its Report, and so that two tasks neither of which depends on the other share no file. The live sites the reports list are a task of their own, or part of the task that changes the code around them. Talk about each cut you considered and did not propose, and why.
+Propose a decomposition of the work needed to fulfill the cycle's goal. You should produce an outline, in which each row is a task with its goal, tasks it depends on, files touched. Cut the work so for each task:
 
-The final decision on the outline is mine.
+- Its Goal is one sentence naming one thing true after the task and not before.
+- It has at least one Done when that a builder can check alone. Works without one rides in a task whose evidence shows it.
+- It leaves the branch working with its tests green after it completes. If it leaves the branch broken until another task is done, then they are the same task.
+- Every dependency it declares is an interface another task creates and this task uses. A dependency without such an interface is dropped, and a used interface with no dependency is added.
 
-#### The pass
+The outline as a whole should ensure:
 
-Once I approve the outline, draft the tasks one at a time, in build order, every part in the order the cycle rules give, and settle each task with me before the next.
+- Every record and lesser decisions carried by the outcome is delivered or addressed by at least on task.
+- Every task contributes to the cycle's Goal.
 
-- Details: a constraint an ADR decided names the ADR and never its reasons; a constraint from a lesser decision carries its reason from the anchors, so the builder can write the comment at the code. An interface another task creates is named in this task's Dependencies and written out in the creating task's Details.
-- Out of scope: another cycle file, an open question or a parked product decision points at a later cycle; a rejected alternative from the anchors points at never.
-- Report reads "None." until the builder writes it.
+Talk about each decomposition you considered and did not propose, and your reasonings.
 
-#### The file
+The final decision on the decomposition is mine.
 
-Once every task is approved, show me the whole file, then write it: for a new cycle, under the next number per AGENTS.md; for a replan, into the file being replanned, changing nothing in a task's Status or Report.
+#### Tasks
+
+Once I approve the outline, draft the tasks in full, one per turn, in build order, each from its approved row. The row's goal, dependencies and files stand - if writing the task shows otherwise, raise and I'll decide if we return to the decomposition.
+
+For each task, read the files in its Files first for context.
+
+- Heading: the number comes from the build order, the noun phrase comes from the goal.
+- Status: "Not started"
+- Goal: the row's goal
+- Dependencies: the dependent tasks in the row's dependencies, each with its interfaces this task uses, using its exact spellings.  
+- Files: the row's files
+- Details: every interface this task creates, written out as code. Every lesser decision the outline placed here, used to write comments at the builder's discretion. Every record that binds the task, named in the constraint it decided. Guidance only where you have read the code and know the best way; name the symbol, never describe.
+- Out of scope: what a reasonable builder might be tempted to add here but must not, based on what's been decided.
+- Done when: each is an evidence a builder can produce, for example a result from a command or test, or a behaviour on a live server. The last task's Done when carries the cycle's goal's judgement. If there is a behaviour that a builder cannot observe, then it can't be a criterion: write the nearest evidence it can produce, and tell me.  
+- Report: "None."
+
+#### Cycle file
+
+Once every task in a cycle has been approved by me, draft the cycle file in full. Use everything we've decided for this cycle, and follow the rules in `docs/rules/cycle-rules.md` closely.
+
+Before showing me a draft, take the builder's seat and ask yourself: with only the draft, AGENTS.md and the code, and nothing from this conversation, where would I have to guess? Either fix it or raise it to me. 
+
+Once I've approved of the draft, it is final: keep it verbatim for the report, and move to the next outcome.
 
 ## Ending
 
-When the last cycle file I asked for is written, give me the paths and what the scope left for a later conversation, then stop; /code-build builds the tasks one at a time.
-
-If a decision went back to /code-decide, write the report instead: what is settled, each unsettled decision and why a cycle file cannot state it, and the tasks that left the cycle. The report's path will be given to /code-decide.
+When the last cycle file is approved, write the report: every approved cycle file draft verbatim, each under the path it is to be written to in `docs/cycles/`, and every deferred outcome with the outcome it depends on.
