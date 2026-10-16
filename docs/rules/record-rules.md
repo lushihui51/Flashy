@@ -24,6 +24,8 @@ A superseded or deprecated record stays in its folder with its Status pointer. N
 
 **Title.** A short noun phrase naming the option chosen and what it was chosen for.
 
+**File Name.** `docs/pdrs/NNN-<slug>.md`; the slug is taken from the title.
+
 **Sections.** Title, Status, Context, Decision, Alternatives considered, Consequences, in that order.
 
 **Status.** Status holds a state and record pointers, nothing else. The states are "Active"; "Superseded by" followed by the replacing record or records; and "Deprecated by" followed by the record that records the change of context that dropped the decision, or a few words on the cause when no record holds it. A replacing record may add "Supersedes" with the records it replaces. A PDR's pointers name only PDRs. "Proposed" is not used.

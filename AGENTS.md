@@ -29,6 +29,7 @@
 - Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
 - Code references in ADRs and task files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
+- A numbered file under `docs/` (ADR, PDR, task file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
 
 ## Conventions
 
