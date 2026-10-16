@@ -12,12 +12,12 @@ type ConfigurationPickListProps = {
   /** One tap on a row's checkbox. `group` is the row's deck group, so the page can
    * untick that deck's other configuration (MD-1). */
   onToggle: (group: ConfigurationGroup, configId: string) => void;
-  /** The row's pencil: open this configuration for editing (task 019 MD-6). */
+  /** The row's pencil: open this configuration for editing (cycle 019 MD-6). */
   onEdit: (configId: string) => void;
 };
 
 /**
- * A checkbox per configuration, at most one ticked per deck group (task 019 MD-1):
+ * A checkbox per configuration, at most one ticked per deck group (cycle 019 MD-1):
  * ticking a second configuration in a deck unticks the first, and tapping a ticked one
  * clears it. Nothing here enforces that natively — `toggleConfig` does, in the page's
  * handler — so the inputs carry no `name`, and a hand-edited URL can show two ticks in

@@ -249,7 +249,7 @@ def rebuild_deck_mastery(db: Session, strategy: MasteryStrategy, deck_id: uuid.U
     would produce for this deck (ADR 050 makes this safe — the ledger's order is
     `reviewed_at`, not an identity id, so deleting and re-inserting one deck's rows
     cannot disturb any other deck's order). Every other deck's rows, including their
-    ids, are untouched. Does not commit — apply_deletion (task 013 T3) calls this
+    ids, are untouched. Does not commit — apply_deletion (cycle 013 T3) calls this
     inside its own transaction."""
     db_stage_clear_mastery_for_deck(db, deck_id)
     rows = db_fetch_review_log_for_rebuild(db, deck_id=deck_id)

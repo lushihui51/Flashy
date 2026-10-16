@@ -2,11 +2,11 @@
 
 Fix cycle from the 2026-10-01 /code-plan session, prompted by `docs/reports/2026-09-29-practice-row-configuration-label.md`: each practice row shows subject · deck chips and a date, and both a practice and a configuration default to a timestamp, so neither says what it contains. Backend and frontend: one new nullable column on `practice_deck`, one migration, one new payload field, and a regenerated `frontend/src/api/types.ts`. Branch: `fix/practice-row-configuration-label`, cut from `main`.
 
-Earlier task files affected, recorded here for the next sync's Superseded bullets; this file does not edit them:
+Earlier cycle files affected, recorded here for the next sync's Superseded bullets; this file does not edit them:
 
-- Task 004 T5's Done-when on `SessionDeckChips` ("Alpha · Shared Deck Name" chips with a created date on the row) is replaced by MD-2, MD-3 and MD-4.
-- Task 004's carried invariant 3, "Editing or deleting a `deck_practice_config` never touches any practice; the UI never implies otherwise", keeps its behavioural half (generation and rerun still read only the snapshot, ADR 013) and loses its display half: under ADR 066 a rename reaches the practice's label.
-- Task 004's Canonical vocabulary table gains no row: the label uses "configuration", already in the table, and "+N" is punctuation.
+- Cycle 004 T5's Done-when on `SessionDeckChips` ("Alpha · Shared Deck Name" chips with a created date on the row) is replaced by MD-2, MD-3 and MD-4.
+- Cycle 004's carried invariant 3, "Editing or deleting a `deck_practice_config` never touches any practice; the UI never implies otherwise", keeps its behavioural half (generation and rerun still read only the snapshot, ADR 013) and loses its display half: under ADR 066 a rename reaches the practice's label.
+- Cycle 004's Canonical vocabulary table gains no row: the label uses "configuration", already in the table, and "+N" is punctuation.
 
 AGENTS.md's `practice_deck` entity line gains the stored name through /distill. That is not a task here.
 
@@ -176,7 +176,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - `alembic heads` prints one head; the migration's upgrade and downgrade both ran on the `pg_dump` copy, and the two `SELECT` outcomes are in Notes.
   - `uv run pytest tests/api_tests/test_practice_run.py` passes with the three tests above; a full `uv run pytest` passes, started only when no peer session is mid-run.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: practice_deck stores its configuration's name at start (task 022 T1)`
+- **Commit:** `feat: practice_deck stores its configuration's name at start (cycle 022 T1)`
 - Notes: Migration `9de2fd4c3f06`. On a `pg_dump` copy of the dev database, upgrade backfilled all 12 linked snapshots with their configuration's current name, and the 1 unlinked snapshot stayed null; downgrade removed the column and a second upgrade ran clean. The dev database is at `9de2fd4c3f06`, and `alembic heads` showed one head before and after. Start's `config.name` sits in the helper call's positional arguments, so the Done-when grep for `source_config_name` shows it only by its parameter position, not by name. The two rerun tests share one class helper, `_rerun_with_stored_name`. Otherwise none.
 
 ### T2 — A rename reaches every linked snapshot (ADR 066) — depends on T1
@@ -200,7 +200,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - `grep -n "db_stage_set_practice_deck_source_config_name" app/` shows the definition and exactly one call, in `update_deck_practice_config`.
   - `uv run pytest tests/api_tests/test_practice_run.py tests/api_tests/test_layering_guard.py` passes with the four tests above; a full `uv run pytest` passes.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: a configuration rename updates its linked snapshots' stored name (task 022 T2)`
+- **Commit:** `feat: a configuration rename updates its linked snapshots' stored name (cycle 022 T2)`
 - Notes: The unlink function's docstring lost its "snapshots are never touched otherwise" sentence, which ADR 066 makes false; it now names the rename function instead. The new tests `db.refresh()` each snapshot after the PATCH so the test session's identity map cannot hide the UPDATE. The full `pytest` was run by the user (the build session's permission classifier denied the run); clean. Otherwise none.
 
 ### T3 — The summary carries each deck's configuration label (ADR 066) — depends on T2
@@ -231,7 +231,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - After `npm run gen:api`, `git diff --exit-code frontend/src/api/types.ts` is clean against the commit, and `types.ts` shows `configuration_name: string | null` on `PracticeRunDeckSummary`.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: practice summaries carry each deck's configuration name (task 022 T3)`
+- **Commit:** `feat: practice summaries carry each deck's configuration name (cycle 022 T3)`
 - Notes: `test_lists_newest_first_with_name_and_deck_context` also compares whole deck dicts, so its expected dict gained `"configuration_name": "Config B"` too. One test beyond Details, `test_label_prefers_the_live_name_over_a_stale_stored_one`: T2 keeps the stored name equal to the live one on every API path, so none of the listed tests failed when the query read the stored name alone; this one overwrites the stored name directly and expects the live name. `gen:api` also rewrites `frontend/src/api/openapi.json`, committed with `types.ts`. Otherwise none.
 
 ### T4 — The capped-list helper and the derived configuration name (ADR 067) — no dependencies
@@ -253,7 +253,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - Every test above passes under `npx vitest run src/lib`.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: capped name list and derived configuration name helpers (task 022 T4)`
+- **Commit:** `feat: capped name list and derived configuration name helpers (cycle 022 T4)`
 - Notes: the "+2" test adds two field defs inside the test (Example, Note), not one: four names on the prompt side need a fifth field on the answer side, or the name is "" by the empty-side rule. `defaultConfigurationName` keeps a `?? ''` on the name lookup because `noUncheckedIndexedAccess` types it as possibly undefined; it is never reached.
 
 ### T5 — The configuration builder derives its default name (ADR 067) — depends on T4
@@ -281,7 +281,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - The browser walk's outcome is in Notes.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: new configuration derives its name from the board (task 022 T5)`
+- **Commit:** `feat: new configuration derives its name from the board (cycle 022 T5)`
 - Notes: Browser walk at 390px on the Ports deck (four fields): Name empty on open and with only a prompt field; "Port Number → Protocol Name" once both sides had one; "Port Number → Protocol Name, Protocol Function" after a random-draw answer; typed "My Ports Drill" kept through a fourth assignment; Cancel returned to the deck's Configurations tab, nothing saved. The servers on 5173 and 8000 ran from the main checkout's branch, so the walk used this worktree's Vite on port 5174 against that backend, which this frontend-only task does not depend on. Otherwise none.
 
 ### T6 — Practice rows and the detail page name their configurations (MD-2, MD-3, MD-4) — depends on T3 and T4
@@ -316,7 +316,7 @@ Two chains: T1 → T2 → T3 → T6 on the backend side (T2 and T3 share `test_p
   - `grep -rn "TODO(defer:" app/ frontend/src/` shows no new entry.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: practice rows and detail name their configurations (task 022 T6)`
+- **Commit:** `feat: practice rows and detail name their configurations (cycle 022 T6)`
 - Notes: Browser walk at 390px against this worktree's own servers (backend on 8001, Vite on 5174 with `VITE_API_BASE_URL`), because the servers on 8000/5173 ran from the main checkout without T3; same dev database, nothing created or deleted. All 13 practice rows showed name, badge and one "Deck · Configuration" chip and no date; the newest row showed its date-named configuration ("Ports · Oct 1, 2026 at 1:18 PM"); the Sep 22, 2:57 PM row, whose snapshot has no stored name, showed "Ports" alone; no horizontal scroll. The Sep 28, 6:34 PM detail page showed "CompTIA A+ · Commands · Purpose to Command". Every dev practice has one deck, so "+N" was checked only by the unit tests. Otherwise none.
 
 ## Deferred — do not build

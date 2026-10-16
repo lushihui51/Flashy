@@ -1,7 +1,7 @@
 """PATCH /api/decks/{id} per plan §2.3 — the batch changeset endpoint Phase 6 adds:
 field_defs and cards applied together in one transaction, in the stated order (field
 create -> field update -> field delete -> reorder -> card delete -> card update ->
-card create). Task 013 T5: the field and card delete phases run through
+card create). Cycle 013 T5: the field and card delete phases run through
 compute_deletion_impact + apply_deletion (ADR 049, ADR 051), the same closure a
 direct subject/deck/card delete uses."""
 

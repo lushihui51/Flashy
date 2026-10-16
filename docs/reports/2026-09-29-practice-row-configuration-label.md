@@ -42,9 +42,9 @@
 3. Should the row label be the configuration name snapshotted at start (a rename after start doesn't reach the practice), or the live name with a fallback when the link is gone?
 4. What label should existing runs show, given their snapshots carry no name?
 
-## ADRs, tasks, and tests this touches
+## ADRs, cycles, and tests this touches
 
 - **ADR 013:** adding a name column extends what the snapshot copies.
 - **ADR 040:** `PracticeRunDeckSummary`'s docstring says `source_config_id` "is not surfaced on any API payload". A snapshotted name keeps that true, and reading the live name would contradict it.
-- **ADR 021 and the vocabulary table in `docs/tasks/004-practice-setup.md`:** the row label is a "configuration" in user-facing copy.
-- **Task 004 T5:** the `SessionDeckChips` Done-when. The same component renders on `PracticeDetailsPage`, so changing it changes both surfaces.
+- **ADR 021 and the vocabulary table in `docs/cycles/004-practice-setup.md`:** the row label is a "configuration" in user-facing copy.
+- **Cycle 004 T5:** the `SessionDeckChips` Done-when. The same component renders on `PracticeDetailsPage`, so changing it changes both surfaces.

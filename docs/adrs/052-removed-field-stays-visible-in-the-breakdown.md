@@ -51,7 +51,7 @@ Benefits:
 
 - A completed practice's page is honest: a Failed attempt shows the field that failed it, as a placeholder, and an attempt keeps its shape.
 - History is kept, consistent with ADR 047, and the fix is one flag on an existing shape plus one rendering branch.
-- `RatedFieldValue.rating`'s `None` case, kept by task 013 MD-4 for stability, has a real meaning again.
+- `RatedFieldValue.rating`'s `None` case, kept by cycle 013 MD-4 for stability, has a real meaning again.
 
 Costs:
 

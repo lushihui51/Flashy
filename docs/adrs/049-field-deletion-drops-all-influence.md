@@ -6,7 +6,7 @@ Accepted. Supersedes ADR 010's decision that field deletion means archival; the 
 
 ## Context
 
-ADR 010 decided that a field is archived, never hard-deleted by default, with a gated hard delete for a field that has no values. Three things had drifted from that by task 013. No user interface ever called the archive endpoint or the gated hard delete; the deck editor's remove-field goes through the batch edit, which hard-deletes the row ungated (`app/services/deck_batch_edit.py`), and the dev database held zero archived fields. ADR 015 had made `review_log.field_def_id` `SET NULL`, so removing a field with review history succeeded silently instead of failing on the RESTRICT that ADR 010's gate had relied on (ADR 010's amendment records this). And the deleted field's influence lived on: its ratings had fed the prompt-side updates of its sibling fields (the breadth-weighted target in `EmaStrategy.expand`), its id stayed inside other rows' `shown_prompt_ids`, where a rebuild would try to insert a `mastery_log` row for it, configurations naming it stayed until run start rejected them, and a pending `practice_card` whose answer field it was could never be rated.
+ADR 010 decided that a field is archived, never hard-deleted by default, with a gated hard delete for a field that has no values. Three things had drifted from that by cycle 013. No user interface ever called the archive endpoint or the gated hard delete; the deck editor's remove-field goes through the batch edit, which hard-deletes the row ungated (`app/services/deck_batch_edit.py`), and the dev database held zero archived fields. ADR 015 had made `review_log.field_def_id` `SET NULL`, so removing a field with review history succeeded silently instead of failing on the RESTRICT that ADR 010's gate had relied on (ADR 010's amendment records this). And the deleted field's influence lived on: its ratings had fed the prompt-side updates of its sibling fields (the breadth-weighted target in `EmaStrategy.expand`), its id stayed inside other rows' `shown_prompt_ids`, where a rebuild would try to insert a `mastery_log` row for it, configurations naming it stayed until run start rejected them, and a pending `practice_card` whose answer field it was could never be rated.
 
 The user's position was that a resource they delete should be gone, and that archive earns nothing while no surface exposes it.
 
@@ -26,7 +26,7 @@ The save confirm names what goes — cards affected, configurations deleted, act
 
 ### Expose archive as the user path, as ADR 010 intended
 
-Rejected. Archive's benefit — a retired field's history stays readable — reaches no user through any existing surface, and the shipped path had been hard delete since task 003. Keeping a second lifecycle for a benefit nobody gets is complexity without a customer.
+Rejected. Archive's benefit — a retired field's history stays readable — reaches no user through any existing surface, and the shipped path had been hard delete since cycle 003. Keeping a second lifecycle for a benefit nobody gets is complexity without a customer.
 
 ### Strip archive out of the code
 

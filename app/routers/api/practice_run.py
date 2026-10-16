@@ -128,7 +128,7 @@ def read_practice_run_breakdown(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
     """ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
-    including each card's mastery/delta and per-field detail (task 010 T3). 409 while
+    including each card's mastery/delta and per-field detail (cycle 010 T3). 409 while
     the session is still active — the bucket refinement only makes sense once nothing
     is pending; 404 for an unknown or foreign session."""
     strategy = get_mastery_strategy()

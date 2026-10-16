@@ -427,7 +427,7 @@ def run_progress(cards: list[PracticeCard]) -> RunProgress:
     """The ADR 028 chain-bucket fold, pure and shared by the run state and the
     breakdown's counts: `cards` — every practice_card row a session has produced,
     created_at ascending (db_read_practice_cards_for_run) — is grouped into chains
-    by card_id, and each chain's *last* row decides its bucket (docs/tasks/006-
+    by card_id, and each chain's *last* row decides its bucket (docs/cycles/006-
     practice-run.md's Contracts). `total_cards` is the chain count, fixed for the
     session's lifetime by construction: it can only equal however many distinct
     card_ids ever got a row, which is set once at session start and never grows."""
@@ -588,7 +588,7 @@ def _compute_field_mastery_deltas(
     domain: list[tuple[uuid.UUID, uuid.UUID]],
 ) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]]:
     """{(card_id, field_def_id): (before_score, after_score, delta)} for every pair in
-    `domain`, per the delta-semantics contract (ADR 042, ADR 043, task 010 T3). Reads
+    `domain`, per the delta-semantics contract (ADR 042, ADR 043, cycle 010 T3). Reads
     only this run's own mastery_log rows plus one bounded before-lookup covering every
     pair at once — never a history replay, and the statement count against
     mastery_log is fixed at 2 regardless of len(domain) (010 MD-4)."""
@@ -655,7 +655,7 @@ def get_practice_run_breakdown(
     """The whole `GET .../breakdown` payload (ADR 029, ADR 031, ADR 042, ADR 043, ADR
     044): every card's full resolved, rated attempt history, grouped into the
     completion-time buckets, plus each card's mastery/delta and its per-field detail
-    (task 010 T3). None for an unknown or foreign session (the router 404s). Raises
+    (cycle 010 T3). None for an unknown or foreign session (the router 404s). Raises
     RunActiveError if the session hasn't completed yet (the router 409s) — the bucket
     refinement and terminal-only attempts below only make sense once nothing is
     pending."""

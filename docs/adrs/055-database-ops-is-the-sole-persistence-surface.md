@@ -58,7 +58,7 @@ Benefits:
 
 Costs:
 
-- One cycle of mechanical movement (task 015): about twenty-two statement and fetch sites, nineteen `db.add` sites, seventeen renames.
+- One cycle of mechanical movement (cycle 015): about twenty-two statement and fetch sites, nineteen `db.add` sites, seventeen renames.
 - Services still take a `Session`, call the four allowed methods, and construct SQLModel objects; a persistence-technology switch would still touch their signatures.
 - More small `db_*` functions, one per operation; the per-table modules keep growing, as ADR 034 noted.
 - The requeue function keeps the old inline code's asymmetry, leaving the constraint IMMEDIATE on success and resetting it only on collision; that quirk is now documented in `database_ops` rather than buried in a service.

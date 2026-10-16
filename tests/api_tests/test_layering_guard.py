@@ -155,7 +155,7 @@ def test_stage_prefix_matches_commit_behaviour():
     """ADR 055: a caller reads commit behaviour off the name. `db_stage_*` and
     `db_try_stage_*` never commit; a writer without `stage_` does; a function whose
     verb writes nothing (read, fetch, count, next, lock) neither carries the prefix nor
-    commits. The name is parsed exactly as task 015's Guards contract states."""
+    commits. The name is parsed exactly as cycle 015's Guards contract states."""
     offenders = []
     for path in sorted(DATABASE_OPS_ROOT.glob("*.py")):
         for node in ast.parse(path.read_text()).body:

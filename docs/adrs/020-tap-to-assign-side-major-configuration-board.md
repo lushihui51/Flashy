@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. `@radix-ui/react-popover` has been installed since task 006 (MD-1, the rating chip); the rejection of a popover *picker* below stands.
+Accepted. `@radix-ui/react-popover` has been installed since cycle 006 (MD-1, the rating chip); the rejection of a popover *picker* below stands.
 
 ## Context
 

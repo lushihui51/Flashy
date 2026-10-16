@@ -15,7 +15,7 @@ type CardStandaloneFormProps = {
 
 type LocationState = { deckId?: string } | null;
 
-/** Standalone card create/edit (task 003 §4.6) — its own routes (`/cards/new`,
+/** Standalone card create/edit (cycle 003 §4.6) — its own routes (`/cards/new`,
  * `/cards/:cardId/edit`), real API calls, real navigation, a routed page like
  * SubjectForm. The in-editor `CardForm.tsx` dialog it was originally a sibling to
  * was deleted along with DeckEditor's card entry (ADR 023); the piece they shared

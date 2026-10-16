@@ -1,4 +1,4 @@
-"""Service tests for compute_deletion_impact + apply_deletion (task 013 T3/T4, ADR
+"""Service tests for compute_deletion_impact + apply_deletion (cycle 013 T3/T4, ADR
 047, ADR 051) — calling the pair directly and committing, the same way
 delete_subject/delete_deck/delete_card do internally. review_log.card_id/
 field_def_id are NOT NULL ON DELETE CASCADE (ADR 048): a deleted card's or field's

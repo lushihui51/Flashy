@@ -191,7 +191,7 @@ def apply_deck_batch_edit(
         db.flush()
 
         # The values loop builds `existing` from card.values once per card, so it relies
-        # on each card appearing once in cards.update (task 015 T9).
+        # on each card appearing once in cards.update (cycle 015 T9).
         seen_card_ids: set[uuid.UUID] = set()
         for entry in ops.update:
             if entry.id in seen_card_ids:

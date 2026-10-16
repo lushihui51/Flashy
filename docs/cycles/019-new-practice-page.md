@@ -9,22 +9,22 @@ Fix cycle from the 2026-09-29 /plan session, prompted by a screenshot review of 
 
 Frontend only: no backend, schema, or `frontend/src/api/types.ts` change. Branch: `fix/new-practice-page`, cut from `main`.
 
-Earlier task files affected, recorded here for the next sync's Superseded bullets; this file does not edit them:
+Earlier cycle files affected, recorded here for the next sync's Superseded bullets; this file does not edit them:
 
-- Task 004's MD-6 is reversed by ADR 061.
-- Task 004's carried invariant 7, "radio-per-deck in UI", becomes checkboxes (MD-1).
-- Task 004's Round-trip navigation contract loses its MD-6 bullet (ADR 061), and its `{configurationId}` save-return narrows to create mode (ADR 061).
-- Task 004 T3's Details ("Selection is a radio per deck group") and T6's save-direction assertion that earlier selections are gone were built against the old rules. They stay checked as history; T1 here rewrites the tests they left.
+- Cycle 004's MD-6 is reversed by ADR 061.
+- Cycle 004's carried invariant 7, "radio-per-deck in UI", becomes checkboxes (MD-1).
+- Cycle 004's Round-trip navigation contract loses its MD-6 bullet (ADR 061), and its `{configurationId}` save-return narrows to create mode (ADR 061).
+- Cycle 004 T3's Details ("Selection is a radio per deck group") and T6's save-direction assertion that earlier selections are gone were built against the old rules. They stay checked as history; T1 here rewrites the tests they left.
 
 ## ADRs
 
 Decisions this file implements; full context and rejected alternatives live in the ADRs.
 
-- **ADR 061 — New practice's draft rides the URL**: selections as repeated `config` params and an edited name as `name`, written with `replace`, so every round trip, refresh, and back keeps the draft; Cancel forwards only `subject`, `deck`, `status`; an edit's Save hands back no `{configurationId}`. Reverses task 004 MD-6.
+- **ADR 061 — New practice's draft rides the URL**: selections as repeated `config` params and an edited name as `name`, written with `replace`, so every round trip, refresh, and back keeps the draft; Cancel forwards only `subject`, `deck`, `status`; an edit's Save hands back no `{configurationId}`. Reverses cycle 004 MD-6.
 
 ## Minor decisions
 
-- **MD-1**: The configuration list uses checkboxes, at most one per deck: tapping a ticked configuration unticks it, and ticking another in the same deck unticks the first. Zero or one per deck is a checkbox's meaning, and unticking then works for keyboard and screen-reader users. Amends task 004 invariant 7's "radio-per-deck in UI". Rejected: radios that uncheck on a second tap; strict radios plus a "None" row per deck.
+- **MD-1**: The configuration list uses checkboxes, at most one per deck: tapping a ticked configuration unticks it, and ticking another in the same deck unticks the first. Zero or one per deck is a checkbox's meaning, and unticking then works for keyboard and screen-reader users. Amends cycle 004 invariant 7's "radio-per-deck in UI". Rejected: radios that uncheck on a second tap; strict radios plus a "None" row per deck.
 - **MD-2**: Delete on the Edit configuration page is deferred; configurations stay deletable from the deck page's Configurations tab.
 - **MD-3**: The Selected section resolves each selected id against one unfiltered query of all the user's configurations, since the filtered list lacks any selection a filter hides. Rejected: copying names into state at selection time (ADR 033; stale after a rename); per-id queries or a fetch-by-ids endpoint.
 - **MD-4**: A selected configuration that no longer exists is removed from the URL, with "A selected configuration no longer exists.", as soon as the settled list of all configurations lacks it. A `config_not_found` at Create removes it the same way and creates nothing, and pressing Create again proceeds with the rest. Count, ticks, and rows always agree, and a selection that vanished entirely still warns. Rejected: checking only when Create is pressed, counting the URL's ids until then (decided first and reversed before build, since the count and the rows disagreed); counting only resolved ids (a fully vanished selection would disappear without a warning); creating from what remains and warning afterwards.
@@ -185,7 +185,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - Implement `practiceSelection.ts` per Contracts.
   - Convert `ConfigurationPickList` to the Contracts shape without `onEdit`: `checked={selectedIds.has(config.id)}` and `onChange={() => onToggle(group, config.id)}`. Rewrite its doc comment: at most one per deck is enforced by `toggleConfig`, not natively (MD-1).
   - In `PracticeCreatePage`:
-    - Delete the `selection` state and the task 004 MD-4 comment above it.
+    - Delete the `selection` state and the cycle 004 MD-4 comment above it.
     - Set `selectedIds = readSelectedConfigIds(searchParams)`.
     - `onToggle` writes `withSelectedConfigIds(searchParams, toggleConfig(selectedIds, group.configs.map((c) => c.id), configId))` with `replace`.
     - The count and Create's enabled state use `selectedIds.length`; the POST sends `selectedIds`.
@@ -212,7 +212,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
     - Change the Cancel test to mount at `/practice/new?subject=s1&status=completed&config=c1`. It asserts landing on pathname `/practice` with `subject=s1`, `status=completed`, and no `config`.
   - **`practicePrefilterChain.test.tsx`:**
     - `radio` becomes `checkbox`.
-    - Retitle the save-direction test so it says earlier selections are kept (ADR 061), not gone (task 004 MD-6), and update its two task 004 MD-6 comments.
+    - Retitle the save-direction test so it says earlier selections are kept (ADR 061), not gone (cycle 004 MD-6), and update its two cycle 004 MD-6 comments.
     - After the return, it asserts pathname `/practice/new`; `config` params `c1`, `c3`, then the created configuration's id; Recall, Basics and Fresh Config all checked; and "3 selected".
 - **Out of scope:**
   - `name` in the URL (T2).
@@ -228,7 +228,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - Every test named in Details passes.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `fix: new practice selection is a checkbox list in the URL (task 019 T1)`
+- **Commit:** `fix: new practice selection is a checkbox list in the URL (cycle 019 T1)`
 - Notes: in `practicePrefilterChain.test.tsx` Basics is `c2` and the created configuration is `c9`, so the save-direction walk asserts `config` equal to `c1`, `c2`, `c9`; this file's `c3` was the page test's fixture id. "Clear filters" calls the existing `setFilters` with both filters null, which already deletes exactly `subject` and `deck` from a copy with `replace`. The existing auto-select test also asserts the URL ends with `config=c2`, and both round-trip tests wait for the tick rather than asserting on first render, since the one-shot now lands in an effect. Otherwise none.
 
 ### T2 — The name sits at the top and rides the URL (ADR 061, MD-7) — depends on T1
@@ -263,7 +263,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - Every test named in Details passes.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `fix: new practice name at the top, kept in the URL (task 019 T2)`
+- **Commit:** `fix: new practice name at the top, kept in the URL (cycle 019 T2)`
 - Notes: the name state reads `searchParams.get('name') ?? formatDateTime(new Date())`, which is the Contracts' `has`/`get!` expression without the non-null assertion, since `get` is `null` only when the param is absent. The independent-hints test also unticks the selection with the name cleared, so both hints are asserted at once. Otherwise none.
 
 ### T3 — A Selected section lists every selection (MD-3, MD-5, MD-9) — depends on T2
@@ -285,7 +285,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
     - Ticking Basics then Recall lists, within `getByRole('region', { name: 'Selected' })`, Recall ("Shared Deck Name · Alpha") before Basics ("Shared Deck Name · Beta").
     - "Remove Recall" unticks Recall's checkbox, removes its row, and drops `c1` from the URL.
     - Unticking a checkbox removes its row.
-    - Rewrite the task 004 MD-4 test: after filtering to Beta, no Recall checkbox exists, the Selected region still lists Recall, and "1 selected" shows.
+    - Rewrite the cycle 004 MD-4 test: after filtering to Beta, no Recall checkbox exists, the Selected region still lists Recall, and "1 selected" shows.
     - At `/practice/new?config=gone`, the region lists no row. T4 then removes the id; this test asserts only the row.
     - At `/practice/new?subject=s1&config=c1`, with MSW returning 500 only for a request carrying neither `subject_id` nor `deck_id`: the region shows "Could not load your selected configurations." and the filtered list still renders.
     - With nothing selected, the hint renders inside the region.
@@ -298,7 +298,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - Every test named in Details passes.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: new practice lists its selected configurations (task 019 T3)`
+- **Commit:** `feat: new practice lists its selected configurations (cycle 019 T3)`
 - Notes: `practicePrefilterChain.test.tsx` is also in this commit, outside the task's Files: its first two chains asserted the filter on the *last* recorded configurations request, and the unfiltered query (MD-3) now arrives last, so they assert that *some* request carries the filter (confirmed in the build session). The section's branch follows the layout contract's order, so the select hint wins over the load error when nothing is selected. Otherwise none.
 
 ### T4 — A selection that no longer exists is removed with a warning (MD-4) — depends on T3
@@ -337,7 +337,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - Every test named in Details passes.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `fix: a selected configuration that no longer exists is removed with a warning (task 019 T4)`
+- **Commit:** `fix: a selected configuration that no longer exists is removed with a warning (cycle 019 T4)`
 - Notes: `missingIds` is wrapped in `useMemo` over the settled list and `searchParams`, since `react-hooks/exhaustive-deps` flags an array rebuilt each render as an effect dependency. The `config_not_found` branch skips the URL write when `detail.config_id` is null. The settled-data test was checked by removing the `isFetching` guard, under which it fails. Otherwise none.
 
 ### T5 — Edit a configuration from New practice and come back (MD-6, ADR 061) — depends on T1; after T4 (shared file)
@@ -383,7 +383,7 @@ Every task edits `frontend/src/pages/PracticeCreatePage.tsx`, so they run strict
   - `grep -rn "TODO(defer:" app/ frontend/src/` shows no new entry.
   - In `frontend/`, `npx vitest run`, `npm run lint`, and `npm run build` are clean.
   - The commit contains only this task's hunks.
-- **Commit:** `feat: edit a configuration from new practice and return to the draft (task 019 T5)`
+- **Commit:** `feat: edit a configuration from new practice and return to the draft (cycle 019 T5)`
 - Notes: `practicePrefilterChain.test.tsx`'s fixtures had no Recognition, so a `c3` Recognition in deck `d1` was added for the edit walk; the earlier chains are unaffected. Restoring the always-hand-back Save fails both the editor's edit-mode test and the chain walk. Browser walk (2026-10-01, headless Chromium at 390px against the dev servers, ADR 007 bypass): named the practice, ticked Command to Purpose (Commands) and Port Number to Protocol Name (Ports); the pencil on Test purpose → Cancel returned to the identical URL with the name and both ticks intact; pencil → Save with no change returned to the identical URL, intact, Test purpose unticked, "2 selected"; ✕ on the Ports row unticked its checkbox, removed the row, and read "1 selected". No page errors. The script was run twice, because the first run read step 4 before the update rendered, which a screenshot showed had succeeded; so Test purpose received four no-change PATCHes and is otherwise unchanged. Create was never pressed and nothing was deleted. Otherwise none.
 
 ## Deferred — do not build

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-`start_practice_run` validated each configuration, cut its snapshot, and generated the deck's cards, but never counted what it wrote. A deck with no cards, or a deck whose every card was blank in all the fields one side of the configuration shows, produced a run with zero practice cards: created as `active`, then completed lazily on its first state read (ADR 015 as amended), a phantom in the practice list with a breakdown of nothing. The 2026-09-23 sync verified it with a scratch test: `POST /api/practice_runs` on a zero-card deck returned 201, and `GET .../state` returned `completed` with `total_cards: 0`. Task 004's carried invariant 2 said "no cardless session", and the configuration validator's own comment called an empty run "the one state that must never exist", but only the uncounted-pool case was guarded, at validation time. The create page had no guard either, and cannot have a cheap one: the configuration summary carries no card count.
+`start_practice_run` validated each configuration, cut its snapshot, and generated the deck's cards, but never counted what it wrote. A deck with no cards, or a deck whose every card was blank in all the fields one side of the configuration shows, produced a run with zero practice cards: created as `active`, then completed lazily on its first state read (ADR 015 as amended), a phantom in the practice list with a breakdown of nothing. The 2026-09-23 sync verified it with a scratch test: `POST /api/practice_runs` on a zero-card deck returned 201, and `GET .../state` returned `completed` with `total_cards: 0`. Cycle 004's carried invariant 2 said "no cardless session", and the configuration validator's own comment called an empty run "the one state that must never exist", but only the uncounted-pool case was guarded, at validation time. The create page had no guard either, and cannot have a cheap one: the configuration summary carries no card count.
 
 Two facts shape the rule. A practice spans several decks, one configuration each, so emptiness is a property of the whole practice, not of one deck. And the second cause is invisible to a count: ADR 026 excludes a blank field from generation, so a card that is legal (at least one value somewhere) can still have nothing for a configuration's prompt side or answer side. The random draw cannot produce that case, since the blank filter runs in the candidate query before the draw, pool counts are validated to `1..n`, and the draw takes `min(k, eligible)`; a side is empty only when the card's values leave it nothing to show.
 
@@ -42,5 +42,5 @@ Benefits:
 Costs:
 
 - Generation runs to completion before the refusal, the same cost as a start that succeeds.
-- One more error code for the create page and the details page to render (task 015 MD-2).
+- One more error code for the create page and the details page to render (cycle 015 MD-2).
 - A cardless deck is discovered on Create, not in the picker.

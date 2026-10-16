@@ -239,8 +239,8 @@ Rule 4 of the comment rules, D5 of the 2026-10-03 report, admits a PDR number in
 
 Status holds a state and record pointers, nothing else. The states were "Accepted"; "Superseded by" followed by the replacing record or records; and "Deprecated" followed by a few words on why the decision was dropped. A replacing record may add "Supersedes" with the records it replaces. "Proposed" is not used. Wording fixed by the user: a superseded decision is replaced; a deprecated decision is dropped, whether it stopped applying or shrank below a record under D3.
 
-- **Why:** D1 removed partial amendments, cross-references belong in a later record's Context, and implementation and drift notes belong to the task file and the code.
-- **Rejected:** prose notes in Status; "Amended by" links; "Implemented by task"; "Proposed".
+- **Why:** D1 removed partial amendments, cross-references belong in a later record's Context, and implementation and drift notes belong to the cycle file and the code.
+- **Rejected:** prose notes in Status; "Amended by" links; "Implemented by cycle"; "Proposed".
 - **Later changed:** the state word by D23, the Deprecated clause by D24. The merged text is in the rules above.
 
 ### D13: no date line
@@ -362,7 +362,7 @@ This is the evidence the session gathered, all at `5fc5a02`. Counts come from sh
 | --- | --- |
 | Exactly "Accepted" | 22 files |
 | "Amends" or "Amended by" notes | 32 occurrences |
-| "Implemented by task" | 10 |
+| "Implemented by cycle" | 10 |
 | "Supersedes" or "superseded by" | 10 |
 | "Confirmed by", "Reaffirms", "Consistent with", "Decides" | about 12 |
 | "Proposed" or "Deprecated" | 0 |
@@ -433,18 +433,18 @@ D9 applied to every rejected alternative, from the alternative headings only. A 
 | `app/` | 191 |
 | `tests/` | 101 |
 | `frontend/src/` | 161 |
-| `docs/tasks/` | 558 |
+| `docs/cycles/` | 558 |
 
-- The 16 records that sort purely as PDR candidates are cited 133 times in code, tests, `AGENTS.md` and `README.md`, and 174 times in task files.
+- The 16 records that sort purely as PDR candidates are cited 133 times in code, tests, `AGENTS.md` and `README.md`, and 174 times in cycle files.
 - ADR 010, wholly superseded, has no live citation outside `docs/`. ADRs 015 and 029, partly superseded, are cited 14 and 16 times in `AGENTS.md` and source.
 
-### Living contracts inside task files
+### Living contracts inside cycle files
 
-Noted during the D8 discussion as a different problem from decision records, and left to the task-file part of the reform.
+Noted during the D8 discussion as a different problem from decision records, and left to the cycle-file part of the reform.
 
-- The vocabulary table: `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md:13` and `AGENTS.md:46` point into `docs/tasks/004-practice-setup.md`.
-- The delta-semantics contract: `AGENTS.md:63` points into `docs/tasks/010-mastery-log.md`.
-- The banner wording: `docs/adrs/062-connectivity-is-the-one-app-level-error-banner.md:39` says it lives in task 020's Contracts.
+- The vocabulary table: `docs/adrs/021-user-facing-vocabulary-never-exposes-schema-terms.md:13` and `AGENTS.md:46` point into `docs/cycles/004-practice-setup.md`.
+- The delta-semantics contract: `AGENTS.md:63` points into `docs/cycles/010-mastery-log.md`.
+- The banner wording: `docs/adrs/062-connectivity-is-the-one-app-level-error-banner.md:39` says it lives in cycle 020's Contracts.
 
 ### What the skills say today
 
@@ -512,7 +512,7 @@ Where the decisions depart from this text, knowingly: Status first and a section
 None of these is decided. Nothing here should become a default downstream.
 
 1. **Where the rules live.** Deferred by the user, for the record rules and the comment rules alike. The options put to the user were the full text in `AGENTS.md`; a rules file in the repo with one pointer line in `AGENTS.md` and an ADR for the reasoning; or an ADR alone. The session recommended the second and split the decisions into rules that describe a record (D1, D2, D3, D5, D7, D9, D10, D12 to D16, D19, D20, D22 to D25) and rules that describe a step (D4, D6, D8, D11, D17's proposal content, D18's stop, D21), the second kind going to the skills. The comment session left the same question open, and it blocks /code-decompose in the same way.
-2. **Task-file references inside records.** "Implemented by task 020" in Status is gone under D12. Citations of task files and minor-decision numbers inside Context are not decided, pending the task-file redefinition, as the comment session deferred them.
+2. **Cycle-file references inside records.** "Implemented by cycle 020" in Status is gone under D12. Citations of cycle files and minor-decision numbers inside Context are not decided, pending the cycle-file redefinition, as the comment session deferred them.
 3. **Reform of the existing records.** Dropped by the user as reform work for its own planning: the move of the 16 records that sort purely as PDR candidates; the split of the about 20 mixed records; a cutoff line stating that records 067 and below predate the rules and are not examples of them; where superseded files sit; the duplicate 066; and the "never reused" numbering rule, which today lives only in the skills' numbering command. The user's stated preference is a clean repository with no stale records for agents to chase; the session argued that a bare rename would plant old-format files in the new directory and that the move should wait until the format rules were set. No part of this is settled.
 4. **Code names in an ADR's Context.** D19 lets an ADR's Context state facts about the code, and no decision in this session says whether such a fact may name a file, a symbol or a line. D16 and D20 cover the Decision section and PDRs. Found while writing this report.
 5. **The examples for D17.** D17 says the rule carries examples on both sides of the line, phrased as kinds of decision. The table shown in the session is a draft, not confirmed wording:
@@ -527,7 +527,7 @@ None of these is decided. Nothing here should become a default downstream.
 
 ## Related
 
-- **`docs/reports/2026-10-03-comment-vocabulary-and-rules.md`.** D11 here extends its D5 (rule 4). Its D6 (present state) is what D25's "a repointed site shows no history" relies on. Its reader, who "has not read any ADR or task file", is paralleled by D22's readers here. Its open question 1, where the rules live, is the same as open question 1 here.
+- **`docs/reports/2026-10-03-comment-vocabulary-and-rules.md`.** D11 here extends its D5 (rule 4). Its D6 (present state) is what D25's "a repointed site shows no history" relies on. Its reader, who "has not read any ADR or cycle file", is paralleled by D22's readers here. Its open question 1, where the rules live, is the same as open question 1 here.
 - **`docs/reports/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 put a rule in `AGENTS.md:33` that code references in ADRs name the file and the symbol, never a line. D16 and D20 go further for the Decision section and for PDRs. Whether that rule survives the reform, and in what form, was not decided here.
 - **`README.md:51`** says every design decision is in `docs/adrs/`, and `README.md:55` says decisions are recorded as architecture decision records. D7 makes both untrue once the first PDR exists.
 - **ADRs.** None is contradicted. Every decision here applies to records written from now on; the existing 68 are untouched by this session, and their reform is open question 3. `docs/adrs/038-rename-practice-session-to-practice-run.md:37`, which leaves older records saying "session", was cited in discussion as the precedent for leaving legacy records alone, and the user's preference went the other way.

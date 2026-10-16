@@ -28,21 +28,21 @@
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
 - Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
-- Code references in ADRs and task files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
-- A numbered file under `docs/` (ADR, PDR, task file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
+- Code references in ADRs and cycle files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
+- A numbered file under `docs/` (ADR, PDR, cycle file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
 
 ## Conventions
 
 - Backend layering (ADR 034, ADR 055, ADR 064; `test_layering_guard.py`): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py` and `health.py`; public functions `db_*`-prefixed, `db_stage_*` when they don't commit, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
 - `app/models/` (ADR 046): `<table>.py` holds the table, its `Base`, and only that table's flat `Create`/`Read`/`Update`/`Summary` shapes; a shape that nests another model or describes a page/flow lives in `app/models/<router>_payloads.py`. A table module imports a sibling's table class only for a `Relationship`, never a shape (`test_models_layout_guard.py`)
-- Array columns are the generic `sqlalchemy.ARRAY`: `.overlap()` does not exist and `.contains()` raises, so overlap is `.op("&&")(ids)` and membership is `.any(id)` (task 013 MD-5)
+- Array columns are the generic `sqlalchemy.ARRAY`: `.overlap()` does not exist and `.contains()` raises, so overlap is `.op("&&")(ids)` and membership is `.any(id)` (cycle 013 MD-5)
 - A rule that can drift silently gets a source-scan guard test in `tests/api_tests/`; extend those rather than relying on review
 - Frontend dates go through `formatDate`/`formatDateTime` in `src/lib/datetime.ts`, which pins `timeZone`; ESLint blocks `toLocale*String` and `Intl.DateTimeFormat` everywhere else (ADR 019)
 - Server data is fetched through TanStack Query only (ADR 033) and lives in the query cache, never copied into long-lived component state. Reusable components and everything in `ui/` never fetch: data arrives as props and the page, or `AppShell`, owns the query
 - Routing is declarative react-router: `<Routes>` in `App.tsx`, never the data router's loaders or actions (ADR 053)
 - Extend an existing component with props rather than forking a near-duplicate; a genuinely new component is named for its purpose, never a generic name that leaves two similar components indistinguishable at the import site
 - Layout: one directory per functional area under `src/components/` (`shell/`, `library/`, `practice/`) plus `ui/` for domain-free primitives (see the directory — the inventory drifts). Pages are `src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (see `App.tsx`)
-- UI copy never echoes schema terms (ADR 021): the user-facing words are the vocabulary table in `docs/tasks/004-practice-setup.md`; change the table first, then every surface. Never "practice config", "pool", a slot name, "in progress", or "ended" in a label, heading, button, or error string
+- UI copy never echoes schema terms (ADR 021): the user-facing words are the vocabulary table in `docs/cycles/004-practice-setup.md`; change the table first, then every surface. Never "practice config", "pool", a slot name, "in progress", or "ended" in a label, heading, button, or error string
 - Every non-top-level detail page carries one structural breadcrumb row above its `<h1>`, pointing at its hierarchy parent however it was reached; shell destinations and create/edit forms are exempt (ADR 025). Page-view state (tabs, filters) lives in the URL, never `useState`
 - Round-trip return addresses ride the URL as `?returnTo=`, read only through `internalReturnTo` (`src/lib/returnTo.ts`); one-shot arrival results (`{deckId}`, `{configurationId}`) stay in router state (ADR 024)
 - A `.tsx` file exports only components (`react-refresh/only-export-components`); shared values live in a sibling `.ts` (`ratingTiers.ts`, `navItems.ts`) or `src/lib/`
@@ -74,7 +74,7 @@ The rules apply to every hand-written comment in every file of the repository.
 
 A comment is written when, and only when, the reader needs it: without it they would have to guess, or read code they should not have to read.
 
-The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR, PDR, or task file.
+The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR, PDR, or cycle file.
 
 - A reader needs an interface comment if and only if the declaration (name, parameters, types) cannot answer "how do I use this correctly" without ambiguity.
 - A reader needs an implementation comment if and only if the statements cannot answer "what is this for, and why is it here" on a first read, without ambiguity.
@@ -134,7 +134,7 @@ A fact about one member is stated at that member, not repeated in the comment of
 - One `review_group_id` is one appearance: a `ReviewGroup` bundling every rated answer field and the prompt fields shown with them
 - `MasteryStrategy.expand(group)` decides every `(card_id, field_def_id, side)` update for an appearance up front (ADR 012). Breadth (how many rated answers a prompt was shown for) changes the prompt-side update's _weight_, never its _target_ — see the comment above `EMA_BETA` in `app/mastery/ema.py`; both review counts increment by exactly 1 per appearance regardless
 - **Harshest-wins** must stay consistent in two places: `submit_rating` (`app/services/practice_run.py`) fails a `practice_card` if _any_ answer field is rated 1, and `EmaStrategy._aggregate_target` makes the prompt-side target the rating-1 score if any answer failed, otherwise the mean (ADR 012)
-- A card's display mastery is `strategy.card_score` over all its deck's active fields, unreviewed ones at the prior (ADR 043) — one definition for every surface. Run deltas never replay history; the bound rule is the delta-semantics contract in `docs/tasks/010-mastery-log.md` (ADR 042)
+- A card's display mastery is `strategy.card_score` over all its deck's active fields, unreviewed ones at the prior (ADR 043) — one definition for every surface. Run deltas never replay history; the bound rule is the delta-semantics contract in `docs/cycles/010-mastery-log.md` (ADR 042)
 
 ## Entity vocabulary
 
@@ -142,10 +142,10 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 
 - `app_user` — the authenticated user (keyed by `clerk_user_id`), root of every ownership chain; `timezone` is their IANA zone, synced from the `X-Timezone` header on every request (ADR 019)
 - `subject` — a user's top-level grouping of decks; owns `deck` rows. `icon` is a key into the curated set in `frontend/src/lib/subjectIcon.ts`. `last_activity_at` (there is no `updated_at`, ADR 018) is the server-side sort key for every subject and deck list — the frontend never re-sorts — written after insert only by `touch()` in `app/services/activity.py`
-- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`, and `deck_practice_config` rows. Always has ≥2 active fields, enforced on create, batch edit, and archive (task 003 D3). Deleting a deck deletes everything that references it, review rows and snapshots included, and a run left with no deck goes with it (ADR 047, ADR 048)
+- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`, and `deck_practice_config` rows. Always has ≥2 active fields, enforced on create, batch edit, and archive (cycle 003 D3). Deleting a deck deletes everything that references it, review rows and snapshots included, and a run left with no deck goes with it (ADR 047, ADR 048)
 - `field_def` — the sole source of truth for a field (name, `FieldType`, `position`), referenced by id everywhere (ADR 009); removed only by a hard delete through the deletion closure (ADR 049); `archived_at` and the archive endpoints stay in the code, unexposed. The active field at position 0 is the deck's **primary field**, derived, never stored (ADR 032)
 - `card` — one flashcard in a `deck`; holds no content itself
-- `card_field_value` — a card's per-field content, dense: exactly one row per active `field_def` of the deck, `""` when unfilled, never a missing row; every path that adds a field backfills every existing card in the same transaction (ADR 057); archived fields keep their rows but are excluded from every read path. An all-blank card is never persisted (task 003)
+- `card_field_value` — a card's per-field content, dense: exactly one row per active `field_def` of the deck, `""` when unfilled, never a missing row; every path that adds a field backfills every existing card in the same transaction (ADR 057); archived fields keep their rows but are excluded from every read path. An all-blank card is never persisted (cycle 003)
 - `review_log` — append-only ledger of every rated field review, the source of truth mastery is rebuilt from; a row is owned by its card and field and cascades with them (ADR 011, ADR 047, ADR 048); every id in `shown_prompt_ids` is a live `field_def` id (ADR 049)
 - `mastery_log` — append-only ledger of `(card, field)` state changes, ordered by `reviewed_at` (ADR 050), current mastery being the latest row per pair; a disposable projection of `review_log`, regenerated whole by `rebuild_mastery` or per deck by `rebuild_deck_mastery` (ADR 042, ADR 049)
 - `deck_practice_config` — a saved, named, mutable template of which fields are prompts/answers and the pool-sampling rules; validated on save and again at run start (ADR 013)
@@ -156,5 +156,5 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 ## Context
 
 - Before writing or editing a record, read `docs/rules/record-rules.md`; ADRs are in `docs/adrs/`, PDRs in `docs/pdrs/`
-- Before writing or editing a task file in `docs/tasks/`, read `docs/rules/task-rules.md`
+- Before writing or editing a cycle file in `docs/cycles/`, read `docs/rules/cycle-rules.md`
 - Before writing a report in `docs/reports/`, read `docs/rules/report-rules.md`

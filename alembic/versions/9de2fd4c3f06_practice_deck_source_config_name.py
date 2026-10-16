@@ -4,7 +4,7 @@ Revision ID: 9de2fd4c3f06
 Revises: f6887865090a
 Create Date: 2026-10-01 21:15:00.233848
 
-ADR 066 (task 022 T1): practice_deck gains a nullable source_config_name, the name of
+ADR 066 (cycle 022 T1): practice_deck gains a nullable source_config_name, the name of
 the configuration a snapshot was cut from as of the last moment its source_config_id
 link existed. The practice summary falls back to it for a deck's configuration label
 once the link is gone.

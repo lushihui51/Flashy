@@ -4,7 +4,7 @@ Revision ID: f6887865090a
 Revises: 9aaac4c2ea4e
 Create Date: 2026-09-21 14:22:03.016830
 
-ADR 047, ADR 048 (task 013 T4): review_log and practice_deck stop outliving the
+ADR 047, ADR 048 (cycle 013 T4): review_log and practice_deck stop outliving the
 persistent/owning row they're about — review_log.card_id/field_def_id and
 practice_deck.deck_id become NOT NULL ON DELETE CASCADE, review_log.practice_card_id
 is dropped (review_group_id was already the durable appearance identifier), and a run

@@ -177,7 +177,7 @@ export function isDeckEditorValid(state: DeckEditorState): boolean {
 
 /** The create payload: name, subject, and fields in list order. A deck is born with a
  * schema and no content — the first card is added from the new deck's own card list
- * (ADR 023); the create contract has no `cards` field at all (task 008 T2). */
+ * (ADR 023); the create contract has no `cards` field at all (cycle 008 T2). */
 export function buildDeckCreatePayload(state: DeckEditorState): DeckCreate {
   return {
     name: state.name.trim(),

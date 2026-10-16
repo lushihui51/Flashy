@@ -1,4 +1,4 @@
-"""Route tests for GET /api/deletion-impact (task 013 T3, ADR 051) — the advisory
+"""Route tests for GET /api/deletion-impact (cycle 013 T3, ADR 051) — the advisory
 preview behind every delete confirm. Builds real data through the public API so each
 scenario is what a real deck/subject/field/card/config/run structure produces, not a
 hand-assembled row set."""

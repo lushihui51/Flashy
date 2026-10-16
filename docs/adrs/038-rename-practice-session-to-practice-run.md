@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Renames ADR 031's `GET .../run` to `GET .../state`. Frontend identifiers (`practiceSessionId` route params, `session` props) were left by task 009's rename map; user-facing copy says "practice" since the 2026-09-23 vocabulary sweep.
+Accepted. Renames ADR 031's `GET .../run` to `GET .../state`. Frontend identifiers (`practiceSessionId` route params, `session` props) were left by cycle 009's rename map; user-facing copy says "practice" since the 2026-09-23 vocabulary sweep.
 
 ## Context
 
@@ -10,7 +10,7 @@ The rewrite saga ended with 006; the app's concepts are now stable enough to nam
 
 ## Decision
 
-Rename `practice_session` to `practice_run` across schema and code in one mechanical migration and sweep: table, FK columns, constraint/index names, Python modules and classes, API routes, and frontend modules, per the rename map in task file 009. `deck_practice_config` keeps its name. Status enum values (`active`/`completed`) and user-facing copy are unchanged. The run-state endpoint moves to `/{id}/state` and the `session_active` error codes become `run_active` (009 MD-1).
+Rename `practice_session` to `practice_run` across schema and code in one mechanical migration and sweep: table, FK columns, constraint/index names, Python modules and classes, API routes, and frontend modules, per the rename map in cycle file 009. `deck_practice_config` keeps its name. Status enum values (`active`/`completed`) and user-facing copy are unchanged. The run-state endpoint moves to `/{id}/state` and the `session_active` error codes become `run_active` (009 MD-1).
 
 ## Alternatives considered
 
@@ -34,4 +34,4 @@ Benefits:
 
 Costs:
 
-- ADRs and task files 001–008 keep the old term as history; readers map session → run. AGENTS.md is reconciled by /distill, not retroactive edits.
+- ADRs and cycle files 001–008 keep the old term as history; readers map session → run. AGENTS.md is reconciled by /distill, not retroactive edits.

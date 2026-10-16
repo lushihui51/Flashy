@@ -200,7 +200,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
   );
 }
 
-/** One entry of the detail sheet's Fields section (ADR 044, task 010 T4): every
+/** One entry of the detail sheet's Fields section (ADR 044, cycle 010 T4): every
  * currently active field of the card's deck, not just the ones this run's attempts
  * happened to touch — an untouched field still shows its current mastery, at ±0. */
 function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {

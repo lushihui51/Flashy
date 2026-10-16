@@ -353,7 +353,7 @@ type ImpactSummaryCounts = {
   runsDeleted: number;
 };
 
-/** Task 013 MD-2: the editor save confirm's one sentence, for a changeset that
+/** Cycle 013 MD-2: the editor save confirm's one sentence, for a changeset that
  * deletes fields and/or cards — the same closure a direct field or card delete goes
  * through (ADR 049, ADR 051), worded from `fieldsDeleted`/`cardsDeleted` (the
  * changeset itself) plus `configurationsDeleted`/`runsDeleted` (the deletion-impact
@@ -550,7 +550,7 @@ function DeckEditorBody({
     }
   };
 
-  // §3 (task 013 MD-2): the confirm is destructive-changeset-only, and only in edit
+  // §3 (cycle 013 MD-2): the confirm is destructive-changeset-only, and only in edit
   // mode — create mode has nothing on the server yet for a changeset to destroy.
   // fields_deleted/cards_deleted come straight off the changeset the editor itself
   // built; configurations_deleted/runs_deleted come from the same deletion-impact

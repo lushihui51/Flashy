@@ -2,9 +2,9 @@
 
 **Date:** 2026-10-01, recording the /plan investigation of 2026-09-29.
 
-**Prompted by:** the app freezing when the browser is offline or the backend or its database is down. The 2026-09-29 /plan session investigated it and produced ADRs 062 to 065 and task 020. Its findings were written into task 020's introduction only; the 2026-10-01 sync pass puts them here, where AGENTS.md says plan-mode findings live.
+**Prompted by:** the app freezing when the browser is offline or the backend or its database is down. The 2026-09-29 /plan session investigated it and produced ADRs 062 to 065 and cycle 020. Its findings were written into cycle 020's introduction only; the 2026-10-01 sync pass puts them here, where AGENTS.md says plan-mode findings live.
 
-**Outcome:** bugs found and fixed in task 020 (commits 22d3d09, e799340, 90bc27a, 83ef29a, 256368b on `feat/connection-status`).
+**Outcome:** bugs found and fixed in cycle 020 (commits 22d3d09, e799340, 90bc27a, 83ef29a, 256368b on `feat/connection-status`).
 
 ## Findings, as the session saw them (commit a934ae0)
 
@@ -16,7 +16,7 @@
 
 ## Decisions
 
-Recorded by /justify on 2026-09-29: ADR 062 (connectivity is the one app-level error banner, amending ADR 035), ADR 063 (a polled health probe detects outages and drives recovery), ADR 064 (`GET /api/health` is the one unauthenticated route, amending ADR 055), and ADR 065 (every non-ok response throws a status-carrying `ApiError`, amending ADR 006 and ADR 022). Task 020 MD-1 set the engine's connect timeout and deferred mapping database-connection errors to `503` on ordinary endpoints under `TODO(defer:db-unavailable-503)`, to be revisited once the frontend and API are cross-origin. The reasoning and the rejected alternatives are in those ADRs and are not repeated here.
+Recorded by /justify on 2026-09-29: ADR 062 (connectivity is the one app-level error banner, amending ADR 035), ADR 063 (a polled health probe detects outages and drives recovery), ADR 064 (`GET /api/health` is the one unauthenticated route, amending ADR 055), and ADR 065 (every non-ok response throws a status-carrying `ApiError`, amending ADR 006 and ADR 022). Cycle 020 MD-1 set the engine's connect timeout and deferred mapping database-connection errors to `503` on ordinary endpoints under `TODO(defer:db-unavailable-503)`, to be revisited once the frontend and API are cross-origin. The reasoning and the rejected alternatives are in those ADRs and are not repeated here.
 
 ## What the code does now (commit 256368b)
 
@@ -29,5 +29,5 @@ Recorded by /justify on 2026-09-29: ADR 062 (connectivity is the one app-level e
 
 ## Related
 
-- ADRs 062, 063, 064, 065; `docs/tasks/020-connection-status.md`.
+- ADRs 062, 063, 064, 065; `docs/cycles/020-connection-status.md`.
 - AGENTS.md's "Every router depends on `CurrentUserDep`" and "one module per table" lines, and its ADR 035 line about no global error channel, gain their exceptions through /code-distill, as flagged in the 2026-10-01 sync. README.md's "Every API endpoint verifies the Clerk session token" and "one database-operations module per table" claims are flagged the same way.

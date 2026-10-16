@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Implemented by task 022.
+Accepted. Implemented by cycle 022.
 
 - **Amends ADR 013:** the snapshot copies one more value, the configuration's name, next to the six array columns. Generation, validation and rerun still read only the snapshot's own arrays.
 - **Amends ADR 040:** the attribution link gains its first display use: the practice summary read follows `source_config_id` for a label, and a rename now also writes the configuration's new name onto every snapshot still linked. The sever rule, and the rule that generation, validation and rerun never read the link, are unchanged.
@@ -26,7 +26,7 @@ Four rules keep the stored name meaning "the configuration's name as of the last
 - Rerun copies the old snapshot's stored name verbatim, possibly null, exactly as it copies `source_config_id`.
 - The migration backfills the stored name onto every snapshot whose link is intact, from the linked configuration's current name. A linked configuration's layout cannot have changed since the snapshot (the sever rule), only its name, so this is the value the rules above would have maintained. Unlinked snapshots stay null and show the deck alone.
 
-A rename therefore reaches the labels of past practices. Task 004's carried invariant 3, "editing a configuration never touches any practice; the UI never implies otherwise", keeps its behavioural half and loses its display half.
+A rename therefore reaches the labels of past practices. Cycle 004's carried invariant 3, "editing a configuration never touches any practice; the UI never implies otherwise", keeps its behavioural half and loses its display half.
 
 ## Alternatives considered
 

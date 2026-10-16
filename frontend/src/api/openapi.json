@@ -2177,7 +2177,7 @@
           "Deletion"
         ],
         "summary": "Get Deletion Impact",
-        "description": "The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,\nMD-3): the same closure a deletion transaction computes for itself, reported as\ncounts. 404 for the first id that's foreign or doesn't exist; 422 when all four\nlists are empty \u2014 there's nothing to preview.",
+        "description": "The advisory preview behind every delete confirm (ADR 051, cycle 013 MD-2,\nMD-3): the same closure a deletion transaction computes for itself, reported as\ncounts. 404 for the first id that's foreign or doesn't exist; 422 when all four\nlists are empty \u2014 there's nothing to preview.",
         "operationId": "get_deletion_impact_api_deletion_impact_get",
         "parameters": [
           {
@@ -2696,7 +2696,7 @@
           "Practice"
         ],
         "summary": "Read Practice Run Breakdown",
-        "description": "ADR 029/031/042/043/044: the completion dataset behind the retrospective view,\nincluding each card's mastery/delta and per-field detail (task 010 T3). 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
+        "description": "ADR 029/031/042/043/044: the completion dataset behind the retrospective view,\nincluding each card's mastery/delta and per-field detail (cycle 010 T3). 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
         "operationId": "read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get",
         "parameters": [
           {
@@ -3085,7 +3085,7 @@
           "fields"
         ],
         "title": "BreakdownCard",
-        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR\n042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every\nactive field's after-state score; `delta` is that same fold's after-state minus\nits before-state, exact (the client rounds per 010 MD-2); `fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
+        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR\n042, ADR 043, ADR 044, cycle 010 T3): `mastery` is ADR 043's card fold over every\nactive field's after-state score; `delta` is that same fold's after-state minus\nits before-state, exact (the client rounds per 010 MD-2); `fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
       },
       "CardBatchCreate": {
         "properties": {
@@ -3916,7 +3916,7 @@
           "runs_deleted"
         ],
         "title": "DeletionImpactRead",
-        "description": "The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,\nby type, for a delete confirm to word its warning (task 013 MD-2, MD-3). Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
+        "description": "The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,\nby type, for a delete confirm to word its warning (cycle 013 MD-2, MD-3). Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
       },
       "FieldDefBatchCreate": {
         "properties": {
@@ -4147,7 +4147,7 @@
           "delta"
         ],
         "title": "FieldMasteryDelta",
-        "description": "One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
+        "description": "One active field's session-delta entry (ADR 042, ADR 044, cycle 010 T3):\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
       },
       "FieldType": {
         "type": "string",

@@ -2500,7 +2500,7 @@ def _expected_after(strategy, ratings, shown_prompt_ids=(), prior_states=None):
 
 
 class TestBreakdownMastery:
-    """GET .../breakdown's mastery/delta additions (ADR 042, ADR 043, task 010 T3).
+    """GET .../breakdown's mastery/delta additions (ADR 042, ADR 043, cycle 010 T3).
     Built directly against practice_run/practice_card/mastery_log rather than through
     the generation/rating HTTP flow — the delta-semantics contract is specifically
     about row ordering and attribution, which this gives exact control over."""
@@ -3006,7 +3006,7 @@ def _snapshot(db, session_id: str):
 
 
 class TestConfigEditSeversLineage:
-    """ADR 040 (task 009 T7): materially editing a config nulls source_config_id on
+    """ADR 040 (cycle 009 T7): materially editing a config nulls source_config_id on
     every snapshot cut from it — a rename alone, or an update that fails validation,
     leaves every link untouched."""
 
@@ -3064,7 +3064,7 @@ class TestConfigEditSeversLineage:
 
 
 class TestConfigRenamePropagates:
-    """ADR 066 (task 022 T2): a non-material update carrying a name writes it onto every
+    """ADR 066 (cycle 022 T2): a non-material update carrying a name writes it onto every
     snapshot still linked to that configuration; a material update severs and writes
     nothing, even when it also carries a name."""
 
@@ -3142,7 +3142,7 @@ class TestConfigRenamePropagates:
 
 
 class TestConfigurationLabel:
-    """ADR 066 (task 022 T3): each summary deck's `configuration_name` is the live
+    """ADR 066 (cycle 022 T3): each summary deck's `configuration_name` is the live
     configuration name while the snapshot is linked, else the stored name, else None."""
 
     @staticmethod

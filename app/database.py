@@ -19,7 +19,7 @@ SQLModel.metadata.naming_convention = {
 # host and `...+00:00` on another. The instant is identical either way, but pinning it
 # keeps the API's representation deterministic and stops a host's local zone from
 # leaking into responses. The user's zone is applied at render time, never here.
-# Task 020 MD-1: a database host that stops answering fails a new connection in
+# Cycle 020 MD-1: a database host that stops answering fails a new connection in
 # seconds instead of the OS's ~2 minutes. Must stay below the frontend health probe's
 # timeout (ADR 063; test_db_connect_timeout_is_shorter_than_the_probe_timeout).
 DB_CONNECT_TIMEOUT_SECONDS = 3

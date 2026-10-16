@@ -347,7 +347,7 @@ describe('DeckEditor — create mode', () => {
         ]);
         // A deck is born with a schema and no content — the first card is added from
         // the new deck's own card list (ADR 023). The create contract has no `cards`
-        // field at all (task 008 T2).
+        // field at all (cycle 008 T2).
         expect(body).not.toHaveProperty('cards');
         return HttpResponse.json({ id: 'd1' }, { status: 201 });
       }),
@@ -669,7 +669,7 @@ describe('DeckEditor — edit mode', () => {
   });
 
   // No "a card-only deletion opens the confirm with no impact request made" test
-  // here (task 013 T7's Details asks for one): buildDeckBatchEditPayload never
+  // here (cycle 013 T7's Details asks for one): buildDeckBatchEditPayload never
   // produces a `cards` key (asserted above, "Card entry left this form entirely —
   // a deck edit never carries card ops"), so there is no way to drive this editor
   // into a state where cards.delete is non-empty. handleSaveClick still checks for

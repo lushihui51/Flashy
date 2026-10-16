@@ -328,7 +328,7 @@ describe('practice pre-filter chains', () => {
 
     // The filter reached the server and the list: only Beta's group renders. Some
     // request, not the last — New practice also asks for every configuration,
-    // unfiltered, for its Selected section (task 019 MD-3).
+    // unfiltered, for its Selected section (cycle 019 MD-3).
     await screen.findByRole('group', { name: 'Beta Deck · Beta' });
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
     expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
@@ -369,7 +369,7 @@ describe('practice pre-filter chains', () => {
 
     await screen.findByRole('group', { name: 'Alpha Deck · Alpha' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
-    // Some request, not the last (task 019 MD-3, as above).
+    // Some request, not the last (cycle 019 MD-3, as above).
     expect(
       configRequests.some(
         (query) => query.get('subject_id') === 's1' && query.get('deck_id') === 'd1',

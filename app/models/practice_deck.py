@@ -21,7 +21,7 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     snapshot goes with it, and a run left owning no `PracticeDeck` at all is deleted
     alongside its last one (`compute_deletion_impact`'s run closure, ADR 051).
     `source_config_name` (ADR 066) is the fallback for the configuration label once the
-    link is gone, read only by the practice summary query (task 022 T3)."""
+    link is gone, read only by the practice summary query (cycle 022 T3)."""
 
     __table_args__ = (UniqueConstraint("practice_run_id", "deck_id"),)
 
@@ -31,7 +31,7 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     practice_run_id: uuid.UUID = Field(
         foreign_key="practice_run.id", ondelete="CASCADE"
     )
-    # NOT NULL, ON DELETE CASCADE (ADR 047, ADR 048, task 013) — see the class
+    # NOT NULL, ON DELETE CASCADE (ADR 047, ADR 048, cycle 013) — see the class
     # docstring: a snapshot is owned by its session, but it does not outlive its deck.
     deck_id: uuid.UUID = Field(foreign_key="deck.id", ondelete="CASCADE", nullable=False)
     # Attribution-only (ADR 040, see class docstring) — never read by generation,
@@ -43,7 +43,7 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     # ADR 066: the configuration's name as of the last moment the link existed.
     # 1. Written at run start with the config's name.
     # 2. Set to the new name on every linked snapshot by a non-material update that
-    #    carries a name (task 022 T2, `update_deck_practice_config`).
+    #    carries a name (cycle 022 T2, `update_deck_practice_config`).
     # 3. Copied verbatim by rerun, possibly null.
     # 4. Touched by nothing else: a material edit and a delete only null the link.
     source_config_name: str | None = Field(default=None)

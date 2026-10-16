@@ -8,4 +8,4 @@
 
 **Citations.** A report cites code as path:LINE-LINE against a commit it names, and states what the code does now, never what it should do.
 
-**Content.** A report records the decision and its reasoning. A deferred outcome says what would need to be true to revisit it. A report names any record, task file, or test assertion it contradicts or extends.
+**Content.** A report records the decision and its reasoning. A deferred outcome says what would need to be true to revisit it. A report names any record, cycle file, or test assertion it contradicts or extends.

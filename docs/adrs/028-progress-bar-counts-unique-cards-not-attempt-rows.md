@@ -10,7 +10,7 @@ A failed `practice_card` is never mutated — `_requeue_failed_card` (`app/servi
 
 ## Decision
 
-The run page's progress indicator is one proportional bar with four color segments — grey (pending, first attempt) · yellow (pending, retry) · green (passed) · red (failed, terminal) — sized by `count / total`. `total` is the number of distinct `card_id`s that received a `practice_card` row at session start, fixed for the session's lifetime, never the live `practice_card` row count. Each card's segment membership comes from folding its chain of same-`card_id` rows (ordered by `created_at`) down to a bucket from the last row — the same chain/bucket rule the completion breakdown uses (ADR 029), pinned once in `docs/tasks/006-practice-run.md`'s Contracts.
+The run page's progress indicator is one proportional bar with four color segments — grey (pending, first attempt) · yellow (pending, retry) · green (passed) · red (failed, terminal) — sized by `count / total`. `total` is the number of distinct `card_id`s that received a `practice_card` row at session start, fixed for the session's lifetime, never the live `practice_card` row count. Each card's segment membership comes from folding its chain of same-`card_id` rows (ordered by `created_at`) down to a bucket from the last row — the same chain/bucket rule the completion breakdown uses (ADR 029), pinned once in `docs/cycles/006-practice-run.md`'s Contracts.
 
 ## Alternatives considered
 

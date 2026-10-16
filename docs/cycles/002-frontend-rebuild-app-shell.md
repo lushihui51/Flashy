@@ -1,8 +1,8 @@
 # 002 — Frontend rebuild: app shell
 
-Covers the mobile-first app shell: top bar, sidebar drawer, login, account sheet. Visual/behavioural reference is Quizlet's mobile web UI (see `reference/` screenshots if present, otherwise the descriptions in Contracts are authoritative). Depends on: task file 001 (schema rewrite) complete through T9's contract regeneration.
+Covers the mobile-first app shell: top bar, sidebar drawer, login, account sheet. Visual/behavioural reference is Quizlet's mobile web UI (see `reference/` screenshots if present, otherwise the descriptions in Contracts are authoritative). Depends on: cycle file 001 (schema rewrite) complete through T9's contract regeneration.
 
-Branch: `rewrite/frontend-shell`, merged via PR #11. **Status: every task below is executed** (commits P0 through P5, plus a post-manual-testing bugfix commit `bde01a4`). Two corrections surfaced during execution; see the ADRs section and the Notes on P2/P3. This file is the pre-workflow decompose document reformatted into the standard task-file structure (2026-08-25); content is unchanged, only presentation. The original wording is in git history as `docs/plans/002-frontend-rebuild-app-shell.md`.
+Branch: `rewrite/frontend-shell`, merged via PR #11. **Status: every task below is executed** (commits P0 through P5, plus a post-manual-testing bugfix commit `bde01a4`). Two corrections surfaced during execution; see the ADRs section and the Notes on P2/P3. This file is the pre-workflow decompose document reformatted into the standard cycle-file structure (2026-08-25); content is unchanged, only presentation. The original wording is in git history as `docs/plans/002-frontend-rebuild-app-shell.md`.
 
 Execution protocol (as run): one PR per task, each independently reviewable and mergeable, in dependency order.
 
@@ -10,12 +10,12 @@ Execution protocol (as run): one PR per task, each independently reviewable and 
 
 Later work changed what parts of this file describe; contracts and checked boxes are left as written, with current truth here:
 
-- **§1.1's Create no-op (and P5's "Create is clickable and does nothing" box)**: superseded by task 003 Phase 2 — Create opens `CreateSheet` (`AppShell.tsx`) and its `TODO(defer:nav-targets)` tag is gone. The checked box records what P5 verified at the time.
+- **§1.1's Create no-op (and P5's "Create is clickable and does nothing" box)**: superseded by cycle 003 Phase 2 — Create opens `CreateSheet` (`AppShell.tsx`) and its `TODO(defer:nav-targets)` tag is gone. The checked box records what P5 verified at the time.
 - **§2's provider nesting shipped inverted**: `main.tsx` has `QueryClientProvider` outermost, then `ClerkProvider`, then the router. Neither depends on the other; the diagram's order was never load-bearing.
-- **§2's colour-token list has grown**: `index.css` also defines `--color-text-secondary`, `--color-danger`, `--color-danger-contrast`, and task 006's five run-page tokens (`--color-success`, `--color-warning`, `--color-pending`, `--color-rating-hard`, `--color-rating-good`; sync 2026-09-18).
+- **§2's colour-token list has grown**: `index.css` also defines `--color-text-secondary`, `--color-danger`, `--color-danger-contrast`, and cycle 006's five run-page tokens (`--color-success`, `--color-warning`, `--color-pending`, `--color-rating-hard`, `--color-rating-good`; sync 2026-09-18).
 - **§1.1's top bar has moved on since this file closed** (sync 2026-09-18): Create is icon-only (a `+` with `aria-label="Create"` — the "later tweak" §1.1's note anticipated), a Practice icon link sits between Create and the auth slot (from the same `navItems.ts` constant as the drawer's item), and the fixed-width auth slot §1.1 asked for was removed in favour of content sizing — the padding put ~50px of dead space between Create and the avatar — accepting a one-time shift when the wider signed-out "Log in" pill swaps for the avatar (commits `046933c`, `d0bb3e8`, `1853c41`). P5's unchecked "no horizontal layout shift" box is therefore superseded, not pending.
-- **The Deferred table's `nav-targets` row is mostly done** (sync 2026-09-23): the Library and Practice pages and the Create flow are built (tasks 003, 004); only `HomePage.tsx` and `NotificationsPage.tsx` still carry the tag. ADR 006, cited below, was later amended again by ADR 022 and ADR 035.
-- **§3.8's `PracticePage.tsx`**: replaced by `PracticeOverviewPage.tsx` in task 004; `/practice` routes there (`App.tsx`). The other three placeholder pages kept their names.
+- **The Deferred table's `nav-targets` row is mostly done** (sync 2026-09-23): the Library and Practice pages and the Create flow are built (cycles 003, 004); only `HomePage.tsx` and `NotificationsPage.tsx` still carry the tag. ADR 006, cited below, was later amended again by ADR 022 and ADR 035.
+- **§3.8's `PracticePage.tsx`**: replaced by `PracticeOverviewPage.tsx` in cycle 004; `/practice` routes there (`App.tsx`). The other three placeholder pages kept their names.
 
 ## ADRs
 

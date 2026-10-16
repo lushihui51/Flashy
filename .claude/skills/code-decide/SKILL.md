@@ -18,12 +18,12 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - An "ADR" is a record in `docs/adrs/`; a "PDR" is a record in `docs/pdrs/`.
 - "The product reports" are the /product-record reports this conversation opened from, if any.
 - "The report" is the file you may write under Ending, for /product-decide.
-- "In-progress task files" are task files with an unchecked task, on this branch or any other.
+- "In-progress cycle files" are cycle files with an unchecked task, on this branch or any other.
 - A decision's "anchors" are three things kept with it: the relevant facts about what has been built and what has been decided, each alternative rejected and why, and what becomes true for the next developer because of it. A fact is relevant when it drives the decision: if it stopped holding, the decision would lose some of its ground.
 
 ## Where facts come from
 
-- What has been built: the code, and the in-progress task files.
+- What has been built: the code, and the in-progress cycle files.
 - What has been decided: the PDRs for the product side, the ADRs for the code side.
 - Everything else comes from me. Never invent a fact.
 - Mark every fact verified (you read the code path, or ran it) or inferred (reasoned from names, comments, or docs). Before a proposed decision rests on an inferred fact, ask me to confirm it.
@@ -33,7 +33,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - The PDRs and the product reports if they are provided, in full.
 - Every active ADR, so you can tell me when a decision contradicts or extends one. A Superseded or Deprecated ADR no longer holds; skip it.
 - Whatever code you need to understand what has been built.
-- The in-progress task files, they tell you what is being built. For a replan, the blocked task is the topic.
+- The in-progress cycle files, they tell you what is being built. For a replan, the blocked task is the topic.
 - Nothing else without my explicit permission.
 
 ## How you think

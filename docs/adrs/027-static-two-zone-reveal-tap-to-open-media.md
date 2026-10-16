@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-A practice card's answer side is a variable-length list of independently-rated fields — pool sampling can draw a different field selection and count on each attempt of the same underlying card, even on its own retries (`generate_practice_card_fields`). Field values may be `text`, `image`, or `audio` (`FieldType`, `app/models/field_def.py`). Planning considered a literal 3D flip-card interaction and inline media rendering before settling on the design below (`docs/tasks/006-practice-run.md`).
+A practice card's answer side is a variable-length list of independently-rated fields — pool sampling can draw a different field selection and count on each attempt of the same underlying card, even on its own retries (`generate_practice_card_fields`). Field values may be `text`, `image`, or `audio` (`FieldType`, `app/models/field_def.py`). Planning considered a literal 3D flip-card interaction and inline media rendering before settling on the design below (`docs/cycles/006-practice-run.md`).
 
 ## Decision
 
@@ -33,4 +33,4 @@ Benefits:
 Costs:
 
 - An image/audio value needs one extra tap even when it would have fit comfortably inline.
-- The media overlay is one more floating layer to manage alongside the rating popover (`docs/tasks/006-practice-run.md` minor decisions).
+- The media overlay is one more floating layer to manage alongside the rating popover (`docs/cycles/006-practice-run.md` minor decisions).

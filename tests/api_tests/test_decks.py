@@ -115,7 +115,7 @@ class TestDeckCRUD:
 
 class TestDeckCreateAtomic:
     """POST /api/decks — deck and field_defs created together in one transaction.
-    Cards are no longer part of this contract (ADR 023, task 008 T2): a deck is born
+    Cards are no longer part of this contract (ADR 023, cycle 008 T2): a deck is born
     with a schema and no content; cards come afterward via POST /api/cards or the
     batch-edit endpoint (see test_cards.py and test_deck_batch_edit.py)."""
 

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The frontend routes with `react-router-dom` 7: `App.tsx` mounts a `<BrowserRouter>` around one `<Routes>` tree, with a layout route for `AppShell` and one `<Route>` per page or routed form. Pages fetch their own data through TanStack Query (ADR 033); return addresses ride the URL and one-shot results ride `useLocation().state` (ADR 024); tabs and filters live in `useSearchParams` (ADR 025); tests mount pages in a `MemoryRouter` through `renderWithRouter`. Nothing calls `createBrowserRouter`, `RouterProvider`, a route `loader` or `action`, `useLoaderData`, or `useFetcher`. The library predates the rebuild (task 002's keep list) and task 008 removed a redundant `react-router` entry, so the mode was inherited rather than chosen. React Router 7 offers three modes and its documentation steers new apps to the data or framework mode, so the choice needs a record.
+The frontend routes with `react-router-dom` 7: `App.tsx` mounts a `<BrowserRouter>` around one `<Routes>` tree, with a layout route for `AppShell` and one `<Route>` per page or routed form. Pages fetch their own data through TanStack Query (ADR 033); return addresses ride the URL and one-shot results ride `useLocation().state` (ADR 024); tabs and filters live in `useSearchParams` (ADR 025); tests mount pages in a `MemoryRouter` through `renderWithRouter`. Nothing calls `createBrowserRouter`, `RouterProvider`, a route `loader` or `action`, `useLoaderData`, or `useFetcher`. The library predates the rebuild (cycle 002's keep list) and cycle 008 removed a redundant `react-router` entry, so the mode was inherited rather than chosen. React Router 7 offers three modes and its documentation steers new apps to the data or framework mode, so the choice needs a record.
 
 ## Decision
 

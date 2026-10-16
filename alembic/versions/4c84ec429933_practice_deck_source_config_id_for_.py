@@ -26,7 +26,7 @@ def upgrade() -> None:
     from — never read by generation, validation, or rerun logic.
 
     Autogenerate also caught an unrelated drift from the practice_session→practice_run
-    rename (task 009 T2): that migration renamed the column but left this table's own
+    rename (cycle 009 T2): that migration renamed the column but left this table's own
     unique constraint under its pre-rename name
     (`uq_practice_deck_practice_session_id`), out of step with what the current model's
     naming convention now derives from the renamed column

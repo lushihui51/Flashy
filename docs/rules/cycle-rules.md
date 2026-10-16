@@ -1,14 +1,14 @@
-# Task file rules
+# Cycle file rules
 
-**Lifetime.** A task file serves one cycle. Once the cycle's work is merged to main, the file is complete and is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a task file, as a rule or as history; the only exceptions are a docs/reports report and a commit message.
+**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged to main, the file is complete and is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history; the only exceptions are a docs/reports report and a commit message.
 
-**Readers.** A task file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation. A task file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
+**Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
 
-**Purpose.** For the builder, a task file is the whole of what it is told for the cycle: what to build; why, through the records it names; how, as constraints the build must keep and guidance on the best way to build it; and what must be true when each task is done. For the engineer, it is the instrument of approval before building and of supervision during it: each task is judged from the builder's report against the file and by testing the app on a live server, and code is read only if the report points to it.
+**Purpose.** For the builder, a cycle file is the whole of what it is told for the cycle: what to build; why, through the records it names; how, as constraints the build must keep and guidance on the best way to build it; and what must be true when each task is done. For the engineer, it is the instrument of approval before building and of supervision during it: each task is judged from the builder's report against the file and by testing the app on a live server, and code is read only if the report points to it.
 
 **Sections.** Title; Goal, the cycle's single outcome, its scope, and how the engineer will judge it; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
 
-**Title.** A unique number in ascending order and a short noun phrase naming the cycle's outcome. The file is docs/tasks/NNN-<slug>.md, the slug taken from the phrase.
+**Title.** A unique number in ascending order and a short noun phrase naming the cycle's outcome. The file is docs/cycles/NNN-<slug>.md, the slug taken from the phrase.
 
 **Goal.** Three things, in prose: the outcome in one sentence; the scope, what the cycle covers and what it leaves out; and the judgement, what the engineer will check, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
 

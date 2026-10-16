@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. Reverses task 004 MD-6, under which New practice's selection did not survive a round trip, and narrows task 004's Round-trip navigation contract: the configuration builder hands back `{configurationId}` from create mode only. Consistent with ADR 024 and ADR 025. Implemented by task 019.
+Accepted. Reverses cycle 004 MD-6, under which New practice's selection did not survive a round trip, and narrows cycle 004's Round-trip navigation contract: the configuration builder hands back `{configurationId}` from create mode only. Consistent with ADR 024 and ADR 025. Implemented by cycle 019.
 
 ## Context
 
-New practice assembles a practice from a name and at most one deck configuration per deck, chosen from a list the user narrows by subject and deck. Task 004 held the selection in component state, and its MD-6 accepted that the selection is lost on any round trip away from the page: "New configuration", with its nested "New deck…", was the only way out, and a draft was not the navigation metadata ADR 024 covers.
+New practice assembles a practice from a name and at most one deck configuration per deck, chosen from a list the user narrows by subject and deck. Cycle 004 held the selection in component state, and its MD-6 accepted that the selection is lost on any round trip away from the page: "New configuration", with its nested "New deck…", was the only way out, and a draft was not the navigation metadata ADR 024 covers.
 
 A screenshot review on 2026-09-29 asked for two changes that make round trips routine. A configuration should open for editing straight from the list, and the name should move to the top of the page. Under MD-6 both destroy the draft: select two configurations, open a third to adjust it, and come back to nothing selected; type a name first, as a name at the top invites, and it is lost the same way.
 
@@ -55,5 +55,5 @@ Costs:
 
 - The URL grows by a UUID per selection plus the name, percent-encoded again inside every nested `returnTo`.
 - The name input edits a local buffer that is read from the URL once, at mount, and mirrored back on every change; binding the input straight to the URL would route each keystroke through a router navigation.
-- A bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck. Task 019 removes the first as soon as the page sees it and leaves the second to the server's `duplicate_deck`.
+- A bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck. Cycle 019 removes the first as soon as the page sees it and leaves the second to the server's `duplicate_deck`.
 - The page's URL writes that react to fetched data must share one effect, because two `setSearchParams` calls made after one render overwrite each other.

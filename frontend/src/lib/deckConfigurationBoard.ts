@@ -24,7 +24,7 @@ export function isPoolSlot(slot: BoardSlot): slot is PoolSlot {
 }
 
 // ADR 021: user-facing vocabulary is a contract — these are the exact words from the
-// governing task file's "Board slot ↔ UI mapping" table. Never "pool", never a raw
+// governing cycle file's "Board slot ↔ UI mapping" table. Never "pool", never a raw
 // slot name.
 export const SLOT_LABELS: Record<BoardSlot, string> = {
   unassigned: 'Not used',

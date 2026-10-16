@@ -33,7 +33,7 @@ The rules apply to every hand-written comment in every file of the repository.
 
 A comment is written when, and only when, the reader needs it: without it they would have to guess, or read code they should not have to read.
 
-The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR or task file.
+The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR or cycle file.
 
 - A reader needs an interface comment if and only if the declaration (name, parameters, types) cannot answer "how do I use this correctly" without ambiguity.
 - A reader needs an implementation comment if and only if the statements cannot answer "what is this for, and why is it here" on a first read, without ambiguity.
@@ -102,7 +102,7 @@ Three kinds, each defined by where the comment sits and what it is for. A named 
 
 ### D2: rule 1, when a comment is written
 
-A comment is written exactly when the reader needs it, tested by one question per kind, for a reader who knows the language, the libraries, and AGENTS.md and has read no ADR or task file. An implementation comment is also required when the statements are unambiguous only after line-by-line work; "on a first read" carries that.
+A comment is written exactly when the reader needs it, tested by one question per kind, for a reader who knows the language, the libraries, and AGENTS.md and has read no ADR or cycle file. An implementation comment is also required when the statements are unambiguous only after line-by-line work; "on a first read" carries that.
 
 - **Why:** a rule that only forbids is satisfied by writing nothing, and the note names the reader guessing as the harm. "Obvious" needed a test and a named reader. AGENTS.md is loaded in every agent session, so repeating its conventions in comments restates what the reader has.
 - **Rejected:** a forbid-only rule, as in the note's first draft; "obvious" with no test; Ousterhout's comment on every class, method, and variable; ambiguity alone as the implementation test; a reader who has not read AGENTS.md.
@@ -129,7 +129,7 @@ A comment states its own reason. An ADR number is a pointer for a reader about t
 
 - **Why:** D2's reader has not read any ADR, so a number cannot stand in for a reason.
 - **Rejected:** an ADR number in an interface or member comment; a number in place of the reason; "further reading is needed" with no test.
-- **Left open by the user:** a line forbidding references to task files and to MD, T, D, phase, or section numbers. The user dropped it because they plan to change what a task file is used for. Rule 4 is silent on those references until then.
+- **Left open by the user:** a line forbidding references to cycle files and to MD, T, D, phase, or section numbers. The user dropped it because they plan to change what a cycle file is used for. Rule 4 is silent on those references until then.
 
 ### D6: rule 5, present state
 
@@ -228,11 +228,11 @@ Frontend, non-test `frontend/src/`, about 247 comments:
 
 ### Facts that bear on the rules
 
-- **Docstrings under `app/routers/` and `app/models/` are published.** FastAPI puts a handler's or model's docstring in the OpenAPI schema, and `npm run gen:api` copies it into `frontend/src/api/types.ts`. That file has 35 lines citing an ADR, a task, or a phase; `frontend/src/api/types.ts:258` is one. Its schemas section carries 97 `@description` entries. Any edit to such a docstring changes the generated file.
+- **Docstrings under `app/routers/` and `app/models/` are published.** FastAPI puts a handler's or model's docstring in the OpenAPI schema, and `npm run gen:api` copies it into `frontend/src/api/types.ts`. That file has 35 lines citing an ADR, a cycle, or a phase; `frontend/src/api/types.ts:258` is one. Its schemas section carries 97 `@description` entries. Any edit to such a docstring changes the generated file.
 - **AGENTS.md already answers some questions a comment might.** `AGENTS.md:37` says a `db_stage_*` function does not commit. `app/database_ops/` has 25 such functions, and 18 of their docstrings mention committing.
-- **The build workflow gives a writer D2's footing.** The /code-build skill tells an agent to read the task file, the ADRs it lists, and AGENTS.md.
+- **The build workflow gives a writer D2's footing.** The /code-build skill tells an agent to read the cycle file, the ADRs it lists, and AGENTS.md.
 - **No comment uses fixed sections.** `app/` has no `Args:`, `Returns:`, `Raises:`, or `:param` docstring section, and non-generated `frontend/src/` has no `@param`, `@returns`, or `@throws`.
-- **Markers and pragmas carry prose.** All 10 `TODO(defer:)` lines in `app/` and `frontend/src/` have words after the tag; `app/main.py:25` is a full sentence ending "(task 020 MD-1)". `app/routers/api/deletion_impact.py:23` is `# noqa: B006 — FastAPI query params, not shared state`.
+- **Markers and pragmas carry prose.** All 10 `TODO(defer:)` lines in `app/` and `frontend/src/` have words after the tag; `app/main.py:25` is a full sentence ending "(cycle 020 MD-1)". `app/routers/api/deletion_impact.py:23` is `# noqa: B006 — FastAPI query params, not shared state`.
 - **Signature that cannot answer its own question.** `app/services/timezone.py:22-28`: the signature `normalize_timezone(value: str | None) -> str | None` cannot say that `None` means "nothing usable" as opposed to a fallback to UTC.
 - **Reason for a choice of approach.** `frontend/src/api/client.ts:33-38` explains why the timezone header is sent on every request and not once at sign-in. `app/database_ops/practice_card.py:27-45` runs an insert inside a savepoint; the docstring at `:28-38` holds both what a caller depends on and how the body achieves it.
 - **ADR numbers in comments.** A grep over `app/` and non-test, non-generated `frontend/src/` finds 139 comment lines citing an ADR: 127 with one number, 10 with two, 2 with three or more.
@@ -242,15 +242,15 @@ Frontend, non-test `frontend/src/`, about 247 comments:
 
 None of these is decided. Nothing here should become a default downstream.
 
-1. **Where the rules live.** The session ended with this asked and unanswered. D2 assumes a reader who knows AGENTS.md and has read no ADR, so rules kept only in an ADR do not reach a writer. The options put to the user were the full text in AGENTS.md, the rules in their own file in the repo with one pointer line in AGENTS.md and an ADR for the reasoning, or an ADR only. The session recommended the second. This blocks /code-decompose, which cannot write its first task without it.
-2. **References to task files and minor decisions.** Deferred by the user until task files are redefined. Revisit when that part of the reform is decided.
+1. **Where the rules live.** The session ended with this asked and unanswered. D2 assumes a reader who knows AGENTS.md and has read no ADR, so rules kept only in an ADR do not reach a writer. The options put to the user were the full text in AGENTS.md, the rules in their own file in the repo with one pointer line in AGENTS.md and an ADR for the reasoning, or an ADR only. The session recommended the second. This blocks /code-decompose, which cannot write its first cycle file without it.
+2. **References to cycle files and minor decisions.** Deferred by the user until cycle files are redefined. Revisit when that part of the reform is decided.
 3. **Bringing existing comments in line with the rules.** Out of scope by the user's instruction: this session set what a comment should be, and the changes come after.
 4. **Enforcement.** Not discussed. AGENTS.md's convention is a source-scan guard test in `tests/api_tests/` for any rule that can drift silently.
 
 ## Related
 
 - **AGENTS.md.** D6 keeps the `TODO(defer:<tag>)` convention at `AGENTS.md:55` by exception. D2 makes AGENTS.md part of what every comment may assume, which raises the cost of a stale line there.
-- **`docs/reports/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 governs references from ADRs and task files into code: file and symbol, never a line. D5 here governs the other direction, from a comment to an ADR.
+- **`docs/reports/2026-09-28-adr-cites-and-per-side-candidate-fetch.md`.** Its D1 governs references from ADRs and cycle files into code: file and symbol, never a line. D5 here governs the other direction, from a comment to an ADR.
 - **ADRs.** None is contradicted. No ADR records a decision about comments, so /code-justify starts from nothing.
 
 ### The plan file's proposals and what became of them
@@ -261,7 +261,7 @@ None of these is decided. Nothing here should become a default downstream.
 | D2 rule 1: written only when required | D2: written when and only when needed, one question per kind, named reader |
 | D3 rule 2: interface comments | D3: five items, prose, a test for the body |
 | D4 rule 3: implementation comments, ending "change the code" | D4: two sentences; "change the code" rejected |
-| D5 rule 4: references, including no task or MD references | D5: ADR rule kept; the task-reference line left open |
+| D5 rule 4: references, including no cycle or MD references | D5: ADR rule kept; the cycle-reference line left open |
 | D6 rule 5: present state | D6: same rule with a test and the marker exception |
 | D7 rule 6: member comments | D8, after D7 moved constants out |
 | Open question: scope | D9 |
@@ -270,8 +270,8 @@ None of these is decided. Nothing here should become a default downstream.
 
 The plan file sits outside the repo, so its survey is copied here. It was made on 2026-10-02 against `5fc5a02` by survey agents. This session did not re-verify it except where marked.
 
-- Backend (`app/`): about 205 ADR or task mentions; about 174 in docstrings (120 function, 48 class, 6 module), 15 on fields, 7 on constants, 9 in function bodies. Heaviest: `app/services/practice_run.py` (47), `app/models/practice_run_payloads.py` (25), `app/models/practice_deck.py` (15).
-- Frontend (`frontend/src/`, non-test): 78 ADR mentions; about 43 above declarations, 31 in bodies, 8 on constants, 5 in file headers. About 120 more use `MD-n`, `T#`, `§`, `D#`, or `Phase N`, often with no task number.
+- Backend (`app/`): about 205 ADR or cycle mentions; about 174 in docstrings (120 function, 48 class, 6 module), 15 on fields, 7 on constants, 9 in function bodies. Heaviest: `app/services/practice_run.py` (47), `app/models/practice_run_payloads.py` (25), `app/models/practice_deck.py` (15).
+- Frontend (`frontend/src/`, non-test): 78 ADR mentions; about 43 above declarations, 31 in bodies, 8 on constants, 5 in file headers. About 120 more use `MD-n`, `T#`, `§`, `D#`, or `Phase N`, often with no cycle number.
 - Tests: about 100 ADR mentions in `tests/`, 50 in frontend tests, and about 38 frontend test titles citing an ADR, MD, or phase.
 - Docstring style is prose everywhere, with no `Args:`, `Returns:`, or `@param`. Re-verified here.
 - Interface-comment coverage: services 27 of 29, database_ops 65 of 96, routers 10 of 38, `src/api` functions 5 of 45, components 37 of 49.

@@ -4,7 +4,7 @@ Makes the app fully navigable per the 2026-08-26 /plan session: every non-top-le
 
 ## Superseded since (sync 2026-09-18)
 
-- **MD-2's static run-page crumb label is gone**: task 006 T5 fetched the run state, so `PracticeRunPage.tsx` renders the run's own name (`session_name`) once the state query resolves and falls back to "Practice" (until the 2026-09-23 vocabulary sweep, "Practice session") only while loading or when the run isn't found — the upgrade MD-2 and the Practice-crumbs contract anticipated. The `TODO(defer:practice-run)` tag that T2's Done-when greps for went with the stub; the crumb target (`/practice/{practiceSessionId}`) and T2's checked status stand.
+- **MD-2's static run-page crumb label is gone**: cycle 006 T5 fetched the run state, so `PracticeRunPage.tsx` renders the run's own name (`session_name`) once the state query resolves and falls back to "Practice" (until the 2026-09-23 vocabulary sweep, "Practice session") only while loading or when the run isn't found — the upgrade MD-2 and the Practice-crumbs contract anticipated. The `TODO(defer:practice-run)` tag that T2's Done-when greps for went with the stub; the crumb target (`/practice/{practiceSessionId}`) and T2's checked status stand.
 
 ## ADRs
 
@@ -15,7 +15,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 ## Minor decisions
 
 - **MD-1**: the deck crumb's library link carries no `?tab` — a structural link goes to the place, not a remembered view; browser back is what restores the exact tab.
-- **MD-2**: the run stub's crumb label is the static "Practice session" until the run task fetches real data and can upgrade it to the session name.
+- **MD-2**: the run stub's crumb label is the static "Practice session" until the run cycle fetches real data and can upgrade it to the session name.
 - **MD-3**: no shared Breadcrumb component — each instance is three lines of JSX, pinned by the Breadcrumb grammar contract below; extracting a primitive for that is premature.
 
 ## Contracts
@@ -25,7 +25,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 - One row above the page's `<h1>`: `inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)`, leading `<ChevronLeft aria-hidden className="h-[15px] w-[15px]" />`, then the link content. Each crumb is a react-router `Link`.
 - Labels are the parent's own title: the vocabulary table's **Practice** for `/practice`; **Your library** for `/library`; a subject crumb renders `[SubjectIcon] {subject.name}`.
 - **Two-link chain (deck page only):** `[ChevronLeft] Your library › [SubjectIcon] {subject.name}` — first link to `/library` (no `?tab`, per MD-1), separator `<span aria-hidden="true">›</span>` in `text-(--color-text-muted)`, second link to `/subjects/{id}`. The "Your library" link renders immediately; the subject link appears when `subjectQuery` resolves (today's `{subject && …}` gate moves to just the second link).
-- **Practice crumbs:** `PracticeDetailsPage` → `[ChevronLeft] Practice` linking `/practice`. `PracticeRunPage` → `[ChevronLeft] Practice session` linking `/practice/{practiceSessionId}` — a static label per MD-2; the run task replaces it with the session name once that page fetches real data (note left in its TODO comment).
+- **Practice crumbs:** `PracticeDetailsPage` → `[ChevronLeft] Practice` linking `/practice`. `PracticeRunPage` → `[ChevronLeft] Practice session` linking `/practice/{practiceSessionId}` — a static label per MD-2; the run cycle replaces it with the session name once that page fetches real data (note left in its TODO comment).
 
 ### Library tab in the URL
 

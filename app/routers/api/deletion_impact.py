@@ -25,7 +25,7 @@ def get_deletion_impact(
     field_ids: _IdListQuery = [],  # noqa: B006
     card_ids: _IdListQuery = [],  # noqa: B006
 ):
-    """The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,
+    """The advisory preview behind every delete confirm (ADR 051, cycle 013 MD-2,
     MD-3): the same closure a deletion transaction computes for itself, reported as
     counts. 404 for the first id that's foreign or doesn't exist; 422 when all four
     lists are empty — there's nothing to preview."""

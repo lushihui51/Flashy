@@ -9,7 +9,7 @@ type RunProgressBarProps = {
 /** ADR 028: one proportional bar, four color segments, sized against `total_cards` —
  * fixed at session start, so a requeue (which paints a segment red and adds a new
  * pending row in the same action) never shrinks another segment's share. Segment
- * order and colors are the contract (docs/tasks/006-practice-run.md): passed, then
+ * order and colors are the contract (docs/cycles/006-practice-run.md): passed, then
  * still_failed, then retry_pending, then unseen, left to right. Numeric counts are
  * screen-reader-only (`aria-label`) — the bar itself carries no visible text, per
  * this task's Out of scope. */

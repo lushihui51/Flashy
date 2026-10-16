@@ -76,7 +76,7 @@ def test_metadata_naming_convention_is_the_adr_054_templates():
     """ADR 054: these five templates are the source of every constraint and index
     name. Changing one renames constraints across the whole schema without any
     migration saying so, and autogenerate then proposes a drop-and-create for every
-    constraint whose derived name moved (the drift task 009 T6 hit)."""
+    constraint whose derived name moved (the drift cycle 009 T6 hit)."""
     import app.database  # noqa: F401 — the assignment is the import side effect
     from sqlmodel import SQLModel
 

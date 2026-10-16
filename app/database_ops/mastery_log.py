@@ -145,7 +145,7 @@ def db_fetch_mastery_read_rows(
 
 def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
-    used by the breakdown's delta computation (task 010 T3, ADR 042/043, 010 MD-4) to
+    used by the breakdown's delta computation (cycle 010 T3, ADR 042/043, 010 MD-4) to
     find each (card, field) pair this run itself touched and, among those, its own
     first and last row. `reviewed_at` ascending (the ledger's order, ADR 050) so
     callers reading min/max per pair don't need to re-sort."""
@@ -161,7 +161,7 @@ def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> li
 def db_fetch_mastery_before_bound(
     db: Session, bounds: list[tuple[uuid.UUID, uuid.UUID, datetime]]
 ) -> dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState]:
-    """The breakdown's per-pair 'before' lookup (task 010 T3, ADR 042/043, 010 MD-4;
+    """The breakdown's per-pair 'before' lookup (cycle 010 T3, ADR 042/043, 010 MD-4;
     bound type per ADR 050): one statement for every (card_id, field_def_id,
     bound_reviewed_at) triple in `bounds`, regardless of how many there are — a
     VALUES relation of each pair's own bound timestamp, inner-joined to mastery_log on

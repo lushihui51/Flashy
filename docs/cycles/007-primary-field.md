@@ -4,7 +4,7 @@ Formalizes and surfaces a convention the frontend already relies on implicitly: 
 
 ## Superseded since (sync 2026-09-19)
 
-- **`CardSummaryRow.tsx` no longer exists**: removed as dead code on 2026-09-18 (commit `09c7004`) once the deck editor's Cards section went (task 003, ADR 023). The read-only consumers of the primary-field convention that MD-1 and the ADR bullet name are now `CardTable` and the breakdown row only, matching ADR 032's status note. MD-1's scoping — the visible marker lives in `DeckEditor` alone — is unchanged.
+- **`CardSummaryRow.tsx` no longer exists**: removed as dead code on 2026-09-18 (commit `09c7004`) once the deck editor's Cards section went (cycle 003, ADR 023). The read-only consumers of the primary-field convention that MD-1 and the ADR bullet name are now `CardTable` and the breakdown row only, matching ADR 032's status note. MD-1's scoping — the visible marker lives in `DeckEditor` alone — is unchanged.
 
 ## ADRs
 

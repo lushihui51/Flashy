@@ -255,7 +255,7 @@ export interface paths {
         };
         /**
          * Get Deletion Impact
-         * @description The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,
+         * @description The advisory preview behind every delete confirm (ADR 051, cycle 013 MD-2,
          *     MD-3): the same closure a deletion transaction computes for itself, reported as
          *     counts. 404 for the first id that's foreign or doesn't exist; 422 when all four
          *     lists are empty — there's nothing to preview.
@@ -356,7 +356,7 @@ export interface paths {
         /**
          * Read Practice Run Breakdown
          * @description ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
-         *     including each card's mastery/delta and per-field detail (task 010 T3). 409 while
+         *     including each card's mastery/delta and per-field detail (cycle 010 T3). 409 while
          *     the session is still active — the bucket refinement only makes sense once nothing
          *     is pending; 404 for an unknown or foreign session.
          */
@@ -486,7 +486,7 @@ export interface components {
          * @description One card's whole outcome chain for the completion breakdown (ADR 029):
          *     `attempts` is chronological, so `attempts[-1]` is the determining attempt that
          *     decided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR
-         *     042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every
+         *     042, ADR 043, ADR 044, cycle 010 T3): `mastery` is ADR 043's card fold over every
          *     active field's after-state score; `delta` is that same fold's after-state minus
          *     its before-state, exact (the client rounds per 010 MD-2); `fields` lists every
          *     currently active field_def of the card's deck, field_def.position ascending —
@@ -846,7 +846,7 @@ export interface components {
         /**
          * DeletionImpactRead
          * @description The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,
-         *     by type, for a delete confirm to word its warning (task 013 MD-2, MD-3). Each
+         *     by type, for a delete confirm to word its warning (cycle 013 MD-2, MD-3). Each
          *     field is the count of one closure set `compute_deletion_impact` returns —
          *     `cards_affected` is `DeletionImpact.affected_card_count`, every other field is
          *     `len()` of the matching id set. Never nests another shape.
@@ -941,7 +941,7 @@ export interface components {
         };
         /**
          * FieldMasteryDelta
-         * @description One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):
+         * @description One active field's session-delta entry (ADR 042, ADR 044, cycle 010 T3):
          *     `mastery` is the after-state field score (`strategy.field_score`, the existing
          *     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
          *     is always a float, never None — 0.0 for a field this run's card left untouched.

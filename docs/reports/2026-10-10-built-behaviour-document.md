@@ -2,15 +2,15 @@
 
 **Date:** 2026-10-10. The session ran from 2026-10-09 into 2026-10-10.
 
-**Prompted by:** the documentation reform on `process/reform`, continuing from the three sessions recorded in `docs/reports/2026-10-03-comment-vocabulary-and-rules.md`, `docs/reports/2026-10-06-adr-pdr-ground-rules.md` and `docs/reports/2026-10-07-task-file-ground-rules.md`. The engineer, reading Cockburn's _Writing Effective Use Cases_, first asked whether a PDR as the record session defined it is a sea-level goal of the user. They then named a gap: nothing in the ecosystem of ADRs, PDRs, task files and comments says what has been built on the product side, and they proposed a document to hold that.
+**Prompted by:** the documentation reform on `process/reform`, continuing from the three sessions recorded in `docs/reports/2026-10-03-comment-vocabulary-and-rules.md`, `docs/reports/2026-10-06-adr-pdr-ground-rules.md` and `docs/reports/2026-10-07-cycle-file-ground-rules.md`. The engineer, reading Cockburn's _Writing Effective Use Cases_, first asked whether a PDR as the record session defined it is a sea-level goal of the user. They then named a gap: nothing in the ecosystem of ADRs, PDRs, cycle files and comments says what has been built on the product side, and they proposed a document to hold that.
 
-**Outcome:** deferred, no code changes. The engineer dropped the document at the end of the session and keeps task files as the answer to what was built, to see how it goes. No decision from this session stands, and nothing is pending /code-decompose or /code-justify. The condition for revisiting is under open question 1.
+**Outcome:** deferred, no code changes. The engineer dropped the document at the end of the session and keeps cycle files as the answer to what was built, to see how it goes. No decision from this session stands, and nothing is pending /code-decompose or /code-justify. The condition for revisiting is under open question 1.
 
-**Grounding.** At the engineer's instruction the session read the three reports named above before anything else, and treated `AGENTS.md`, the ADRs, the task files and the skills under `~/.claude/skills` as subjects of the reform rather than rules in force. The README was read because the engineer named it. No ADR was read.
+**Grounding.** At the engineer's instruction the session read the three reports named above before anything else, and treated `AGENTS.md`, the ADRs, the cycle files and the skills under `~/.claude/skills` as subjects of the reform rather than rules in force. The README was read because the engineer named it. No ADR was read.
 
 Every cite is against `1d97ef3`. The working tree carried the 2026-10-07 report untracked; its lines are cited from that file as it stood.
 
-**Terms.** As the task session fixed them: "user" is a person using the app; the human building it is "the engineer"; the agent in a planning session is "the planner"; the agent building a task is "the builder".
+**Terms.** As the cycle-file session fixed them: "user" is a person using the app; the human building it is "the engineer"; the agent in a planning session is "the planner"; the agent building a task is "the builder".
 
 ## Finding 1: a PDR is not a sea-level goal
 
@@ -30,11 +30,11 @@ One observation on D8 (`:136-137`, `:208-214`), "the accepted PDRs are the requi
 The engineer's gap, checked against the three rule sets. Each describes what the rules say today.
 
 - **Records never carry built state.** Status holds "Active", "Superseded by" or "Deprecated by" and nothing else (`docs/reports/2026-10-06-adr-pdr-ground-rules.md:90-95`, D23 at `:316-321`, D24 at `:323-328`). Putting built state there would also cover the wrong set, since under D18 an uncontested behaviour has no record.
-- **Task files stop being the cumulative view.** Task D1 (`docs/reports/2026-10-07-task-file-ground-rules.md:22-28`, `:132-138`) freezes a file at merge, keeps it for debugging only, and tests it by whether deleting it would lose nothing the repository still needs. Its reasoning (`:136`) says the durable homes already exist, the PDRs for requirements and the code for mechanism. The code holds what is built, but no product-side reader opens it: task D3 (`:36-43`) has the engineer read code only when a report points to it, and record D22 (`docs/reports/2026-10-06-adr-pdr-ground-rules.md:122-126`) gives a PDR's reader no technical context. Today the planning skill reads every task file as that view (`docs/reports/2026-10-07-task-file-ground-rules.md:328`).
+- **Cycle files stop being the cumulative view.** Cycle-file D1 (`docs/reports/2026-10-07-cycle-file-ground-rules.md:22-28`, `:132-138`) freezes a file at merge, keeps it for debugging only, and tests it by whether deleting it would lose nothing the repository still needs. Its reasoning (`:136`) says the durable homes already exist, the PDRs for requirements and the code for mechanism. The code holds what is built, but no product-side reader opens it: cycle-file D3 (`:36-43`) has the engineer read code only when a report points to it, and record D22 (`docs/reports/2026-10-06-adr-pdr-ground-rules.md:122-126`) gives a PDR's reader no technical context. Today the planning skill reads every cycle file as that view (`docs/reports/2026-10-07-cycle-file-ground-rules.md:328`).
 - **Comments describe the present, one site at a time.** Comment rule 5 (`docs/reports/2026-10-03-comment-vocabulary-and-rules.md:70-76`) makes every comment current, and nothing assembles them.
 - **The README's Status paragraph is the only live statement.** `README.md:57-59` lists what is built, what is a placeholder and what is implemented but unexposed, for a reader deciding whether to use the app. The engineer's position is that this is not the README's job.
 
-The gap is therefore a consequence of the reform, opened where task D1's reasoning assumed a durable home for product state that the other rules do not provide.
+The gap is therefore a consequence of the reform, opened where cycle-file D1's reasoning assumed a durable home for product state that the other rules do not provide.
 
 ## The document the session converged on, and why it was dropped
 
@@ -49,15 +49,15 @@ The shape the session had converged on before the drop, none of it in force:
 - It is a set of use cases after Cockburn, each at sea level, one goal a user achieves in one sitting, with the app as a black box, which gives it a completeness test: every such goal has a use case. Organisation by screen, by entity and by PDR were rejected, the last on coverage.
 - The form of a use case was the point reached when the engineer stopped: a title as a verb phrase, preconditions, minimal guarantee, success guarantee, a numbered main success scenario and extensions numbered against the step they leave, with stakeholders and interests, trigger, scope, level and technology variations left out as intent or mechanism.
 
-The engineer then dropped the whole idea and chose to keep things as they are: task files were made ephemeral by task D1, but they are the natural answer to what was built, and the engineer will see how that goes before adding a document type.
+The engineer then dropped the whole idea and chose to keep things as they are: cycle files were made ephemeral by cycle-file D1, but they are the natural answer to what was built, and the engineer will see how that goes before adding a document type.
 
-The session named one tension in that choice, which the engineer accepted knowingly. Task D1 keeps a task file "for debugging only" and tests it by deletion losing nothing the repository still needs. If task files are the answer to what was built, they are needed after the merge and that test fails for every one of them. Either task D1's purpose widens to include that answer, or the gap returns the first time the planner needs the current product and finds only frozen per-cycle files. The session's recommendation at the time was to keep the document, and the engineer's decision went the other way.
+The session named one tension in that choice, which the engineer accepted knowingly. Cycle-file D1 keeps a cycle file "for debugging only" and tests it by deletion losing nothing the repository still needs. If cycle files are the answer to what was built, they are needed after the merge and that test fails for every one of them. Either cycle-file D1's purpose widens to include that answer, or the gap returns the first time the planner needs the current product and finds only frozen per-cycle files. The session's recommendation at the time was to keep the document, and the engineer's decision went the other way.
 
 ## Open questions
 
 None of these is decided. Nothing here should become a default downstream.
 
-1. **The revisit condition.** The built-behaviour document is revisited when one of two things happens: a planning session needs to know what the app does today and cannot assemble it from the frozen task files, or the engineer wants to compare the PDRs with what is built and has nothing to compare them against. At that point task D1's deletion test and "debugging only" purpose are the rules the answer contradicts or extends. The shape above is the starting point, not a decision.
+1. **The revisit condition.** The built-behaviour document is revisited when one of two things happens: a planning session needs to know what the app does today and cannot assemble it from the frozen cycle files, or the engineer wants to compare the PDRs with what is built and has nothing to compare them against. At that point cycle-file D1's deletion test and "debugging only" purpose are the rules the answer contradicts or extends. The shape above is the starting point, not a decision.
 2. **Completeness of the PDR set.** Under record D8 the PDRs are the requirements, and under D18 only contested decisions get a record, so nothing lists what a user can do with the app. Whether that matters was not decided. A list of sea-level goals is the Cockburn-shaped alternative the record session never weighed against D8.
 3. **Cockburn's altitude as D17's threshold.** Record D17 sets no threshold and carries examples instead. The session observed that goal levels could supply one for PDRs and did not propose it.
 4. **The README's Status paragraph.** `README.md:57-59` is the one live statement of what is built, written for an outsider. Whether it stays as the only such statement, and who keeps it true, was not raised beyond the engineer's view that it is not the README's purpose.
@@ -65,7 +65,7 @@ None of these is decided. Nothing here should become a default downstream.
 ## Related
 
 - **`docs/reports/2026-10-06-adr-pdr-ground-rules.md`.** Finding 1 reads its D5, D6, D9, D15, D16, D17, D19 and D20 against Cockburn and extends none of them. The D8 observation is new. Its D7 and D8 both rejected "a living behaviour document" (`:206`, `:213`) as the home of product decisions; the dropped document would have been one in a different role, as the home of built state, and the session named Nygard's reason against large documents as applying to it whatever its role. Its D25 (`:72-74`) was the rule a document citing PDRs would have had to extend; the dropped shape cites nothing, so the question did not arise.
-- **`docs/reports/2026-10-07-task-file-ground-rules.md`.** Finding 2 rests on its D1, D2 and D3. The engineer's closing choice, task files as the answer to what was built, is in tension with D1's purpose and deletion test as recorded above. Its D11 (`:84-87`) was the reason the dropped document could not be a task's file.
+- **`docs/reports/2026-10-07-cycle-file-ground-rules.md`.** Finding 2 rests on its D1, D2 and D3. The engineer's closing choice, cycle files as the answer to what was built, is in tension with D1's purpose and deletion test as recorded above. Its D11 (`:84-87`) was the reason the dropped document could not be a task's file.
 - **`docs/reports/2026-10-03-comment-vocabulary-and-rules.md`.** The dropped document's reference rule borrowed rule 4's "complete without any reference" (`:62-68`), and its present-state rule borrowed rule 5 (`:70-76`).
 - **`README.md`.** `:51` says every design decision is in `docs/adrs/`; `:57-59` is the Status paragraph. Neither is changed.
 - **ADRs.** None was read, at the engineer's instruction, and none is contradicted, because nothing is decided.

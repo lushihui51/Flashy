@@ -34,7 +34,7 @@ def test_health_reports_database_unavailable(client, monkeypatch):
 
 
 def test_engine_fails_fast_and_pre_pings():
-    """Task 020 MD-1."""
+    """Cycle 020 MD-1."""
     assert _CONNECT_ARGS["connect_timeout"] == DB_CONNECT_TIMEOUT_SECONDS == 3
     assert engine.pool._pre_ping is True
 

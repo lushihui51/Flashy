@@ -4,7 +4,7 @@ description: Code conversation, continued — turn the decisions /code-decide co
 disable-model-invocation: true
 ---
 
-This runs after /code-decide, in the same conversation, and its input is the hand-off /code-decide ended with. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and pass everything else to the task file. Every ADR you write is read by a developer who has read AGENTS.md and no other ADR or PDR.
+This runs after /code-decide, in the same conversation, and its input is the hand-off /code-decide ended with. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and pass everything else to the cycle file. Every ADR you write is read by a developer who has read AGENTS.md and no other ADR or PDR.
 
 You may assume every decision from /code-decide:
 
@@ -24,7 +24,7 @@ Give me one thing to answer per turn: one question, the triage table, one ADR's 
 - "The user" is a person using the app, never me.
 - An "ADR" is a record in `docs/adrs/`; a "PDR" is a record in `docs/pdrs/`. You never write or edit a PDR.
 - A decision's "anchors" are the three things /code-decide kept with it: the relevant facts about what has been built and what has been decided, each alternative rejected and why, and what becomes true for the next developer because of it.
-- A "lesser decision" is a confirmed decision that earns no ADR of its own; it reaches the builder through the task file, with its anchors.
+- A "lesser decision" is a confirmed decision that earns no ADR of its own; it reaches the builder through the cycle file, with its anchors.
 - A "live site" is a line in the code or in AGENTS.md that cites an ADR by number.
 - "The report" is the report this conversation ends with: the hand-off to /code-plan.
 
@@ -90,6 +90,6 @@ Once the fate of all affected ADRs has been settled, draft any new ADR we've dec
 
 ## Ending
 
-When every row is settled, write the report holding: every ADR written, by number and title; every ADR superseded or deprecated, and by what ADR if any; every live site that cites a superseded or deprecated ADR; every lesser decision bound for the task file, with its anchors and the ADR or decision it originated from; every open question carried over from /code-decide unchanged. The report's path is given to /code-plan.
+When every row is settled, write the report holding: every ADR written, by number and title; every ADR superseded or deprecated, and by what ADR if any; every live site that cites a superseded or deprecated ADR; every lesser decision bound for the cycle file, with its anchors and the ADR or decision it originated from; every open question carried over from /code-decide unchanged. The report's path is given to /code-plan.
 
 If a decision needs rethinking and I am going back to /code-decide, write the report as things stand, including what is settled (same as above), what is unsettled, and what question needs rethinking and why. The report's path will be given to /code-decide.

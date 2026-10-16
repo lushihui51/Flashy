@@ -8,7 +8,7 @@ Feature cycle from the 2026-09-29 /plan session, prompted by the app freezing wh
 - **Pages misreport.** Eight pages render every failed load as "not found", and `LibraryPage` has no error branch at all.
 - **A silent database hangs requests.** The engine in `app/database.py` sets no `connect_timeout`, so a database host that stops answering hangs each request until the OS gives up, about two minutes.
 
-Branch: `feat/connection-status`, cut from `main`. T3 edits `frontend/src/components/library/DeckConfigurationEditor.tsx` and its test, which task 019 also edits; task 019 merged first (PR #33) and this branch merged `main` before T3 ran, so no rebase was needed.
+Branch: `feat/connection-status`, cut from `main`. T3 edits `frontend/src/components/library/DeckConfigurationEditor.tsx` and its test, which cycle 019 also edits; cycle 019 merged first (PR #33) and this branch merged `main` before T3 ran, so no rebase was needed.
 
 Recorded by /justify: ADR 062 amends ADR 035, ADR 064 amends ADR 055, and ADR 065 amends ADR 006 and ADR 022; each amended ADR's Status line names its amendment. ADR 063 stays consistent with ADR 033, since its recovery refetch only reruns queries that pages own.
 
@@ -43,7 +43,7 @@ Decisions this file implements; full context and rejected alternatives live in t
 - `app/database.py` defines `DB_CONNECT_TIMEOUT_SECONDS = 3`.
 - `_CONNECT_ARGS` becomes `{"options": "-c timezone=utc", "connect_timeout": DB_CONNECT_TIMEOUT_SECONDS}`.
 - `engine = create_engine(settings.database_url, echo=False, pool_pre_ping=True, connect_args=_CONNECT_ARGS)`.
-- Deferred marker in `app/main.py`, directly above `app.add_middleware(CORSMiddleware, ...)`: `# TODO(defer:db-unavailable-503) map database-connection errors on every endpoint to 503 database_unavailable once the frontend and API are cross-origin (hosting cycle): an unhandled error's 500 carries no CORS headers, so a cross-origin browser reads it as a network failure (task 020 MD-1).`
+- Deferred marker in `app/main.py`, directly above `app.add_middleware(CORSMiddleware, ...)`: `# TODO(defer:db-unavailable-503) map database-connection errors on every endpoint to 503 database_unavailable once the frontend and API are cross-origin (hosting cycle): an unhandled error's 500 carries no CORS headers, so a cross-origin browser reads it as a network failure (cycle 020 MD-1).`
 
 ### API-layer errors (ADR 065) — `frontend/src/api/unwrap.ts`, `frontend/src/api/client.ts`
 
@@ -183,7 +183,7 @@ Each site keeps its existing wrapper. A `404` renders the existing text, unchang
 - **Done when:**
   - `uv run pytest` passes, including the three new tests and `test_layering_guard.py`.
   - `grep -rn "TODO(defer:db-unavailable-503)" app/` prints exactly one line, in `app/main.py`.
-  - The regenerated `types.ts` and `openapi.json` diffs add the `/api/health` path and nothing else. If they contain anything more, stop and report the extra hunks, as task 018 T1 did.
+  - The regenerated `types.ts` and `openapi.json` diffs add the `/api/health` path and nothing else. If they contain anything more, stop and report the extra hunks, as cycle 018 T1 did.
   - In `frontend/`, `npx vitest run`, `npm run lint` and `npm run build` are clean.
   - With `fastapi dev` running, `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/health` prints `200`.
   - The commit contains only this task's hunks.

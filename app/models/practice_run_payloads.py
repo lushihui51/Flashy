@@ -123,7 +123,7 @@ class BreakdownAttempt(AppModel):
 
 
 class FieldMasteryDelta(AppModel):
-    """One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):
+    """One active field's session-delta entry (ADR 042, ADR 044, cycle 010 T3):
     `mastery` is the after-state field score (`strategy.field_score`, the existing
     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
     is always a float, never None — 0.0 for a field this run's card left untouched."""
@@ -139,7 +139,7 @@ class BreakdownCard(AppModel):
     """One card's whole outcome chain for the completion breakdown (ADR 029):
     `attempts` is chronological, so `attempts[-1]` is the determining attempt that
     decided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR
-    042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every
+    042, ADR 043, ADR 044, cycle 010 T3): `mastery` is ADR 043's card fold over every
     active field's after-state score; `delta` is that same fold's after-state minus
     its before-state, exact (the client rounds per 010 MD-2); `fields` lists every
     currently active field_def of the card's deck, field_def.position ascending —

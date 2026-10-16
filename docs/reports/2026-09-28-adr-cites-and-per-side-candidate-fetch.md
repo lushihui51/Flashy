@@ -10,9 +10,9 @@ Every code cite is against `main` at `66d297d`; the working tree carried only th
 
 - ADR 013 (`docs/adrs/013-snapshot-practice-config-at-session-start.md:17,19`) cites `app/services/practice_session.py:114-126`, `:184-195`, and `:83-95`. The file is `app/services/practice_run.py` since ADR 038; the initial batch is now at `app/services/practice_run.py:193-206`, the requeue at `:817-833`. ADR 013's Status has been amended twice (ADR 040, ADR 060) without touching the cites.
 - ADR 013 is not alone. ADRs 008, 012, 015, 028, 029 and 031 also cite `practice_session.py`. Line-number cites of any file appear in 8 of the 60 ADRs, all early (009, 010, 011, 012, 013, 014, 019, 032); no ADR since 032 cites a line.
-- ADR 038's Consequences already decide the file-name half: "ADRs and task files 001–008 keep the old term as history; readers map session → run. AGENTS.md is reconciled by /distill, not retroactive edits."
+- ADR 038's Consequences already decide the file-name half: "ADRs and cycle files 001–008 keep the old term as history; readers map session → run. AGENTS.md is reconciled by /distill, not retroactive edits."
 - The /sync command's own rule is "never rewriting an accepted one" (an ADR is superseded or amended in Status, not edited).
-- Line cites elsewhere: task file 015's Contracts section carries them pinned to a commit hash (added by the 2026-09-24 sync, `docs/reports/2026-09-24-sync-mid-task-015.md`, item 5); `docs/reports/` reports are required by AGENTS.md to cite `path:LINE-LINE` and every report states the commit it cites against in its header. The /justify and /decompose commands say nothing about citations.
+- Line cites elsewhere: cycle file 015's Contracts section carries them pinned to a commit hash (added by the 2026-09-24 sync, `docs/reports/2026-09-24-sync-mid-cycle-015.md`, item 5); `docs/reports/` reports are required by AGENTS.md to cite `path:LINE-LINE` and every report states the commit it cites against in its header. The /justify and /decompose commands say nothing about citations.
 
 ### Reasoning
 
@@ -22,9 +22,9 @@ A line number without a commit is a snapshot that rots with every edit above it.
 
 AGENTS.md gains a hard rule, one sentence, in the form the file uses:
 
-> Code references in ADRs and task files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines, against the commit named in their header.
+> Code references in ADRs and cycle files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines, against the commit named in their header.
 
-Existing ADRs keep their cites as history. Rejected: rewriting ADR 013 alone (inconsistent with the other six) or all seven (reverses ADR 038's decision). Deferred: a doc-scan guard test in `tests/api_tests/` for `path:NNN` in `docs/adrs/`. The user wants to see first whether the AGENTS.md rule alone holds; the guard would need an allowlist for the eight historical ADRs. Revisit the guard if a new ADR or task file lands with a line cite despite the rule. The AGENTS.md edit itself is not made here (/plan writes no tracked files); it lands through /distill or the cycle that /justify records D1 in.
+Existing ADRs keep their cites as history. Rejected: rewriting ADR 013 alone (inconsistent with the other six) or all seven (reverses ADR 038's decision). Deferred: a doc-scan guard test in `tests/api_tests/` for `path:NNN` in `docs/adrs/`. The user wants to see first whether the AGENTS.md rule alone holds; the guard would need an allowlist for the eight historical ADRs. Revisit the guard if a new ADR or cycle file lands with a line cite despite the rule. The AGENTS.md edit itself is not made here (/plan writes no tracked files); it lands through /distill or the cycle that /justify records D1 in.
 
 ## 2. The per-side candidate fetch
 
@@ -45,7 +45,7 @@ Existing ADRs keep their cites as history. Rejected: rewriting ADR 013 alone (in
 
 ### Not recorded anywhere
 
-Task 001 (`docs/tasks/001-schema-rewrite.md:261`) specifies pool resolution per card ("drive from the pool array via unnest, join field_def, join card_field_value, LEFT JOIN mastery") and is silent on per side. The two-statement shape is a builder choice from `011f6ef`, not a decision. It contradicts no ADR.
+Cycle 001 (`docs/cycles/001-schema-rewrite.md:261`) specifies pool resolution per card ("drive from the pool array via unnest, join field_def, join card_field_value, LEFT JOIN mastery") and is silent on per side. The two-statement shape is a builder choice from `011f6ef`, not a decision. It contradicts no ADR.
 
 ### D2 (confirmed 2026-09-28)
 

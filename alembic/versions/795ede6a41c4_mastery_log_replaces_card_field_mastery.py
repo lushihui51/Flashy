@@ -6,7 +6,7 @@ Create Date: 2026-09-14 15:29:07.960929
 
 ADR 042: replaces the disposable card_field_mastery cache with an append-only ledger.
 Upgrade creates mastery_log, then backfills and retroactively attributes the whole
-history by importing and calling app.services.mastery.rebuild_mastery (task 010 T1)
+history by importing and calling app.services.mastery.rebuild_mastery (cycle 010 T1)
 against this migration's own connection — the same replay every live rating goes
 through, run globally (every user) via review_log, the true source of truth (ADR 011)
 — before dropping card_field_mastery. Accepted coupling: this upgrade imports app code
@@ -57,7 +57,7 @@ def upgrade() -> None:
 
     # Data-only: replay review_log (ADR 011's source of truth) through the app's write
     # path to backfill mastery_log for every pre-existing appearance, with attribution
-    # reconstructed the same way rebuild_mastery always does it (task 010 T1). Imports
+    # reconstructed the same way rebuild_mastery always does it (cycle 010 T1). Imports
     # app code as of this revision — see the module docstring.
     from sqlmodel import Session
 

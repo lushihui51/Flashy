@@ -583,7 +583,7 @@ class TestRebuildOracle:
     def test_rebuild_reproduces_the_whole_ledger_not_just_latest_rows(
         self, db, existing_user, mastery_cards
     ):
-        """Invariant 3 (task 013 Contracts): replaying a card's appearances in
+        """Invariant 3 (cycle 013 Contracts): replaying a card's appearances in
         reviewed_at order reproduces every row untouched, value for value and
         timestamp for timestamp — not just each pair's latest row. The rebuild never
         re-stamps (ADR 050), so every (card_id, field_def_id, reviewed_at) key from
