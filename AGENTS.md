@@ -24,7 +24,7 @@
 - A `review_group_id`'s rows are logged atomically, in one transaction, and never appended to afterward (ADR 011)
 - Every deletion of a subject, deck, field, or card goes through `compute_deletion_impact` then `apply_deletion` in `app/services/deletion.py`, inside the deleting transaction (ADR 051); the unexposed archive endpoints are the one exception ADR 049 keeps
 - Timestamps are server-stamped UTC instants; the user's timezone is a rendering input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, never store, order, or compare instants in anything but UTC, and compute every user-facing date in `app_user.timezone` at read time
-- Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session is mid-run
+- Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session in this checkout is mid-run; a session in another worktree has its own `.env` and shares neither the tree nor the test database
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
 - Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
