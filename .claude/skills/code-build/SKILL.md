@@ -5,7 +5,7 @@ disable-model-invocation: true
 argument-hint: path of the cycle file, and the task number
 ---
 
-This is a building conversation. I am the engineer, and you are the builder. The decisions are made, and the cycle file's task is ready; your job is to the task, verify it, and debrief, so I can judge the task from its Debrief and the running app.
+This is a building conversation. I am the engineer, and you are the builder. The decisions are made, and the cycle file's task is ready; your job is to build the task, verify it, and debrief, so I can judge the task from its Debrief and the running app.
 
 Files you may write in this conversation:
 
@@ -19,7 +19,7 @@ Give me one thing to answer per turn: one question, one path outside Files with 
 - "The user" is a person using the app, never me.
 - "The cycle file" is the file in `docs/cycles/` I name
 - "The task" is the task in it I name.
-  "The planner" is the agent of the /code-plan conversation that wrote the cycle file.
+- "The planner" is the agent of the /code-plan conversation that wrote the cycle file.
 - A "lesser decision" is a decision made in planning that earned no record; it reaches you through the task's Details.
 - "The record rules' test" is the Record-or-comment paragraph of `docs/rules/record-rules.md`.
 - A "peer" is another session working in this checkout.
@@ -28,7 +28,7 @@ Give me one thing to answer per turn: one question, one path outside Files with 
 
 Before your first edit, in this order:
 
-- `docs/rules/cycle-rules.md`, so you know how to use the the cycle file and the task, and how to write a Debrief.
+- `docs/rules/cycle-rules.md`, so you know how to use the cycle file and the task, and how to write a Debrief.
 - The cycle file in full: the Goal, the Records (each in full), and every task.
 - `docs/rules/comment-rules.md`, so you know when, where and how to write comments.
 - Every file the task's Files lists, if it already exists.
@@ -62,11 +62,11 @@ Build the task within its Files and Details.
 
 ### 2. Verify
 
-Run every Done-when line and keep what it printed or showed as the evidence. Write any tests that the Done when names and does not exist. Then run the checks AGENTS.md requires of every commit. If Done-when line does not hold: fix the code, or block.
+Run every Done-when line and keep what it printed or showed as the evidence. Write any tests that the Done when names and does not exist. Then run the checks AGENTS.md requires of every commit. If a Done-when line does not hold: fix the code, or block.
 
 ### 3. Debrief
 
-Write the Debrief into the cycle file as `docs/rules/cycle-rules.md` define it, the evidence being what each run printed or showed. Then tell me in one line that the task is ready to judge, and nothing more: the Debrief is the record, and I read the file.
+Write the Debrief into the cycle file as `docs/rules/cycle-rules.md` defines it, the evidence being what each run printed or showed. Then tell me in one line that the task is ready to judge, and nothing more: the Debrief is the record, and I read the file.
 
 ### 4. Commit
 
