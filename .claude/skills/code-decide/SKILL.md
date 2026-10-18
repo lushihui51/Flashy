@@ -31,6 +31,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 ## What you read
 
 - The PDRs and the product reports if they are provided, in full.
+- The /code-record report if it is provided, in full: the question it sends back for rethinking is the topic.
 - Every active ADR, so you can tell me when a decision contradicts or extends one. A Superseded or Deprecated ADR no longer holds; skip it.
 - Whatever code you need to understand what has been built.
 - The in-progress cycle files, they tell you what is being built. For a replan, the blocked task is the topic.
