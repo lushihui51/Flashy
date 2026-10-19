@@ -2,12 +2,12 @@
 name: code-decide
 description: Code conversation — decide how the app is built to deliver what the PDRs say, nothing about what it does for the user
 disable-model-invocation: true
-argument-hint: PDRs and their report paths, or a topic
+argument-hint: path of the docket, and a topic if the docket holds no question.
 ---
 
-This is a code conversation. I am the engineer; your job is to help me decide how the app is built to deliver what the active PDRs say. Nothing decided here changes what the user experiences. It opens from one or more active PDRs together with the product reports that produced them, or from a topic with no PDR behind it: a bug, a refactor, or a replan after a blocked task. /code-record runs next, in this same conversation, and takes the hand-off at the end as its only input.
+This is a code conversation. I am the engineer; your job is to help me decide how the app is built to deliver what the active PDRs say. Nothing decided here changes what the user experiences. It opens from the docket: the questions it holds for /code-decide, the PDRs it lists, and the lesser decisions the product side left for you; or, when the docket holds no question, from a topic with no PDR behind it: a bug, a refactor, or a replan after a blocked task. /code-record runs next and reads the docket as its only input.
 
-Files you may write in this conversation: none, except the report under Ending, and only when something is parked for /product-decide.
+Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`.
 
 Give me one thing to answer per turn: one question, or one proposed decision with its alternatives, for me to confirm or pick another.
 
@@ -16,22 +16,21 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - "The user" is a person using the app, never me.
 - "The next developer" is whoever makes code-side decisions after this cycle.
 - An "ADR" is a record in `docs/adrs/`; a "PDR" is a record in `docs/pdrs/`.
-- "The product reports" are the /product-record reports this conversation opened from, if any.
-- "The report" is the file you may write under Ending, for /product-decide.
+- "The docket" is the roundtable docket whose path I give.
 - "In-progress cycle files" are cycle files with an unchecked task, on this branch or any other.
 - A decision's "anchors" are three things kept with it: the relevant facts about what has been built and what has been decided, each alternative rejected and why, and what becomes true for the next developer because of it. A fact is relevant when it drives the decision: if it stopped holding, the decision would lose some of its ground.
 
 ## Where facts come from
 
 - What has been built: the code, and the in-progress cycle files.
-- What has been decided: the PDRs for the product side, the ADRs for the code side.
+- What has been decided: the PDRs and the docket's lesser decisions for the product side, the ADRs for the code side.
 - Everything else comes from me. Never invent a fact.
 - Mark every fact verified (you read the code path, or ran it) or inferred (reasoned from names, comments, or docs). Before a proposed decision rests on an inferred fact, ask me to confirm it.
 
 ## What you read
 
-- The PDRs and the product reports if they are provided, in full.
-- The /code-record report if it is provided, in full: the question it sends back for rethinking is the topic.
+- `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
+- The PDRs the docket lists, in full.
 - Every active ADR, so you can tell me when a decision contradicts or extends one. A Superseded or Deprecated ADR no longer holds; skip it.
 - Whatever code you need to understand what has been built.
 - The in-progress cycle files, they tell you what is being built. For a replan, the blocked task is the topic.
@@ -49,25 +48,27 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 Ask of each alternative: if it became the decision and were built perfectly, would a user notice?
 
 - No: it belongs here.
-- Yes: it is a product decision. Say so, do not confirm it, and park it for /product-decide; every decision here that depends on it stays an open question.
+- Yes: it is a product decision. Say so, do not confirm it; with my approval it goes on the docket as an open question owned by /product-decide, and every decision here that depends on it stays an open question resting on it.
 - Only some: it needs splitting. Raise it to me and propose the split by the same test; the part no user could notice is decided here.
 
 ## Confirming decisions
 
 - A decision is confirmed only when I say so. State it plainly and ask me directly.
-- Number confirmed decisions D1, D2, … in this conversation; the numbers are scratch labels only.
+- Label confirmed decisions CD1 upward, above the highest label the docket holds.
 - Keep each confirmed decision with its anchors in the running list.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
-- Anything deferred is an open question and stays listed as one.
+- Anything deferred is an open question owned by you: /code-decide; keep it with what rests on it.
 
 ## Pushbacks
 
-- If a PDR's intent cannot be delivered, or is too costly to deliver, raise it with your reasoning. If I confirm, park it for the report with the PDR's decision and why it cannot be delivered as decided.
+- If a PDR's intent cannot be delivered, or is too costly to deliver, raise it with your reasoning. If I confirm, it goes on the docket as an open question owned by /product-decide, with the PDR's decision and why it cannot be delivered as decided.
+
+## Changed PDRs
+
+- For every PDR the docket lists as superseded or deprecated, find every active ADR whose Context cites it and propose, one per turn, whether that ADR still holds. An ADR that no longer holds is decided here like any other.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. If I have none, write the report if there is at least one parked pushback or product decision.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, and the changed PDRs you checked taken out. Then stop; /product-decide is next if you put a question to it, otherwise /code-record.
 
-Lastly, give the hand-off: every confirmed decision with its anchors in full and the open questions. Then stop; /code-record is next.
-
-Topic for this conversation: $ARGUMENTS
+Docket and topic for this conversation: $ARGUMENTS
