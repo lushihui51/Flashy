@@ -56,6 +56,6 @@ Ask of each alternative: if it became the decision and were implemented perfectl
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision with its anchors in full under Product decisions; every open question, deferred or parked for /code-decide, under Open questions with its owner and what rests on it; and every open question you decided taken out. Then stop; /product-record is next.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, and the open questions you decided taken out. Then stop; /product-record is next.
 
 Docket and topic for this conversation: $ARGUMENTS
