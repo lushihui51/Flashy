@@ -2,12 +2,12 @@
 name: product-decide
 description: Product conversation — decide what the app does for the people who use it, nothing about how it is built
 disable-model-invocation: true
-argument-hint: topic, or path of a report
+argument-hint: path of the docket, and a topic if the docket holds no question.
 ---
 
-This is a product conversation. I am the product owner; your job is to help me decide what the app does for the people who use it. Nothing you write here is about how the app is built: every sentence must make sense to someone who has never seen code. /product-record runs next, in this same conversation, and takes the hand-off at the end as its only input.
+This is a product conversation. I am the product owner; your job is to help me decide what the app does for the people who use it. Nothing you write here is about how the app is built: every sentence must make sense to someone who has never seen code. /product-record runs next and reads the docket as its only input.
 
-Files you may write in this conversation: none.
+Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`.
 
 Give me one thing to answer per turn: one question, or one proposed decision with its alternatives, for me to evaluate.
 
@@ -16,6 +16,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - "The user" is a person using the app, never me.
 - "The app" is what the user meets: what it shows, what it lets them do, and what they get from it.
 - A "record" is a Product Decision Record in `docs/pdrs/`.
+- "The docket" is the roundtable docket whose path I give.
 - A decision's "anchors" are the three things kept with it: the facts about use and need it answers, each alternative rejected and why, and what becomes true for the user because of it.
 
 ## Where facts come from
@@ -24,10 +25,10 @@ Facts about how the app is used and what the user needs come from me. Never inve
 
 ## What you read
 
+- `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - Every record whose Status is Active, so you can tell me when a new decision contradicts or extends one. A Superseded or Deprecated record no longer holds; skip it.
 - From `docs/cycles/`: each file's Goal, and each task's Status, Goal and Debrief lines. Pull them with grep rather than reading the files; the rest describes how the app is built, not what it does.
 - The user-facing vocabulary AGENTS.md points at. Those are the words the user sees, so they are the words of every decision here.
-- The report if its provided, in full: it is the topic.
 - Nothing else without my explicit permission.
 
 ## How you think
@@ -42,19 +43,19 @@ Facts about how the app is used and what the user needs come from me. Never inve
 Ask of each alternative: if it became the decision and were implemented perfectly, would a user notice?
 
 - Yes: it belongs here.
-- No: it is a build decision. Raise it to me; it goes on the parked list.
+- No: it is a build decision. Raise it to me; with my approval it goes on the docket as an open question owned by /code-decide.
 - Only some: it needs splitting. Raise it to me and propose the split by the same test.
 
 ## Confirming decisions
 
 - A decision exists only when I confirm it. State it plainly and ask me directly.
-- Number confirmed decisions D1, D2, … in this conversation; the numbers are scratch labels only.
+- Label confirmed decisions PD1 upward, above the highest label the docket holds.
 - Keep each confirmed decision with its anchors in the running list.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
-- Anything deferred is an open question and stays listed as one.
+- Anything deferred is an open question owned by you: /product-decide; keep it with what rests on it.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask once whether I have more. When I have none, give the hand-off: every confirmed decision with its anchors in full, the open questions, the parked build decisions, and the path of the report, if any. Then stop; /product-record is next.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision with its anchors in full under Product decisions; every open question, deferred or parked for /code-decide, under Open questions with its owner and what rests on it; and every open question you decided taken out. Then stop; /product-record is next.
 
-Topic for this conversation: $ARGUMENTS
+Docket and topic for this conversation: $ARGUMENTS
