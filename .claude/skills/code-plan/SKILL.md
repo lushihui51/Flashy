@@ -2,15 +2,15 @@
 name: code-plan
 description: Planning conversation — write cycle files for the builders
 disable-model-invocation: true
-argument-hint: paths of /code-record reports
+argument-hint: path of the docket
 ---
 
-This is a planning conversation. I am the engineer, and you are the planner. Up until this point, I've resolved most of the decisions needed for at least one build-cycle, and your job is to help me turn these decisions into actionable plans in the form of cycle files executed by the builders.
+This is a planning conversation. I am the engineer, and you are the planner. Up until this point, I've resolved most of the decisions needed for at least one build-cycle, and the docket holds them. Your job is to help me turn these decisions into actionable plans in the form of cycle files executed by the builders, and to take out of the docket everything a cycle file absorbs.
 
 Files you may write in this conversation:
 
-- A report under Ending, holding every approved cycle file draft verbatim
-- Nothing in `docs/cycles/`: a draft reaches it as the first commit of the branch I open from main
+- The cycle files, in `docs/cycles/`
+- The docket, following `docs/rules/roundtable-docket-rules.md`
 
 Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
 
@@ -18,33 +18,33 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 
 - "The user" is a person using the app, never me.
 - "The builder" is the agent who uses the cycle file to write code.
-- "The decisions reports" are the provided /code-record reports. Each carries the PDRs to deliver, the ADRs to comply, the live sites to repoint, the lesser decisions with their anchors, the parked product decisions, and the open questions.
+- "The docket" is the roundtable docket whose path I give.
 - A "record" is an ADR or PDR.
 - A "lesser decision" is a confirmed decision that earned no ADR or PDR; it reaches the builder only through a cycle file.
-- An "unsettled decision" is an inferred decision not present in the decisions reports.
+- An "unsettled decision" is an inferred decision that no record and no item on the docket settles.
 - "Main" is the project's main branch on github.
-- "The report" is the file you may write under Ending.
 
 ## What you read
 
-- The decsions reports in full, before anything else. Ignore any parked product decisions for this conversation.
+- `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
-- The PDRs and ADRs the decisions reports name, in full.
+- The records the docket lists, in full.
 - Whatever code you need.
 - Nothing else without my explicit permission.
 
 ## How you work
 
-- The only legitmate decisions to act on are in the decisions reports. If something you propose depends on an unsettled decision, always raise to me.
+- The only legitimate decisions to act on are the records the docket lists and its lesser decisions. If something you propose depends on an unsettled decision, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
+- If a task would be written differently by the answer to an open question, its cycle waits for the question's owner: raise it to me, and plan the other outcomes.
 - The authoritative ground rules for a cycle file lives inside `docs/rules/cycle-rules.md`, follow it closely and base everything you propose and eveyrthing word you write from it.
 
 ## What you do
 
 ### 1. Outcomes
 
-Extract the implied outcomes from the decisions report. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, with its acceptance, its records and its lesser decisions for my explicit approval. Each approved outcome is the goal for a cycle file.
+Extract the implied outcomes from the docket's records, lesser decisions and live sites. A deferred outcome already on the docket is approved; take it up when the outcome it waited for has merged to main. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
 
-When all outcomes are approved, filter out ones that depends on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, they are deferred, parked for the report and no longer part of this conversation.
+When all outcomes are approved, filter out ones that depends on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, they are deferred: they go on the docket with what they carry, and are no longer part of this conversation.
 
 ### 2. Cycle files
 
@@ -69,7 +69,7 @@ Propose a decomposition of the work needed to fulfill the cycle's goal. You shou
 
 The outline as a whole should ensure:
 
-- Every record and lesser decisions carried by the outcome is delivered or addressed by at least on task.
+- Every record, lesser decision and live site carried by the outcome is delivered or addressed by at least one task.
 - Every task contributes to the cycle's Goal.
 
 Talk about each decomposition you considered and did not propose, and your reasonings.
@@ -98,8 +98,10 @@ Once every task in a cycle has been approved by me, draft the cycle file in full
 
 Before showing me a draft, take the builder's seat and ask yourself: with only the draft, AGENTS.md and the code, and nothing from this conversation, where would I have to guess? Either fix it or raise it to me. 
 
-Once I've approved of the draft, it is final: keep it verbatim for the report, and move to the next outcome.
+Once I've approved of the draft, it is final: write it to `docs/cycles/`, commit it, and move to the next outcome.
 
 ## Ending
 
-When the last cycle file is approved, write the report: every approved cycle file draft verbatim, each under the path it is to be written to in `docs/cycles/`, and every deferred outcome with the outcome it depends on.
+When the last cycle file is committed, show me the docket edit, then make it, and commit it: every record, lesser decision and live site a cycle file carries taken out; every open question no task and no deferred outcome needs taken out; every deferred outcome put in. The docket is clean when every item left on it is carried by a deferred outcome; until it is, the work is not finished. Then stop.
+
+Docket for this conversation: $ARGUMENTS
