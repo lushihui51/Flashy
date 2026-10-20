@@ -4344,7 +4344,7 @@
           "configuration_name"
         ],
         "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` (ADR 040) is read here for the\nlabel only (ADR 066): `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` (ADR 040) is read here for the\nlabel only (ADR 068): `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
       },
       "PracticeRunRead": {
         "properties": {

@@ -18,7 +18,7 @@ class PracticeRunDeckSummary(AppModel):
 
     This chain is the only link between a session and a subject/deck, and the only thing
     the filters use. `practice_deck.source_config_id` (ADR 040) is read here for the
-    label only (ADR 066): `configuration_name` is the live configuration's name while
+    label only (ADR 068): `configuration_name` is the live configuration's name while
     the link resolves, else the snapshot's stored `source_config_name`, else None. The
     link is never read for filtering, generation, validation or rerun."""
 

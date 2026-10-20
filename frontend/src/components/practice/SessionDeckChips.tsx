@@ -19,7 +19,7 @@ const CHIP_CLASS =
  * since the row's filters already narrow by subject (MD-2). The detail page uses
  * 'full': every deck with its subject, the one place the whole practice is spelled
  * out (MD-3). A deck whose snapshot has no configuration name shows without one
- * (ADR 066).
+ * (ADR 068).
  *
  * No wrapping element of its own — a caller drops these chips into whatever flex row
  * it's already building. No fetching: `decks` is already on `PracticeRunSummary`, so

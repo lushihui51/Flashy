@@ -171,7 +171,7 @@ def _snapshot_and_generate_deck(
     sources. `source_config_id` (ADR 040) rides along into the snapshot purely for
     attribution — start_practice_run passes the live config's id, rerun_practice_run
     the old snapshot's value verbatim — and is never read back by anything below this
-    function. `source_config_name` (ADR 066) rides into the snapshot next to it, the
+    function. `source_config_name` (ADR 068) rides into the snapshot next to it, the
     same way, and is likewise read by nothing below."""
     practice_deck = db_stage_create_practice_deck(
         db,
@@ -325,7 +325,7 @@ def rerun_practice_run(
     regenerated exactly like session start, via the same _snapshot_and_generate_deck
     helper, each carrying its old snapshot's `source_config_id` forward verbatim (ADR
     040 — attribution only, possibly already null; never looked up fresh), and its
-    `source_config_name` likewise (ADR 066). `name` is stored verbatim on the new run —
+    `source_config_name` likewise (ADR 068). `name` is stored verbatim on the new run —
     the client formats it, same as start_practice_run. Raises LookupError for an
     unknown/foreign session (the router 404s); RerunError('run_active') if the session
     hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;

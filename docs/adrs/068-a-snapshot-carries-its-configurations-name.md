@@ -1,4 +1,4 @@
-# ADR 066: A snapshot carries its configuration's name, live while linked and stored as the fallback
+# ADR 068: A snapshot carries its configuration's name, live while linked and stored as the fallback
 
 ## Status
 

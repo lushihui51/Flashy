@@ -52,7 +52,7 @@ def _summaries_for_runs(
         )
         .join(Deck, Deck.id == PracticeDeck.deck_id)
         .join(Subject, Subject.id == Deck.subject_id)
-        # ADR 066: the label only — live name while linked, else the stored name.
+        # ADR 068: the label only — live name while linked, else the stored name.
         .outerjoin(
             DeckPracticeConfig,
             col(DeckPracticeConfig.id) == PracticeDeck.source_config_id,

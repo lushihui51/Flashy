@@ -6,7 +6,7 @@ Accepted. Implemented by cycle 022.
 
 ## Context
 
-The configuration builder prefilled its Name with the current date-time, chosen because a name only has to be unique per deck and a timestamp is unique and better than "Untitled". In use, every configuration kept it. New practice's picker then listed nothing but dates, and once practice rows name their configurations (ADR 066), a date-named configuration would only put a second date on the row. A practice's name stays a date (cycle 022 MD-1): a practice is an event, a configuration is a layout.
+The configuration builder prefilled its Name with the current date-time, chosen because a name only has to be unique per deck and a timestamp is unique and better than "Untitled". In use, every configuration kept it. New practice's picker then listed nothing but dates, and once practice rows name their configurations (ADR 068), a date-named configuration would only put a second date on the row. A practice's name stays a date (cycle 022 MD-1): a practice is an event, a configuration is a layout.
 
 ## Decision
 

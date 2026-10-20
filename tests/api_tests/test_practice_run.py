@@ -2864,7 +2864,7 @@ class TestConfigLineage:
     start, copied through rerun verbatim, nulled (snapshot untouched) if the source
     config is later deleted. Never read by generation, validation, or rerun logic. The
     link itself is not exposed on any payload — these tests reach it straight off the
-    ORM row — though the name it resolves to is, as `configuration_name` (ADR 066)."""
+    ORM row — though the name it resolves to is, as `configuration_name` (ADR 068)."""
 
     def test_start_writes_the_configs_id_onto_the_snapshot(
         self, client, db, session_cards, session_config
@@ -3064,7 +3064,7 @@ class TestConfigEditSeversLineage:
 
 
 class TestConfigRenamePropagates:
-    """ADR 066 (cycle 022 T2): a non-material update carrying a name writes it onto every
+    """ADR 068 (cycle 022 T2): a non-material update carrying a name writes it onto every
     snapshot still linked to that configuration; a material update severs and writes
     nothing, even when it also carries a name."""
 
@@ -3142,7 +3142,7 @@ class TestConfigRenamePropagates:
 
 
 class TestConfigurationLabel:
-    """ADR 066 (cycle 022 T3): each summary deck's `configuration_name` is the live
+    """ADR 068 (cycle 022 T3): each summary deck's `configuration_name` is the live
     configuration name while the snapshot is linked, else the stored name, else None."""
 
     @staticmethod

@@ -99,7 +99,7 @@ def update_deck_practice_config(
     reaches this function at all) leaves every snapshot's source_config_id untouched.
 
     A non-material update that carries a name writes it onto every snapshot still linked
-    to this configuration (ADR 066), even when the name is unchanged; no comparison is
+    to this configuration (ADR 068), even when the name is unchanged; no comparison is
     made. A material update takes precedence: it severs and propagates nothing, even
     when it also carries a name, so a practice keeps the name that described the layout
     it ran. Either UPDATE commits with the config update in
