@@ -2,7 +2,7 @@
 
 **Reader.** A record is written for a reader who has read AGENTS.md and no other record; the table at the end says who that reader is for each type.
 
-**Type.** The test is applied to each rejected alternative on its own: if that alternative were built perfectly, could a person using the app tell the difference? Yes marks a PDR candidate, no marks an ADR candidate. Only differences the alternative cannot avoid count. A user is a person using the app. Whether a candidate earns a record is a separate judgment.
+**Type.** The test is applied to each rejected alternative on its own: if that alternative were built perfectly, could a person using the app tell the difference? Yes marks a PDR candidate, no marks an ADR candidate. Only differences the alternative cannot avoid count. Whether a candidate earns a record is a separate judgment.
 
 **Significance.** Significance is measured by cost of change, in a currency per type; the table at the end gives each. No hard threshold is set.
 
@@ -20,7 +20,7 @@
 
 **The replacing record.** When a record's decision changes, what replaces it is triaged as a new decision. It becomes one record, several records, or no record. Significance is judged on the decision as it now stands, never on the size of the change. A superseding record is complete on its own: a reader who has read no superseded record gets the whole decision, the reason for every part of it, every alternative still rejected, and what was replaced and why.
 
-**The old record.** The old record is marked Superseded by the record or records that replace it, or Deprecated when none does. A superseded or deprecated record stays in its folder with its Status pointer. No live site in code or AGENTS.md cites it, and a repointed site shows no history.
+**The old record.** The old record is marked Superseded by the record or records that replace it, or Deprecated when none does. A superseded or deprecated record stays in its folder with its Status pointer. No live site (a line in code or AGENTS.md that cites a record by number) cites it, and a repointed site shows no history.
 
 ## The record
 
