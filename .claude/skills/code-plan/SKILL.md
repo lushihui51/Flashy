@@ -83,7 +83,7 @@ Once I approve the outline, draft the tasks in full, one per turn, in build orde
 For each task, read the files in its Files first for context.
 
 - Heading: the number comes from the build order, the noun phrase comes from the goal.
-- Status: "Not started"
+- Status: "- [ ]"
 - Goal: the row's goal
 - Dependencies: the dependent tasks in the row's dependencies, each with its interfaces this task uses, using its exact spellings.  
 - Files: the row's files
