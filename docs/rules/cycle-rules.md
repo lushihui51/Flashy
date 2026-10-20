@@ -4,7 +4,11 @@
 
 **Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
 
+**Edits before the merge.** Until the cycle's merge, the builder writes only a task's Status and Debrief; every other edit is the planner's, made by /code-plan.
+
 **Purpose.** For the builder, a cycle file is the whole of what it is told for the cycle: what to build; why, through the records it names; how, as constraints the build must keep and guidance on the best way to build it; and what must be true when each task is done. For the engineer, it is the instrument of approval before building and of supervision during it: each task is judged from the builder's debrief against the file and by testing the app on a live server, and code is read only if the debrief points to it.
+
+## The cycle
 
 **Sections.** Title; Goal, the cycle's single outcome, its scope, and how the engineer will judge it; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
 
@@ -12,7 +16,9 @@
 
 **Goal.** Three things, in prose: the outcome in one sentence; the scope, what the cycle covers and what it leaves out; and the judgement, what the engineer will check, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
 
-**Records.** One line per record, ADR or PDR, in force: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
+**Records.** One line per active record, ADR or PDR: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
+
+## A task
 
 **Parts of a task.** Status; Goal, what the task delivers; Dependencies, the tasks that must be done first, and which of their interfaces this task uses; Files, the paths it may touch; Details, guidance on the best way to build it, and every interface it creates, written out exactly; Out of scope, what it must not do; Done when, what must be true when it is done; Debrief, what the builder reports when it is done. In that order. Every part appears; one with nothing to hold reads "None."
 
@@ -35,5 +41,3 @@
 **Debrief.** Written by the builder, in the file, when the task is done or blocked. Done: the evidence for each Done-when criterion, in order; every departure from Details or Files; and what in the code the engineer should read, if anything, and why. Blocked: what was attempted, what was found, and why the file cannot settle it. Never restate the task.
 
 **Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision and is raised, never written around.
-
-**Edits before the merge.** Until the cycle's merge, the builder writes only a task's Status and Debrief; every other edit is the planner's, made by /code-plan.
