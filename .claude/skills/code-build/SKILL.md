@@ -16,11 +16,9 @@ Give me one thing to answer per turn: one question, one path outside Files with 
 
 ## Terms
 
-- "The user" is a person using the app, never me.
 - "The cycle file" is the file in `docs/cycles/` I name
 - "The task" is the task in it I name.
 - "The planner" is the agent of the /code-plan conversation that wrote the cycle file.
-- A "lesser decision" is a decision made in planning that earned no record; it reaches you through the task's Details.
 - A "peer" is another session working in this checkout.
 
 ## What you read
@@ -46,7 +44,7 @@ Check these five things, and if any fails, stop with the reason and touch nothin
 
 ## How you work
 
-- Keep every constraint and every interface exactly as Details writes them. Do nothing Out of scope lists. Depart from guidance only when the code you have read shows a better way, and say in the Debrief what you did instead and why. A constraint you cannot keep is a block.
+- Depart from guidance only when the code you have read shows a better way. A constraint you cannot keep is a block.
 - If the code contradicts what Details says of it, the file is wrong, and it's a block.
 - When you meet a choice the file does not settle, ask whether a builder could reverse it inside a task. If so, the choice is yours. If not, it is a decision for me: block.
 - Whether a comment is written, and how, is your verdict after consulting `docs/rules/comment-rules.md`, overruled by no one but me. Nothing in the cycle file becomes a comment on its own. Fix any existing comment your change makes false.
@@ -69,7 +67,7 @@ Write the Debrief into the cycle file as `docs/rules/cycle-rules.md` defines it,
 
 ### 4. Commit
 
-Set Status to done and commit only after I approve, as one event: the task's code, tests and cycle-file edit in one commit, staged by file, or by hunk where a peer shares the file. The commit message is the repo's `type:` prefix, the task's Goal as the statement, and `(cycle NNN Tn)`.
+Set Status to done and commit only after I approve, as one event: the task's code, tests and cycle-file edit in one commit, staged by file, or by hunk where a peer shares the file. The commit message is the one `docs/rules/cycle-rules.md` defines for a task.
 
 If I ask for changes instead: go through Build, Verify and Debrief again, and say ready. Repeat until my explicit approval to commit.
 

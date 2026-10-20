@@ -13,12 +13,10 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 
 ## Terms
 
-- "The user" is a person using the app, never me.
 - "The next developer" is whoever makes code-side decisions after this cycle.
 - An "ADR" is a record in `docs/adrs/`; a "PDR" is a record in `docs/pdrs/`.
 - "The docket" is the roundtable docket whose path I give.
 - "In-progress cycle files" are cycle files with an unchecked task, on this branch or any other.
-- A decision's "anchors" are three things kept with it: the relevant facts about what has been built and what has been decided, each alternative rejected and why, and what becomes true for the next developer because of it. A fact is relevant when it drives the decision: if it stopped holding, the decision would lose some of its ground.
 
 ## Where facts come from
 
@@ -30,6 +28,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 ## What you read
 
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
+- The Type test in `docs/rules/record-rules.md`.
 - The PDRs the docket lists, in full.
 - Every active ADR, so you can tell me when a decision contradicts or extends one. A Superseded or Deprecated ADR no longer holds; skip it.
 - Whatever code you need to understand what has been built.
@@ -45,10 +44,10 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 
 ## What belongs here
 
-Ask of each alternative: if it became the decision and were built perfectly, would a user notice?
+Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
-- No: it belongs here.
-- Yes: it is a product decision. Say so, do not confirm it; with my approval it goes on the docket as an open question owned by /product-decide, and every decision here that depends on it stays an open question resting on it.
+- An ADR candidate: it belongs here.
+- A PDR candidate: it is a product decision. Say so, do not confirm it; with my approval it goes on the docket as an open question owned by /product-decide, and every decision here that depends on it stays an open question resting on it.
 - Only some: it needs splitting. Raise it to me and propose the split by the same test; the part no user could notice is decided here.
 
 ## Confirming decisions

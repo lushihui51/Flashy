@@ -5,7 +5,7 @@ disable-model-invocation: true
 argument-hint: path of the docket
 ---
 
-This runs after /code-decide, and its input is the docket's Code decisions. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and leave everything else on the docket for /code-plan. Every ADR you write is read by a developer who has read AGENTS.md and no other ADR or PDR.
+This runs after /code-decide, and its input is the docket's Code decisions. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and leave everything else on the docket for /code-plan.
 
 You may assume every Code decision on the docket:
 
@@ -22,12 +22,8 @@ Give me one thing to answer per turn: one question, the triage table, one ADR's 
 
 ## Terms
 
-- "The user" is a person using the app, never me.
 - An "ADR" is a record in `docs/adrs/`; a "PDR" is a record in `docs/pdrs/`. You never write or edit a PDR.
-- A decision's "anchors" are the three things /code-decide kept with it: the relevant facts about what has been built and what has been decided, each alternative rejected and why, and what becomes true for the next developer because of it.
 - "The docket" is the roundtable docket whose path I give.
-- A "lesser decision" is a confirmed decision that earns no ADR of its own; it reaches /code-plan through the docket, with its anchors.
-- A "live site" is a line in the code or in AGENTS.md that cites an ADR by number.
 
 ## What you read
 
@@ -41,7 +37,7 @@ Give me one thing to answer per turn: one question, the triage table, one ADR's 
 
 ### 1. The triage
 
-First, propose one triage for every Code decision on the docket, as a table: one row per proposed ADR or lesser decision. An ADR row names the decisions it groups and what reversing it would cost, in record-rules.md's currency for an ADR: the stored data to migrate, the code beyond its own module that relies on it, the dependencies to replace, and what would break silently. A lesser-decision row says why a builder could reverse it inside a task.
+First, propose one triage for every Code decision on the docket, as a table: one row per proposed ADR or lesser decision. An ADR row names the decisions it groups and why it is significant per record-rules.md; a lesser-decision row says why it is not significant per record-rules.md.
 
 In addition, talk about each grouping or split you considered and did not propose, and why.
 
@@ -55,7 +51,7 @@ Once I approve the triage, take the rows one at a time, in the table's order, an
 
 Propose its relation to the active ADRs and PDRs in 2 sections for my review:
 
-1. What ADRs and PDRs it should reference in its Context: the ADRs that are forces on it, and the PDRs whose behaviour it delivers or must not break
+1. What ADRs and PDRs it should reference in its Context
 2. What ADRs it contradicts or extends
 
 Once I have approved of the sections, go through the ADRs under "What ADRs it contradicts or extends" one by one, and propose your decision on its fate and your reasoning. Nothing is decided until I say so.
