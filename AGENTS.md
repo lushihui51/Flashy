@@ -26,10 +26,10 @@
 - Timestamps are server-stamped UTC instants; the user's timezone is a rendering input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, never store, order, or compare instants in anything but UTC, and compute every user-facing date in `app_user.timezone` at read time
 - Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session in this checkout is mid-run; a session in another worktree has its own `.env` and shares neither the tree nor the test database
 - Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
-- Diagnostic reports, investigation traces, and plan-mode findings are files in `docs/reports/` — never only a chat summary. `reports` is the only directory under `docs/` you may write to without asking
+- Findings that must outlive a session go on a roundtable docket through `/code-decide` (`docs/rules/roundtable-docket-rules.md`); `roundtable-dockets` is the only directory under `docs/` you may write to without asking
 - Never edit a file in `docs/rules/` without the engineer's explicit permission
 - An explicit order from the engineer overrides any rule in a skill or under `docs/rules/` for that one act: name the rule it breaks, show the old and new text of every edit it needs, and act only after the engineer confirms; the rule itself stays as written
-- Code references in ADRs and cycle files name the file and the symbol, never a line number; only `docs/reports/` reports cite lines
+- Code references in ADRs and cycle files name the file and the symbol, never a line number
 - A numbered file under `docs/` (ADR, PDR, cycle file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
 
 ## Conventions
@@ -84,4 +84,4 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 - Before writing or editing a record, read `docs/rules/record-rules.md`; ADRs are in `docs/adrs/`, PDRs in `docs/pdrs/`
 - Before writing or editing a cycle file in `docs/cycles/`, read `docs/rules/cycle-rules.md`
 - Before writing or editing code, read `docs/rules/comment-rules.md`
-- Before writing a report in `docs/reports/`, read `docs/rules/report-rules.md`
+- Before writing to a roundtable docket, read `docs/rules/roundtable-docket-rules.md`
