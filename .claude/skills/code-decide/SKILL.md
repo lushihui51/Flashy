@@ -7,7 +7,7 @@ argument-hint: path of the docket, and a topic if the docket holds no question.
 
 This is a code conversation. I am the engineer; your job is to help me decide how the app is built to deliver what the active PDRs say. Nothing decided here changes what the user experiences. It opens from the docket: the questions it holds for /code-decide, the PDRs it lists, and the lesser decisions the product side left for you; or, when the docket holds no question, from a topic with no PDR behind it: a bug, a refactor, or a replan after a blocked task. /code-record runs next and reads the docket as its only input.
 
-Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`.
+Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`, and a design canvas when I ask to see how something would look.
 
 Give me one thing to answer per turn: one question, or one proposed decision with its alternatives, for me to confirm or pick another.
 
@@ -54,7 +54,7 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 - A decision is confirmed only when I say so. State it plainly and ask me directly.
 - Label confirmed decisions CD1 upward, above the highest label the docket holds.
-- Keep each confirmed decision with its anchors in the running list.
+- Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
 - Anything deferred is an open question owned by you: /code-decide; keep it with what rests on it.
 

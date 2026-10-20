@@ -7,7 +7,7 @@ argument-hint: path of the docket, and a topic if the docket holds no question.
 
 This is a product conversation. I am the product owner; your job is to help me decide what the app does for the people who use it. Nothing you write here is about how the app is built: every sentence must make sense to someone who has never seen code. /product-record runs next and reads the docket as its only input.
 
-Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`.
+Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`, and a design canvas when I ask to see how something would look.
 
 Give me one thing to answer per turn: one question, or one proposed decision with its alternatives, for me to evaluate.
 
@@ -48,7 +48,7 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 - A decision exists only when I confirm it. State it plainly and ask me directly.
 - Label confirmed decisions PD1 upward, above the highest label the docket holds.
-- Keep each confirmed decision with its anchors in the running list.
+- Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
 - Anything deferred is an open question owned by you: /product-decide; keep it with what rests on it.
 
