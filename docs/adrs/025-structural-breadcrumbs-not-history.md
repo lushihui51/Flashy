@@ -2,16 +2,16 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-Cycle 003 gave `SubjectDetailPage` and `DeckDetailPage` a breadcrumb — `[chevron-left] <parent>` — so each page shows where it sits: a deck under its subject, a subject under the library. That decision was never written down anywhere but that one cycle file, so it carried no force outside it.
+`SubjectDetailPage` and `DeckDetailPage` carry a breadcrumb — `[chevron-left] <parent>` — so each page shows where it sits: a deck under its subject, a subject under the library. That decision was never recorded, so it carried no force beyond those two pages.
 
-Manual verification of cycle 004's practice surfaces (2026-08-26) surfaced the gap this left. Two separate failures, same root cause:
+Manual verification of the practice surfaces (2026-08-26) surfaced the gap this left. Two separate failures, same root cause:
 
 1. **`DeckDetailPage`'s crumb pointed somewhere the user never asked to go.** The library's Decks tab is a flat, cross-subject list — a lateral shortcut that jumps straight to a deck two hierarchy levels deep. Landing there via that shortcut, the crumb (correctly, by the existing design) points at the deck's subject — a page the user never visited — and nothing on screen mentions the library at all. `LibraryPage` compounded it: its Subjects/Decks tab lives in `useState`, the outlier among its own siblings (`PracticeOverviewPage` and `DeckDetailPage` both hold equivalent view state in the URL precisely so returning restores it), so _any_ return to the library — browser back included — silently drops back to Subjects regardless of which tab was open.
-2. **Three new pages in cycle 004 (`PracticeCreatePage`, `PracticeDetailsPage`, `PracticeRunPage`) shipped with no breadcrumb at all**, because the rule that Subject/Deck pages follow was never captured as a rule — it was two pages that happened to look alike. `PracticeDetailsPage` in particular has no way up except a destructive Delete button or starting the practice.
+2. **Three new pages (`PracticeCreatePage`, `PracticeDetailsPage`, `PracticeRunPage`) shipped with no breadcrumb at all**, because the rule that Subject/Deck pages follow was never captured as a rule — it was two pages that happened to look alike. `PracticeDetailsPage` in particular has no way up except a destructive Delete button or starting the practice.
 
 This is the same decay pattern ADR 024 fixed for `returnTo`: a correct pattern shipped once, undocumented, and silently violated by the next cycle file that needed the same shape.
 
@@ -32,7 +32,7 @@ Rejected. The same URL would render a different crumb depending on how it was re
 
 ### Alternative considered: patch only the two broken pages, leave the rule unwritten
 
-Rejected. This is exactly what happened after cycle 003 — the pattern existed, wasn't written down, and cycle 004 rebuilt three pages without it. Writing the rule down is what makes the next cycle file inherit it instead of rediscovering the gap.
+Rejected. This is exactly what happened — the pattern existed, wasn't written down, and three new pages were built without it. Writing the rule down is what makes the next surface inherit it instead of rediscovering the gap.
 
 ### Alternative considered: a shared `Breadcrumb` component
 

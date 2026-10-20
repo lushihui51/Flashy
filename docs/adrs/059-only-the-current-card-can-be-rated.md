@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends nothing; makes explicit an invariant ADR 008's serving order and ADR 037's placement had assumed. Implemented by cycle 017.
+Active. Amends nothing; makes explicit an invariant ADR 008's serving order and ADR 037's placement had assumed.
 
 ## Context
 

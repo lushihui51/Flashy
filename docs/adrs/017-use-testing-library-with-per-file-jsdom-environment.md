@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-Before the app-shell rebuild (`docs/plans/002-frontend-rebuild-app-shell.md`), the frontend's Vitest suite only tested pure functions in `src/api/*.ts` against a mocked HTTP layer (MSW) — no React component was ever rendered in a test, so `vite.config.ts`'s `test.environment` was `'node'` (no DOM, fastest possible test startup). Plan 002's ground rule 5 ("each component ships with a Vitest + RTL test covering the acceptance criteria") introduced the first React component tests in the project, which need a real DOM to render into and query against.
+Before the app-shell rebuild, the frontend's Vitest suite only tested pure functions in `src/api/*.ts` against a mocked HTTP layer (MSW) — no React component was ever rendered in a test, so `vite.config.ts`'s `test.environment` was `'node'` (no DOM, fastest possible test startup). The rebuild's ground rule that each component ships with a Vitest + RTL test covering its acceptance criteria introduced the first React component tests in the project, which need a real DOM to render into and query against.
 
 ## Decision
 

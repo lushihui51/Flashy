@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000. ADR 058 defines the empty-queue case the fallbacks below never covered and removes the no-predecessor fallback. ADR 059 makes explicit the invariant this assumed: only the current card can be rated.
+Active. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000. ADR 058 defines the empty-queue case the fallbacks below never covered and removes the no-predecessor fallback. ADR 059 makes explicit the invariant this assumed: only the current card can be rated.
 
 ## Context
 
@@ -42,8 +42,8 @@ Costs:
 - There is a limit to how many times cards can be repositioned at position x, specifically log2(gap). When midpoint returns a collision, renumber the remaining cards' position to 1000-spaced gaps. It can take up to O(n)(let n be the deck size), which is accepted because it's cheap: deck size is at most a few thousand, and it happens rarely. The rebalancing is also safe: the positions are ephemeral, and exists for one user's one session.
 - Finding the right position to reposition a card can take up to O(n)(let n be the deck size), which is accepted because n is at most a few thousand, bounded by the deck size.
 
-## Amendment (2026-08-19, Phase 7 QA)
+## Amendment
 
 This ADR describes `x` — how many cards later a failed card should reappear — as "calculated internally," but never defines how. As shipped, `x` is not computed at all: `_insertion_position` (`app/services/practice_session.py`) does a pure mastery-ascending merge-insertion of the failed card against the session's current pending cards, with no minimum-gap floor. In practice this means a card whose post-fail mastery becomes the session-wide minimum — common for a card that was already weak enough to fail — is inserted immediately before whatever was next in the queue, making it literally the very next card served (`x = 0`), not "after x cards" in any spaced sense.
 
-This was surfaced during manual Phase 7 testing (a small deck produced a tight loop of 2 repeating cards) and confirmed by tracing the code rather than assumed. Defining a real `x` — and whatever minimum-gap guarantee should back it — is deferred to a follow-up change; `_insertion_position`/`_requeue_failed_card` in the same file is what that change will replace or extend.
+This was surfaced in manual testing (a small deck produced a tight loop of 2 repeating cards) and confirmed by tracing the code rather than assumed. Defining a real `x` — and whatever minimum-gap guarantee should back it — is deferred to a follow-up change; `_insertion_position`/`_requeue_failed_card` in the same file is what that change will replace or extend.

@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. Confirmed by ADR 060: a failed field cleared after it was shown drops out of the retry; the guarantee holds for fields still live and non-blank.
+Active. Confirmed by ADR 060: a failed field cleared after it was shown drops out of the retry; the guarantee holds for fields still live and non-blank.
 
 ## Context
 
-Requeueing a failed card regenerates its prompts and answers through the same weighted sampler used at session start (`generate_practice_card_fields`). Cycle 001 deliberately made practice selection _weighted, not pure argmin_, so a requeued card doesn't reliably repeat the exact combination it just failed — that principle was recorded only in cycle-file notes, never an ADR, and this ADR now carries it. But the weighting (`100 − mastery`, never-reviewed treated as 0) has a perverse consequence at the field level: a field just rated "Again" lands near weight 57, while every never-asked pool field sits at 100 — so the retry of a failed card was _less_ likely to re-ask the very field the user missed than to ask something new. The card-level guarantee ("a failed card resurfaces", ADR 029) never extended to the field that failed it.
+Requeueing a failed card regenerates its prompts and answers through the same weighted sampler used at session start (`generate_practice_card_fields`). The schema rewrite deliberately made practice selection _weighted, not pure argmin_, so a requeued card doesn't reliably repeat the exact combination it just failed — that principle was never recorded in an ADR, and this ADR now carries it. But the weighting (`100 − mastery`, never-reviewed treated as 0) has a perverse consequence at the field level: a field just rated "Again" lands near weight 57, while every never-asked pool field sits at 100 — so the retry of a failed card was _less_ likely to re-ask the very field the user missed than to ask something new. The card-level guarantee ("a failed card resurfaces", ADR 029) never extended to the field that failed it.
 
 ## Decision
 

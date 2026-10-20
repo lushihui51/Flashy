@@ -2,15 +2,15 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-Several surfaces let a user step away mid-form to create something they need and come back: the deck configuration builder's and the card form's "New deck…" pickers, and (since cycle 004's New practice page) "New configuration". Each hands the next page a `returnTo` so Cancel and Save know where to land. Cycle 003 built this as router state — `navigate('/decks/new', { state: { returnTo: location.pathname } })` — and it worked for a single hop.
+Several surfaces let a user step away mid-form to create something they need and come back: the deck configuration builder's and the card form's "New deck…" pickers, and New practice's "New configuration". Each hands the next page a `returnTo` so Cancel and Save know where to land. The first build of this used router state — `navigate('/decks/new', { state: { returnTo: location.pathname } })` — and it worked for a single hop.
 
-Verifying cycle 004's New practice flow surfaced a nested case the state-based design never handled: New practice → New configuration → New deck. The deck editor's own "New deck…" trip reads only its _own_ current location for the `returnTo` it hands forward — it has no way to see what router state the page above it was carrying, because router state isn't part of a location the way `pathname`/`search` are. So the practice page's return address was silently dropped at the second hop: Cancel from the deck editor landed back on the configuration builder correctly (one hop), but Cancel again from there fell through to the builder's default fallback (`/library`) instead of back to New practice. Saving had the same defect — the practice page's own auto-select hand-back (`{configurationId}`) never arrived, because the configuration builder had nothing to navigate back _to_.
+Verifying the New practice flow surfaced a nested case the state-based design never handled: New practice → New configuration → New deck. The deck editor's own "New deck…" trip reads only its _own_ current location for the `returnTo` it hands forward — it has no way to see what router state the page above it was carrying, because router state isn't part of a location the way `pathname`/`search` are. So the practice page's return address was silently dropped at the second hop: Cancel from the deck editor landed back on the configuration builder correctly (one hop), but Cancel again from there fell through to the builder's default fallback (`/library`) instead of back to New practice. Saving had the same defect — the practice page's own auto-select hand-back (`{configurationId}`) never arrived, because the configuration builder had nothing to navigate back _to_.
 
-Cycle 003 never gave this pattern its own ADR — it lived only as cycle-file text, which is why the fix started here rather than as a formal supersession.
+This pattern had never been given its own ADR, so the fix starts here rather than as a supersession.
 
 ## Decision
 
@@ -42,5 +42,5 @@ Benefits:
 
 Costs:
 
-- URLs for these flows are less readable than the bare paths that shipped with cycle 003 (e.g. `/decks/new?returnTo=%2Fdeck-configurations%2Fnew%3Fsubject...`).
-- A contributor unaware of this ADR could still reintroduce a state-based sender for a new round trip; the Round-trip navigation contract in `docs/cycles/004-practice-setup.md` and a grep-based check in that task's Done-when are the guardrails against that, not a structural one.
+- URLs for these flows are less readable than the bare paths they replace (e.g. `/decks/new?returnTo=%2Fdeck-configurations%2Fnew%3Fsubject...`).
+- A contributor unaware of this ADR could still reintroduce a state-based sender for a new round trip; this ADR and AGENTS.md's round-trip rule are the guardrails against that, not a structural one.

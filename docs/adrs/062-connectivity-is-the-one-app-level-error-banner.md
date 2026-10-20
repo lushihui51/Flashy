@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 035: connectivity is its one global error channel; every other error still renders inline at its call site. Implemented by cycle 020.
+Active. Amends ADR 035: connectivity is its one global error channel; every other error still renders inline at its call site.
 
 ## Context
 
@@ -36,7 +36,7 @@ One banner, `ConnectionBanner`, rendered by `AppShell` as the first child of its
 
   In every one of these cases the user's connection works.
 
-A database outage shares the server-trouble message, and the copy never says "database". Every message says the app is retrying on its own. The banner has no dismiss control; it clears when the condition does. The wording lives in cycle 020's Contracts.
+A database outage shares the server-trouble message, and the copy never says "database". Every message says the app is retrying on its own. The banner has no dismiss control; it clears when the condition does. The wording lives in `frontend/src/components/shell/ConnectionBanner.tsx`.
 
 Everything else stays as ADR 035 decided. Pages and forms render their own failures inline, beneath the banner when both apply, and ADR 065 makes those messages truthful. There is still no toast, no `QueryCache`/`MutationCache` handler, and no error boundary. The exception does not extend to other global failure modes: auth expiry mid-session, which ADR 035 also named, still has no channel.
 

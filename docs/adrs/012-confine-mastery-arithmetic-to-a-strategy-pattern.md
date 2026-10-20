@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The row-lock and upsert write mechanics described below are replaced by ADR 042's append-only ledger and per-card advisory lock; the decision — arithmetic confined to `MasteryStrategy`, never in SQL — is unchanged.
+Active. The row-lock and upsert write mechanics described below are replaced by ADR 042's append-only ledger and per-card advisory lock; the decision — arithmetic confined to `MasteryStrategy`, never in SQL — is unchanged.
 
 ## Context
 
@@ -14,9 +14,9 @@ That obvious approach directly threatens the guarantee ADR 011 depends on: if ar
 
 Mastery arithmetic — blending, scoring, aggregation — lives only inside `MasteryStrategy` implementations under `app/mastery/`. Never in SQL, a SQLModel expression, or a trigger, in any phase. The database stores mastery state; it never computes it.
 
-The `MasteryStrategy` protocol (`app/mastery/strategy.py:14-51`) is the interface: `prior()` (state for an unreviewed pair), `expand(group)` (the one place that decides every `MasteryUpdate` for one appearance, because the prompt side needs the whole group to know its breadth), `apply_review(state, update)` (a pure function: state-or-None plus one decided update, in, new state out), `field_score` and `card_score` (collapsing state to display values). `EmaStrategy` (`app/mastery/ema.py`) is the concrete implementation currently in use; its constants (`alpha`, `beta`) deliberately live in that one file, not a shared module, so no other code can reach in and compute with them directly.
+The `MasteryStrategy` protocol (`app/mastery/strategy.py`) is the interface: `prior()` (state for an unreviewed pair), `expand(group)` (the one place that decides every `MasteryUpdate` for one appearance, because the prompt side needs the whole group to know its breadth), `apply_review(state, update)` (a pure function: state-or-None plus one decided update, in, new state out), `field_score` and `card_score` (collapsing state to display values). `EmaStrategy` (`app/mastery/ema.py`) is the concrete implementation currently in use; its constants (`alpha`, `beta`) deliberately live in that one file, not a shared module, so no other code can reach in and compute with them directly.
 
-The repository layer enforces the boundary from the other side — `app/database_ops/card_field_mastery.py:15-17` states it directly: "this module fetches and writes state; it never computes it. Every value written below is already-computed Python data handed in by a MasteryStrategy — no blending, scoring, or aggregation expression appears in any statement here." The write itself is a plain `SET x = <value>` upsert (`ON CONFLICT DO UPDATE SET prompt_mastery = excluded.prompt_mastery, ...`), never `SET x = <expression>`.
+The repository layer enforces the boundary from the other side — `app/database_ops/card_field_mastery.py` states it directly: "this module fetches and writes state; it never computes it. Every value written below is already-computed Python data handed in by a MasteryStrategy — no blending, scoring, or aggregation expression appears in any statement here." The write itself is a plain `SET x = <value>` upsert (`ON CONFLICT DO UPDATE SET prompt_mastery = excluded.prompt_mastery, ...`), never `SET x = <expression>`.
 
 Concurrency is handled with `SELECT ... FOR UPDATE` row locks instead of an atomic SQL blend — accepted explicitly, not by omission: "Row locks replace the atomic SQL blend. Contention is one user rating one card; this is fine. Do not 'optimize' back into SQL expressions."
 

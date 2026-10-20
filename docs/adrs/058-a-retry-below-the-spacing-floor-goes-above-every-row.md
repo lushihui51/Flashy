@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted. Amends ADR 037: its insertion formula applies only with at least `RETRY_SPACING_FLOOR` cards pending, and the "end of the queue" it promises for fewer is now defined. Amends ADR 008's status note: the no-successor fallback stays; the no-predecessor fallback is removed. Diagnosis and reproduction in `docs/reports/2026-09-27-requeue-last-card-collision.md`; implemented by cycle 017.
+Active. Amends ADR 037: its insertion formula applies only with at least `RETRY_SPACING_FLOOR` cards pending, and the "end of the queue" it promises for fewer is now defined. Amends ADR 008's status note: the no-successor fallback stays; the no-predecessor fallback is removed.
 
 ## Context
 
 On 2026-09-26 the user rated "Again" on the last card of a live practice run and the request failed with `RuntimeError: could not find a free position for a requeued card ... after renumbering`. Reproduced against the test database with a 3-card run: two passes, then one "Again". `submit_rating` flushes the rated card to `failed` before the requeue reads the pending queue, so on the last card the queue is empty. `_insertion_position` then takes both of its "no neighbour" fallbacks, `-1000` below and `+1000` above, and their midpoint is 0. Position 0 always holds the run's first generated row, which was rated before any requeue could exist and never moves: rated rows keep their positions forever, and the renumber fallback moves pending rows only. With nothing pending the renumber is a no-op, the second attempt is identical, and the loop raises. Every such request rolled back whole, so no run held partial rows.
 
-The fallbacks date from the 2026-08-18 generation commit and no ADR, task, or contract recorded them. ADR 037 promised that "with fewer than 3 pending cards remaining, the retry goes to the end of the queue", and defined that end only through the same fallbacks, which give "last pending + 500" for one or two remaining and 0 for none. No test rated the last pending card. Since ADR 037's floor makes the insertion index at least 1 whenever the queue is non-empty, the no-predecessor fallback was reachable from the empty queue alone, and only wrongly.
+The fallbacks date from the 2026-08-18 generation commit and no ADR recorded them. ADR 037 promised that "with fewer than 3 pending cards remaining, the retry goes to the end of the queue", and defined that end only through the same fallbacks, which give "last pending + 500" for one or two remaining and 0 for none. No test rated the last pending card. Since ADR 037's floor makes the insertion index at least 1 whenever the queue is non-empty, the no-predecessor fallback was reachable from the empty queue alone, and only wrongly.
 
 The user intends to redesign how cards are ordered at the start of a run and where a retry is inserted. What stays across that redesign is the floor, and the rule that a retry with too few cards ahead of it simply goes to the end.
 

@@ -2,15 +2,15 @@
 
 ## Status
 
-Accepted. `CardSummaryRow.tsx` was removed as dead code on 2026-09-18 (it had no importer once the deck editor's Cards section went); `CardTable` and the breakdown row remain the consumers of the convention.
+Active. `CardSummaryRow.tsx`, named below, no longer exists; `CardTable` and the breakdown row are the consumers of the convention.
 
 ## Context
 
-`CardSummaryRow.tsx` already uses `fieldDefs[0]`'s value as a card's title (falling back to "Untitled card"), and `CardTable.tsx` already freezes and links the same column — both silently, with no name for the convention and no visibility into why field position matters. Decomposing the practice-run completion breakdown surfaced the same need again: a compact way to identify a card without dumping every prompt/answer value onto one row (`docs/cycles/006-practice-run.md`). Inventing a second, different rule there would leave the app with two incompatible answers to "which field represents this card."
+`CardSummaryRow.tsx` already uses `fieldDefs[0]`'s value as a card's title (falling back to "Untitled card"), and `CardTable.tsx` already freezes and links the same column — both silently, with no name for the convention and no visibility into why field position matters. Decomposing the practice-run completion breakdown surfaced the same need again: a compact way to identify a card without dumping every prompt/answer value onto one row. Inventing a second, different rule there would leave the app with two incompatible answers to "which field represents this card."
 
 ## Decision
 
-A deck's **primary field** is its active `field_def` at position 0, per the deck's existing field ordering (`db_read_field_defs`, `app/database_ops/field_def.py:24-36`, already active-only and position-sorted). It is derived, never stored. It becomes the one rule for identifying a card compactly: the practice completion breakdown's per-card row (`docs/cycles/006-practice-run.md`), and a visible marker in `DeckEditor`'s field list so a user reordering fields can see which one currently plays this role (`docs/cycles/007-primary-field.md`) — scoped to `DeckEditor` only, since it's the one surface where field position is actually set; the read-only displays that already consume the convention (`CardSummaryRow`, `CardTable`) are unchanged.
+A deck's **primary field** is its active `field_def` at position 0, per the deck's existing field ordering (`db_read_field_defs`, `app/database_ops/field_def.py`, already active-only and position-sorted). It is derived, never stored. It becomes the one rule for identifying a card compactly: the practice completion breakdown's per-card row, and a visible marker in `DeckEditor`'s field list so a user reordering fields can see which one currently plays this role — scoped to `DeckEditor` only, since it's the one surface where field position is actually set; the read-only displays that already consume the convention (`CardSummaryRow`, `CardTable`) are unchanged.
 
 ## Alternatives considered
 

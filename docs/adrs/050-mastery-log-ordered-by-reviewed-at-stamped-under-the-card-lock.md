@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. Amends ADR 042: the ledger's order is `reviewed_at`, not the identity id, and the id is a uuid with no ordering meaning. ADR 042's rejection of CASCADE on the run foreign key stands.
+Active. Amends ADR 042: the ledger's order is `reviewed_at`, not the identity id, and the id is a uuid with no ordering meaning. ADR 042's rejection of CASCADE on the run foreign key stands.
 
 ## Context
 
-ADR 042 made the BIGINT identity id the ledger's total order and called `reviewed_at` display data. That holds while every insert is a live append, because ids then follow time. ADR 049 needs a deck-scoped rebuild, which deletes one deck's rows and re-inserts them, giving them ids above rows other decks wrote later in time. Order inside the deck still follows time; order across decks no longer does. One reader depended on the cross-deck order: the breakdown's "before" lookup for a field the run never touched bounds by the run's first row across all its decks (cycle 010's delta contract), so after a scoped rebuild an untouched field's pre-run row could sit above the bound and read as never reviewed. The id was carrying two jobs, identity and order, and the second cannot survive a partial re-insert.
+ADR 042 made the BIGINT identity id the ledger's total order and called `reviewed_at` display data. That holds while every insert is a live append, because ids then follow time. ADR 049 needs a deck-scoped rebuild, which deletes one deck's rows and re-inserts them, giving them ids above rows other decks wrote later in time. Order inside the deck still follows time; order across decks no longer does. One reader depended on the cross-deck order: the breakdown's "before" lookup for a field the run never touched bounds by the run's first row across all its decks (the delta semantics in `_compute_field_mastery_deltas`), so after a scoped rebuild an untouched field's pre-run row could sit above the bound and read as never reviewed. The id was carrying two jobs, identity and order, and the second cannot survive a partial re-insert.
 
 The intrinsic order is the review's timestamp, but as stamped it was not a total order per card: `submit_rating` sets `reviewed_at = datetime.now(UTC)` before any lock, and the per-card advisory lock that serializes the ledger write is taken later in `apply_rating`. Two appearances of one card — the same deck open in two runs — could carry equal timestamps yet be applied in a definite order. The rebuild already sorted by `(reviewed_at, review_group_id)` while the live path ordered by insert: two definitions of order that could disagree under a tie, with `review_group_id` a random uuid that says nothing about sequence.
 

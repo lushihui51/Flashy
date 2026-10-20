@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
@@ -10,9 +10,9 @@ Dates have to be _consistent to the user_. A review submitted at 11pm local time
 
 The obvious first instinct is to make the client set the timestamps, so that what lands in the database is "already in the user's timezone." That instinct runs two separate concerns together, and they have different answers.
 
-**Storage cannot carry locality here.** Every timestamp column in the schema is `timestamptz` — `app_user.created_at` and every other `TimestampMixin.created_at` (`app/models/base.py:27`), `subject.last_activity_at` (`app/models/subject.py:34`), `deck.last_activity_at` (`app/models/deck.py:28`), `review_log.reviewed_at` (`app/models/review_log.py:43`), `card_field_mastery.updated_at` (`app/models/card_field_mastery.py:22`), and `field_def.archived_at` (`app/models/field_def.py:38`). Postgres `timestamptz` stores no timezone at all: it normalizes whatever it is given to a UTC instant on the way in and discards the offset. A client sending `2026-08-24T09:00:00-07:00` and a server sending `2026-08-24T16:00:00Z` produce byte-identical rows. Moving the clock to the client changes nothing about what is stored, so "stored in the user's timezone" is not a property this schema can express — short of switching to naive `timestamp` columns, which is rejected below.
+**Storage cannot carry locality here.** Every timestamp column in the schema is `timestamptz` — `app_user.created_at` and every other `TimestampMixin.created_at` (`app/models/base.py`), `subject.last_activity_at` (`app/models/subject.py`), `deck.last_activity_at` (`app/models/deck.py`), `review_log.reviewed_at` (`app/models/review_log.py`), `card_field_mastery.updated_at` (`app/models/card_field_mastery.py`), and `field_def.archived_at` (`app/models/field_def.py`). Postgres `timestamptz` stores no timezone at all: it normalizes whatever it is given to a UTC instant on the way in and discards the offset. A client sending `2026-08-24T09:00:00-07:00` and a server sending `2026-08-24T16:00:00Z` produce byte-identical rows. Moving the clock to the client changes nothing about what is stored, so "stored in the user's timezone" is not a property this schema can express — short of switching to naive `timestamp` columns, which is rejected below.
 
-**Consistency to the user is a rendering property.** Whether "today", a day bucket, or a displayed date is right for the user depends entirely on which zone you format and bucket in at read time. That zone therefore has to be known at read time — and it always is: every read path is user-scoped by invariant 7 (`docs/plans/001-schema-rewrite.md`), with ownership enforced in the query via `CurrentUserDep` (`app/dependencies.py`). Because no date is ever fetched without a user in hand, the user's zone is always available exactly where it is needed. The observation that "dates are not accessed without specifying a user" is the argument _for_ read-time rendering, not for baking locality into storage.
+**Consistency to the user is a rendering property.** Whether "today", a day bucket, or a displayed date is right for the user depends entirely on which zone you format and bucket in at read time. That zone therefore has to be known at read time — and it always is: every read path is user-scoped, with ownership enforced in the query via `CurrentUserDep` (`app/dependencies.py`). Because no date is ever fetched without a user in hand, the user's zone is always available exactly where it is needed. The observation that "dates are not accessed without specifying a user" is the argument _for_ read-time rendering, not for baking locality into storage.
 
 **`reviewed_at` is not cosmetic.** It is the ordering key for `rebuild_mastery`'s replay of `review_log`, and for any future FSRS-style grade derivation. `review_log` is append-only (invariant 3), so anything that interleaves a user's review history out of true order is permanent — there is no UPDATE path to repair it.
 

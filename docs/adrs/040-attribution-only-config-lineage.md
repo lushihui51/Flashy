@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 013: attribution is now distinguished from behavioral coupling. Amended by ADR 068: the link gains a display use (the practice label), and a rename writes the configuration's new name onto linked snapshots; the sever rule is unchanged.
+Active. Amends ADR 013: attribution is now distinguished from behavioral coupling. Amended by ADR 068: the link gains a display use (the practice label), and a rename writes the configuration's new name onto linked snapshots; the sever rule is unchanged.
 
 ## Context
 

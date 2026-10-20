@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
 `subject` and `deck` need a sort key for "most recently relevant first" ordering — every list of subjects or decks in the app (library tabs, subject page, pickers) is ordered by it. The value has to bubble: creating, deleting, or moving a deck should bump its subject too, not just the deck's own row, or a subject with brand-new decks would sort as if nothing had happened to it.
 
-The initial design (Phase 5.4 of `docs/plans/003-frontend-rebuild-creation-flows.md`, D13) shipped two separate timestamp columns instead of one:
+The initial design shipped two separate timestamp columns instead of one:
 
 - `last_activity_at` — the sort key. Bumps on the row's own edits and on bubbled child activity, written only by one helper, `touch()` (`app/services/activity.py`).
 - `updated_at` — a conventional audit field. Bumps only when the row's own columns change, never bubbled, meant to answer "when was this specific row last edited."

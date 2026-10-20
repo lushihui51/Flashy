@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. The dormant `DELETE /fields/{id}` and `/fields/{id}/hard` endpoints ADR 049 keeps unexposed are the one deletion path outside the closure.
+Active. The dormant `DELETE /fields/{id}` and `/fields/{id}/hard` endpoints ADR 049 keeps unexposed are the one deletion path outside the closure.
 
 ## Context
 
-Under ADR 047 through ADR 049, deleting a subject, deck, field, or card takes configurations, runs, ledger rows, array elements, and a rebuild with it, and the user must be told what goes before it goes. The confirm dialogs could not say so: the deck editor's save confirm counted removed fields only (cycle 003), the deck delete confirm promised "Your review history is kept", and the subject confirm counted decks from client state. Three routers and the batch edit each deleted their own way, relying partly on foreign-key cascades and partly on hand-written cleanup. A warning computed by one piece of code and a deletion executed by another can disagree the moment either changes.
+Under ADR 047 through ADR 049, deleting a subject, deck, field, or card takes configurations, runs, ledger rows, array elements, and a rebuild with it, and the user must be told what goes before it goes. The confirm dialogs could not say so: the deck editor's save confirm counted removed fields only, the deck delete confirm promised "Your review history is kept", and the subject confirm counted decks from client state. Three routers and the batch edit each deleted their own way, relying partly on foreign-key cascades and partly on hand-written cleanup. A warning computed by one piece of code and a deletion executed by another can disagree the moment either changes.
 
 ## Decision
 

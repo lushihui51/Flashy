@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-Every task ends with the same manual ritual — `pytest`, `npx vitest run`, `npm run lint`, `npm run build` — enforced only by convention. The repo already works through GitHub PRs. Two schema-heavy cycles (the rename, the mastery ledger) are about to land, and nothing anywhere exercises the alembic chain from zero: pytest builds its schema via `SQLModel.metadata.create_all`. Hosting and CD are deliberately out of scope — they are decision-dense enough to deserve their own /plan cycle after the ledger lands (009 MD-2).
+Every task ends with the same manual ritual — `pytest`, `npx vitest run`, `npm run lint`, `npm run build` — enforced only by convention. The repo already works through GitHub PRs. Two schema-heavy cycles (the rename, the mastery ledger) are about to land, and nothing anywhere exercises the alembic chain from zero: pytest builds its schema via `SQLModel.metadata.create_all`. Hosting and CD are deliberately out of scope — they are decision-dense enough to deserve their own cycle after the ledger lands.
 
 ## Decision
 

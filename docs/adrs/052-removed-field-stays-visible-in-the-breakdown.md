@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. Amends ADR 049: a completed run's breakdown renders a deleted field's id as a placeholder instead of dropping it; the decision there that completed runs are untouched and active runs naming the field are deleted is unchanged.
+Active. Amends ADR 049: a completed run's breakdown renders a deleted field's id as a placeholder instead of dropping it; the decision there that completed runs are untouched and active runs naming the field are deleted is unchanged.
 
 ## Context
 
-ADR 049 deletes a field outright, deletes the active runs naming it, and leaves completed runs alone, "their frozen arrays keeping the dead id, which rerun and the breakdown already tolerate". A /plan follow-up on 2026-09-22, prompted by the wording of the editor's save confirm, asked what a completed practice actually shows once a field it used is gone. The answer, read from the code: the run, its snapshot, and its practice cards survive, and the practice cards still hold the dead id in their `prompts` and `answers` arrays. The breakdown resolves those ids against the deck's field rows and drops any id with no row (`_resolve_field_values` in `app/services/practice_run.py`), so the field vanishes from every attempt with no marker. Its ratings went with its review rows under ADR 048, so nothing could have shown them. An attempt's Passed or Failed status is stored on the practice card, so a Failed attempt whose only Again was on the deleted field now shows only Good or Easy badges, and an attempt whose sole answer field was the deleted one shows no answers at all. The Fields section lists the deck's current active fields with mastery from the rebuilt ledger. Nothing on the page says a field was removed.
+ADR 049 deletes a field outright, deletes the active runs naming it, and leaves completed runs alone, "their frozen arrays keeping the dead id, which rerun and the breakdown already tolerate". A follow-up on 2026-09-22, prompted by the wording of the editor's save confirm, asked what a completed practice actually shows once a field it used is gone. The answer, read from the code: the run, its snapshot, and its practice cards survive, and the practice cards still hold the dead id in their `prompts` and `answers` arrays. The breakdown resolves those ids against the deck's field rows and drops any id with no row (`_resolve_field_values` in `app/services/practice_run.py`), so the field vanishes from every attempt with no marker. Its ratings went with its review rows under ADR 048, so nothing could have shown them. An attempt's Passed or Failed status is stored on the practice card, so a Failed attempt whose only Again was on the deleted field now shows only Good or Easy badges, and an attempt whose sole answer field was the deleted one shows no answers at all. The Fields section lists the deck's current active fields with mastery from the rebuilt ledger. Nothing on the page says a field was removed.
 
 ADR 049's Consequences accepted that history changes; "tolerate" understated what the page then says. Under ADR 047 an ephemeral thing goes only when it can no longer function, and a completed practice still functions: its breakdown renders. The question was whether to keep it and make it honest, or stop keeping it.
 
@@ -51,7 +51,7 @@ Benefits:
 
 - A completed practice's page is honest: a Failed attempt shows the field that failed it, as a placeholder, and an attempt keeps its shape.
 - History is kept, consistent with ADR 047, and the fix is one flag on an existing shape plus one rendering branch.
-- `RatedFieldValue.rating`'s `None` case, kept by cycle 013 MD-4 for stability, has a real meaning again.
+- `RatedFieldValue.rating`'s `None` case, kept for stability, has a real meaning again.
 
 Costs:
 

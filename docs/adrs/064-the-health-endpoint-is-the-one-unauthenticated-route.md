@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends ADR 055: a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing. Consistent with ADR 007, which verifies Clerk JWTs on protected routes. Implemented by cycle 020.
+Active. Amends ADR 055: a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing. Consistent with ADR 007, which verifies Clerk JWTs on protected routes.
 
 ## Context
 
@@ -58,4 +58,4 @@ Costs:
 
 - Anyone can learn whether Flashy and its database are up, and can trigger a `SELECT 1`. Rate limiting belongs to the hosting cycle.
 - AGENTS.md's "every router depends on `CurrentUserDep`" rule and ADR 055's one-module-per-table rule each carry an exception.
-- Ordinary endpoints still answer a database outage with a plain `500`. Mapping them to `503` is deferred (cycle 020 MD-1). Across origins that `500` carries no CORS headers, so the browser reads it as a network failure.
+- Ordinary endpoints still answer a database outage with a plain `500`. Mapping them to `503` is deferred (`TODO(defer:db-unavailable-503)` in `app/main.py`). Across origins that `500` carries no CORS headers, so the browser reads it as a network failure.

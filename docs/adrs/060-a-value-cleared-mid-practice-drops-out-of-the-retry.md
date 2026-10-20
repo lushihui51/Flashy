@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amends the trigger ADR 013's Consequences and ADR 029's Decision describe for a requeue that finds nothing to generate: the reachable trigger is a card value cleared while a practice uses it, not an archived field. Confirms ADR 026 and ADR 036 as written. Implemented by cycle 018.
+Active. Amends the trigger ADR 013's Consequences and ADR 029's Decision describe for a requeue that finds nothing to generate: the reachable trigger is a card value cleared while a practice uses it, not an archived field. Confirms ADR 026 and ADR 036 as written.
 
 ## Context
 
@@ -48,5 +48,5 @@ Benefits:
 Costs:
 
 - A user who clears a value on a card mid-practice sees that card end the practice on a failed row, and the field it just failed is not asked again.
-- The `still_failed` bucket remains reachable and stays in the interface, labelled "Failed" (cycle 018 MD-1) rather than "Abandoned".
+- The `still_failed` bucket remains reachable and stays in the interface, labelled "Failed" rather than "Abandoned".
 - ADR 036's guarantee is conditional, and the condition is now explicit in the records rather than only in the code.

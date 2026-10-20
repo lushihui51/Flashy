@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted. Amends ADR 034: its "contains all SQL" clause becomes a mechanical rule covering every statement and every session call, enforced by a source-scan guard; the three-layer layout, the downward dependency rule, and the direct-call nuance are unchanged. Amended by ADR 064 (2026-09-29): a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing.
+Active. Amends ADR 034: its "contains all SQL" clause becomes a mechanical rule covering every statement and every session call, enforced by a source-scan guard; the three-layer layout, the downward dependency rule, and the direct-call nuance are unchanged. Amended by ADR 064: a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing.
 
 ## Context
 
-ADR 034 recorded the three layers on 2026-08-27 as established fact and said `database_ops` "contains all SQL". The code it described already broke that clause: the batch-edit service built its own queries and two routers reached the ORM with `db.get` since 2026-08-24, no guard was written, and later work copied the pattern it found (the configuration sever on 2026-09-13, rebuild attribution on 2026-09-14). ADR 034's own Consequences called the boundary "judgment, not mechanics", which is why it drifted unnoticed through three sync passes that checked only import direction.
+ADR 034 recorded the three layers as established fact and said `database_ops` "contains all SQL". The code it described already broke that clause: the batch-edit service built its own queries and two routers reached the ORM with `db.get`, no guard was written, and later work copied the pattern it found (the configuration sever, rebuild attribution). ADR 034's own Consequences called the boundary "judgment, not mechanics", which is why it drifted unnoticed past reviews that checked only import direction.
 
-The 2026-09-23 sync inventoried the surface: eight statement constructions in three services, four raw `text()` statements (the per-card advisory lock and the `SET CONSTRAINTS` switch around the requeue insert), eight `db.get` calls in routers and the deletion service, the `app_user` lookup and insert in `dependencies.py` with no `database_ops` module of their own, nineteen `db.add` calls, one `begin_nested` savepoint, and one upward import: `database_ops/subject.py` importing `touch` from a service, which the import check had missed. The position taken in the follow-up planning session was the repository pattern's: a service and a database operation are decoupled, `add`, `get`, and `delete` belong to the repository as much as `select` does, and only transaction control belongs to the caller.
+An inventory of the surface found eight statement constructions in three services, four raw `text()` statements (the per-card advisory lock and the `SET CONSTRAINTS` switch around the requeue insert), eight `db.get` calls in routers and the deletion service, the `app_user` lookup and insert in `dependencies.py` with no `database_ops` module of their own, nineteen `db.add` calls, one `begin_nested` savepoint, and one upward import: `database_ops/subject.py` importing `touch` from a service, which the import check had missed. The position taken was the repository pattern's: a service and a database operation are decoupled, `add`, `get`, and `delete` belong to the repository as much as `select` does, and only transaction control belongs to the caller.
 
 ## Decision
 
@@ -58,7 +58,7 @@ Benefits:
 
 Costs:
 
-- One cycle of mechanical movement (cycle 015): about twenty-two statement and fetch sites, nineteen `db.add` sites, seventeen renames.
+- One pass of mechanical movement: about twenty-two statement and fetch sites, nineteen `db.add` sites, seventeen renames.
 - Services still take a `Session`, call the four allowed methods, and construct SQLModel objects; a persistence-technology switch would still touch their signatures.
 - More small `db_*` functions, one per operation; the per-table modules keep growing, as ADR 034 noted.
 - The requeue function keeps the old inline code's asymmetry, leaving the constraint IMMEDIATE on success and resetting it only on collision; that quirk is now documented in `database_ops` rather than buried in a service.

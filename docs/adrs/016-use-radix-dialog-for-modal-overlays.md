@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-The app-shell rebuild (`docs/plans/002-frontend-rebuild-app-shell.md`) needed two modal overlays — a left-side navigation drawer (`SideDrawer`) and a bottom account sheet (`AccountSheet`) — both requiring a dimming scrim, `Esc`-to-close, click-outside-to-close, a trapped focus while open, and body scroll lock while open.
+The app-shell rebuild needed two modal overlays — a left-side navigation drawer (`SideDrawer`) and a bottom account sheet (`AccountSheet`) — both requiring a dimming scrim, `Esc`-to-close, click-outside-to-close, a trapped focus while open, and body scroll lock while open.
 
 These are exactly the class of bug-prone interaction that plan 002's own ground rules called out as acceptable to solve with a headless primitive rather than hand-rolled: "A headless dialog/sheet primitive (e.g. Radix `Dialog`) is acceptable if it materially reduces a11y work — state the choice in the PR description." Focus traps in particular are notoriously easy to get subtly wrong (tab order escaping the dialog, focus not returning to the invoking control on close), and a hand-rolled version would need to be independently correct for both overlays.
 

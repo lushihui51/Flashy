@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
@@ -10,13 +10,13 @@ Letting one user get another user's deck content needs two things: a mechanism t
 
 ## Decision
 
-Build `copy_deck` (a full, correct duplication mechanism) before any `shared_deck` link/permission table. Share links are explicitly deferred, with the reasoning stated directly: "Phase 6's copy function is the hard part; the link table is additive."
+Build `copy_deck` (a full, correct duplication mechanism) before any `shared_deck` link/permission table. Share links are explicitly deferred, with the reasoning stated directly: "the copy function is the hard part; the link table is additive."
 
-**What's actually hard, and why it had to come first:** `copy_deck` (`app/services/deck_copy.py:26-128`) builds a `field_map` of old-id → new-id as it copies `field_def` rows, then remaps every uuid inside a copied `deck_practice_config`'s four id arrays through that map, remaps `card_field_value.field_def_id` per value (silently dropping values for archived fields, which never get a `field_map` entry), and re-validates configs against the source deck before remapping — the same staleness concern as ADR 013 — all inside one explicit transaction, so any failure rolls back the whole copy rather than leaving a partially-remapped deck behind. A share-link table, by contrast, only needs to gate _whether_ a copy is allowed — it doesn't need to solve remapping itself, which is why it's additive once copying is correct.
+**What's actually hard, and why it had to come first:** `copy_deck` (`app/services/deck_copy.py`) builds a `field_map` of old-id → new-id as it copies `field_def` rows, then remaps every uuid inside a copied `deck_practice_config`'s four id arrays through that map, remaps `card_field_value.field_def_id` per value (silently dropping values for archived fields, which never get a `field_map` entry), and re-validates configs against the source deck before remapping — the same staleness concern as ADR 013 — all inside one explicit transaction, so any failure rolls back the whole copy rather than leaving a partially-remapped deck behind. A share-link table, by contrast, only needs to gate _whether_ a copy is allowed — it doesn't need to solve remapping itself, which is why it's additive once copying is correct.
 
-**Source-deck ownership is deliberately not checked — the detail invisible in the schema alone.** Four repository helpers exist specifically for this function and are an explicit, documented exception to the rule that ownership is enforced in the query for every other read of user data: `db_read_deck_for_copy`, `db_read_deck_practice_config_for_copy`, `db_read_field_defs_for_copy`, `db_read_cards_with_values_for_deck`. Each docstring makes the same distinction — quoting `copy_deck`'s own docstring (`app/services/deck_copy.py:33-37`): "`target_subject_id` is ownership-scoped to `user_id` like every other query touching a user's own data; `source_deck_id` deliberately isn't ... copying is the mechanism a future share-link phase authorizes, not something this function gates on its own." Reading "copy source material" is treated as a different kind of read than reading "the caller's own data" — the question of whether a given caller _may_ copy from a given source deck is deferred entirely to the not-yet-built share-link phase.
+**Source-deck ownership is deliberately not checked — the detail invisible in the schema alone.** Four repository helpers exist specifically for this function and are an explicit, documented exception to the rule that ownership is enforced in the query for every other read of user data: `db_read_deck_for_copy`, `db_read_deck_practice_config_for_copy`, `db_read_field_defs_for_copy`, `db_read_cards_with_values_for_deck`. Each docstring makes the same distinction — quoting `copy_deck`'s own docstring (`app/services/deck_copy.py`): "`target_subject_id` is ownership-scoped to `user_id` like every other query touching a user's own data; `source_deck_id` deliberately isn't ... copying is the mechanism a future share-link phase authorizes, not something this function gates on its own." Reading "copy source material" is treated as a different kind of read than reading "the caller's own data" — the question of whether a given caller _may_ copy from a given source deck is deferred entirely to the not-yet-built share-link phase.
 
-`copy_deck` never copies `card_field_mastery`, `review_log`, or sessions — "a copy starts with no history of its own" (`app/services/deck_copy.py:43-45`). A copy is a content-only snapshot, not a full clone.
+`copy_deck` never copies `card_field_mastery`, `review_log`, or sessions — "a copy starts with no history of its own" (`app/services/deck_copy.py`). A copy is a content-only snapshot, not a full clone.
 
 ## Alternatives considered
 

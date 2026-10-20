@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Implemented by cycle 020.
+Active
 
 - **Amends ADR 006:** `unwrap` and `unwrapVoid` decide failure by `response.ok`, not by whether `error` is set. A request that got no response is turned into readable text by `client.ts`'s `onError` middleware.
 - **Amends ADR 022:** `ApiDetailError` becomes a subclass of `ApiError`, so every thrown API failure carries its HTTP status.
@@ -71,4 +71,4 @@ Costs:
 - Three error types now flow from the API layer: a plain `Error` for no response, `ApiError`, and `ApiDetailError`. A caller that string-matches messages still misses the structure.
 - Two messages are fixed copy inside the API layer. ADR 006 left presentation to the UI edge; this is a small exception, accepted because they are only the default message, which a call site may still replace.
 - Every test that calls `unwrap` directly now has to supply a `response`.
-- Queries with no error branch, such as `DeckEditor`'s subject query, still render nothing when they fail. Cycle 020 leaves them to the banner and ADR 063's recovery refetch.
+- Queries with no error branch, such as `DeckEditor`'s subject query, still render nothing when they fail. They are left to the banner and ADR 063's recovery refetch.

@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted. Decides the display question ADR 006 left open under "Error normalization". Amended by ADR 062 (2026-09-29): connectivity is the one global error channel, reported by an app-level banner; every other error still renders inline at its call site.
+Active. Decides the display question ADR 006 left open under "Error normalization". Amended by ADR 062: connectivity is the one global error channel, reported by an app-level banner; every other error still renders inline at its call site.
 
 ## Context
 
-ADR 006 fixed the api layer as side-effect-free — `unwrap` throws and "the UI decides what an error looks like" was explicitly left unwired. Since the rebuild, every surface has answered that the same way without a record: a page renders a failed query as an inline banner where the data would have appeared (`query.isError` → "Could not load …"), and a failed mutation renders its message from local component state next to the control that triggered it — under the Save/Create button, or inside the open delete `ConfirmDialog` via its `children` slot. ADR 022's typed `ApiDetailError` supplies the message text. There is no `ErrorBoundary`, no `QueryCache`/`MutationCache` `onError`, and no toast or snackbar system anywhere in `frontend/src/`; roughly nine surfaces follow the pattern by imitation, and cycle 006's rating and re-run surfaces are specified against it. This ADR records the convention so it stops being folklore.
+ADR 006 fixed the api layer as side-effect-free — `unwrap` throws and "the UI decides what an error looks like" was explicitly left unwired. Since the rebuild, every surface has answered that the same way without a record: a page renders a failed query as an inline banner where the data would have appeared (`query.isError` → "Could not load …"), and a failed mutation renders its message from local component state next to the control that triggered it — under the Save/Create button, or inside the open delete `ConfirmDialog` via its `children` slot. ADR 022's typed `ApiDetailError` supplies the message text. There is no `ErrorBoundary`, no `QueryCache`/`MutationCache` `onError`, and no toast or snackbar system anywhere in `frontend/src/`; roughly nine surfaces follow the pattern by imitation, and the rating and re-run surfaces are specified against it. This ADR records the convention so it stops being folklore.
 
 ## Decision
 

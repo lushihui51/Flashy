@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted. Reverses cycle 004 MD-6, under which New practice's selection did not survive a round trip, and narrows cycle 004's Round-trip navigation contract: the configuration builder hands back `{configurationId}` from create mode only. Consistent with ADR 024 and ADR 025. Implemented by cycle 019.
+Active. The configuration builder hands back `{configurationId}` from create mode only. Consistent with ADR 024 and ADR 025.
 
 ## Context
 
-New practice assembles a practice from a name and at most one deck configuration per deck, chosen from a list the user narrows by subject and deck. Cycle 004 held the selection in component state, and its MD-6 accepted that the selection is lost on any round trip away from the page: "New configuration", with its nested "New deck…", was the only way out, and a draft was not the navigation metadata ADR 024 covers.
+New practice assembles a practice from a name and at most one deck configuration per deck, chosen from a list the user narrows by subject and deck. New practice first held the selection in component state and accepted that the selection is lost on any round trip away from the page: "New configuration", with its nested "New deck…", was the only way out, and a draft was not the navigation metadata ADR 024 covers.
 
-A screenshot review on 2026-09-29 asked for two changes that make round trips routine. A configuration should open for editing straight from the list, and the name should move to the top of the page. Under MD-6 both destroy the draft: select two configurations, open a third to adjust it, and come back to nothing selected; type a name first, as a name at the top invites, and it is lost the same way.
+A screenshot review on 2026-09-29 asked for two changes that make round trips routine. A configuration should open for editing straight from the list, and the name should move to the top of the page. With the selection in component state both destroy the draft: select two configurations, open a third to adjust it, and come back to nothing selected; type a name first, as a name at the top invites, and it is lost the same way.
 
 ADR 024 already returns every round trip to the page's full `pathname + search`, so anything the page keeps in its query string comes back without the page it visited knowing about it. Two existing behaviours sit next to that mechanism. The overview's New practice button forwards the overview's whole query string into New practice, and New practice's Cancel forwarded its whole query string back. And the configuration builder handed back `{configurationId}` on every save, which New practice auto-selects, replacing whatever that deck had selected.
 
@@ -24,13 +24,13 @@ ADR 024's rule is unchanged: the URL carries what must survive being forwarded, 
 
 ## Alternatives considered
 
-### Keep MD-6
+### Keep the selection in component state
 
 Rejected. Losing the selection was tolerable with one rarely used exit, and not with an edit link on every configuration row.
 
 ### Keep the draft in sessionStorage
 
-Rejected, as MD-6 rejected it before. An abandoned draft would reappear on the next visit to New practice and would need expiry rules of its own. A URL has no staleness: opening New practice from the overview starts clean.
+Rejected, as it was rejected the first time. An abandoned draft would reappear on the next visit to New practice and would need expiry rules of its own. A URL has no staleness: opening New practice from the overview starts clean.
 
 ### Edit in a full-screen overlay so the page never unmounts
 
@@ -55,5 +55,5 @@ Costs:
 
 - The URL grows by a UUID per selection plus the name, percent-encoded again inside every nested `returnTo`.
 - The name input edits a local buffer that is read from the URL once, at mount, and mirrored back on every change; binding the input straight to the URL would route each keystroke through a router navigation.
-- A bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck. Cycle 019 removes the first as soon as the page sees it and leaves the second to the server's `duplicate_deck`.
+- A bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck. The page removes the first as soon as it sees it and leaves the second to the server's `duplicate_deck`.
 - The page's URL writes that react to fetched data must share one effect, because two `setSearchParams` calls made after one render overwrite each other.

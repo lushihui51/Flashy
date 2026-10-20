@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-Every data-bearing page in the rebuilt frontend fetches through `@tanstack/react-query`: a single default-configured `QueryClient` is created in `main.tsx` and provided app-wide, pages own `useQuery`/`useMutation` calls, and writes are followed by key-based invalidation (`['decks']`, `['practice_sessions']`, …) rather than manual refetch or local mirroring. Several accepted records already lean on this without adopting it anywhere: ADR 006's side-effect-free api layer throws for "the caller" to handle — the caller is a query or mutation; ADR 017's test recipe wraps components in a `QueryClientProvider` over MSW; ADR 022's typed `ApiDetailError` is caught from mutation state; AGENTS.md's "reusable components do not fetch — the page owns the query" rule presumes a query layer to own. The library predates the rebuild (it survived cycle 002's P0 keep-list), so the choice was inherited rather than recorded. This ADR closes that gap.
+Every data-bearing page in the rebuilt frontend fetches through `@tanstack/react-query`: a single default-configured `QueryClient` is created in `main.tsx` and provided app-wide, pages own `useQuery`/`useMutation` calls, and writes are followed by key-based invalidation (`['decks']`, `['practice_sessions']`, …) rather than manual refetch or local mirroring. Several accepted records already lean on this without adopting it anywhere: ADR 006's side-effect-free api layer throws for "the caller" to handle — the caller is a query or mutation; ADR 017's test recipe wraps components in a `QueryClientProvider` over MSW; ADR 022's typed `ApiDetailError` is caught from mutation state; AGENTS.md's "reusable components do not fetch — the page owns the query" rule presumes a query layer to own. The library predates the rebuild, so the choice was inherited rather than recorded. This ADR closes that gap.
 
 ## Decision
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ Accepted
 
 It ran through two channels. The obvious one: `fastapi dev` restarts the worker on every file save and re-enters the lifespan. The less obvious one: `tests/conftest.py`'s `client` fixture enters `with TestClient(app)`, which runs the lifespan too — and `app.database.engine` is bound to `DATABASE_URL`, the live dev database, not the test one, because the test override only swaps the request-scoped `get_session`. So every pytest run touched the dev database's schema.
 
-`create_all` is additive-only: it creates tables that are missing and never alters, drops, or reports on tables that exist. Two failure modes follow. A new model silently gains a table before its migration exists, and the later `alembic upgrade` fails on `CREATE TABLE`; a new column on an existing table is never applied, and the server starts fine until the first query touching it fails at runtime. The first mode happened during the mastery-ledger cycle (cycle 010): an empty `mastery_log` appeared in the dev database while `card_field_mastery` and `alembic_version` were untouched, and 010 T2's migration could only be verified on a copy.
+`create_all` is additive-only: it creates tables that are missing and never alters, drops, or reports on tables that exist. Two failure modes follow. A new model silently gains a table before its migration exists, and the later `alembic upgrade` fails on `CREATE TABLE`; a new column on an existing table is never applied, and the server starts fine until the first query touching it fails at runtime. The first mode happened while the mastery ledger was being built: an empty `mastery_log` appeared in the dev database while `card_field_mastery` and `alembic_version` were untouched, and its migration could only be verified on a copy.
 
 ADR 041 made CI exercise the alembic chain from an empty database, which catches a broken chain but cannot prevent a dev database from drifting out from under it. Nothing depended on the startup call: CI already runs `alembic upgrade head` before pytest, and tests build their own schema on the disposable test database.
 
@@ -26,7 +26,7 @@ Rejected — keeps the footgun on the shelf and adds a configuration knob nobody
 
 ### Replace it with a startup check that the database is at alembic head
 
-Rejected for now — louder than silent drift, but it would also run inside every test through `TestClient(app)`'s lifespan, failing tests whenever the dev database is behind even though tests never touch that database. The wrong coupling; revisitable after the hosting cycle (009 MD-2) if deploy-time checks are wanted.
+Rejected for now — louder than silent drift, but it would also run inside every test through `TestClient(app)`'s lifespan, failing tests whenever the dev database is behind even though tests never touch that database. The wrong coupling; revisitable after hosting if deploy-time checks are wanted.
 
 ### Document the behavior in AGENTS.md and leave the code alone
 
@@ -42,5 +42,5 @@ Benefits:
 Costs:
 
 - A fresh clone must run `alembic upgrade head` before `fastapi dev` does anything useful — one documented step instead of an invisible one.
-- The dev database that already drifted needs a one-time manual cleanup (cycle 011 T1's rollout).
+- The dev database that already drifted needs a one-time manual cleanup.
 - Tests still enter the app lifespan through `TestClient(app)`; it is now empty, which is harmless but slightly misleading to a reader of `conftest.py`.

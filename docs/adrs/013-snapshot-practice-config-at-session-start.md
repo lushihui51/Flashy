@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged. ADR 060 names the trigger for the mid-practice stale case in Consequences: the archive endpoint is unexposed since ADR 049, and the case is reached by clearing a card's value while a practice uses it. Amended by ADR 068: the snapshot also copies the configuration's name, read for a label only.
+Active. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged. ADR 060 names the trigger for the mid-practice stale case in Consequences: the archive endpoint is unexposed since ADR 049, and the case is reached by clearing a card's value while a practice uses it. Amended by ADR 068: the snapshot also copies the configuration's name, read for a label only.
 
 ## Context
 
@@ -12,11 +12,11 @@ If a session's card generation always read the _live_ config, editing the config
 
 ## Decision
 
-`practice_deck` holds a copy of the config's six array/count columns (`prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids`, `prompt_pool_counts`, `answer_pool_ids`, `answer_pool_counts`) taken at the moment a session starts. It has **no** `source_config_id` — the model's own docstring states the reasoning directly (`app/models/practice_deck.py:10-12`): "a self-contained snapshot of a deck_practice_config taken at session start. Editing or deleting the source config must never affect a session, so nothing here points back to it."
+`practice_deck` holds a copy of the config's six array/count columns (`prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids`, `prompt_pool_counts`, `answer_pool_ids`, `answer_pool_counts`) taken at the moment a session starts. It has **no** `source_config_id` — the model's own docstring states the reasoning directly (`app/models/practice_deck.py`): "a self-contained snapshot of a deck_practice_config taken at session start. Editing or deleting the source config must never affect a session, so nothing here points back to it."
 
-Every card generated for the session's lifetime — the initial batch (`app/services/practice_session.py:114-126`) and every card requeued after a failed rating (`app/services/practice_session.py:184-195`) — reads from this frozen `practice_deck` row, never the live config again.
+Every card generated for the session's lifetime — the initial batch (`app/services/practice_session.py`) and every card requeued after a failed rating (`app/services/practice_session.py`) — reads from this frozen `practice_deck` row, never the live config again.
 
-Because a config can drift (a referenced field gets archived) in the gap between being saved and being used to start a session, validation runs twice: once at config save/update, and again immediately before the snapshot is cut (`app/services/practice_session.py:83-95`) — the snapshot has to be valid at the exact moment it becomes immutable, not just valid whenever it was last saved.
+Because a config can drift (a referenced field gets archived) in the gap between being saved and being used to start a session, validation runs twice: once at config save/update, and again immediately before the snapshot is cut (`app/services/practice_session.py`) — the snapshot has to be valid at the exact moment it becomes immutable, not just valid whenever it was last saved.
 
 ## Alternatives considered
 

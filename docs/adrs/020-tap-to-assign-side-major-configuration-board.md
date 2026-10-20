@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted. `@radix-ui/react-popover` has been installed since cycle 006 (MD-1, the rating chip); the rejection of a popover *picker* below stands.
+Active. `@radix-ui/react-popover` is installed, for the rating chip; the rejection of a popover *picker* below stands.
 
 ## Context
 
 The deck configuration builder's assignment board — where a deck's fields are assigned to prompt/answer, always-shown/random-draw — first shipped (`4c32349`) as a four-row drag-table: HTML5-draggable chips with an embedded per-chip `<select>` as the fallback path. Screenshot review (2026-08-25) found it unusable: HTML5 drag events never fire on touch, the embedded select swallowed the press so the chip was effectively undraggable even with a mouse, and the fixed-column table cannot fit narrow viewports. There is also no real device available to verify touch gestures, so unverifiable gesture code defaults to being removed rather than shipped.
 
-A first revision (written outside the codebase context) replaced drag with tap-to-assign across five flat stacked sections, with a destination picker that was a bottom sheet on narrow viewports and a popover on wide ones. Re-examined with full codebase context in the 2026-08-25 /plan session, it had two flaws: the picker forked by viewport one sentence after the revision's own "no responsive fork" principle, and a popover has no foundation here (the only Radix package installed is `react-dialog`, per ADR 016). Deeper: the five flat sections buried the model. The four config arrays are really two _sides_, each with an "always" half and a "random" half, and the draw-count checkboxes belong to the random half — as a flat footer they appeared as a side effect of moves, and even the app's author could not say where frequency was set.
+A first revision (written outside the codebase context) replaced drag with tap-to-assign across five flat stacked sections, with a destination picker that was a bottom sheet on narrow viewports and a popover on wide ones. Re-examined with full codebase context, it had two flaws: the picker forked by viewport one sentence after the revision's own "no responsive fork" principle, and a popover has no foundation here (the only Radix package installed is `react-dialog`, per ADR 016). Deeper: the five flat sections buried the model. The four config arrays are really two _sides_, each with an "always" half and a "random" half, and the draw-count checkboxes belong to the random half — as a flat footer they appeared as a side effect of moves, and even the app's author could not say where frequency was set.
 
 ## Decision
 

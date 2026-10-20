@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted; amended 2026-08-24 (see Amendment below). The SET NULL half — review_log rows and practice_deck snapshots outliving what they reference, and the deleted-deck chip — is superseded by ADR 048 under the rule of ADR 047 (2026-09-21); the cascade of deck-owned rows, the two run statuses, and the lazy completion of a stranded run remain in force.
+Active; see the Amendment below. The SET NULL half — review_log rows and practice_deck snapshots outliving what they reference, and the deleted-deck chip — is superseded by ADR 048 under the rule of ADR 047; the cascade of deck-owned rows, the two run statuses, and the lazy completion of a stranded run remain in force.
 
 ## Context
 
@@ -48,10 +48,9 @@ Costs:
 - `review_log` and `practice_deck` accumulate orphaned rows over time (nulled references) that nothing purges — acceptable, since they're append-only history by design, but worth knowing before writing a query against either table that assumes every foreign key is populated.
 - A downgrade of the migration that introduced these `ondelete` rules will fail once any row has actually gone null in production — expected (there's no data-preserving way to force a null back into a `NOT NULL`/no-`ondelete` column), not a defect in the migration.
 
-## Amendment (2026-08-24): two session statuses, and a session owns its snapshot rows
+## Amendment: two session statuses, and a session owns its snapshot rows
 
-Two follow-on decisions, taken while planning the practice overview UI
-(`docs/plans/004-frontend-rebuild-practice-setup.md`, Phase 1). They revise this ADR's
+Two follow-on decisions, taken while planning the practice overview UI. They revise this ADR's
 "session liveness on the read path" paragraph rather than standing alone, because both
 follow directly from the deletion policy above.
 

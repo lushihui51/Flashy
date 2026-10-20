@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Active
 
 ## Context
 
-The practice surfaces name concepts users touch constantly: practices, deck configurations, and a configuration's four field arrays (`prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids` + counts, `answer_pool_ids` + counts). The first shipped builder labeled its sections straight from the schema — "Prompt fields", "Answer fields", "Prompt pool", "Answer pool" — and the 2026-08-25 /plan re-examination showed where that leads: the app's own author could not tell what the sections implied or where draw frequency was set. "Pool" describes the implementation (a set that is drawn from); it says nothing about the experience (some fields appear on every card, some appear sometimes). Earlier naming work had already fixed one instance of the same disease — "never write practice config" (`docs/reports/2026-08-24-deck-configuration-naming.md`).
+The practice surfaces name concepts users touch constantly: practices, deck configurations, and a configuration's four field arrays (`prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids` + counts, `answer_pool_ids` + counts). The first shipped builder labeled its sections straight from the schema — "Prompt fields", "Answer fields", "Prompt pool", "Answer pool" — and a re-examination showed where that leads: the app's own author could not tell what the sections implied or where draw frequency was set. "Pool" describes the implementation (a set that is drawn from); it says nothing about the experience (some fields appear on every card, some appear sometimes). Earlier naming work had already fixed one instance of the same disease: "never write practice config".
 
 ## Decision
 

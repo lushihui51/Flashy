@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The vestigial `cards` array the Consequences keep was removed by cycle 008. Rule 2's "repeated in the collection's empty state" is superseded by ADR 066: the add control renders once, in the collection's toolbar row, and the empty state carries none; the Consequences line "empty states own their add affordances" goes with it. Rules 1 and 3 remain in force.
+Active. The vestigial `cards` array the Consequences keep no longer exists. Rule 2's "repeated in the collection's empty state" is superseded by ADR 066: the add control renders once, in the collection's toolbar row, and the empty state carries none; the Consequences line "empty states own their add affordances" goes with it. Rules 1 and 3 remain in force.
 
 ## Context
 
@@ -22,7 +22,7 @@ Rejected: it is what shipped — the button's target was invisible state, and th
 
 ### Alternative considered: keep card entry inside deck create/edit
 
-Rejected: it couples routine content entry to schema editing, bloats the form, and left the API with a `cards` array on deck-create that the client now always sends empty (removal is deferred cleanup in `docs/cycles/004-practice-setup.md`).
+Rejected: it couples routine content entry to schema editing, bloats the form, and left the API with a `cards` array on deck-create that the client now always sends empty.
 
 ## Consequences
 

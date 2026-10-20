@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. The shape family is `Base`/table/`Create`/`Read`/`Update`/`Summary` (ADR 046), not the base/table/create/read/delete set named below.
+Active. The shape family is `Base`/table/`Create`/`Read`/`Update`/`Summary` (ADR 046), not the base/table/create/read/delete set named below.
 
 ## Context
 

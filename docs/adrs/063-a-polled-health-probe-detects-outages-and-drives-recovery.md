@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Implements ADR 062's detection. It is consistent with ADR 033, since the probe is a query the shell owns and recovery reruns each page's own query definition. It is consistent with ADR 035, since it adds no `QueryCache`/`MutationCache` handler. Implemented by cycle 020.
+Active. Implements ADR 062's detection. It is consistent with ADR 033, since the probe is a query the shell owns and recovery reruns each page's own query definition. It is consistent with ADR 035, since it adds no `QueryCache`/`MutationCache` handler.
 
 ## Context
 
@@ -10,7 +10,7 @@ ADR 062's banner needs to know when the server or database is in trouble, and wh
 
 Watching failures means a global `QueryCache`/`MutationCache` handler, which ADR 035 rejected. It also misses three cases that matter here:
 
-- **A request that hangs never fails.** The frontend's `fetch` has no timeout, and before cycle 020 the engine had no connect timeout either, so a database host that stopped answering held each request for about two minutes.
+- **A request that hangs never fails.** The frontend's `fetch` has no timeout, and the engine had no connect timeout either, so a database host that stopped answering held each request for about two minutes.
 - **A page the user is only reading makes no requests.**
 - **Recovery produces no failure to observe.** Once the server is back, a query that failed during the outage stays failed until the user refocuses the tab or navigates away.
 
@@ -31,7 +31,7 @@ The banner learns about trouble only from these two sources, never by watching t
 
 When the probe goes from failing to healthy, the hook refetches every active query that is in the error state, once. This is a command issued at one moment, not a listener. Failed mutations are never replayed; the user's input stays in place (ADR 035) and they submit again. Recovery from offline stays with TanStack's own reconnect behaviour, and the global retry defaults are unchanged.
 
-The backend's connect timeout (3 seconds, cycle 020 MD-1) stays shorter than the probe's timeout. A silent database host then answers `503` before the probe gives up, so it reads as server trouble rather than can't connect. A source-scan test in `tests/api_tests/test_health.py` guards this ordering.
+The backend's connect timeout (3 seconds) stays shorter than the probe's timeout. A silent database host then answers `503` before the probe gives up, so it reads as server trouble rather than can't connect. A source-scan test in `tests/api_tests/test_health.py` guards this ordering.
 
 ## Alternatives considered
 

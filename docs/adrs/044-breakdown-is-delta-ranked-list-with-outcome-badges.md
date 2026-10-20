@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Supersedes ADR 029's four-tab grouping; its outcome-chain semantics remain in force.
+Active. Supersedes ADR 029's four-tab grouping; its outcome-chain semantics remain in force.
 
 ## Context
 
@@ -10,7 +10,7 @@ ADR 029's completion view groups cards into four outcome tabs (first try / one r
 
 ## Decision
 
-The four tabs are replaced by a single list of all the run's cards under a sort control (010 MD-1: gains first / drops first / mastery). Every row shows the card's primary field, its mastery and delta (010 MD-2), and an outcome badge carrying the old bucket meaning — the chain fold and bucket computation of ADR 029 survive unchanged, demoted from tabs to badges. The summary counts line stays. The tap-open detail keeps the full attempt history and gains a per-field section listing _every_ active field of the card's deck with its mastery and delta — untouched fields at ±0, prompt-side drift shown honestly rather than hidden. Both call sites (run completion and the details page) share the component and change together.
+The four tabs are replaced by a single list of all the run's cards under a sort control (gains first / drops first / mastery). Every row shows the card's primary field, its mastery and delta, and an outcome badge carrying the old bucket meaning — the chain fold and bucket computation of ADR 029 survive unchanged, demoted from tabs to badges. The summary counts line stays. The tap-open detail keeps the full attempt history and gains a per-field section listing _every_ active field of the card's deck with its mastery and delta — untouched fields at ±0, prompt-side drift shown honestly rather than hidden. Both call sites (run completion and the details page) share the component and change together.
 
 ## Alternatives considered
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Implemented by cycle 022.
+Active
 
 - **Amends ADR 013:** the snapshot copies one more value, the configuration's name, next to the six array columns. Generation, validation and rerun still read only the snapshot's own arrays.
 - **Amends ADR 040:** the attribution link gains its first display use: the practice summary read follows `source_config_id` for a label, and a rename now also writes the configuration's new name onto every snapshot still linked. The sever rule, and the rule that generation, validation and rerun never read the link, are unchanged.
@@ -12,8 +12,6 @@ Accepted. Implemented by cycle 022.
 A practice spans one `practice_deck` snapshot per deck, each cut from one `deck_practice_config` (ADR 013). The overview row and the detail page showed only subject · deck chips, so two practices on the same deck with different configurations looked alike, and every configuration defaulted to a timestamp (ADR 067), so a row could not have said which layout it ran anyway.
 
 A run has no way to name its configuration. The snapshot copies the six arrays but not the name. ADR 040's `source_config_id` reaches the live configuration, but a material edit nulls it on every snapshot cut from that configuration, and so does deleting the configuration; only a rename keeps it. A label read through the link alone vanishes from every past practice the moment the user adjusts that configuration's layout, and snapshots from before ADR 040 have no link at all.
-
-Investigation: `docs/reports/2026-09-29-practice-row-configuration-label.md`.
 
 ## Decision
 
@@ -26,7 +24,7 @@ Four rules keep the stored name meaning "the configuration's name as of the last
 - Rerun copies the old snapshot's stored name verbatim, possibly null, exactly as it copies `source_config_id`.
 - The migration backfills the stored name onto every snapshot whose link is intact, from the linked configuration's current name. A linked configuration's layout cannot have changed since the snapshot (the sever rule), only its name, so this is the value the rules above would have maintained. Unlinked snapshots stay null and show the deck alone.
 
-A rename therefore reaches the labels of past practices. Cycle 004's carried invariant 3, "editing a configuration never touches any practice; the UI never implies otherwise", keeps its behavioural half and loses its display half.
+A rename therefore reaches the labels of past practices. The invariant "editing a configuration never touches any practice; the UI never implies otherwise" keeps its behavioural half and loses its display half.
 
 ## Alternatives considered
 

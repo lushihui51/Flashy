@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Confirmed by ADR 060: the blank filter has no requeue exception.
+Active. Confirmed by ADR 060: the blank filter has no requeue exception.
 
 ## Context
 
