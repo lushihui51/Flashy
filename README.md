@@ -48,11 +48,11 @@ The reasoning behind the parts that make the three ideas above possible. Each no
 
 **Continuous integration.** GitHub Actions runs the backend tests against a real PostgreSQL, applies the full migration chain from an empty database, and runs the frontend lint, tests, and build on every pull request and every push to `main` ([ADR 041](docs/adrs/041-use-github-actions-for-ci.md)).
 
-The entity diagram is at [`docs/Flashy-ERD.drawio`](docs/Flashy-ERD.drawio), and every design decision is in [`docs/adrs/`](docs/adrs/).
+The entity diagram is at [`docs/Flashy-ERD.drawio`](docs/Flashy-ERD.drawio), and every architecture decision is in [`docs/adrs/`](docs/adrs/).
 
 ## How this is built
 
-Flashy is developed with [Claude Code](https://claude.com/claude-code) through a fixed cycle. Each cycle begins as a planning conversation that settles decisions before any code is written; those decisions are recorded as architecture decision records in [`docs/adrs/`](docs/adrs/). The work is then decomposed into a cycle file in [`docs/cycles/`](docs/cycles/), which pins the contracts the tasks share and gives every task checkable done-criteria. Building sessions execute one task at a time against that file and stop rather than improvise when they hit something the plan did not foresee. Periodic sync and distill passes reconcile the cycle files and the agent instructions in `AGENTS.md` with what the code actually does, and investigations along the way are written up in [`docs/reports/`](docs/reports/). The slash commands that drive the cycle live outside this repository; what is checked in is the trail they leave.
+Flashy is developed with [Claude Code](https://claude.com/claude-code). A human raises every product and architecture decision and has the final say on each; Claude works out the alternatives, records what was decided, and builds against it, and nothing is written or merged without the human's approval.
 
 ## Status
 
