@@ -3,6 +3,7 @@
 ## Project
 
 - Flashy — flashcard SaaS. Frontend: React/TypeScript/Vite (`frontend/`). Backend: FastAPI/SQLModel/PostgreSQL (`app/`)
+- "The user" is a person using the app, never the human building it: the engineer, or the product owner in a product conversation
 - Auth: Clerk (ADR 007). Every router but `GET /api/health` (ADR 064) depends on `CurrentUserDep` (`app/dependencies.py`); ownership is scoped in the query, and a foreign or unknown id is a 404, never a 403. The local bypass needs both `DEV_AUTH_USER_ID` and `ENV=development` and is never set outside local dev
 - Frontend auth: `@clerk/react` (not `@clerk/clerk-react`) — it has no `<SignedIn>`/`<SignedOut>`; branch on `useUser()`'s `isLoaded`/`isSignedIn` instead
 
@@ -81,7 +82,7 @@ The 12 tables under `app/models/`; the model files and the ADRs cited hold the c
 
 ## Context
 
-- Before writing or editing a record, read `docs/rules/record-rules.md`; ADRs are in `docs/adrs/`, PDRs in `docs/pdrs/`
+- A record is an ADR in `docs/adrs/` or a PDR in `docs/pdrs/`; before writing or editing one, read `docs/rules/record-rules.md`
 - Before writing or editing a cycle file in `docs/cycles/`, read `docs/rules/cycle-rules.md`
 - Before writing or editing code, read `docs/rules/comment-rules.md`
 - Before writing to a roundtable docket, read `docs/rules/roundtable-docket-rules.md`
