@@ -36,4 +36,4 @@
 
 **Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision and is raised, never written around.
 
-**Edits before the merge.** Until the cycle's merge, the builder writes only a task's Status and Debrief; every other edit is the planner's, made in a planning session.
+**Edits before the merge.** Until the cycle's merge, the builder writes only a task's Status and Debrief; every other edit is the planner's, made by /code-plan.
