@@ -21,9 +21,9 @@ type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 
 /**
  * One practice's own page: name, status, when it was created, which decks it covers,
- * and — while it's still active — the way into it. Delete and, once completed,
- * Re-run (ADR 039) are the entity actions and so live in the header (ADR 023); create
- * is start (invariant 2), so there is nothing to edit beyond that.
+ * and — while it's still active — the way into it. Delete and, once completed, Re-run
+ * are the entity actions and so live in the header; create is start, so there is
+ * nothing to edit beyond that.
  *
  * The body is a separate component, gated on the session actually being loaded — same
  * reason DeckConfigurationEditor gates its body on the config: everything below needs
@@ -65,8 +65,8 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
   const [confirmRerunOpen, setConfirmRerunOpen] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
 
-  // Only a completed session has a breakdown to show (ADR 029) — the router itself
-  // 409s a breakdown request for an active one, so this stays disabled until then.
+  // Only a completed session has a breakdown to show — the router itself 409s a
+  // breakdown request for an active one, so this stays disabled until then.
   const breakdownQuery = useQuery({
     queryKey: ['practice_run_breakdown', session.id],
     queryFn: () => readPracticeRunBreakdown(session.id),
@@ -83,8 +83,8 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
   });
 
   const rerunMutation = useMutation({
-    // Named the same way the creation page pre-fills its own name field (ADR 019's
-    // one sanctioned formatter) — generated fresh at click time, not cached from mount.
+    // Named the same way the creation page pre-fills its own name field (the one
+    // sanctioned formatter) — generated fresh at click time, not cached from mount.
     mutationFn: () => rerunPracticeRun(session.id, formatDateTime(new Date())),
     onSuccess: async (newSession) => {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
@@ -92,8 +92,8 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
     },
     onError: (error: Error) => {
       setConfirmRerunOpen(false);
-      // ADR 056: `no_cards` is the one rerun failure whose sentence the frontend owns
-      // — the backend's message names the mechanism, not the two causes a user can fix.
+      // `no_cards` is the one rerun failure whose sentence the frontend owns — the
+      // backend's message names the mechanism, not the two causes a user can fix.
       setRerunError(
         error instanceof ApiDetailError && error.detail.code === 'no_cards'
           ? NO_CARDS_MESSAGE
@@ -139,9 +139,9 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         </div>
       </div>
 
-      {/* ADR 035: the rerun mutation's dialog closes on failure (unlike delete's,
-          which stays open), so its error renders here instead — same alert styling as
-          the delete error, next to the header actions that triggered it. */}
+      {/* The rerun mutation's dialog closes on failure (unlike delete's, which stays
+          open), so its error renders here instead — same alert styling as the delete
+          error, next to the header actions that triggered it. */}
       {rerunError && (
         <p role="alert" className="mt-1 text-sm text-(--color-danger)">
           {rerunError}
@@ -178,7 +178,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         title="Delete this practice?"
         // Same copy the overview uses — deliberately says nothing about decks or
         // configs: deleting a session takes its own cards and snapshots and nothing
-        // else (ADR 015, amended), and reviews already logged stay on record.
+        // else, and reviews already logged stay on record.
         description="Its progress will be gone. The decks it practised are not affected."
         confirmLabel="Delete"
         destructive

@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # ADR 038 / MD-1: practice_session becomes practice_run — table, both FK
+    # practice_session becomes practice_run — table, both FK
     # columns, the position unique constraint, and its covering index. A pure
     # rename, no data or structural change: Postgres tracks foreign keys and check
     # constraints by OID, not by name, so they follow the table automatically.

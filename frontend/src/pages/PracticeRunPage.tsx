@@ -17,10 +17,10 @@ import { isNotFound } from 'src/api/unwrap';
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
 
-/** The active-session run surface (ADR 027, ADR 028, ADR 031): the current card as a
- * static two-zone reveal with rating (MD-1, MD-2, MD-4, MD-5), live progress, and a
- * retry marker (MD-3). Once `current_card` is null, nothing is pending and this page
- * shows the same completion breakdown (ADR 029, T8) the details page shows later. */
+/** The active-session run surface: the current card as a static two-zone reveal with
+ * rating, live progress, and a retry marker. Once `current_card` is null, nothing is
+ * pending and this page shows the same completion breakdown the details page shows
+ * later. */
 export default function PracticeRunPage() {
   const { practiceSessionId } = useParams<{ practiceSessionId: string }>();
 
@@ -37,7 +37,7 @@ export default function PracticeRunPage() {
         className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
       >
         <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        {/* 005 MD-2: static until the session's real name is fetched, then upgraded. */}
+        {/* Static until the session's real name is fetched, then upgraded. */}
         {runQuery.data?.session_name ?? 'Practice'}
       </Link>
 

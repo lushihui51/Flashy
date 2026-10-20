@@ -9,8 +9,8 @@ describe('userTimeZone', () => {
 
 describe('formatDate', () => {
   it('formats the instant, not the string it was written as', () => {
-    // ADR 019: the API emits UTC, but an equivalent offset spelling of the same moment
-    // must render identically — a formatter that read the literal text would differ.
+    // The API emits UTC, but an equivalent offset spelling of the same moment must
+    // render identically — a formatter that read the literal text would differ.
     expect(formatDate('2026-08-24T16:00:00Z')).toBe(formatDate('2026-08-24T09:00:00-07:00'));
   });
 

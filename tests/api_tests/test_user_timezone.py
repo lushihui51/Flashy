@@ -1,5 +1,5 @@
-"""ADR 019: `app_user.timezone` is the user's IANA zone, supplied by the client on
-every request via X-Timezone, and used only to render dates back in their local zone.
+"""`app_user.timezone` is the user's IANA zone, supplied by the client on every
+request via X-Timezone, and used only to render dates back in their local zone.
 Nothing stored is ever expressed in it — every timestamp column stays a server-stamped
 UTC instant."""
 
@@ -89,8 +89,8 @@ class TestTimezoneSync:
         assert _call(db, clerk_user_id="tz-b").timezone == "Europe/London"
 
     def test_zone_never_changes_stored_timestamps(self, db, stub_clerk):
-        """The whole point of ADR 019: the zone is a rendering input. Moving it must not
-        rewrite, re-express, or shift any instant already on the row."""
+        """The zone is a rendering input. Moving it must not rewrite, re-express, or
+        shift any instant already on the row."""
         user = _call(db, zone="America/Los_Angeles")
         created_at = user.created_at
         user = _call(db, zone="Pacific/Auckland")

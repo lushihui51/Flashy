@@ -255,10 +255,10 @@ export interface paths {
         };
         /**
          * Get Deletion Impact
-         * @description The advisory preview behind every delete confirm (ADR 051, cycle 013 MD-2,
-         *     MD-3): the same closure a deletion transaction computes for itself, reported as
-         *     counts. 404 for the first id that's foreign or doesn't exist; 422 when all four
-         *     lists are empty — there's nothing to preview.
+         * @description The advisory preview behind every delete confirm: the same closure a deletion
+         *     transaction computes for itself, reported as counts. 404 for the first id that's
+         *     foreign or doesn't exist; 422 when all four lists are empty — there's nothing to
+         *     preview.
          */
         get: operations["get_deletion_impact_api_deletion_impact_get"];
         put?: never;
@@ -281,7 +281,7 @@ export interface paths {
          * @description Newest first, each row carrying the decks (and their subjects) it snapshotted.
          *     Filters are the same relation, asked as a question: a session matches a subject or
          *     deck if any of its practice_deck rows points at a matching deck (`source_config_id`
-         *     is attribution only, never a filter — ADR 040).
+         *     is attribution only, never a filter).
          */
         get: operations["read_practice_runs_api_practice_runs_get"];
         put?: never;
@@ -306,7 +306,7 @@ export interface paths {
         };
         /**
          * Read Practice Run
-         * @description MD-3: the detail page needs the same deck chips the list already renders, so this
+         * @description The detail page needs the same deck chips the list already renders, so this
          *     answers with PracticeRunSummary rather than the bare PracticeRunRead — API-
          *     first beats a client-side join of the list endpoint.
          */
@@ -316,7 +316,7 @@ export interface paths {
         /**
          * Delete Practice Run
          * @description User delete is the only way a session leaves the list — there is no `abandoned`
-         *     status for one to fall out of view into (ADR 015 as amended).
+         *     status for one to fall out of view into.
          */
         delete: operations["delete_practice_run_api_practice_runs__practice_run_id__delete"];
         options?: never;
@@ -333,9 +333,9 @@ export interface paths {
         };
         /**
          * Read Practice Run State
-         * @description ADR 031: one server-composed payload, replacing the old bare-id `current_card`
-         *     endpoint. 404 for an unknown or foreign session; `current_card: null` once nothing
-         *     is pending, at which point `session_status` already reads "completed".
+         * @description One server-composed payload. 404 for an unknown or foreign session;
+         *     `current_card: null` once nothing is pending, at which point `session_status`
+         *     already reads "completed".
          */
         get: operations["read_practice_run_state_api_practice_runs__practice_run_id__state_get"];
         put?: never;
@@ -355,8 +355,8 @@ export interface paths {
         };
         /**
          * Read Practice Run Breakdown
-         * @description ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
-         *     including each card's mastery/delta and per-field detail (cycle 010 T3). 409 while
+         * @description The completion dataset behind the retrospective view, including each card's
+         *     mastery/delta and per-field detail. 409 while
          *     the session is still active — the bucket refinement only makes sense once nothing
          *     is pending; 404 for an unknown or foreign session.
          */
@@ -380,11 +380,11 @@ export interface paths {
         put?: never;
         /**
          * Rerun Run
-         * @description ADR 039: creates a new run from the completed run's own frozen practice_deck
-         *     snapshots, named verbatim from the request body; the original run is untouched.
+         * @description Creates a new run from the completed run's own frozen practice_deck snapshots,
+         *     named verbatim from the request body; the original run is untouched.
          *     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
          *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400
-         *     `no_cards` if the surviving snapshots generate no practice card (ADR 056).
+         *     `no_cards` if the surviving snapshots generate no practice card.
          */
         post: operations["rerun_run_api_practice_runs__practice_run_id__rerun_post"];
         delete?: never;
@@ -420,7 +420,7 @@ export interface paths {
         /**
          * Read Health
          * @description The one route without `CurrentUserDep`: the frontend's health probe must answer
-         *     signed-out visitors and must not depend on Clerk (ADR 064). 503
+         *     signed-out visitors and must not depend on Clerk. 503
          *     `database_unavailable` when the database does not answer.
          */
         get: operations["read_health_api_health_get"];
@@ -473,22 +473,22 @@ export interface components {
         };
         /**
          * BreakdownBucket
-         * @description The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`
-         *     splits by chain length so the breakdown can distinguish a card that took retries
-         *     from one that didn't; `still_failed` — a chain whose last row is `failed` with no
-         *     successor, the ADR 013 stale-snapshot case — is unaffected by length and stays one
+         * @description The completion-time refinement of the chain fold: `passed` splits by chain
+         *     length so the breakdown can distinguish a card that took retries from one that
+         *     didn't; `still_failed` — a chain whose last row is `failed` with no successor,
+         *     because nothing was left to generate a retry from — is unaffected by length and stays one
          *     bucket, displayed to the user as "Failed".
          * @enum {string}
          */
         BreakdownBucket: "passed_first_try" | "passed_after_one_fail" | "passed_after_many_fails" | "still_failed";
         /**
          * BreakdownCard
-         * @description One card's whole outcome chain for the completion breakdown (ADR 029):
-         *     `attempts` is chronological, so `attempts[-1]` is the determining attempt that
-         *     decided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR
-         *     042, ADR 043, ADR 044, cycle 010 T3): `mastery` is ADR 043's card fold over every
-         *     active field's after-state score; `delta` is that same fold's after-state minus
-         *     its before-state, exact (the client rounds per 010 MD-2); `fields` lists every
+         * @description One card's whole outcome chain for the completion breakdown: `attempts` is
+         *     chronological, so `attempts[-1]` is the determining attempt that decided `bucket`.
+         *     `mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold
+         *     (`strategy.card_score`) over every active field's after-state score; `delta` is
+         *     that same fold's after-state minus its before-state, exact (the client rounds);
+         *     `fields` lists every
          *     currently active field_def of the card's deck, field_def.position ascending —
          *     not just the ones this run's attempts happened to touch.
          */
@@ -514,7 +514,7 @@ export interface components {
         /**
          * CardBatchCreate
          * @description `values` is keyed by a real field_def id or a same-request `client_key`
-         *     (§2.3, widened in Phase 7 — see `CardBatchUpdate`).
+         *     (see `CardBatchUpdate`).
          */
         CardBatchCreate: {
             /** Values */
@@ -534,7 +534,7 @@ export interface components {
         /**
          * CardBatchUpdate
          * @description `values` is partial (only changed fields), keyed by a real field_def id or a
-         *     same-request `client_key` — the deck editor's edit-mode diff (Phase 7) can set an
+         *     same-request `client_key` — the deck editor's edit-mode diff can set an
          *     existing card's value for a field created in the very same request (field
          *     creates are always applied before card updates, per the stated operation order,
          *     so the field already has a real row by the time this runs).
@@ -565,7 +565,7 @@ export interface components {
         /**
          * CardMasteryRead
          * @description Display-only aggregate — never stored, computed fresh from mastery_log
-         *     via the active MasteryStrategy on every request (invariant 8).
+         *     via the active MasteryStrategy on every request.
          */
         CardMasteryRead: {
             /** Mastery */
@@ -623,7 +623,7 @@ export interface components {
         };
         /**
          * DeckBatchEdit
-         * @description `PATCH /api/decks/{id}` body (§2.3, Phase 6). Every top-level key is optional —
+         * @description `PATCH /api/decks/{id}` body. Every top-level key is optional —
          *     a request can touch just `name`, just `field_defs`, or any combination — but the
          *     whole thing is applied as one transaction: a failure anywhere rolls back
          *     everything, including an already-changed `name`.
@@ -809,7 +809,7 @@ export interface components {
         };
         /**
          * DeckSummary
-         * @description DeckRead plus preview data for a list row (Phase 2.6) — card_count and
+         * @description DeckRead plus preview data for a list row — card_count and
          *     field_names (position order, active fields only). Only `GET /api/decks` returns
          *     this; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the
          *     richer `DeckDetail` instead, which already includes everything here except these
@@ -845,8 +845,8 @@ export interface components {
         };
         /**
          * DeletionImpactRead
-         * @description The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,
-         *     by type, for a delete confirm to word its warning (cycle 013 MD-2, MD-3). Each
+         * @description The `GET /api/deletion-impact` response: the deletion closure's size, by type,
+         *     for a delete confirm to word its warning. Each
          *     field is the count of one closure set `compute_deletion_impact` returns —
          *     `cards_affected` is `DeletionImpact.affected_card_count`, every other field is
          *     `len()` of the matching id set. Never nests another shape.
@@ -877,9 +877,9 @@ export interface components {
         };
         /**
          * FieldDefBatchOps
-         * @description §2.3's `field_defs` changeset. Applied in the stated order (create → update →
+         * @description The `field_defs` changeset. Applied in the stated order (create → update →
          *     delete → reorder) inside the batch-edit transaction — this model just carries the
-         *     four lists; the service resolves ids/client_keys and enforces D3.
+         *     four lists; the service resolves ids/client_keys and enforces the two-field floor.
          */
         FieldDefBatchOps: {
             /** Create */
@@ -941,7 +941,7 @@ export interface components {
         };
         /**
          * FieldMasteryDelta
-         * @description One active field's session-delta entry (ADR 042, ADR 044, cycle 010 T3):
+         * @description One active field's session-delta entry:
          *     `mastery` is the after-state field score (`strategy.field_score`, the existing
          *     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
          *     is always a float, never None — 0.0 for a field this run's card left untouched.
@@ -1007,9 +1007,9 @@ export interface components {
         PracticeCardStatus: "pending" | "passed" | "failed";
         /**
          * PracticeRunBreakdown
-         * @description The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and
+         * @description The whole `GET .../breakdown` payload: bucket counts, and
          *     every card's full resolved history, so the completion screen's row-tap detail needs
-         *     no second request. Only ever built for a completed session (ADR 029) — the router
+         *     no second request. Only ever built for a completed session — the router
          *     409s an active one before this is composed.
          */
         PracticeRunBreakdown: {
@@ -1038,8 +1038,8 @@ export interface components {
          * @description One deck a session touches, resolved through `practice_deck → deck → subject`.
          *
          *     This chain is the only link between a session and a subject/deck, and the only thing
-         *     the filters use. `practice_deck.source_config_id` (ADR 040) is read here for the
-         *     label only (ADR 068): `configuration_name` is the live configuration's name while
+         *     the filters use. `practice_deck.source_config_id` is read here for the label
+         *     only: `configuration_name` is the live configuration's name while
          *     the link resolves, else the snapshot's stored `source_config_name`, else None. The
          *     link is never read for filtering, generation, validation or rerun.
          */
@@ -1084,7 +1084,7 @@ export interface components {
         };
         /**
          * PracticeRunRerun
-         * @description Body of POST .../rerun (ADR 039): the client-formatted name for the new run,
+         * @description Body of POST .../rerun: the client-formatted name for the new run,
          *     the same way PracticeRunCreate.name is — the server derives nothing.
          */
         PracticeRunRerun: {
@@ -1093,7 +1093,7 @@ export interface components {
         };
         /**
          * PracticeRunState
-         * @description The whole `GET .../state` payload (ADR 031) — everything the run page needs to
+         * @description The whole `GET .../state` payload — everything the run page needs to
          *     render one screen, in one round trip. `current_card` is None once nothing is
          *     pending, which is also exactly when `session_status` reads `completed`.
          */
@@ -1110,10 +1110,10 @@ export interface components {
          *     so the client can render and filter by subject/deck without a second round trip or a
          *     client-side join.
          *
-         *     `decks` lists every snapshot of the run — a `practice_deck` no longer outlives its
-         *     deck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run
+         *     `decks` lists every snapshot of the run — a `practice_deck` never outlives its
+         *     deck: deleting a deck deletes its snapshots with it, and a run
          *     left owning no snapshot at all is deleted alongside its last one. There is no
-         *     "deleted deck" state left for a summary to represent.
+         *     "deleted deck" state for a summary to represent.
          */
         PracticeRunSummary: {
             /**
@@ -1142,7 +1142,7 @@ export interface components {
          * @description A resolved answer field plus the rating it was given, joined from `review_log`
          *     on `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`
          *     exactly for a removed field's placeholder, because its review rows cascaded with
-         *     the field (ADR 048).
+         *     the field.
          */
         RatedFieldValue: {
             /**
@@ -1179,12 +1179,12 @@ export interface components {
          * ResolvedFieldValue
          * @description One prompt/answer field id from a practice_card's `prompts`/`answers` array,
          *     joined against its field_def (name, type) and this card's current value — the
-         *     server-side resolution ADR 031 replaces bare-id responses with. `value` is `""`
+         *     server-side resolution every run payload uses instead of bare ids. `value` is `""`
          *     when no card_field_value row exists for this (card, field) pair; it is passed
          *     through as-is even if blank, since a value can go blank *after* the practice_card
-         *     was generated (ADR 026 only governs generation-time candidacy, not later edits).
+         *     was generated (the blank filter governs generation-time candidacy, not later edits).
          *     `removed` is True only for a placeholder the breakdown emits for a stored id whose
-         *     field_def row no longer exists (ADR 052); every other resolution, including the
+         *     field_def row no longer exists; every other resolution, including the
          *     live run's current card, leaves it False.
          */
         ResolvedFieldValue: {
@@ -1206,7 +1206,7 @@ export interface components {
         };
         /**
          * RunProgress
-         * @description The ADR 028 live-progress counts: `total_cards` is fixed at session start
+         * @description The live-progress counts: `total_cards` is fixed at session start
          *     (distinct card_ids that received a practice_card row then) and never changes, so
          *     the other four counts — a partition of it by chain-fold bucket — only ever
          *     redistribute, never grow the denominator mid-session.
@@ -1225,10 +1225,9 @@ export interface components {
         };
         /**
          * RunStatus
-         * @description Two states, not three. `abandoned` was dropped: nothing could distinguish it from
-         *     `completed` without tracking why a session ran out of pending cards, which ADR 015
-         *     had already declined to invent state for. A session is either still practisable or it
-         *     isn't (ADR 015, amended).
+         * @description Two states, not three: nothing could distinguish an "abandoned" session from a
+         *     `completed` one without tracking why it ran out of pending cards, and no state is
+         *     kept for that. A session is either still practisable or it isn't.
          * @enum {string}
          */
         RunStatus: "active" | "completed";
@@ -1284,7 +1283,7 @@ export interface components {
         };
         /**
          * SubjectSummary
-         * @description SubjectRead plus a deck count for a library list row (Phase 2.6). Only
+         * @description SubjectRead plus a deck count for a library list row. Only
          *     `GET /api/subjects` returns this — the subject detail page derives its own deck/
          *     card counts from the (separately-fetched, already-enriched) deck list instead of
          *     needing this here too.

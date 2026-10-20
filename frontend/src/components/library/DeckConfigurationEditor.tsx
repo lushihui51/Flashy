@@ -98,9 +98,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
   if (mode === 'edit' && !configQuery.data) return null;
 
   // `deckId` in router state is a deck just created through the "New deck…" round-trip
-  // (DeckEditor navigates back with it) — a one-shot result, so it stays in state
-  // (ADR 024). `?deck=` is the pre-filter chain's context. Both mean "start on this
-  // deck", so the fresher one wins.
+  // (DeckEditor navigates back with it) — a one-shot result, so it stays in state.
+  // `?deck=` is the pre-filter chain's context. Both mean "start on this deck", so the
+  // fresher one wins.
   const state = location.state as { deckId?: string } | null;
 
   return (
@@ -139,8 +139,8 @@ function DeckConfigurationEditorBody({
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
   const [deckId, setDeckId] = useState<string | null>(config?.deck_id ?? contextDeckId);
-  // ADR 067: in create mode the name follows the board — derived from its layout — until
-  // the user types, after which it is theirs through further assignments and a deck
+  // In create mode the name follows the board — derived from its layout — until the
+  // user types, after which it is theirs through further assignments and a deck
   // change. Edit mode starts with the stored name, so it is never re-derived.
   // null until the user types (create mode); the stored name from the start (edit mode).
   const [typedName, setTypedName] = useState<string | null>(config?.name ?? null);
@@ -194,9 +194,9 @@ function DeckConfigurationEditorBody({
         queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] }),
         queryClient.invalidateQueries({ queryKey: ['deck_practice_config', saved.id] }),
       ]);
-      // `{configurationId}` is a create-only hand-back (ADR 061): building a
-      // configuration from New practice means wanting to use it, so New practice
-      // auto-selects it; an edit says nothing about wanting it and returns with no result.
+      // `{configurationId}` is a create-only hand-back: building a configuration from
+      // New practice means wanting to use it, so New practice auto-selects it; an edit
+      // says nothing about wanting it and returns with no result.
       navigate(
         returnTo ?? `/decks/${saved.deck_id}?tab=configurations`,
         mode === 'create' ? { state: { configurationId: saved.id } } : undefined,
@@ -274,9 +274,9 @@ function DeckConfigurationEditorBody({
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              // returnTo itself rides the URL (ADR 024), not state: this page's own
-              // full location already contains whatever returnTo it was opened with,
-              // so a nested round trip survives with nothing extra to forward by hand.
+              // returnTo itself rides the URL, not state: this page's own full
+              // location already contains whatever returnTo it was opened with, so a
+              // nested round trip survives with nothing extra to forward by hand.
               onSelectCreate={() => {
                 const params = new URLSearchParams();
                 params.set('returnTo', `${location.pathname}${location.search}`);

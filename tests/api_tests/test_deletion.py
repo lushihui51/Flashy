@@ -1,8 +1,8 @@
-"""Service tests for compute_deletion_impact + apply_deletion (cycle 013 T3/T4, ADR
-047, ADR 051) — calling the pair directly and committing, the same way
-delete_subject/delete_deck/delete_card do internally. review_log.card_id/
-field_def_id are NOT NULL ON DELETE CASCADE (ADR 048): a deleted card's or field's
-review rows are gone entirely, never left behind with a nulled reference."""
+"""Service tests for compute_deletion_impact + apply_deletion — calling the pair
+directly and committing, the same way delete_subject/delete_deck/delete_card do
+internally. review_log.card_id/field_def_id are NOT NULL ON DELETE CASCADE: a deleted
+card's or field's review rows are gone entirely, never left behind with a nulled
+reference."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -175,7 +175,7 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     assert surviving_snapshot.deck_id == other_deck_id
     assert surviving_snapshot.prompt_field_ids == [o_front.id]
 
-    # No review row references the deleted card either (ADR 048's cascade).
+    # No review row references the deleted card either: its rows cascaded with it.
     assert db.exec(select(ReviewLog).where(ReviewLog.card_id == d1_card_id)).first() is None
 
 
@@ -301,11 +301,12 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     )
 
     # B has no mastery_log rows left at all, and no review_log rows either — its
-    # own rating from appearance 1 cascaded away with the field (ADR 048).
+    # own rating from appearance 1 cascaded away with the field.
     assert db.exec(select(MasteryLog).where(MasteryLog.field_def_id == b_id)).first() is None
     assert db.exec(select(ReviewLog).where(ReviewLog.field_def_id == b_id)).first() is None
 
-    # The scrub: deck1's own row no longer names B, deck2's identical array still does.
+    # The scrub: B is gone from deck1's own row, while deck2's identical array still
+    # names it.
     d1_row = db.exec(
         select(ReviewLog).where(
             ReviewLog.card_id == card1_id,

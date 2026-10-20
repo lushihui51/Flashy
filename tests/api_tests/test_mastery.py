@@ -53,10 +53,9 @@ def mastery_cards(client, existing_deck):
 
 
 def _snapshot(db):
-    """Current mastery = latest row per (card, field) pair (ADR 042) — folds the
-    append-only ledger down to the same shape the old single-row-per-pair cache had,
-    so every existing assertion below still reads as "current state" without knowing
-    the ledger keeps history underneath."""
+    """Current mastery = latest row per (card, field) pair — folds the append-only
+    ledger down to one entry per pair, so an assertion below reads as "current state"
+    without knowing the ledger keeps history underneath."""
     rows = db.exec(select(MasteryLog).order_by(MasteryLog.reviewed_at)).all()
     latest: dict[tuple, tuple] = {}
     for row in rows:
@@ -377,8 +376,8 @@ class TestRecordReviewGroupOutcomes:
 
 
 class TestReviewedAtOrder:
-    """ADR 050: the ledger's order is reviewed_at, stamped under the card's advisory
-    lock so it is strictly increasing per card even when the proposed stamp — what
+    """The ledger's order is reviewed_at, stamped under the card's advisory lock so it
+    is strictly increasing per card even when the proposed stamp — what
     datetime.now(UTC) would read — is identical across two appearances."""
 
     def test_two_appearances_at_the_same_instant_get_strictly_increasing_reviewed_at(
@@ -463,7 +462,7 @@ class TestReviewedAtOrder:
 
 
 class TestRunAttribution:
-    """ADR 042's practice_run_id parameter on the write path: each appended row is
+    """The practice_run_id parameter on the write path: each appended row is
     attributed to the run it happened in, and a retry of an already-logged group
     appends nothing at all — not even an unattributed row."""
 
@@ -583,11 +582,11 @@ class TestRebuildOracle:
     def test_rebuild_reproduces_the_whole_ledger_not_just_latest_rows(
         self, db, existing_user, mastery_cards
     ):
-        """Invariant 3 (cycle 013 Contracts): replaying a card's appearances in
-        reviewed_at order reproduces every row untouched, value for value and
-        timestamp for timestamp — not just each pair's latest row. The rebuild never
-        re-stamps (ADR 050), so every (card_id, field_def_id, reviewed_at) key from
-        before rebuild must still be present after, with the same state."""
+        """Replaying a card's appearances in reviewed_at order reproduces every row
+        untouched, value for value and timestamp for timestamp — not just each pair's
+        latest row. The rebuild never re-stamps, so every (card_id, field_def_id,
+        reviewed_at) key from before rebuild must still be present after, with the
+        same state."""
         strategy = EmaStrategy()
         card_id = mastery_cards["card_ids"][0]
         field_ids = mastery_cards["field_ids"]
@@ -629,12 +628,12 @@ class TestRebuildOracle:
     def test_rebuild_reconstructs_attribution_and_preserves_state(
         self, db, existing_user, mastery_cards
     ):
-        """The reconstruction ADR 042 calls out: a group's review_group_id is the
-        practice_card.id it was submitted against, so rebuild_mastery recovers
-        practice_run_id by joining back to still-existing practice_card rows —
-        surviving for a run that's still around, nulled for a run that was deleted
-        (its practice_card cascades away with it; the reviewed card itself is
-        untouched and its ledger state must come out unchanged either way)."""
+        """A group's review_group_id is the practice_card.id it was submitted against,
+        so rebuild_mastery recovers practice_run_id by joining back to still-existing
+        practice_card rows — surviving for a run that's still around, nulled for a run
+        that was deleted (its practice_card cascades away with it; the reviewed card
+        itself is untouched and its ledger state must come out unchanged either
+        way)."""
         strategy = EmaStrategy()
         card_a, card_b = mastery_cards["card_ids"][0], mastery_cards["card_ids"][1]
         answer_field, prompt_field = mastery_cards["field_ids"][0], mastery_cards["field_ids"][1]
@@ -712,11 +711,11 @@ class TestRebuildOracle:
 
 
 class TestDeckScopedRebuild:
-    """ADR 049: rebuild_deck_mastery must reproduce exactly what a user-wide rebuild
-    produces for its one deck, and must not touch any other deck's rows — not even
-    their ids, since a scoped rebuild only clears and re-inserts its own deck's
-    cards' rows (ADR 050 is what makes this safe: order is reviewed_at, not an
-    identity id, so a partial re-insert can't disturb another deck's order)."""
+    """rebuild_deck_mastery must reproduce exactly what a user-wide rebuild produces
+    for its one deck, and must not touch any other deck's rows — not even their ids,
+    since a scoped rebuild only clears and re-inserts its own deck's cards' rows
+    (safe because the ledger's order is reviewed_at, not an identity id, so a partial
+    re-insert can't disturb another deck's order)."""
 
     @staticmethod
     def _ledger_for_cards(db, card_ids):

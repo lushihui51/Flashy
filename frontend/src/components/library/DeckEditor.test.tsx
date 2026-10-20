@@ -184,13 +184,13 @@ describe('DeckEditor — create mode', () => {
     renderEditor();
 
     await screen.findByDisplayValue('Term');
-    // A third field so Remove is enabled (D3: disabled at exactly two).
+    // A third field so Remove is enabled (it is disabled at two, a deck's minimum).
     await user.click(screen.getByRole('button', { name: 'Add field' }));
 
     await user.click(screen.getByRole('button', { name: 'Remove Term' }));
 
-    // Gone outright — no confirm, no struck-through row (Phase 7.5 §1: only a
-    // *saved* field stages; create mode never has one).
+    // Gone outright — no confirm, no struck-through row (only a *saved* field stages;
+    // create mode never has one).
     expect(screen.queryByText(/Remove "Term"\?/)).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('Term')).not.toBeInTheDocument();
   });
@@ -214,8 +214,6 @@ describe('DeckEditor — create mode', () => {
     expect(await screen.findByPlaceholderText('Subject')).toBeInTheDocument();
   });
 
-  // The subject combobox's create row used to live in a picker wrapper with its own test
-  // file; the overlay is wired here now, so its coverage moved here with it.
   it('"New subject…" opens the create overlay; cancel leaves the selection unchanged', async () => {
     mockSubjects();
     const user = userEvent.setup();
@@ -279,7 +277,7 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      // ADR 024: returnTo rides the URL, not state.
+      // returnTo rides the URL, not state.
       ['/decks/new?returnTo=%2Fcards%2Fnew'],
     );
 
@@ -346,8 +344,7 @@ describe('DeckEditor — create mode', () => {
           { name: 'Definition', type: 'text' },
         ]);
         // A deck is born with a schema and no content — the first card is added from
-        // the new deck's own card list (ADR 023). The create contract has no `cards`
-        // field at all (cycle 008 T2).
+        // the new deck's own card list. The create contract has no `cards` field at all.
         expect(body).not.toHaveProperty('cards');
         return HttpResponse.json({ id: 'd1' }, { status: 201 });
       }),
@@ -576,7 +573,7 @@ describe('DeckEditor — edit mode', () => {
     await user.clear(nameInput);
     await user.type(nameInput, 'Vocab Renamed');
 
-    // Add a field, so the D3 floor allows staging one for removal.
+    // Add a field, so the two-field floor allows staging one for removal.
     await user.click(screen.getByRole('button', { name: 'Add field' }));
     const [, , newFieldInput] = screen.getAllByRole('textbox', { name: 'Field name' });
     await user.type(newFieldInput!, 'Notes');
@@ -668,15 +665,6 @@ describe('DeckEditor — edit mode', () => {
     ).toBeInTheDocument();
   });
 
-  // No "a card-only deletion opens the confirm with no impact request made" test
-  // here (cycle 013 T7's Details asks for one): buildDeckBatchEditPayload never
-  // produces a `cards` key (asserted above, "Card entry left this form entirely —
-  // a deck edit never carries card ops"), so there is no way to drive this editor
-  // into a state where cards.delete is non-empty. handleSaveClick still checks for
-  // it, matching the Contracts wording symmetrically with field_defs.delete, in
-  // case a later phase gives this editor card operations of its own — see the
-  // task's Notes line for the full record of this gap.
-
   it('a failed impact request for the save confirm renders inline and opens nothing', async () => {
     mockEditDeck();
     server.use(
@@ -758,8 +746,8 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
     expect(await screen.findByText('Delete deck?')).toBeInTheDocument();
-    // ADR 048: everything the closure counts cascades with the deck, review history
-    // included — the sentence names each type the impact query reported.
+    // Everything the closure counts cascades with the deck, review history included —
+    // the sentence names each type the impact query reported.
     expect(
       screen.getByText(
         "This also deletes 1 deck, 1 card, 2 fields, 3 deck configurations and 1 practice. This can't be undone.",

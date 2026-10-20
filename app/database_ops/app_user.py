@@ -1,7 +1,7 @@
 """Persistence for the `app_user` table — the authenticated user, keyed by
 `clerk_user_id`, and the root of every ownership chain. These are the only three
 operations the table has: the row is created lazily on first sight of a Clerk id, its
-timezone is kept in step with the `X-Timezone` header (ADR 019), and nothing else ever
+timezone is kept in step with the `X-Timezone` header, and nothing else ever
 writes it. Unlike every other module here the reads are not ownership-scoped, because
 this table *is* the ownership scope."""
 

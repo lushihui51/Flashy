@@ -145,7 +145,7 @@ describe('LibraryPage', () => {
 
     expect(await screen.findByText('No subjects yet.')).toBeInTheDocument();
     // The count row's create button is the only one; the empty state is its text
-    // alone (ADR 066). getByRole throws on a second match.
+    // alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'New subject' })).toBeInTheDocument();
   });
 
@@ -158,7 +158,7 @@ describe('LibraryPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Decks' }));
 
     expect(await screen.findByText('No decks yet.')).toBeInTheDocument();
-    // The count row's create button is the only one (ADR 066).
+    // The count row's create button is the only one.
     expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
   });
 

@@ -8,11 +8,11 @@ from app.models.base import AppModel
 
 
 class MasteryLog(AppModel, table=True):
-    """Append-only ledger (ADR 042): one row per (card, field) state change, carrying
-    the full post-blend FieldMasteryState. No arithmetic lives here or in the
-    repository that reads/writes it; that's the MasteryStrategy's job (invariant 8).
+    """Append-only ledger: one row per (card, field) state change, carrying the full
+    post-blend FieldMasteryState. No arithmetic lives here or in the repository that
+    reads/writes it; that's the MasteryStrategy's job.
 
-    The ledger's order is `reviewed_at`, not `id` (ADR 050): "latest row" always means
+    The ledger's order is `reviewed_at`, not `id`: "latest row" always means
     greatest `reviewed_at` for a (card_id, field_def_id) pair, and every DISTINCT ON /
     ORDER BY in the repository uses that one column. `id` is an app-supplied uuid that
     identifies a row and orders nothing — a rebuild can delete and re-insert one
@@ -25,7 +25,7 @@ class MasteryLog(AppModel, table=True):
     `practice_run_id` is nullable attribution, ON DELETE SET NULL — deleting a run
     must not rewind mastery, it only loses which run gets credit for the movement.
     `card_id`/`field_def_id` CASCADE: a deleted card or field takes its review_log
-    rows with it (ADR 048), so its ledger rows would have nothing left to be a
+    rows with it, so its ledger rows would have nothing left to be a
     projection of. `review_group_id` is stored as provenance only — which
     appearance produced the row — never as an order key; it carries no foreign key and
     is not indexed."""

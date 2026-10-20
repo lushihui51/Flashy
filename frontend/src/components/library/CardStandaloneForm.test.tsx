@@ -111,8 +111,8 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams, not
-    // compared as an encoded string literal.
+    // returnTo rides the URL, not state — decoded via URLSearchParams, not compared as
+    // an encoded string literal.
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
     const locationEl = screen.getByTestId('location');

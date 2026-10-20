@@ -21,10 +21,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """subject.icon is now an identifier into a curated frontend icon set, not emoji
-    (see docs/plans/003-frontend-rebuild-creation-flows.md, Phase 2.5's icon-rendering
-    decision, superseded). Updates the server default and backfills rows that are
-    still on the old emoji default — values that were deliberately set to something
+    """subject.icon is an identifier into a curated frontend icon set, not emoji.
+    Updates the server default and backfills rows that are
+    still on the emoji default — values that were deliberately set to something
     else (e.g. 'brain', 'atom') are untouched."""
     op.alter_column("subject", "icon", server_default="book-open")
     op.execute("UPDATE subject SET icon = 'book-open' WHERE icon = '📚'")

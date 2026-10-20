@@ -10,7 +10,7 @@ from app.services.activity import touch
 
 def create_field_def(db: Session, deck: Deck, name: str, field_type: FieldType) -> FieldDef:
     """Adds one active field at the deck's next position and, in the same transaction,
-    a `""` value row for every existing card, keeping `card_field_value` dense (ADR 057).
+    a `""` value row for every existing card, keeping `card_field_value` dense.
     An active-name collision rolls everything back and raises `ValueError`."""
     touch(db, deck)
     try:

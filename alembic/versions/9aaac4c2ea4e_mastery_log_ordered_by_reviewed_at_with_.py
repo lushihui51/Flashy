@@ -4,8 +4,8 @@ Revision ID: 9aaac4c2ea4e
 Revises: 795ede6a41c4
 Create Date: 2026-09-21 09:22:31.052511
 
-ADR 050 (cycle 013 T1): the ledger's order becomes `reviewed_at`, not the identity
-`id` — a deck-scoped rebuild (cycle 013 T2) deletes and re-inserts one deck's rows,
+The ledger's order becomes `reviewed_at`, not the identity `id` — a deck-scoped
+rebuild deletes and re-inserts one deck's rows,
 which would otherwise land them above every row other decks wrote later in time. `id`
 becomes an app-supplied uuid that identifies a row and orders nothing.
 
@@ -16,19 +16,20 @@ Upgrade, in order:
    lives only in the old mastery_log's identity ids, which this migration does not
    reconstruct). If any such pair exists, the migration raises and changes nothing.
 2. A scrub of review_log.shown_prompt_ids down to live field_def ids only —
-   establishes invariant 1 (cycle 013's Contracts) before the replay below, which
+   establishes that every id in shown_prompt_ids is a live field_def id before the
+   replay below, which
    would otherwise try to log a mastery_log row against a field that no longer
    exists.
 3. Drop and recreate mastery_log under the new shape, then import and call
    app.services.mastery.rebuild_mastery against this migration's own connection —
-   the same replay every live rating goes through, run globally via review_log (ADR
-   011's source of truth) — exactly as 795ede6a41c4 first backfilled this table.
+   the same replay every live rating goes through, run globally via review_log (the
+   source of truth) — exactly as 795ede6a41c4 first backfilled this table.
    Accepted coupling: this upgrade imports app code as of this revision, so it
    replays through whatever MasteryStrategy app.mastery.config.get_mastery_strategy()
    resolves to at the time this migration runs (795ede6a41c4's docstring makes the
    same assumption).
 
-Downgrade recreates the old identity-ordered shape and repopulates it by numbering
+Downgrade recreates the identity-ordered shape and repopulates it by numbering
 mastery_log's own rows off the new order (reviewed_at, with review_group_id as a
 deterministic tiebreak for rows of different pairs that share a timestamp) — plain
 SQL, no MasteryStrategy, no app import. Step 2's scrub is not reversed: a

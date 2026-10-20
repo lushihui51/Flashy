@@ -92,8 +92,6 @@ describe('unwrap', () => {
   });
 
   it('throws a plain Error, not ApiDetailError, for an object detail missing a string code', () => {
-    // Same shape session-start errors used to fall back to before ADR 022 — message-only
-    // object details (no `code`) must keep throwing a plain Error, not the new type.
     let thrown: unknown;
     try {
       unwrap({ error: { detail: { message: 'Something went wrong' } }, response: res(500) });

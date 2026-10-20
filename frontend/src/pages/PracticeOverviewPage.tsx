@@ -24,9 +24,9 @@ function isStatusTab(value: string | null): value is StatusTab {
   return value !== null && (STATUS_TABS as readonly string[]).includes(value);
 }
 
-/** The session list (§Phase 1). Filter state lives in the URL rather than component
- * state so every entry point into practice — the subject page's Practice button, the
- * deck page's, a shared link — is just a URL with the right params, and so going back
+/** The session list. Filter state lives in the URL rather than component state so
+ * every entry point into practice — the subject page's Practice button, the deck
+ * page's, a shared link — is just a URL with the right params, and so going back
  * returns to the list the user was actually looking at. */
 export default function PracticeOverviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -175,8 +175,8 @@ export default function PracticeOverviewPage() {
         open={pendingDelete !== null}
         title="Delete this practice?"
         // Deliberately says nothing about decks or configs: deleting a session takes its
-        // own cards and snapshots and nothing else (ADR 015, amended), and reviews
-        // already logged stay on record.
+        // own cards and snapshots and nothing else, and reviews already logged stay on
+        // record.
         description="Its progress will be gone. The decks it practised are not affected."
         confirmLabel="Delete"
         destructive

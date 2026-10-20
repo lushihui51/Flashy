@@ -9,13 +9,12 @@ export type EditorField = {
   id?: string;
   name: string;
   type: FieldType;
-  /** Phase 7.5: meaningful only when `id` is set. A saved field's Remove stages it
-   * for deletion on save instead of dropping it from the list immediately — the row
-   * stays in place, struck through, with no interactive control of its own. The
-   * *only* way to reverse it is the header's single global Undo (Phase 7.5 §2),
-   * which reverts the whole form at once. A brand-new field (no `id`) never carries
-   * this — removing one just deletes it outright, since there's nothing on the
-   * server to stage against. */
+  /** Meaningful only when `id` is set. A saved field's Remove stages it for deletion
+   * on save instead of dropping it from the list immediately — the row stays in
+   * place, struck through, with no interactive control of its own. The *only* way to
+   * reverse it is the header's single global Undo, which reverts the whole form at
+   * once. A brand-new field (no `id`) never carries this — removing one just deletes
+   * it outright, since there's nothing on the server to stage against. */
   pendingRemoval?: boolean;
 };
 
@@ -33,8 +32,8 @@ function makeKey(): string {
   return crypto.randomUUID();
 }
 
-/** A brand-new deck starts with the two fields most decks need (§4.7) — the user
- * renames or replaces them rather than starting from an empty list. */
+/** A brand-new deck starts with the two fields most decks need — the user renames or
+ * replaces them rather than starting from an empty list. */
 export function initialDeckEditorState(subjectId: string | null = null): DeckEditorState {
   return {
     name: '',
@@ -47,14 +46,13 @@ export function initialDeckEditorState(subjectId: string | null = null): DeckEdi
   };
 }
 
-/** Edit mode's starting state (Phase 7) — every pre-existing field keeps its real
- * `id`, plus a fresh client-only `key` for reducer/component use exactly like a
- * brand-new one gets.
+/** Edit mode's starting state — every pre-existing field keeps its real `id`, plus a
+ * fresh client-only `key` for reducer/component use exactly like a brand-new one gets.
  *
- * Call this exactly once per edit session and reuse the same object as both the
- * reducer's initial state and the frozen `original` diffed against at save time —
- * two separate calls would mint two different sets of keys for the same rows,
- * breaking every id-based comparison in `buildDeckBatchEditPayload`. */
+ * Call this once per loaded deck and reuse the same object as both the reducer's state
+ * and the `original` diffed against at save time — two separate calls would mint two
+ * different sets of keys for the same rows, breaking every id-based comparison in
+ * `buildDeckBatchEditPayload`. */
 export function deckDetailToEditorState(deck: DeckDetail): DeckEditorState {
   const orderedFieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
   const fields: EditorField[] = orderedFieldDefs.map((fieldDef) => ({
@@ -79,12 +77,12 @@ export type DeckEditorAction =
   | { type: 'SET_FIELD_TYPE'; key: string; fieldType: FieldType }
   | { type: 'REMOVE_FIELD'; key: string }
   | { type: 'MOVE_FIELD'; key: string; toIndex: number }
-  /** Phase 7.5: replaces the *entire* state wholesale. Two callers — after a
-   * successful edit-mode save, re-run through `deckDetailToEditorState` (real ids
-   * for anything created via `client_key`, every pending flag cleared, `dirty`
-   * reset); and the header's global Undo, dispatched with the frozen `original` to
-   * discard every uncommitted change — renames, reorders, new rows, and pending
-   * removals — in one step. */
+  /** Replaces the *entire* state wholesale. Two callers — after a successful
+   * edit-mode save, re-run through `deckDetailToEditorState` (real ids for anything
+   * created via `client_key`, every pending flag cleared, `dirty` reset); and the
+   * header's global Undo, dispatched with the frozen `original` to discard every
+   * uncommitted change — renames, reorders, new rows, and pending removals — in one
+   * step. */
   | { type: 'LOAD'; state: DeckEditorState };
 
 export function deckEditorReducer(
@@ -120,16 +118,16 @@ export function deckEditorReducer(
       };
 
     case 'REMOVE_FIELD': {
-      // D3 counts non-pending fields only — a field already staged for removal
-      // doesn't hold the floor open for another one (Phase 7.5 §1).
+      // The two-field floor counts non-pending fields only — a field already staged for
+      // removal doesn't hold the floor open for another one.
       const activeCount = state.fields.filter((f) => !f.pendingRemoval).length;
-      if (activeCount <= 2) return state; // D3: never drop below two active fields.
+      if (activeCount <= 2) return state; // Never drop below two active fields.
       const field = state.fields.find((f) => f.key === action.key);
       if (!field) return state;
       if (field.id) {
         // A saved field: stage it, don't drop it — the row stays in place, with no
-        // control of its own to reverse just this one (Phase 7.5 §1); only the
-        // global Undo can bring it back.
+        // control of its own to reverse just this one; only the global Undo can bring
+        // it back.
         return {
           ...state,
           fields: state.fields.map((f) =>
@@ -139,7 +137,7 @@ export function deckEditorReducer(
         };
       }
       // A brand-new field never had server state to stage against — remove it
-      // outright, same as before Phase 7.5.
+      // outright.
       return { ...state, fields: state.fields.filter((f) => f.key !== action.key), dirty: true };
     }
 
@@ -165,10 +163,10 @@ export function deckEditorReducer(
 export function isDeckEditorValid(state: DeckEditorState): boolean {
   if (state.name.trim() === '') return false;
   if (state.subjectId === null) return false;
-  // Phase 7.5: a pending-removal field is on its way out on save, so it neither
-  // counts toward the D3 floor nor blocks Save with a struck-through duplicate name.
+  // A pending-removal field is on its way out on save, so it neither counts toward
+  // the two-field floor nor blocks Save with a struck-through duplicate name.
   const activeFields = state.fields.filter((f) => !f.pendingRemoval);
-  if (activeFields.length < 2) return false; // D3: a deck needs at least two fields.
+  if (activeFields.length < 2) return false; // A deck needs at least two fields.
   if (activeFields.some((f) => f.name.trim() === '')) return false;
   const lowerNames = activeFields.map((f) => f.name.trim().toLowerCase());
   if (new Set(lowerNames).size !== lowerNames.length) return false;
@@ -176,8 +174,8 @@ export function isDeckEditorValid(state: DeckEditorState): boolean {
 }
 
 /** The create payload: name, subject, and fields in list order. A deck is born with a
- * schema and no content — the first card is added from the new deck's own card list
- * (ADR 023); the create contract has no `cards` field at all (cycle 008 T2). */
+ * schema and no content — the first card is added from the new deck's own card list,
+ * and the create contract has no `cards` field at all. */
 export function buildDeckCreatePayload(state: DeckEditorState): DeckCreate {
   return {
     name: state.name.trim(),

@@ -10,12 +10,6 @@ type BreakdownCard = components['schemas']['BreakdownCard'];
 type BreakdownBucket = components['schemas']['BreakdownBucket'];
 type FieldMasteryDelta = components['schemas']['FieldMasteryDelta'];
 
-/** ADR 044's one retrospective view: a summary line, a sort control, one compact row
- * per card (outcome badge, mastery, delta), and a row tap opening the full
- * attempt-by-attempt detail plus every active field's mastery/delta. Doesn't fetch —
- * the run page (once nothing is pending) and the details page (for any completed
- * session) each own the breakdown query and pass the same payload down here, so the
- * view itself can't drift between the two places it's shown. */
 const BUCKET_LABELS: Record<BreakdownBucket, string> = {
   passed_first_try: 'First try',
   passed_after_one_fail: 'One retry',
@@ -25,9 +19,9 @@ const BUCKET_LABELS: Record<BreakdownBucket, string> = {
 
 type SortKey = 'gains' | 'drops' | 'mastery';
 
-// 010 MD-1: labeled exactly this way, `gains` the default. No tie-breaking rule is
-// defined — Array.prototype.sort is stable, so equal values keep the server's
-// first-attempt position order, but nothing here relies on that being the case.
+// Labeled exactly this way, `gains` the default. No tie-breaking rule is defined —
+// Array.prototype.sort is stable, so equal values keep the server's first-attempt
+// position order, but nothing here relies on that being the case.
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'gains', label: 'Gains first' },
   { key: 'drops', label: 'Drops first' },
@@ -42,25 +36,25 @@ function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
   return sorted;
 }
 
-// 010 MD-2: a rounded integer, "—" for a field that's never been reviewed. Card-level
-// mastery is never null (BreakdownCard.mastery is a plain float), so this only ever
-// takes that branch for a field entry.
+// A rounded integer, "—" for a field that's never been reviewed. Card-level mastery is
+// never null (BreakdownCard.mastery is a plain float), so this only ever takes that
+// branch for a field entry.
 function formatMastery(mastery: number | null): string {
   return mastery === null ? '—' : String(Math.round(mastery));
 }
 
-// 010 MD-2: the exact difference rounded to a signed integer, "±0" at zero. Rounding
-// happens first and the sign is read off the rounded value, not the original float —
-// otherwise a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
+// The exact difference rounded to a signed integer, "±0" at zero. Rounding happens
+// first and the sign is read off the rounded value, not the original float — otherwise
+// a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
 function formatDelta(delta: number): string {
   const rounded = Math.round(delta);
   if (rounded === 0) return '±0';
   return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
 }
 
-/** The compact row's text (ADR 029): only the deck's primary field, name and value —
- * never prompt/answer content. Falls back to "Untitled card" when the primary field
- * itself is blank. */
+/** The compact row's text: only the deck's primary field, name and value — never
+ * prompt/answer content. Falls back to "Untitled card" when the primary field itself
+ * is blank. */
 function cardTitle(card: BreakdownCard): string {
   return card.primary_field.value
     ? `${card.primary_field.name}: ${card.primary_field.value}`
@@ -71,6 +65,12 @@ type RunBreakdownProps = {
   breakdown: PracticeRunBreakdown;
 };
 
+/** The one retrospective view: a summary line, a sort control, one compact row per
+ * card (outcome badge, mastery, delta), and a row tap opening the full
+ * attempt-by-attempt detail plus every active field's mastery/delta. Doesn't fetch —
+ * the run page (once nothing is pending) and the details page (for any completed
+ * session) each own the breakdown query and pass the same payload down here, so the
+ * view itself can't drift between the two places it's shown. */
 export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
   const [sortKey, setSortKey] = useState<SortKey>('gains');
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -200,9 +200,9 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
   );
 }
 
-/** One entry of the detail sheet's Fields section (ADR 044, cycle 010 T4): every
- * currently active field of the card's deck, not just the ones this run's attempts
- * happened to touch — an untouched field still shows its current mastery, at ±0. */
+/** One entry of the detail sheet's Fields section: every currently active field of the
+ * card's deck, not just the ones this run's attempts happened to touch — an untouched
+ * field still shows its current mastery, at ±0. */
 function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
   return (
     <li className="flex items-center justify-between gap-3">
@@ -218,10 +218,9 @@ function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
 }
 
 /** A read-only rendering of one answer's rating, drawing its label/color from the same
- * tier ramp (MD-2) `RatingChip` uses — this is history, so unlike `RatingChip` it never
- * opens anything on tap. `rating: null` arrives only on a removed field's placeholder
- * (ADR 052), which the sheet never hands to `RatingBadge`, so the "Unrated" fallback
- * is defensive. */
+ * tier ramp `RatingChip` uses — this is history, so unlike `RatingChip` it never opens
+ * anything on tap. `rating: null` arrives only on a removed field's placeholder, which
+ * the sheet never hands to `RatingBadge`, so the "Unrated" fallback is defensive. */
 function RatingBadge({ rating }: { rating: number | null }) {
   const tier = RATING_TIERS.find((t) => t.rating === rating);
   if (!tier) {

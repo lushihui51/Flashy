@@ -27,7 +27,7 @@ class Subject(SubjectBase, TimestampMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="app_user.id")
-    # D13: recency sort key — every list of subjects is ordered by this, descending.
+    # Recency sort key — every list of subjects is ordered by this, descending.
     # Bumps on own-column edits and on bubbled child activity (a deck created/
     # deleted/moved under this subject). No `onupdate`; the only writer is
     # `touch()` (app/services/activity.py).
@@ -48,7 +48,7 @@ class SubjectRead(SubjectBase):
 
 
 class SubjectSummary(SubjectRead):
-    """SubjectRead plus a deck count for a library list row (Phase 2.6). Only
+    """SubjectRead plus a deck count for a library list row. Only
     `GET /api/subjects` returns this — the subject detail page derives its own deck/
     card counts from the (separately-fetched, already-enriched) deck list instead of
     needing this here too."""

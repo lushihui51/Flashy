@@ -15,12 +15,10 @@ type CardFieldsFormProps = {
   onChange: (key: string, value: string) => void;
 };
 
-/** One labelled input per field, in the order given (§4.5). Shared between the
- * in-editor card role today and, from Phase 5, the standalone card form — neither
- * makes a network call itself, it's just controlled inputs over `values`. A field
- * whose type isn't in SUPPORTED_FIELD_TYPES (pre-rewrite `image`/`audio` data) renders
- * read-only with its stored value rather than crashing or offering an editable
- * widget that doesn't exist yet (§2.5). */
+/** One labelled input per field, in the order given. No network call of its own — just
+ * controlled inputs over `values`. A field whose type isn't in SUPPORTED_FIELD_TYPES
+ * (`image`/`audio`) renders read-only with its stored value rather than crashing or
+ * offering an editable widget for a type the form cannot edit. */
 export default function CardFieldsForm({ fieldDefs, values, onChange }: CardFieldsFormProps) {
   return (
     <div className="flex flex-col gap-4">

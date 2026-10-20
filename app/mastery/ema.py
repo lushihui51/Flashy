@@ -23,8 +23,8 @@ RATING_SCORES: dict[int, float] = {1: 0.0, 2: 33.0, 3: 67.0, 4: 100.0}
 @dataclass(frozen=True)
 class EmaStrategy:
     """Exponential moving average toward the normalized rating. Constants live here,
-    not in a shared module — invariant 8: no other module may import them, consumers go
-    through the strategy."""
+    not in a shared module: no other module may import them, consumers go through the
+    strategy."""
 
     name: str = "ema"
     prior_value: float = MASTERY_PRIOR

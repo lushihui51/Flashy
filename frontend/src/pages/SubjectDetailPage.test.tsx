@@ -224,8 +224,8 @@ describe('SubjectDetailPage', () => {
 
     expect(await screen.findByText('No decks in this subject yet.')).toBeInTheDocument();
     expect(screen.getByText('Decks')).toBeInTheDocument();
-    // The row's button is the one add control; the empty state is its text alone
-    // (ADR 066). getByRole throws on a second match.
+    // The row's button is the one add control; the empty state is its text alone.
+    // getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });

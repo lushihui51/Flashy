@@ -123,8 +123,8 @@ describe('PracticeDetailsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     // Date only, not the clock time — formatDateTime renders in whatever zone the
-    // machine running this test happens to sit in (ADR 019), so a fixed instant can
-    // land on a different hour, though never a different calendar day for this one.
+    // machine running this test happens to sit in, so a fixed instant can land on a
+    // different hour, though never a different calendar day for this one.
     expect(screen.getByText(/Aug 24, 2026/)).toBeInTheDocument();
     expect(screen.getByText('Alpha · Shared Deck Name · Config A')).toBeInTheDocument();
   });
@@ -328,8 +328,8 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
     await waitFor(() => expect(rerunRequestedId).toBe('ps1'));
-    // The client formats the new run's name itself (ADR 039), the same way the
-    // creation page pre-fills its own name field — never left blank or server-derived.
+    // The client formats the new run's name itself, the same way the creation page
+    // pre-fills its own name field — never left blank or server-derived.
     expect(rerunRequestedBodies[0]?.name).toBeTruthy();
     // Navigated to the new session's own detail route — its distinct name proves it.
     expect(await screen.findByRole('heading', { name: 'Alpha run (new)' })).toBeInTheDocument();
@@ -384,7 +384,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
       'no deck from this session still has a live, valid snapshot to rerun',
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    // Still on ps1 — nothing navigated away, the old session is unchanged.
+    // Still on ps1 — nothing navigated away, the original session is unchanged.
     expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
   });
@@ -412,7 +412,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
-    // The frontend's sentence in full, not the backend's message (ADR 056).
+    // The frontend's sentence in full, not the backend's message.
     expect((await screen.findByRole('alert')).textContent).toBe(NO_CARDS_MESSAGE);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });

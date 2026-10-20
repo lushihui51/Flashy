@@ -30,8 +30,8 @@ def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | 
 
 
 def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
-    """Deliberately unscoped — Phase 6's copy_deck reads the source deck as raw copy
-    material, not as the caller's own data (invariant 7 protects the latter). Whether
+    """Deliberately unscoped — copy_deck reads the source deck as raw copy material,
+    not as the caller's own data, which every other read scopes by ownership. Whether
     the caller may copy from this particular source is a question for whatever
     authorizes the call (a future share-link check), not this fetch."""
     return db.get(Deck, deck_id)
@@ -40,7 +40,7 @@ def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
 def db_read_decks(
     db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
 ) -> list[Deck]:
-    # D13: recency order, server-side — the frontend never sorts this list.
+    # Recency order, server-side — the frontend never sorts this list.
     query = (
         select(Deck)
         .join(Subject, Subject.id == Deck.subject_id)
@@ -57,7 +57,7 @@ def db_read_decks_with_summary(
 ) -> list[DeckSummary]:
     """Same decks as db_read_decks, plus each one's card_count and field_names
     (position order, active fields only) — via two grouped queries regardless of how
-    many decks there are, never one query per deck (Phase 2.6)."""
+    many decks there are, never one query per deck."""
     decks = db_read_decks(db, user_id, subject_id)
     if not decks:
         return []
@@ -94,7 +94,7 @@ def db_read_owned_deck_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """The subset of `ids` that exist and belong to user_id (via the subject chain) —
-    compute_deletion_impact's ownership check (ADR 051 step 1)."""
+    compute_deletion_impact's ownership check."""
     if not ids:
         return set()
     return set(
@@ -109,7 +109,7 @@ def db_read_owned_deck_ids(
 def db_read_deck_ids_for_subjects(
     db: Session, subject_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """Every deck of these subjects — ADR 051 step 2's ∪ decks-of-subject_ids. Not
+    """Every deck of these subjects, the deletion closure's decks-of-subjects set. Not
     ownership-scoped on its own; the caller has already established subject_ids are
     owned."""
     if not subject_ids:
@@ -118,7 +118,7 @@ def db_read_deck_ids_for_subjects(
 
 
 def db_stage_delete_decks(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    """Bulk delete by id, no commit — apply_deletion owns the transaction."""
     if not ids:
         return
     db.execute(delete(Deck).where(col(Deck.id).in_(ids)))

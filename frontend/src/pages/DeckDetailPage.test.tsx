@@ -230,7 +230,7 @@ describe('DeckDetailPage', () => {
 
     expect(await screen.findByText('No cards in this deck yet.')).toBeInTheDocument();
     // The tab's toolbar button is the only add control; the empty state is its text
-    // alone (ADR 066). getByRole throws on a second match.
+    // alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
     // the table (and its field header) is not replaced by the empty state.
     expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
@@ -426,7 +426,7 @@ describe('DeckDetailPage', () => {
 
       expect(await screen.findByText(/No configurations yet/)).toBeInTheDocument();
       // The tab's toolbar button is the only add control; the empty state is its text
-      // alone (ADR 066). getByRole throws on a second match.
+      // alone. getByRole throws on a second match.
       expect(screen.getByRole('button', { name: 'New configuration' })).toBeInTheDocument();
     });
 

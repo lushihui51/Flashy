@@ -48,7 +48,7 @@ def update_subject(
         raise HTTPException(status_code=404, detail="Subject not found")
     data = payload.model_dump(exclude_unset=True)
     if data:
-        # D13: an own-column edit bumps the recency sort key; an empty PATCH does not.
+        # An own-column edit bumps the recency sort key; an empty PATCH does not.
         touch(db, subject)
     try:
         return db_update_subject(db, subject, data)

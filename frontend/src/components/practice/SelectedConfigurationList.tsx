@@ -12,8 +12,8 @@ type SelectedConfigurationListProps = {
 
 /**
  * New practice's selection as a list, including configurations a filter hides from the
- * pick list (cycle 019 MD-5). Purely presentational: the page resolves the selected ids
- * and owns the heading and the empty state (AGENTS.md — reusable components don't fetch).
+ * pick list. Purely presentational: the page resolves the selected ids and owns the
+ * heading and the empty state (AGENTS.md — reusable components don't fetch).
  */
 export default function SelectedConfigurationList({
   configs,

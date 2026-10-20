@@ -1,5 +1,5 @@
 /**
- * ADR 019 — the single sanctioned place to turn a stored instant into text.
+ * The single sanctioned place to turn a stored instant into text.
  *
  * The API returns every timestamp as a UTC instant. Whether that instant reads as the
  * right day depends entirely on which zone it is formatted in, so every formatter here

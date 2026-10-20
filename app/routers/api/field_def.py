@@ -108,8 +108,8 @@ def archive_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uu
     if not field_def:
         raise HTTPException(status_code=404, detail="Field not found")
     if field_def.archived_at is None:
-        # D3: archiving counts as removing — a deck can't archive down to fewer than
-        # two active fields, same floor as create and the batch-edit endpoint.
+        # Archiving counts as removing — a deck can't archive down to fewer than two
+        # active fields, same floor as create and the batch-edit endpoint.
         active_count = len(db_read_field_defs(db, field_def.deck_id, current_user.id))
         if active_count <= 2:
             raise HTTPException(status_code=422, detail="a deck needs at least two fields")

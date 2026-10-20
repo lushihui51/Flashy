@@ -4,20 +4,20 @@ Revision ID: f6887865090a
 Revises: 9aaac4c2ea4e
 Create Date: 2026-09-21 14:22:03.016830
 
-ADR 047, ADR 048 (cycle 013 T4): review_log and practice_deck stop outliving the
+review_log and practice_deck stop outliving the
 persistent/owning row they're about — review_log.card_id/field_def_id and
 practice_deck.deck_id become NOT NULL ON DELETE CASCADE, review_log.practice_card_id
 is dropped (review_group_id was already the durable appearance identifier), and a run
-left owning no practice_deck at all no longer has a reason to exist.
+left owning no practice_deck at all has no reason to exist.
 
 Upgrade, in order:
-1. Drop every review_log row already orphaned under the old SET NULL regime — ADR
-   048 cascades going forward, it doesn't reach back to redeem history that predates
+1. Drop every review_log row already orphaned under the SET NULL regime this
+   replaces — the cascade applies going forward, it doesn't reach back to redeem history that predates
    it, and there is nothing to cascade *from* once the row it was about is already
    gone.
 2. Drop every practice_deck row whose deck is already gone, same reasoning.
 3. Drop every practice_run left with zero practice_deck rows (already true before
-   this migration, or made true by steps 1-2 just now) — ADR 048's "a run with no
+   this migration, or made true by steps 1-2 just now) — the "a run with no
    decks is deleted" rule, applied once to history instead of going forward through
    apply_deletion.
 4. Drop the now-pointless review_log.practice_card_id.

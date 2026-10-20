@@ -7,8 +7,8 @@ import type { components } from 'src/api/types';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 
-// Deltas are distinct across every card, and cover all three MD-2 sign cases
-// (+5, −10, ±0, +20) so a single fixture can drive every ordering/formatting test.
+// Deltas are distinct across every card, and cover all three sign cases (+5, −10, ±0,
+// +20) so a single fixture can drive every ordering/formatting test.
 function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBreakdown {
   return {
     total_cards: 4,
@@ -258,9 +258,9 @@ describe('RunBreakdown', () => {
 
   it('shows a removed field as "Removed field" with no value and no rating', async () => {
     const user = userEvent.setup();
-    // ADR 052: a field deleted after this practice completed arrives as a placeholder
-    // on each side (empty name/value, `removed: true`, `rating: null` on the answer
-    // side); the Fields section only ever lists the deck's live fields.
+    // A field deleted after this practice completed arrives as a placeholder on each
+    // side (empty name/value, `removed: true`, `rating: null` on the answer side); the
+    // Fields section only ever lists the deck's live fields.
     render(
       <RunBreakdown
         breakdown={breakdown({

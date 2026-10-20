@@ -21,8 +21,8 @@ class ReviewGroupInconsistent(Exception):
     match, field-for-field, what's being submitted for it now. Not a routine client
     error — it's a should-never-happen signal that some caller violated the invariant
     mastery math depends on: an appearance must be logged atomically, in one
-    transaction, and never appended to afterward. Phase 4's endpoint should map this to
-    a 409/500 and log it loudly rather than surface it as an ordinary validation
+    transaction, and never appended to afterward. The endpoint should map this to a
+    409/500 and log it loudly rather than surface it as an ordinary validation
     failure."""
 
     def __init__(
@@ -43,7 +43,7 @@ class ReviewGroupInconsistent(Exception):
 
 def db_read_latest_reviewed_at(db: Session, card_id: uuid.UUID) -> datetime | None:
     """The card's own latest review_log timestamp (`max(reviewed_at)`), served by
-    `ix_review_log_card_id_reviewed_at`. record_review_group (ADR 050) reads this
+    `ix_review_log_card_id_reviewed_at`. record_review_group reads this
     under the card's advisory lock to keep mastery_log's order strictly increasing
     per card; None for a card with no reviews yet."""
     return db.exec(
@@ -111,7 +111,7 @@ def db_fetch_review_log_for_rebuild(
 ) -> list[ReviewLog]:
     """Every row, oldest first — the replay order rebuild_mastery and
     rebuild_deck_mastery fold through. review_log.card_id/field_def_id cascade-delete
-    with their card/field (ADR 047, ADR 048), so every remaining row is already about
+    with their card/field, so every remaining row is already about
     a live (card, field) pair — no filter needed to establish that. At most one of
     user_id/deck_id is ever passed — a user-wide rebuild and a deck-scoped one are
     different callers, never combined in one call."""
@@ -128,13 +128,13 @@ def db_fetch_review_log_for_rebuild(
 def db_stage_scrub_shown_prompt_ids(
     db: Session, deck_id: uuid.UUID, field_ids: Collection[uuid.UUID]
 ) -> None:
-    """Removes each of field_ids from shown_prompt_ids on this deck's own cards' rows
-    (ADR 049) — one UPDATE per id, so cost scales with how many fields are being
+    """Removes each of field_ids from shown_prompt_ids on this deck's own cards' rows —
+    one UPDATE per id, so cost scales with how many fields are being
     deleted, not with how many review_log rows exist. `= ANY (shown_prompt_ids)`
     narrows each UPDATE to rows that actually name the id, the same effect
     array_remove's own "not present, no-op" gives a single row, applied at the query
-    level so an id nobody used touches nothing. No commit — apply_deletion (ADR 051)
-    owns the transaction."""
+    level so an id nobody used touches nothing. No commit — apply_deletion owns the
+    transaction."""
     if not field_ids:
         return
     deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)

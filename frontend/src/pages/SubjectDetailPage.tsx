@@ -10,9 +10,8 @@ import { pluralize } from 'src/lib/pluralize';
 import { isNotFound } from 'src/api/unwrap';
 
 /** First two field names, `+N` for the rest — computed by count, not measured text,
- * so it's deterministic regardless of how the names actually render. The row no
- * longer states the total field count (Phase 2.7's accepted tradeoff) — that lives
- * on the deck detail page's own meta line. */
+ * so it's deterministic regardless of how the names actually render. The row carries
+ * no total field count — that lives on the deck detail page's own meta line. */
 function formatFieldNames(names: string[]): string {
   if (names.length <= 2) return names.join(', ');
   return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
@@ -118,7 +117,7 @@ export default function SubjectDetailPage() {
           <AddButton label="Add deck" onClick={addDeck} />
         </div>
         {decks && decks.length === 0 ? (
-          // No button here — the row's above is the one add control (ADR 066).
+          // No button here — the row's above is the one add control.
           <p className="py-8 text-(--color-text-muted)">No decks in this subject yet.</p>
         ) : (
           <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">

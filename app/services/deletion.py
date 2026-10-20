@@ -1,8 +1,8 @@
 """Deleting a persistent entity (subject, deck, field, or card) deletes every record
 that references its id and recomputes every value derived from what's gone, while an
-ephemeral practice run goes only when it can no longer function (ADR 047).
+ephemeral practice run goes only when it can no longer function.
 compute_deletion_impact plans the whole closure and apply_deletion executes exactly
-that plan — the only way any of these four types is ever deleted (ADR 051)."""
+that plan — the only way any of these four types is ever deleted."""
 
 import uuid
 from collections import defaultdict
@@ -55,7 +55,7 @@ from app.services.mastery import rebuild_deck_mastery
 
 @dataclass(frozen=True)
 class DeletionImpact:
-    """The closure one deletion request touches (ADR 051) — every set is the closure,
+    """The closure one deletion request touches — every set is the closure,
     explicit ids included, not just what the request named directly. A pure plan: no
     field here is ever mutated after compute_deletion_impact returns it."""
 
@@ -85,8 +85,8 @@ def compute_deletion_impact(
     field_ids: Collection[uuid.UUID] = (),
     card_ids: Collection[uuid.UUID] = (),
 ) -> DeletionImpact:
-    """A pure read: plans everything one deletion request takes with it (ADR 047,
-    ADR 051), without changing anything. Raises LookupError naming the first id (in
+    """A pure read: plans everything one deletion request takes with it, without
+    changing anything. Raises LookupError naming the first id (in
     caller order, subject then deck then field then card) that's foreign or doesn't
     exist. A field whose deck is also in this request contributes nothing on its own
     — it's already covered by the deck's own cascade."""
@@ -147,7 +147,7 @@ def compute_deletion_impact(
 
 def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpact) -> None:
     """Executes exactly the plan compute_deletion_impact returned — the only way a
-    subject, deck, field, or card is ever deleted (ADR 051). No commit, no touch, no
+    subject, deck, field, or card is ever deleted. No commit, no touch, no
     two-field-floor validation: those are each caller's own job. An object loaded
     before this call is not updated for rows the FK cascades below remove; reload
     after, don't reuse what you read before."""

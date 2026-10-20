@@ -158,7 +158,7 @@ describe('PracticeRunPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Show answer' }));
     const chip = screen.getByRole('button', { name: 'Photo' });
-    // Scoped by name: the page's own progress bar also carries role="img" (T7).
+    // Scoped by name: the page's own progress bar also carries role="img".
     expect(screen.queryByRole('img', { name: 'Photo' })).not.toBeInTheDocument();
 
     await user.click(chip);

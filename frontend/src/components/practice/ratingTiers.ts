@@ -1,8 +1,8 @@
-/** MD-5: user-facing vocabulary, never the schema's bare 1-4. MD-2's ramp: white text
- * on Again (`--color-danger-contrast` — the same white already used for destructive
- * actions), `--color-text` (#1a1a2e) on the other three. `RatingChip` uses this for its
- * interactive chip/popover; the breakdown detail sheet (T8) uses it for a read-only
- * rating badge — one shared mapping so the two ramps can't drift apart. Split into its
+/** User-facing vocabulary, never the schema's bare 1-4. The ramp: white text on Again
+ * (`--color-danger-contrast` — the same white already used for destructive actions),
+ * `--color-text` (#1a1a2e) on the other three. `RatingChip` uses this for its
+ * interactive chip/popover; the breakdown detail sheet uses it for a read-only rating
+ * badge — one shared mapping so the two ramps can't drift apart. Split into its
  * own module (rather than exported from `RatingChip.tsx`) because a component file may
  * only export components under this project's `react-refresh/only-export-components`
  * lint rule. */

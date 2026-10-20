@@ -7,8 +7,8 @@ const UNKNOWN_ERROR_MESSAGE = 'An unknown error occurred (Inspect console for de
 
 type ApiResult<T> = { data?: T; error?: unknown; response: Response };
 
-/** Thrown for every non-ok response (ADR 065): `status` is the HTTP status, so callers
- * can tell a 404 from an outage without matching message text. */
+/** Thrown for every non-ok response: `status` is the HTTP status, so callers can tell
+ * a 404 from an outage without matching message text. */
 export class ApiError extends Error {
   status: number;
 
@@ -18,10 +18,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Thrown instead of a bare ApiError when `detail` is a structured object (ADR 022) — a
- * few endpoints answer with `{code, message, config_id}` because the message alone
- * isn't enough to act on (session start names the config that failed, so the caller
- * can render against that row). It extends `ApiError`, so it carries `status` too;
+/** Thrown instead of a bare ApiError when `detail` is a structured object — a few
+ * endpoints answer with `{code, message, config_id}` because the message alone isn't
+ * enough to act on (session start names the config that failed, so the caller can
+ * render against that row). It extends `ApiError`, so it carries `status` too;
  * `.message` is `detail.message`. Shape-aware callers `instanceof`-check and read
  * `.detail`, everyone else reads the message. */
 export class ApiDetailError extends ApiError {
@@ -58,7 +58,7 @@ function formatError(error: unknown): string | undefined {
   }
   // A few endpoints answer with an object detail because the message alone isn't
   // enough to act on — session start names the config that failed, so the caller can
-  // render against that row. Shape-aware callers catch `ApiDetailError` (ADR 022).
+  // render against that row. Shape-aware callers catch `ApiDetailError`.
   if (typeof detail === 'object' && detail !== null && 'message' in detail) {
     const { message } = detail as { message?: unknown };
     if (typeof message === 'string') return message;
@@ -74,8 +74,8 @@ function toThrown(status: number, error: unknown): ApiError {
   return new ApiError(status, status >= 500 ? SERVER_TROUBLE_MESSAGE : UNKNOWN_ERROR_MESSAGE);
 }
 
-// ADR 065: failure is decided by `response.ok` alone. openapi-fetch reports an
-// empty-body failure as `error: ""` or `error: undefined`, so `error` decides nothing.
+// Failure is decided by `response.ok` alone. openapi-fetch reports an empty-body
+// failure as `error: ""` or `error: undefined`, so `error` decides nothing.
 export function unwrap<T>({ data, error, response }: ApiResult<T>): T {
   if (!response.ok) throw toThrown(response.status, error);
   return data as T;
@@ -85,7 +85,7 @@ export function unwrapVoid({ error, response }: ApiResult<unknown>): void {
   if (!response.ok) throw toThrown(response.status, error);
 }
 
-/** The one 404 test (ADR 065). */
+/** The one 404 test. */
 export function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
 }

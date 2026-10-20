@@ -7,8 +7,8 @@ from app.database import _CONNECT_ARGS, DB_CONNECT_TIMEOUT_SECONDS, engine
 
 
 def test_health_ok_without_auth(client):
-    """ADR 064: the one route without CurrentUserDep. Clears the test's auth bypass so
-    the real get_current_app_user would run if the route depended on it."""
+    """The one route without CurrentUserDep. Clears the test's auth bypass so the real
+    get_current_app_user would run if the route depended on it."""
     from app.dependencies import get_current_app_user
     from app.main import app
 
@@ -34,14 +34,15 @@ def test_health_reports_database_unavailable(client, monkeypatch):
 
 
 def test_engine_fails_fast_and_pre_pings():
-    """Cycle 020 MD-1."""
+    """The engine gives up on a silent database host in seconds, not minutes, and
+    replaces a dead pooled connection instead of handing it out after a restart."""
     assert _CONNECT_ARGS["connect_timeout"] == DB_CONNECT_TIMEOUT_SECONDS == 3
     assert engine.pool._pre_ping is True
 
 
 def test_db_connect_timeout_is_shorter_than_the_probe_timeout():
-    """ADR 063: a silent database must answer 503 before the frontend probe gives up,
-    so it reads as server trouble rather than can't connect."""
+    """A silent database must answer 503 before the frontend probe gives up, so it
+    reads as server trouble rather than can't connect."""
     repo_root = Path(__file__).resolve().parents[2]
     source = (repo_root / "frontend/src/api/health.ts").read_text()
     match = re.search(r"HEALTH_PROBE_TIMEOUT_MS = ([\d_]+);", source)

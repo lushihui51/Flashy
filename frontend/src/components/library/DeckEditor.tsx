@@ -121,25 +121,24 @@ type FieldsSectionProps = {
   onAdd: () => void;
 };
 
-/** Reorder via the Move up/down overflow menu only — no drag. A pointer-events-based
- * drag handle was built and worked under Playwright's *mouse*-simulated events, but
- * that only exercises the "engage immediately" branch; the touch-specific long-press
- * gate (the part real phone users would actually hit) was never verified on a real or
+/** Reorder via the Move up/down overflow menu only — no drag. A pointer-events drag
+ * handle can be exercised under Playwright's *mouse*-simulated events, but that only
+ * covers the "engage immediately" branch; the touch-specific long-press gate (the part
+ * real phone users would actually hit) cannot be verified here on a real or
  * touch-emulated device, and this app is mobile-first. Rather than ship an unverified
  * gesture, the buttons — fully tested and keyboard-operable — are the only mechanism.
  *
- * Phase 7.5: removing a *saved* field (one with an `id`) no longer deletes the row —
- * it stages the row pending-removal in place (struck through, ghosted, every control
- * disabled) until Save or the header's single global Undo, which is the *only* way to
- * bring it back — there is deliberately no control on the row itself for that. A
- * brand-new field still deletes outright — there's nothing on the server to stage
- * against. */
+ * Removing a *saved* field (one with an `id`) stages the row pending-removal in place
+ * (struck through, ghosted, every control disabled) until Save or the header's single
+ * global Undo, which is the *only* way to bring it back — there is deliberately no
+ * control on the row itself for that. A brand-new field deletes outright — there's
+ * nothing on the server to stage against. */
 function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
   const activeCount = fields.filter((f) => !f.pendingRemoval).length;
-  // ADR 032: the primary field is the first field still active (not staged for
-  // removal), in array order — array index doubles as position here, exactly what
-  // the Move up/down handlers below already reorder. Derived on every render, never
-  // stored, and never landing on a row about to disappear.
+  // The primary field is the first field still active (not staged for removal), in
+  // array order — array index doubles as position here, exactly what the Move up/down
+  // handlers below already reorder. Derived on every render, never stored, and never
+  // landing on a row about to disappear.
   const primaryIndex = fields.findIndex((f) => !f.pendingRemoval);
 
   return (
@@ -281,11 +280,11 @@ type DeckEditorProps = {
   mode: 'create' | 'edit';
 };
 
-/** Full-screen route page (§4.7). Mode is derived from the route (`/decks/new` vs.
+/** Full-screen route page. Mode is derived from the route (`/decks/new` vs.
  * `/decks/:deckId/edit`, App.tsx), same pattern as `SubjectForm`/`CardStandaloneForm`.
- * Edit mode (Phase 7) loads the existing `DeckDetail` — and its subject, since the
- * subject combobox needs the full `{id, name, icon}` object, not just an id — before
- * mounting the body, gated the same way `CardStandaloneForm` gates on its deck. */
+ * Edit mode loads the existing `DeckDetail` — and its subject, since the subject
+ * combobox needs the full `{id, name, icon}` object, not just an id — before mounting
+ * the body, gated the same way `CardStandaloneForm` gates on its deck. */
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
   const location = useLocation();
@@ -329,8 +328,8 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       deck={mode === 'edit' ? deckQuery.data : undefined}
       subject={mode === 'edit' ? subjectQuery.data : undefined}
       contextualSubject={createLocationState?.subject ?? null}
-      // ADR 024: returnTo rides the URL, not state — create mode only; an edit is
-      // never entered via a "New deck…" round-trip.
+      // returnTo rides the URL, not state — create mode only; an edit is never entered
+      // via a "New deck…" round-trip.
       returnTo={mode === 'create' ? internalReturnTo(searchParams) : null}
     />
   );
@@ -353,12 +352,10 @@ type ImpactSummaryCounts = {
   runsDeleted: number;
 };
 
-/** Cycle 013 MD-2: the editor save confirm's one sentence, for a changeset that
- * deletes fields and/or cards — the same closure a direct field or card delete goes
- * through (ADR 049, ADR 051), worded from `fieldsDeleted`/`cardsDeleted` (the
- * changeset itself) plus `configurationsDeleted`/`runsDeleted` (the deletion-impact
- * query). Phase 7.5's field-count-only version of this sentence is gone — this one
- * accounts for cards and for what the deletion closure takes with a field. */
+/** The editor save confirm's one sentence, for a changeset that deletes fields and/or
+ * cards — the same closure a direct field or card delete goes through, worded from
+ * `fieldsDeleted`/`cardsDeleted` (the changeset itself) plus
+ * `configurationsDeleted`/`runsDeleted` (the deletion-impact query). */
 function impactSummaryText({
   fieldsDeleted,
   cardsDeleted,
@@ -396,13 +393,11 @@ function DeckEditorBody({
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   // Computed once, at mount — the same rule as the subject combobox's own initial
-  // selection below. `original` doubles as the frozen baseline the edit-mode diff
-  // compares against: deckDetailToEditorState mints a fresh client `key` per field
-  // and card, and calling it twice would mint two different sets of keys for the
-  // same rows, breaking every id-based comparison in buildDeckBatchEditPayload.
-  // Unlike Phase 7, this is no longer frozen for the component's whole lifetime —
-  // Phase 7.5 rebases it after every successful edit-mode save (§4), and the global
-  // Undo (§2) reverts to it directly.
+  // selection below. `original` doubles as the baseline the edit-mode diff compares
+  // against: deckDetailToEditorState mints a fresh client `key` per field, and calling
+  // it twice would mint two different sets of keys for the same rows, breaking every
+  // id-based comparison in buildDeckBatchEditPayload. It is rebased after every
+  // successful edit-mode save, and the global Undo reverts to it directly.
   const [original, setOriginal] = useState<DeckEditorState>(() =>
     mode === 'edit' && deck
       ? deckDetailToEditorState(deck)
@@ -421,7 +416,7 @@ function DeckEditorBody({
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Phase 7.5 §4: a transient "Saved ✓" on the Save control after an edit-mode save.
+  // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
     if (!savedFlash) return;
@@ -432,7 +427,7 @@ function DeckEditorBody({
   const valid = isDeckEditorValid(state);
   // Nothing to save/undo when the form hasn't changed since it was loaded (or since
   // the last successful save, once `original` has been rebased) — Save and Undo
-  // disable exactly then (§4), rather than staying clickable for a no-op.
+  // disable exactly then, rather than staying clickable for a no-op.
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
@@ -449,9 +444,9 @@ function DeckEditorBody({
     goBack();
   };
 
-  // Phase 7.5 §2: the single global Undo — discards every uncommitted change
-  // (renames, reorders, added rows, and every staged removal) in one step, back to
-  // `original`. No confirm: nothing has reached the server yet.
+  // The single global Undo — discards every uncommitted change (renames, reorders,
+  // added rows, and every staged removal) in one step, back to `original`. No confirm:
+  // nothing has reached the server yet.
   const handleUndo = () => dispatch({ type: 'LOAD', state: original });
 
   const handleSaveCreate = async () => {
@@ -472,9 +467,9 @@ function DeckEditorBody({
     const payload = buildDeckBatchEditPayload(original, state);
     if (Object.keys(payload).length === 0) return; // Save is disabled in this state; nothing to do.
     const updated = await updateDeck(deckId!, payload);
-    // §4: stay on the page. Rebuild both the live state and the frozen baseline from
-    // the response, one call — this resolves every client_key to a real id and
-    // clears every pending flag naturally, since nothing pending survived the save.
+    // Stay on the page. Rebuild both the live state and the baseline from the
+    // response, one call — this resolves every client_key to a real id and clears
+    // every pending flag naturally, since nothing pending survived the save.
     const rebuilt = deckDetailToEditorState(updated);
     setOriginal(rebuilt);
     dispatch({ type: 'LOAD', state: rebuilt });
@@ -503,10 +498,10 @@ function DeckEditorBody({
     }
   };
 
-  // Phase 7.6: ignores whatever's staged/unsaved in the editor, same as
-  // SubjectForm/CardStandaloneForm's own deletes — deleting the whole deck makes
-  // any pending edit moot. Navigates to the deck's own parent (its subject), the
-  // same "one level up" pattern as a card's delete going to its deck.
+  // Ignores whatever's staged/unsaved in the editor, same as
+  // SubjectForm/CardStandaloneForm's own deletes — deleting the whole deck makes any
+  // pending edit moot. Navigates to the deck's own parent (its subject), the same "one
+  // level up" pattern as a card's delete going to its deck.
   const handleDeleteDeck = async () => {
     setDeleting(true);
     setSaveError(null);
@@ -531,11 +526,10 @@ function DeckEditorBody({
     }
   };
 
-  // MD-3: the confirm's wording is a live count, not a guess — fetched fresh on
-  // every click rather than kept around from mount, so it reflects whatever's
-  // changed underneath (a config saved, a card added) since the page loaded. An
-  // error renders through the form's existing error state and never opens the
-  // dialog.
+  // The confirm's wording is a live count, not a guess — fetched fresh on every click
+  // rather than kept around from mount, so it reflects whatever's changed underneath
+  // (a config saved, a card added) since the page loaded. An error renders through the
+  // form's existing error state and never opens the dialog.
   const handleDeleteClick = async () => {
     setCheckingDeletionImpact(true);
     setSaveError(null);
@@ -550,14 +544,14 @@ function DeckEditorBody({
     }
   };
 
-  // §3 (cycle 013 MD-2): the confirm is destructive-changeset-only, and only in edit
-  // mode — create mode has nothing on the server yet for a changeset to destroy.
-  // fields_deleted/cards_deleted come straight off the changeset the editor itself
-  // built; configurations_deleted/runs_deleted come from the same deletion-impact
-  // query a direct field delete previews with, fetched only when the changeset
-  // deletes a field (cards.delete is always empty here — buildDeckBatchEditPayload
-  // never sends card ops, see deckEditorDiff.ts — but the check stays symmetric
-  // with the contract in case that ever changes).
+  // The confirm is destructive-changeset-only, and only in edit mode — create mode has
+  // nothing on the server yet for a changeset to destroy. fields_deleted/cards_deleted
+  // come straight off the changeset the editor itself built;
+  // configurations_deleted/runs_deleted come from the same deletion-impact query a
+  // direct field delete previews with, fetched only when the changeset deletes a
+  // field. cards.delete is always empty here — buildDeckBatchEditPayload never sends
+  // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
+  // so the check reads it symmetrically with field_defs.delete.
   const handleSaveClick = async () => {
     if (!canSave) return;
     if (mode === 'edit') {
@@ -621,9 +615,9 @@ function DeckEditorBody({
   const [subjectOverlayOpen, setSubjectOverlayOpen] = useState(false);
   const subjectInputRef = useRef<HTMLInputElement>(null);
 
-  // §4: "Done" once the editor has nothing unsaved to lose, "Cancel" while it does —
-  // create mode never has a "clean, already saved" state to return to, so it always
-  // reads "Cancel".
+  // "Done" once the editor has nothing unsaved to lose, "Cancel" while it does — create
+  // mode never has a "clean, already saved" state to return to, so it always reads
+  // "Cancel".
   const showDone = mode === 'edit' && !state.dirty;
 
   return (
@@ -763,8 +757,8 @@ function DeckEditorBody({
         <ConfirmDialog
           open={confirmDeleteOpen}
           title="Delete deck?"
-          // ADR 048: everything that references the deck cascades with it, review
-          // history included — nothing about it survives the delete.
+          // Everything that references the deck cascades with it, review history
+          // included — nothing about it survives the delete.
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
           destructive

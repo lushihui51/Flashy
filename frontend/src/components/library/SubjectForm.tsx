@@ -12,9 +12,9 @@ type SubjectFormProps = {
   mode: 'create' | 'edit';
 };
 
-/** Routed-page wrapper (Phase 3) — thin: it owns navigation only. `SubjectFormBody`
- * (below) is the actual form, shared with the deck editor's create-a-subject overlay (Phase 5.5
- * §3), which wraps the same body in a FullScreenDialog instead of a route. */
+/** Routed-page wrapper — thin: it owns navigation only. `SubjectFormBody` (below) is
+ * the actual form, shared with the deck editor's create-a-subject overlay, which wraps
+ * the same body in a FullScreenDialog instead of a route. */
 export default function SubjectForm({ mode }: SubjectFormProps) {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
@@ -71,10 +71,10 @@ export type SubjectFormBodyProps = {
   onDelete?: () => void;
 };
 
-/** Create and edit share one form (D1) — mode only changes what's prefilled, the
- * submit target, and whether Delete is offered. No navigation of its own: the two
- * callers (the routed page above, and DeckEditor's create-overlay) decide what
- * "done" means for them. */
+/** Create and edit share one form — mode only changes what's prefilled, the submit
+ * target, and whether Delete is offered. No navigation of its own: the two callers
+ * (the routed page above, and DeckEditor's create-overlay) decide what "done" means
+ * for them. */
 export function SubjectFormBody({
   mode,
   subjectId,
@@ -163,10 +163,10 @@ export function SubjectFormBody({
     }
   };
 
-  // MD-3: the confirm's wording is a live count, not a guess — fetched fresh on
-  // every click rather than kept around from mount, so it reflects whatever's
-  // changed underneath since the page loaded. An error renders through the form's
-  // existing error state and never opens the dialog.
+  // The confirm's wording is a live count, not a guess — fetched fresh on every click
+  // rather than kept around from mount, so it reflects whatever's changed underneath
+  // since the page loaded. An error renders through the form's existing error state
+  // and never opens the dialog.
   const handleDeleteClick = async () => {
     setCheckingDeletionImpact(true);
     setFormError(null);

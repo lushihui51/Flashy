@@ -24,7 +24,7 @@ from app.services.deletion import apply_deletion, compute_deletion_impact
 
 
 class DeckBatchEditValidationError(ValueError):
-    """A batch-edit input failed a §2.3 validation rule. The message names the
+    """A batch-edit input failed a validation rule. The message names the
     offending item; the router maps this to a 422."""
 
 
@@ -47,10 +47,10 @@ def _resolve_field_key(
 def apply_deck_batch_edit(
     db: Session, user_id: uuid.UUID, deck: Deck, payload: DeckBatchEdit, strategy: MasteryStrategy
 ) -> Deck:
-    """Applies a §2.3 changeset to `deck` in one transaction: field create → field
+    """Applies a changeset to `deck` in one transaction: field create → field
     update → field delete → reorder → card delete → card update → card create, then a
     single commit. Any validation failure raises before that commit, so nothing
-    partial — not even an already-renamed deck — ever reaches the database (D2)."""
+    partial — not even an already-renamed deck — ever reaches the database."""
     touch_deck = False
     touch_subject_ids: set[uuid.UUID] = set()
 
@@ -74,7 +74,7 @@ def apply_deck_batch_edit(
         touch_subject_ids.add(payload.subject_id)
 
     # Snapshot before any card is created/deleted below — this is exactly the set that
-    # owes a backfilled row to any field created in this same request (D10); a card
+    # owes a backfilled row to any field created in this same request; a card
     # created later in this request already gets a dense row set at creation time.
     existing_card_ids = db_read_card_ids_for_deck(db, deck.id)
 
@@ -103,9 +103,9 @@ def apply_deck_batch_edit(
             )
             key_to_new_field[entry.client_key] = row
             active_fields[row.id] = row
-            # D10: every existing card owes this new field a "" row, in this same
-            # transaction — this is the mechanism that keeps the density invariant
-            # true going forward, not just at deck-create time.
+            # Every existing card owes this new field a "" row, in this same transaction
+            # — this is what keeps card_field_value dense going forward, not just at
+            # deck-create time.
             for card_id in existing_card_ids:
                 db_stage_create_card_field_values(db, card_id, {row.id: ""})
 
@@ -141,8 +141,7 @@ def apply_deck_batch_edit(
         # No manual cleanup of configurations, active runs, review rows, or
         # shown_prompt_ids references — apply_deletion is the only way a field_def
         # is ever deleted, and it takes all of that with it and rebuilds the deck's
-        # mastery to what the live path would have written without the field
-        # (ADR 049, ADR 051).
+        # mastery to what the live path would have written without the field.
         if ops.delete:
             apply_deletion(
                 db, strategy, compute_deletion_impact(db, user_id, field_ids=ops.delete)
@@ -182,8 +181,7 @@ def apply_deck_batch_edit(
                 )
 
         # No manual cleanup — apply_deletion takes the card's review rows and
-        # mastery rows with it; a card delete never needs a rebuild (ADR 047,
-        # ADR 051).
+        # mastery rows with it; a card delete never needs a rebuild.
         if ops.delete:
             apply_deletion(
                 db, strategy, compute_deletion_impact(db, user_id, card_ids=ops.delete)
@@ -191,7 +189,7 @@ def apply_deck_batch_edit(
         db.flush()
 
         # The values loop builds `existing` from card.values once per card, so it relies
-        # on each card appearing once in cards.update (cycle 015 T9).
+        # on each card appearing once in cards.update.
         seen_card_ids: set[uuid.UUID] = set()
         for entry in ops.update:
             if entry.id in seen_card_ids:
@@ -208,7 +206,7 @@ def apply_deck_batch_edit(
             # backfilled for a field created in this request is already in card.values.
             existing = {v.field_def_id: v for v in card.values}
             for key, value in entry.values.items():
-                # A same-request client_key is valid here too (Phase 7): field
+                # A same-request client_key is valid here too: field
                 # create -> ... -> card update is the stated order, so a field
                 # created earlier in this request already has a real row by the
                 # time an existing card's value for it is set here.
@@ -226,7 +224,7 @@ def apply_deck_batch_edit(
 
         for entry in ops.create:
             if all(_is_blank(v) for v in entry.values.values()):
-                continue  # all-blank new card dropped, same rule as create_deck_atomic (D2)
+                continue  # all-blank new card dropped, same rule as create_deck_atomic
             resolved_values: dict[uuid.UUID, str] = {}
             for key, value in entry.values.items():
                 field = _resolve_field_key(key, active_fields, key_to_new_field)

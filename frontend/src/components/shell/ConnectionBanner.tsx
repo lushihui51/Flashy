@@ -13,8 +13,8 @@ const BANNER = {
   },
 } as const;
 
-/** The app's one global error channel (ADR 062): connectivity only. It clears itself
- * when the probe recovers (ADR 063), so it has no dismiss control. */
+/** The app's one global error channel: connectivity only. It clears itself when the
+ * probe recovers, so it has no dismiss control. */
 export default function ConnectionBanner({
   status,
 }: {

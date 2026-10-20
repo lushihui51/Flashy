@@ -1,4 +1,4 @@
-/** How many names a capped list shows before the rest become "+N" (ADR 067, MD-2). */
+/** How many names a capped list shows before the rest become "+N". */
 export const CAP = 2;
 
 /** The first `CAP` items and how many were left out. `overflow` is 0 when nothing was. */

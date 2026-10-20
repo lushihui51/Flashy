@@ -46,9 +46,9 @@ def apply_rating(
     rows to the run this appearance happened in (None for a rebuild replay that can't
     reconstruct one, e.g. the run itself no longer exists).
 
-    Because append-only rows can't serialize a read-modify-append the way the old row
-    lock did, this takes a per-card Postgres advisory lock before fetching latest
-    states — the same pattern db_stage_log_review_group already uses for review_group_id,
+    Because append-only rows give a row lock nothing to serialize a read-modify-append
+    against, this takes a per-card Postgres advisory lock before fetching latest
+    states — the same pattern db_stage_log_review_group uses for review_group_id,
     scoped here to card_id instead. Does not commit — the caller owns the
     transaction."""
     db_lock_card(db, group.card_id)
@@ -76,17 +76,17 @@ def record_review_group(
     group: ReviewGroup,
     practice_run_id: uuid.UUID | None,
 ) -> ReviewGroupWriteOutcome:
-    """The retry-safe write-path entry point for one appearance — what Phase 4's rating
-    endpoint should call, not apply_rating directly. Logs the group, then blends it
+    """The retry-safe write-path entry point for one appearance — what the rating
+    endpoint calls, not apply_rating directly. Logs the group, then blends it
     into mastery only when the log didn't already have it:
 
     - NEW: the group was written for the first time; apply_rating runs.
     - RETRY: review_log already had exactly this group's rated fields on record.
       Mastery is deliberately *not* re-blended, and no ledger row is appended. This
-      looks like a bug at a glance — "we skipped the update" — but it's invariant 2
-      doing exactly the work it exists for: mastery is a disposable, faithful function
-      of the log, so if the log already reflects this appearance, the ledger append
-      that happened when it was first logged already reflects it too. Re-appending
+      looks like a bug at a glance — "we skipped the update" — but it is exactly what
+      follows from mastery being a disposable, faithful function of the log: if the
+      log already reflects this appearance, the ledger append that happened when it
+      was first logged already reflects it too. Re-appending
       here would move mastery toward the same target a second time for a client-side
       retry that changed nothing. Because record_review_group recomputes a stamp
       before every attempt, a retry recomputes one too — but since nothing is written
@@ -94,7 +94,7 @@ def record_review_group(
     - Raises ReviewGroupInconsistent (propagated from db_stage_log_review_group) if the log
       has a different set of rated fields on record for this review_group_id already.
 
-    Order contract (ADR 050): takes the per-card advisory lock first — before
+    Lock order: takes the per-card advisory lock first — before
     db_stage_log_review_group's own review_group_id lock and before apply_rating's — then
     replaces `group.reviewed_at` with the greater of the proposed stamp and the
     card's latest review timestamp plus one microsecond, so the stamp is strictly
@@ -103,8 +103,7 @@ def record_review_group(
     READ COMMITTED transaction, so a second transaction for the same card blocks at
     the lock until this one commits and then sees this stamp. Every transaction takes
     the card lock before any group lock, in this function or in apply_rating's
-    re-entry of the same transaction-scoped lock, so this ordering cannot deadlock
-    against the old group-then-card order.
+    re-entry of the same transaction-scoped lock, so this ordering cannot deadlock.
 
     Does not commit — the caller owns the transaction."""
     db_lock_card(db, group.card_id)
@@ -150,8 +149,9 @@ def card_mastery(
     card_ids: list[uuid.UUID],
     field_ids: list[uuid.UUID] | None = None,
 ) -> dict[uuid.UUID, CardScore]:
-    """Read path. The fetch drives from field_def (invariant 4); this function only
-    folds the already-fetched rows through the strategy — no scoring in SQL."""
+    """Read path. The fetch drives from field_def, so a never-reviewed pair is present
+    with no state; this function only folds the already-fetched rows through the
+    strategy — no scoring in SQL."""
     rows = db_fetch_mastery_read_rows(db, card_ids, field_ids)
     scores_by_card: dict[uuid.UUID, list[float | None]] = {cid: [] for cid in card_ids}
     for row in rows:
@@ -204,20 +204,20 @@ def _fetch_run_attribution(
     """Reconstructs run attribution for a rebuild replay: a group's review_group_id is
     the practice_card.id it was submitted against (submit_rating's construction), so a
     still-existing practice_card row gives back its practice_run_id; a group whose run
-    was deleted gets no entry here and rebuild_mastery treats that as None — the
-    accepted asymmetry ADR 042 calls out, which no breakdown can show anyway. (A
-    deleted card's review rows cascade with it, ADR 048, so they never reach a replay.)"""
+    was deleted gets no entry here and rebuild_mastery treats that as None — an
+    accepted asymmetry, which no breakdown can show anyway. (A deleted card's review
+    rows cascade with it, so they never reach a replay.)"""
     return db_read_run_ids_for_practice_cards(db, review_group_ids)
 
 
 def _replay_review_groups(db: Session, strategy: MasteryStrategy, rows: list[ReviewLog]) -> None:
-    """The replay core shared by every rebuild scope (ADR 049): collapses the given
+    """The replay core shared by every rebuild scope: collapses the given
     review_log rows into ReviewGroups (oldest first, `review_group_id` a
     deterministic tiebreak for groups of different pairs sharing a timestamp),
     reconstructs each group's run attribution, and calls apply_rating per group —
     the same write path a live rating goes through. Never re-stamps: apply_rating
     receives each group's already-persisted `reviewed_at` unchanged, so a rebuild of
-    any scope reproduces every row's order position (ADR 050). Does not clear
+    any scope reproduces every row's order position. Does not clear
     mastery_log and does not commit — the caller owns both, since a full rebuild's
     clear scope (every row, or one user's) and a deck-scoped rebuild's (one deck's
     cards) are different calls to different database_ops functions."""
@@ -244,13 +244,12 @@ def rebuild_mastery(
 
 
 def rebuild_deck_mastery(db: Session, strategy: MasteryStrategy, deck_id: uuid.UUID) -> None:
-    """Deck-scoped counterpart to rebuild_mastery (ADR 049): clears and replays only
-    this deck's cards' mastery_log rows, reproducing exactly what a user-wide rebuild
-    would produce for this deck (ADR 050 makes this safe — the ledger's order is
-    `reviewed_at`, not an identity id, so deleting and re-inserting one deck's rows
-    cannot disturb any other deck's order). Every other deck's rows, including their
-    ids, are untouched. Does not commit — apply_deletion (cycle 013 T3) calls this
-    inside its own transaction."""
+    """Deck-scoped counterpart to rebuild_mastery: clears and replays only this deck's
+    cards' mastery_log rows, reproducing exactly what a user-wide rebuild would produce
+    for this deck (safe because the ledger's order is `reviewed_at`, not an identity
+    id, so deleting and re-inserting one deck's rows cannot disturb any other deck's
+    order). Every other deck's rows, including their ids, are untouched. Does not
+    commit — apply_deletion calls this inside its own transaction."""
     db_stage_clear_mastery_for_deck(db, deck_id)
     rows = db_fetch_review_log_for_rebuild(db, deck_id=deck_id)
     _replay_review_groups(db, strategy, rows)

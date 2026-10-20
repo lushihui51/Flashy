@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # ADR 015 as amended: `abandoned` is gone. Autogenerate does not diff CHECK constraints, so the
+    # `abandoned` is gone. Autogenerate does not diff CHECK constraints, so the
     # status narrowing is written by hand — and the surviving rows are folded into
     # `completed`, which is what `abandoned` always meant in practice (nothing left to
     # practice; nothing recorded *why*).

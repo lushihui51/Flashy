@@ -5,11 +5,11 @@ FORBIDDEN_CALLS = ("create_all(", "drop_all(")
 
 
 def test_no_create_all_or_drop_all_under_app():
-    """ADR 045: alembic upgrade is the only path by which any persistent database's
-    schema changes. SQLModel.metadata.create_all/drop_all may only ever run against
-    the disposable test database, from tests/conftest.py's own fixture — never from
+    """alembic upgrade is the only path by which any persistent database's schema
+    changes. SQLModel.metadata.create_all/drop_all may only ever run against the
+    disposable test database, from tests/conftest.py's own fixture — never from
     application code, which would silently create or drop tables outside alembic's
-    tracked history (010 T2's stray mastery_log table was exactly this)."""
+    tracked history."""
     repo_root = Path(__file__).resolve().parents[2]
     app_root = repo_root / "app"
     for path in sorted(app_root.rglob("*.py")):
@@ -32,12 +32,12 @@ NAMING_CONVENTION = {
 
 
 def test_alembic_env_imports_app_database_before_reading_metadata():
-    """ADR 054: the naming convention is applied as an import side effect of
-    app.database, so alembic/env.py must import it before it reads SQLModel.metadata.
-    Drop the import and autogenerate compares the database against unnamed
-    constraints, proposing spurious drops and creates on every revision. Parsed as
-    ast rather than scanned as text, so commenting the import out fails this: a
-    comment is no longer an ast.Import node."""
+    """The naming convention is applied as an import side effect of app.database, so
+    alembic/env.py must import it before it reads SQLModel.metadata. Drop the import
+    and autogenerate compares the database against unnamed constraints, proposing
+    spurious drops and creates on every revision. Parsed as ast rather than scanned as
+    text, so commenting the import out fails this: a commented-out import is not an
+    ast.Import node."""
     repo_root = Path(__file__).resolve().parents[2]
     env_path = repo_root / "alembic" / "env.py"
     tree = ast.parse(env_path.read_text())
@@ -73,10 +73,10 @@ def test_alembic_env_imports_app_database_before_reading_metadata():
 
 
 def test_metadata_naming_convention_is_the_adr_054_templates():
-    """ADR 054: these five templates are the source of every constraint and index
-    name. Changing one renames constraints across the whole schema without any
-    migration saying so, and autogenerate then proposes a drop-and-create for every
-    constraint whose derived name moved (the drift cycle 009 T6 hit)."""
+    """These five templates are the source of every constraint and index name.
+    Changing one renames constraints across the whole schema without any migration
+    saying so, and autogenerate then proposes a drop-and-create for every constraint
+    whose derived name moved."""
     import app.database  # noqa: F401 — the assignment is the import side effect
     from sqlmodel import SQLModel
 

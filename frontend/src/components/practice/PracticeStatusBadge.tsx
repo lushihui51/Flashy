@@ -6,9 +6,9 @@ type PracticeStatusBadgeProps = {
   status: RunStatus;
 };
 
-/** The one place a session's `active`/`completed` status becomes a badge — extracted
- * from the overview row (Phase 4) so the detail page reads the same status the same
- * way, rather than a second hand-written copy. */
+/** The one place a session's `active`/`completed` status becomes a badge, so the
+ * overview row and the detail page read the same status the same way, rather than a
+ * second hand-written copy. */
 export default function PracticeStatusBadge({ status }: PracticeStatusBadgeProps) {
   const active = status === 'active';
   return (

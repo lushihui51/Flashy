@@ -1,6 +1,6 @@
-"""Phase 5 acceptance test: a fixture with two users; every endpoint returns 404 (not
-403) for the other user's resources, because ownership is enforced in the query, not
-by fetching then checking in Python."""
+"""A fixture with two users; every endpoint returns 404 (not 403) for the other user's
+resources, because ownership is enforced in the query, not by fetching then checking
+in Python."""
 
 import uuid
 

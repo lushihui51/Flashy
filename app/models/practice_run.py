@@ -9,17 +9,16 @@ from app.models.base import AppModel, TimestampMixin
 
 
 class RunStatus(str, Enum):
-    """Two states, not three. `abandoned` was dropped: nothing could distinguish it from
-    `completed` without tracking why a session ran out of pending cards, which ADR 015
-    had already declined to invent state for. A session is either still practisable or it
-    isn't (ADR 015, amended)."""
+    """Two states, not three: nothing could distinguish an "abandoned" session from a
+    `completed` one without tracking why it ran out of pending cards, and no state is
+    kept for that. A session is either still practisable or it isn't."""
 
     active = "active"
     completed = "completed"
 
 
 class PracticeRun(AppModel, TimestampMixin, table=True):
-    """No deck_id and no curr — a session spans one practice_deck per deck (Phase 4.2),
+    """No deck_id and no curr — a session spans one practice_deck per deck,
     and the current card is derived (WHERE status='pending' ORDER BY position LIMIT 1),
     never stored."""
 
@@ -31,8 +30,8 @@ class PracticeRun(AppModel, TimestampMixin, table=True):
     user_id: uuid.UUID = Field(foreign_key="app_user.id")
     # Always client-supplied and stored verbatim: the creation page pre-fills it with a
     # local date-time string it formatted itself. The server derives nothing and does no
-    # timezone arithmetic here (ADR 019 — the zone is a rendering input, and this string
-    # is already rendered). Not unique.
+    # timezone arithmetic here (the zone is a rendering input, and this string is
+    # already rendered). Not unique.
     name: str
     status: RunStatus = Field(
         sa_column=Column(String, nullable=False, default=RunStatus.active)
@@ -45,7 +44,7 @@ class PracticeRunCreate(AppModel):
 
 
 class PracticeRunRerun(AppModel):
-    """Body of POST .../rerun (ADR 039): the client-formatted name for the new run,
+    """Body of POST .../rerun: the client-formatted name for the new run,
     the same way PracticeRunCreate.name is — the server derives nothing."""
 
     name: str

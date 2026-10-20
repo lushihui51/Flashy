@@ -119,7 +119,7 @@ function LocationProbe() {
 }
 
 /** Rendered outside `<Routes>`, so it reports the current location whichever route is
- * showing — the page's own URL writes (ADR 061) included. */
+ * showing — the page's own URL writes included. */
 function CurrentLocationProbe() {
   const location = useLocation();
   return (
@@ -132,7 +132,7 @@ function precedes(first: Element, second: Element) {
   return Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
 }
 
-/** Decoded via URLSearchParams, never compared as an encoded string literal (ADR 024). */
+/** Decoded via URLSearchParams, never compared as an encoded string literal. */
 function currentLocation() {
   const full = screen.getByTestId('current-location').textContent ?? '';
   const [pathname, search = ''] = full.split('?');
@@ -141,7 +141,7 @@ function currentLocation() {
 
 /** Stands in for DeckConfigurationEditor's create route: records where it was carried
  * to, and on "Finish" plays back the same round trip the real builder makes — navigate
- * to `returnTo` (ADR 024: a URL param, not state) with `state: {configurationId}`. */
+ * to `returnTo` (a URL param, not state) with `state: {configurationId}`. */
 function NewConfigStub() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -266,7 +266,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.queryByText(selectHint)).not.toBeInTheDocument();
     expect(create).toBeDisabled();
 
-    // The two hints are independent (MD-7): with neither condition met, both show.
+    // The two hints are independent: with neither condition met, both show.
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     expect(screen.getByText(nameHint)).toBeInTheDocument();
     expect(screen.getByText(selectHint)).toBeInTheDocument();
@@ -437,7 +437,7 @@ describe('PracticeCreatePage', () => {
 
     expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
     await waitFor(() => expect(calls).toBeGreaterThan(callsAfterLoad));
-    // Removed from the selection the same way the settled-list check removes it (MD-4).
+    // Removed from the selection the same way the settled-list check removes it.
     expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
     expect(currentLocation().params.getAll('config')).not.toContain('c1');
   });
@@ -559,7 +559,7 @@ describe('PracticeCreatePage', () => {
 
     expect(await screen.findByText('No deck configurations yet.')).toBeInTheDocument();
     // The always-visible add control above the list is the only one; the empty
-    // state is its text alone (ADR 066). getByRole throws on a second match.
+    // state is its text alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'New configuration' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
   });
@@ -721,7 +721,7 @@ describe('PracticeCreatePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'New configuration' }));
 
-    // Decoded via URLSearchParams, not compared as an encoded string literal (ADR 024).
+    // Decoded via URLSearchParams, not compared as an encoded string literal.
     const [path, search] = (screen.getByTestId('new-config-location').textContent ?? '').split('?');
     const params = new URLSearchParams(search);
     expect(path).toBe('/deck-configurations/new');

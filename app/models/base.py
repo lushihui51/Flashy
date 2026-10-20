@@ -11,7 +11,7 @@ def _camel_to_snake(name: str) -> str:
 
 def utcnow() -> datetime:
     """Current time as an explicit, timezone-aware value — used by `touch()`
-    (app/services/activity.py) to set `last_activity_at` (D13)."""
+    (app/services/activity.py) to set `last_activity_at`."""
     return datetime.now(UTC)
 
 

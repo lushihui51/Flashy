@@ -35,8 +35,8 @@ function EmptyState({ copy }: { copy: string }) {
 }
 
 export default function LibraryPage() {
-  // In the URL rather than component state (ADR 025): a return to the library — via
-  // browser back or the deck page's crumb — should restore whichever tab was open.
+  // In the URL rather than component state: a return to the library — via browser back
+  // or the deck page's crumb — should restore whichever tab was open.
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'subjects';
 

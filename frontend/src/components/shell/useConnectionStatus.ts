@@ -8,10 +8,10 @@ export type ConnectionStatus = 'online' | 'offline' | 'unreachable' | 'server_tr
 export const HEALTH_POLL_HEALTHY_MS = 30_000;
 export const HEALTH_POLL_FAILING_MS = 5_000;
 
-/** The app's connection state (ADR 062, ADR 063). Only `AppShell` calls this, which is
- * what makes the `['health']` query shell-owned. Offline comes from `onlineManager`,
- * which this never sets; server health comes from the polled probe, never from
- * watching other requests. */
+/** The app's connection state. Only `AppShell` calls this, which is what makes the
+ * `['health']` query shell-owned. Offline comes from `onlineManager`, which this never
+ * sets; server health comes from the polled probe, never from watching other
+ * requests. */
 export function useConnectionStatus(): ConnectionStatus {
   const isOnline = useSyncExternalStore(
     (onChange) => onlineManager.subscribe(onChange),
@@ -26,8 +26,8 @@ export function useConnectionStatus(): ConnectionStatus {
       query.state.status === 'error' ? HEALTH_POLL_FAILING_MS : HEALTH_POLL_HEALTHY_MS,
   });
 
-  // Recovery (ADR 063): when the probe goes from failing to healthy, rerun every active
-  // query that failed, once. Mutations are never touched.
+  // Recovery: when the probe goes from failing to healthy, rerun every active query
+  // that failed, once. Mutations are never touched.
   const queryClient = useQueryClient();
   const previousStatus = useRef(health.status);
   useEffect(() => {

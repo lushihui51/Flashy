@@ -111,7 +111,7 @@ def db_read_owned_card_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """The subset of `ids` that exist and belong to user_id (via the subject chain) —
-    compute_deletion_impact's ownership check (ADR 051 step 1)."""
+    compute_deletion_impact's ownership check."""
     if not ids:
         return set()
     return set(
@@ -125,7 +125,7 @@ def db_read_owned_card_ids(
 
 
 def db_read_card_ids_for_decks(db: Session, deck_ids: Collection[uuid.UUID]) -> set[uuid.UUID]:
-    """Every card of these decks — ADR 051 step 5's ∪ cards-of-decks. Plural
+    """Every card of these decks, the deletion closure's cards-of-decks set. Plural
     counterpart to db_read_card_ids_for_deck, which single-deck callers keep using."""
     if not deck_ids:
         return set()
@@ -135,8 +135,8 @@ def db_read_card_ids_for_decks(db: Session, deck_ids: Collection[uuid.UUID]) -> 
 def db_count_cards_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID], excluding: Collection[uuid.UUID]
 ) -> int:
-    """How many cards on these decks are not already in `excluding` — ADR 051 step 8's
-    affected_card_count: cards a field delete shrinks but doesn't remove."""
+    """How many cards on these decks are not already in `excluding` — the deletion
+    closure's affected_card_count: cards a field delete shrinks but doesn't remove."""
     if not deck_ids:
         return 0
     query = select(func.count()).select_from(Card).where(col(Card.deck_id).in_(deck_ids))
@@ -146,7 +146,7 @@ def db_count_cards_for_decks(
 
 
 def db_stage_delete_cards(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    """Bulk delete by id, no commit — apply_deletion owns the transaction."""
     if not ids:
         return
     db.execute(delete(Card).where(col(Card.id).in_(ids)))

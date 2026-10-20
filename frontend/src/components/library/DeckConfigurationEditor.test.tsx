@@ -105,7 +105,7 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
-/** The landing route's router state: what a Save handed back, if anything (ADR 061). */
+/** The landing route's router state: what a Save handed back, if anything. */
 function StateProbe() {
   const location = useLocation();
   return (
@@ -116,8 +116,8 @@ function StateProbe() {
   );
 }
 
-// ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams.get(),
-// never compared as an encoded string literal.
+// returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
+// compared as an encoded string literal.
 function ReturnToProbe() {
   const [searchParams] = useSearchParams();
   return <span data-testid="return-to">{searchParams.get('returnTo') ?? ''}</span>;
@@ -146,9 +146,9 @@ function renderEdit(configId = 'c1') {
   );
 }
 
-// The board's one interaction path (ADR 020): tap the chip, then tap a destination row
-// in the sheet it opens. Sheet rows only ever offer the field's *other* four slots, so
-// every call below must target a slot the field isn't already in.
+// The board's one interaction path: tap the chip, then tap a destination row in the
+// sheet it opens. Sheet rows only ever offer the field's *other* four slots, so every
+// call below must target a slot the field isn't already in.
 const DESTINATION_LABELS: Record<string, string> = {
   prompt_fields: 'Prompt · always shown',
   prompt_pool: 'Prompt · random draw',
@@ -271,8 +271,8 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // Decoded via URLSearchParams.get() (ADR 024): the deck editor's own returnTo is
-    // the builder's exact location, nested returnTo and all — nothing was dropped, and
+    // Decoded via URLSearchParams.get(): the deck editor's own returnTo is the
+    // builder's exact location, nested returnTo and all — nothing was dropped, and
     // nothing had to be hand-encoded or forwarded explicitly to make that true.
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
@@ -284,7 +284,7 @@ describe('DeckConfigurationEditor — create', () => {
     await screen.findByRole('region', { name: 'Not used' });
     const input = screen.getByLabelText('Name');
 
-    // ADR 067: empty while either side has no field.
+    // Empty while either side has no field.
     expect(input).toHaveValue('');
     await assign(user, 'Term', 'prompt_fields');
     expect(input).toHaveValue('');
@@ -416,7 +416,7 @@ describe('DeckConfigurationEditor — create', () => {
     expect(save).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    // The name is derived once both sides have a field (ADR 067), so nothing is left to do.
+    // The name is derived once both sides have a field, so nothing is left to do.
     expect(save).toBeEnabled();
 
     await user.clear(screen.getByLabelText('Name'));
@@ -583,7 +583,7 @@ describe('DeckConfigurationEditor — edit', () => {
       within(screen.getByRole('region', { name: 'Not used' })).getByText('Reading'),
     ).toBeInTheDocument();
 
-    // Edit mode keeps the stored name; the board never re-derives it (ADR 067).
+    // Edit mode keeps the stored name; the board never re-derives it.
     await assign(user, 'Reading', 'answer_fields');
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
   });

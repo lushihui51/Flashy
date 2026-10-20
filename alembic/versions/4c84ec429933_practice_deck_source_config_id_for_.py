@@ -21,12 +21,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """ADR 040: `practice_deck.source_config_id` (nullable, ON DELETE SET NULL) records
+    """`practice_deck.source_config_id` (nullable, ON DELETE SET NULL) records
     attribution-only lineage back to the `deck_practice_config` a snapshot was cut
     from — never read by generation, validation, or rerun logic.
 
     Autogenerate also caught an unrelated drift from the practice_session→practice_run
-    rename (cycle 009 T2): that migration renamed the column but left this table's own
+    rename: that migration renamed the column but left this table's own
     unique constraint under its pre-rename name
     (`uq_practice_deck_practice_session_id`), out of step with what the current model's
     naming convention now derives from the renamed column

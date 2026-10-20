@@ -12,8 +12,8 @@ from app.services.activity import touch
 
 
 class DeckCreateValidationError(ValueError):
-    """A create_deck_atomic input failed a §2.2 validation rule. The message names
-    the offending item, per the API contract, and maps to a 422 in the router."""
+    """A create_deck_atomic input failed a validation rule. The message names the
+    offending item and maps to a 422 in the router."""
 
 
 def create_deck_atomic(
@@ -26,7 +26,7 @@ def create_deck_atomic(
     """Builds a deck and its field_defs in one transaction. Every validation rule runs
     before any row is added, so a failure anywhere leaves nothing persisted; there's no
     partial write to roll back. A deck is born with a schema and no content — cards are
-    added afterward via POST /api/cards or the batch-edit endpoint (ADR 023)."""
+    added afterward via POST /api/cards or the batch-edit endpoint."""
     name = name.strip()
     if not name:
         raise DeckCreateValidationError("name must not be empty")
@@ -64,7 +64,7 @@ def create_deck_atomic(
         db_stage_create_field_def(db, deck.id, field_name, field_def.type, position)
     db.flush()
 
-    # D13: the deck's own last_activity_at is set at insert (server_default=now(),
+    # The deck's own last_activity_at is set at insert (server_default=now(),
     # same as created_at) — only the subject needs an explicit touch.
     touch(db, subject)
 

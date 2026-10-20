@@ -184,8 +184,8 @@ class TestPracticeRunHTTPFlow:
     def test_rate_non_current_pending_card_rejected(
         self, client, db, existing_user, session_cards, session_config
     ):
-        """ADR 059: only the run's current card (its lowest-position pending row) can be
-        rated; any other pending card is a 400 and nothing is written."""
+        """Only the run's current card (its lowest-position pending row) can be rated;
+        any other pending card is a 400 and nothing is written."""
         start_res = client.post(
             "/api/practice_runs",
             json={
@@ -257,9 +257,9 @@ class TestPracticeRunHTTPFlow:
 
 
 class TestPracticeRunAcceptance:
-    """The Phase 4.2 acceptance test: start, rate, fail, requeue — the requeued card is
-    a new row with a different prompt/answer combination and a position consistent
-    with its updated mastery; the old row remains failed."""
+    """Start, rate, fail, requeue — the requeued card is a new row with a different
+    prompt/answer combination and a position consistent with its updated mastery; the
+    original row stays failed."""
 
     def test_full_fail_requeue_cycle(
         self, db, existing_user, session_cards, session_config, session_fields
@@ -307,7 +307,7 @@ class TestPracticeRunAcceptance:
         # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR), so
         # a forced fail always drops the requeued card's mastery to index 0 — the front
         # of the mastery order. But only 2 other pending cards remain once the original
-        # is marked failed, so ADR 037's spacing floor (RETRY_SPACING_FLOOR=3) clamps
+        # is marked failed, so the retry spacing floor (RETRY_SPACING_FLOOR=3) clamps
         # that index up to min(3, len(pending)) = 2: the end of the queue, not the
         # front. This is a hard guarantee of the clamp, not an approximation — assert
         # the guarantee itself (new back of the pending queue), not just "position
@@ -334,8 +334,8 @@ class TestPracticeRunAcceptance:
 
 
 class TestForcedFailedAnswerFields:
-    """ADR 036: the retry of a failed card force-includes every answer field rated
-    "Again" that is still live and non-blank, ahead of pool sampling. With the fixture's
+    """The retry of a failed card force-includes every answer field rated "Again" that
+    is still live and non-blank, ahead of pool sampling. With the fixture's
     answer_pool_counts=[1], the forced fields fill (or overflow) the whole draw, so
     every assertion here is deterministic for any rng seed — the seed never gets a
     chance to make the test pass by luck."""
@@ -396,7 +396,7 @@ class TestForcedFailedAnswerFields:
         # Craft a prior appearance carrying two pool answers even though this
         # snapshot's drawn count is 1 — the state a chained retry can reach — to hit
         # the overflow rule: forced fields exceed the draw and dropping one is never
-        # permitted (ADR 036).
+        # permitted.
         original.answers = [f["answer1"], f["pool_a1"], f["pool_a2"]]
         db.add(original)
         db.commit()
@@ -480,9 +480,9 @@ class TestForcedFailedAnswerFields:
     def test_blanked_failed_pool_field_drops_out_and_card_still_requeues(
         self, db, client, existing_user, session_cards, session_config, session_fields
     ):
-        """The archived-field test's twin through the one path a user reaches: ADR 036's
+        """The archived-field test's twin through the one path a user reaches: the
         force-include is conditional on the failed field being live and non-blank, so a
-        value cleared after it was shown drops out of the retry (ADR 060)."""
+        value cleared after it was shown drops out of the retry."""
         strategy, original = self._start_and_first_pending(
             db, existing_user, session_config["id"], seed=1
         )
@@ -516,10 +516,10 @@ class TestForcedFailedAnswerFields:
 
 
 class TestRetrySpacingFloor:
-    """ADR 037: RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up,
-    never down — a retry surfaces only after that many other pending cards have had
-    their turn, or at the end of the queue with fewer than that remaining. The "2
-    pending cards -> retry is last" case is already covered by
+    """RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up, never down
+    — a retry surfaces only after that many other pending cards have had their turn,
+    or at the end of the queue with fewer than that remaining. The "2 pending cards ->
+    retry is last" case is already covered by
     TestPracticeRunAcceptance.test_full_fail_requeue_cycle (its own scenario, not
     duplicated here)."""
 
@@ -550,10 +550,10 @@ class TestRetrySpacingFloor:
     def test_last_pending_card_requeues_via_http(
         self, client, db, existing_user, session_cards, session_config
     ):
-        """ADR 058: rating "Again" on a run's only pending card requeues it above every
-        row the run has placed (run max + 500) instead of raising, and a retry of that
-        retry chains above it. Positions are exact because the fixture generates 3 cards
-        at 0, 1000, 2000 and nothing else moves them."""
+        """Rating "Again" on a run's only pending card requeues it above every row the
+        run has placed (run max + 500) instead of raising, and a retry of that retry
+        chains above it. Positions are exact because the fixture generates 3 cards at
+        0, 1000, 2000 and nothing else moves them."""
         start_res = client.post(
             "/api/practice_runs",
             json={
@@ -655,8 +655,8 @@ class TestRetrySpacingFloor:
             .order_by(PracticeCard.position)
         ).all()
         # 5 started; the original leaves pending (now failed) and the requeue takes
-        # its place, so the pending count is unchanged — but the requeue is no longer
-        # necessarily first, per the floor.
+        # its place, so the pending count is unchanged — but the floor keeps the
+        # requeue from necessarily being first.
         assert len(pending) == 5
         assert pending[3].id == requeued.id  # exactly 3 pending cards ahead of it
 
@@ -681,8 +681,8 @@ class TestRetrySpacingFloor:
 
     def test_retry_spacing_floor_is_at_least_one(self):
         """`_insertion_position` indexes `pending[final_index - 1]` whenever it runs,
-        which needs the floor to be at least 1 (ADR 058); a floor of 0 would need the
-        no-predecessor branch back."""
+        which needs the floor to be at least 1; a floor of 0 would need a
+        no-predecessor branch."""
         assert RETRY_SPACING_FLOOR >= 1
 
     def test_failing_the_same_card_again_reapplies_the_floor(
@@ -696,7 +696,7 @@ class TestRetrySpacingFloor:
         session_fields,
     ):
         # 8 cards at 0..7000: after the retry reaches the front, enough remain pending
-        # for its second failure to go through the floor again (ADR 058).
+        # for its second failure to go through the floor again.
         self._add_cards(client, existing_deck, session_fields, 5, start_at=3)
         strategy = EmaStrategy()
         config_id = uuid.UUID(session_config["id"])
@@ -735,8 +735,8 @@ class TestRetrySpacingFloor:
         # card, so the floor alone sets the index.
         assert first_requeue.position == 3500
 
-        # Only the current card can be rated (ADR 059): pass the three cards ahead of
-        # the retry so it reaches the front.
+        # Only the current card can be rated: pass the three cards ahead of the retry
+        # so it reaches the front.
         for _ in range(3):
             front = db_read_current_practice_card(db, session.id, existing_user.id)
             assert front is not None and front.id != first_requeue.id
@@ -794,7 +794,7 @@ class TestPositionCollisionFallback:
         collides on its own with the gaps a fresh run leaves, so the stub makes the
         collision deterministic instead of trying to engineer mastery scores precisely
         enough to collide. Five cards, so four stay pending after the fail and the
-        requeue takes the enough-cards branch that calls `_insertion_position` (ADR 058)."""
+        requeue takes the enough-cards branch that calls `_insertion_position`."""
         import app.services.practice_run as practice_run_module
 
         TestRetrySpacingFloor._add_cards(client, existing_deck, session_fields, 2, start_at=3)
@@ -849,10 +849,10 @@ class TestPositionCollisionFallback:
 
 
 class TestBlankValueGenerationFilter:
-    """ADR 026: a field a card left blank (``""``, the dense-with-empty-string state
-    every active field always has) can never be selected as that card's prompt or
-    answer, fixed or pool, on either side — `db_fetch_generation_candidates` drops it
-    from the join entirely, so no amount of resampling can surface it."""
+    """A field a card left blank (``""``, the dense-with-empty-string state every
+    active field always has) can never be selected as that card's prompt or answer,
+    fixed or pool, on either side — `db_fetch_generation_candidates` drops it from
+    the join entirely, so no amount of resampling can surface it."""
 
     def test_blank_pool_field_never_drawn(self, client, db, existing_deck, session_fields):
         f = session_fields
@@ -977,8 +977,9 @@ def _bare_practice_card(card_id, status):
 
 class TestPracticeRunList:
     """GET /api/practice_runs — the practice overview's only read. Relevance to a
-    subject or deck is answered through practice_deck → deck → subject and nothing else
-    (schema invariant 5: a session has no config lineage)."""
+    subject or deck is answered through practice_deck → deck → subject and nothing else:
+    a run reads only its own frozen snapshot and carries no behavioural link to its
+    source configuration."""
 
     def test_lists_newest_first_with_name_and_deck_context(self, client, multi_subject_library):
         lib = multi_subject_library
@@ -1133,9 +1134,9 @@ class TestRunStartErrorShape:
     def test_uncounted_pool_config_cannot_start_a_session(
         self, client, db, existing_deck, session_cards, session_fields
     ):
-        """Inserted straight into the table, bypassing the endpoint: the create path now
-        rejects an uncounted pool, so the only way this shape still reaches session start
-        is a row saved before the rule existed. Start revalidates for exactly that reason
+        """Inserted straight into the table, bypassing the endpoint: the create path
+        rejects an uncounted pool, so the only way this shape reaches session start is a
+        row that bypassed it. Start revalidates for exactly that reason
         — it must refuse rather than write a session with no practice_cards."""
         from app.models.deck_practice_config import DeckPracticeConfig
 
@@ -1165,10 +1166,10 @@ class TestRunStartErrorShape:
 
 
 class TestNoCards:
-    """ADR 056: a practice that generates nothing is refused rather than created empty.
+    """A practice that generates nothing is refused rather than created empty.
     Emptiness is a property of the whole practice — one cardless deck alongside a deck
     that generates is fine — and it is only knowable after generation has run, because
-    a card that is legal can still be blank in every field one side shows (ADR 026)."""
+    a card that is legal can still be blank in every field one side shows."""
 
     def _config(self, client, existing_deck, prompt_id, answer_id, name="No-cards config"):
         res = client.post(
@@ -1252,7 +1253,7 @@ class TestNoCards:
         self, client, existing_deck, existing_field_defs
     ):
         """The second cause, invisible to a card count: the deck has a card, but its
-        answer side is blank, and ADR 026 excludes a blank field from generation."""
+        answer side is blank, and a blank field is excluded from generation."""
         front, back = existing_field_defs
         card = client.post(
             "/api/cards",
@@ -1290,8 +1291,7 @@ class TestNoCards:
 
 class TestPracticeRunDelete:
     """A session owns its practice_decks and practice_cards outright, so deleting it
-    takes them with it (ADR 015, amended). review_log is history and survives — the same
-    split ADR 015 drew for deck deletion, applied one level up."""
+    takes them with it. review_log is history and survives the delete."""
 
     def test_delete_removes_the_session_and_its_owned_rows(
         self, client, db, session_cards, session_config
@@ -1336,7 +1336,7 @@ class TestPracticeRunDelete:
 
         # History outlives the session, untouched: a run is a shell for the reviews
         # inside it, not a resource in its own right, so deleting it costs exactly
-        # its own attribution and nothing in review_log (ADR 047).
+        # its own attribution and nothing in review_log.
         surviving = db.exec(select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))).all()
         assert len(surviving) == len(review_log_ids)
         assert all(row.card_id is not None for row in surviving)
@@ -1358,9 +1358,9 @@ class TestPracticeRunDelete:
 
 
 class TestPracticeRunDetailShape:
-    """GET /api/practice_runs/{id} (T1, MD-3): the detail page needs the same deck
-    chips the list already carries, so the single-session read returns
-    PracticeRunSummary too — not a client-side join of the list endpoint."""
+    """GET /api/practice_runs/{id}: the detail page needs the same deck chips the list
+    already carries, so the single-session read returns PracticeRunSummary too — not
+    a client-side join of the list endpoint."""
 
     def test_detail_carries_decks_after_one_is_deleted(self, client, multi_subject_library):
         lib = multi_subject_library
@@ -1408,9 +1408,9 @@ class TestPracticeRunDetailShape:
 
 
 class TestRunEmptiedByDeckDeletion:
-    """ADR 047, ADR 048: a run left owning no practice_deck at all is deleted
-    alongside its last one. A run that still has another deck's snapshot survives
-    the loss of just one, and lists/filters accordingly."""
+    """A run left owning no practice_deck at all is deleted alongside its last one. A
+    run that still has another deck's snapshot survives the loss of just one, and
+    lists/filters accordingly."""
 
     def test_run_is_gone_after_its_only_deck_is_deleted(self, client, multi_subject_library):
         lib = multi_subject_library
@@ -1464,8 +1464,8 @@ class TestRunEmptiedByDeckDeletion:
 
 
 class TestRunProgressFold:
-    """run_progress (ADR 028) as a pure function, no DB or generation involved —
-    the chain/bucket rule itself, independent of how a chain came to look that way."""
+    """run_progress as a pure function, no DB or generation involved — the
+    chain/bucket rule itself, independent of how a chain came to look that way."""
 
     def test_all_four_buckets_from_each_chains_last_row(self):
         unseen_id, retry_id, passed_id, stuck_id = (uuid.uuid4() for _ in range(4))
@@ -1507,9 +1507,9 @@ class TestRunProgressFold:
 
 
 class TestRunState:
-    """GET .../run (ADR 028, ADR 031) — replaces GET .../current_card. All server-side
-    composition: resolved field values, the fixed-total progress fold, and the
-    active->completed transition inherited from get_current_practice_card."""
+    """GET .../state — all server-side composition: resolved field values, the
+    fixed-total progress fold, and the active->completed transition inherited from
+    get_current_practice_card."""
 
     def test_resolves_fields_in_position_order_regardless_of_config_array_order(
         self, client, existing_deck
@@ -1584,8 +1584,8 @@ class TestRunState:
     def test_value_is_passed_through_blank_if_edited_blank_after_generation(
         self, client, existing_deck
     ):
-        """ADR 026 only keeps a blank field out of *candidacy* at generation time; once
-        a field has been drawn onto a practice_card, later edits to the card are
+        """A blank field is only kept out of *candidacy* at generation time; once a
+        field has been drawn onto a practice_card, later edits to the card are
         resolved as-is, blank included — the run endpoint doesn't re-filter."""
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
@@ -1685,7 +1685,7 @@ class TestRunState:
         assert rate.status_code == 200, rate.text
         assert rate.json()["requeued_practice_card"] is not None
 
-        # ADR 037: with only 2 other pending cards left, the retry's spacing floor
+        # With only 2 other pending cards left, the retry's spacing floor
         # (RETRY_SPACING_FLOOR=3) clamps it to the end of the queue — pass both of the
         # others before the requeued row resurfaces as the current card.
         for _ in range(2):
@@ -1728,14 +1728,14 @@ class TestRunState:
         assert final["session_status"] == "completed"
 
     def test_progress_counts_all_four_buckets_end_to_end(self, client, db, existing_deck):
-        """Exercises the ADR 013/029 stale-snapshot case for real: a card fails after
-        its only answer field is archived mid-session, so the requeue finds nothing to
-        generate from and the chain ends on `failed` with no successor — still_failed,
-        alongside one untouched (unseen), one failed-then-requeued (retry_pending), and
-        one passed-first-try card, all counted against the same fixed `total_cards`.
-        Roles go by queue position, since only the current card can be rated (ADR 059):
-        the front card fails and requeues, the second passes, the third fails after the
-        archive, the fourth is never seen mid-run."""
+        """Exercises the stale-snapshot case for real: a card fails after its only
+        answer field is archived mid-session, so the requeue finds nothing to generate
+        from and the chain ends on `failed` with no successor — still_failed, alongside
+        one untouched (unseen), one failed-then-requeued (retry_pending), and one
+        passed-first-try card, all counted against the same fixed `total_cards`. Roles
+        go by queue position, since only the current card can be rated: the front card
+        fails and requeues, the second passes, the third fails after the archive, the
+        fourth is never seen mid-run."""
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
         ).json()
@@ -1866,12 +1866,12 @@ class TestRunState:
 
 
 class TestBreakdown:
-    """GET .../breakdown (ADR 029, ADR 031) — the completion dataset, only ever built
-    for a session with nothing pending."""
+    """GET .../breakdown — the completion dataset, only ever built for a session with
+    nothing pending."""
 
     def _setup_deck(self, client, existing_deck):
-        """A 4-field deck: `title` (position 0, the ADR 032 primary field, kept out of
-        the practice config so its value never changes across attempts), `prompt` and
+        """A 4-field deck: `title` (position 0, the primary field, kept out of the
+        practice config so its value never changes across attempts), `prompt` and
         `answer` (the config's only fixed fields — no pool, so generation is
         deterministic), and `filler` (keeps the deck at 4 active fields so archiving
         `answer` later doesn't hit the two-field floor)."""
@@ -1913,7 +1913,7 @@ class TestBreakdown:
                     prompt["id"]: f"{tag} prompt",
                     answer["id"]: f"{tag} answer",
                     # filler intentionally omitted — the create endpoint's dense write
-                    # (§2.6) backfills it as "".
+                    # backfills it as "".
                 },
             },
         )
@@ -1922,11 +1922,10 @@ class TestBreakdown:
 
     def test_full_breakdown_all_four_buckets(self, client, db, existing_deck, existing_subject):
         """The stuck card lives in a second deck whose answer field is archived right
-        after the run starts: only the current card can be rated (ADR 059), and a single
-        deck of four cannot fail one card twice before the archive and still leave
-        another unrated until after it (MD-2). The run is driven from the state
-        endpoint with a per-card rating script, so any starting order gives the same
-        outcome."""
+        after the run starts: only the current card can be rated, and a single deck of
+        four cannot fail one card twice before the archive and still leave another
+        unrated until after it. The run is driven from the state endpoint with a
+        per-card rating script, so any starting order gives the same outcome."""
         title, prompt, answer, config = self._setup_deck(client, existing_deck)
 
         first_card = self._make_card(client, existing_deck, title, prompt, answer, "first", "")
@@ -2073,7 +2072,7 @@ class TestBreakdown:
         stuck_attempts = cards_by_id[stuck_card]["attempts"]
         assert [a["status"] for a in stuck_attempts] == ["failed"]
         assert stuck_attempts[0]["answers"][0]["rating"] == 1
-        # `answer` was archived before this attempt but still resolves (ADR 031).
+        # `answer` was archived before this attempt but still resolves.
         assert stuck_attempts[0]["answers"][0]["name"] == "answer"
 
         # Ordered by first attempt's position ascending.
@@ -2129,9 +2128,9 @@ class TestBreakdown:
         session_config,
         mastery_log_statement_counter,
     ):
-        """010 MD-4: the breakdown's mastery_log statement count is fixed — it must
-        not grow with the run's card count or the decks' active-field count. One card
-        on a fresh two-field deck and three cards on session_fields' eight-field deck
+        """The breakdown's mastery_log statement count is fixed — it must not grow with
+        the run's card count or the decks' active-field count. One card on a fresh
+        two-field deck and three cards on session_fields' eight-field deck
         (session_cards + session_config) must report the same nonzero count."""
         small_deck = client.post(
             "/api/decks",
@@ -2196,9 +2195,9 @@ class TestBreakdown:
         assert small_count == large_count
 
     def test_removed_fields_stay_as_placeholders_in_every_attempt(self, client, existing_deck):
-        """ADR 052: a field a completed run's practice_cards still name in `prompts`/
-        `answers` but whose row was later deleted stays visible in the breakdown as a
-        placeholder on both sides, instead of silently vanishing from every attempt."""
+        """A field a completed run's practice_cards still name in `prompts`/`answers`
+        but whose row was later deleted stays visible in the breakdown as a placeholder
+        on both sides, instead of silently vanishing from every attempt."""
         title = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
         ).json()
@@ -2302,11 +2301,11 @@ class TestBreakdown:
                 assert answers[1] == a2_placeholder
 
     def test_resolver_drops_unknown_ids_unless_asked_to_keep_them(self):
-        """_resolve_field_values's keep_removed switch (ADR 052), exercised directly:
-        the HTTP-level test above only ever sees keep_removed=True through the
-        breakdown, so this covers the default (False) drop path and the ordering
-        contract — live entries first by position, placeholders after in stored
-        order — with no HTTP round trip needed."""
+        """_resolve_field_values's keep_removed switch, exercised directly: the
+        HTTP-level test above only ever sees keep_removed=True through the breakdown,
+        so this covers the default (False) drop path and the ordering contract — live
+        entries first by position, placeholders after in stored order — with no HTTP
+        round trip needed."""
         unknown = uuid.uuid4()
         assert _resolve_field_values({}, {}, [unknown]) == []
         assert _resolve_field_values({}, {}, [unknown], keep_removed=True) == [
@@ -2330,11 +2329,11 @@ class TestBreakdown:
         assert resolved[2].removed is True
 
     def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
-        """The one path a user reaches today to the `still_failed` bucket: archiving is
-        unexposed (ADR 049) and a hard field delete removes the active practices naming
-        the field, so clearing a card's only answer value while a practice uses it is
-        what leaves the requeue nothing to generate from. The blank value passes through
-        unlabelled in the breakdown's attempt detail (ADR 060)."""
+        """The one path a user reaches to the `still_failed` bucket: archiving is
+        unexposed and a hard field delete removes the active practices naming the
+        field, so clearing a card's only answer value while a practice uses it is what
+        leaves the requeue nothing to generate from. The blank value passes through
+        unlabelled in the breakdown's attempt detail."""
         fields = {}
         for name in ("prompt", "answer", "filler"):
             res = client.post(
@@ -2500,10 +2499,10 @@ def _expected_after(strategy, ratings, shown_prompt_ids=(), prior_states=None):
 
 
 class TestBreakdownMastery:
-    """GET .../breakdown's mastery/delta additions (ADR 042, ADR 043, cycle 010 T3).
-    Built directly against practice_run/practice_card/mastery_log rather than through
-    the generation/rating HTTP flow — the delta-semantics contract is specifically
-    about row ordering and attribution, which this gives exact control over."""
+    """GET .../breakdown's mastery and delta fields. Built directly against
+    practice_run/practice_card/mastery_log rather than through the generation/rating
+    HTTP flow — the delta-semantics contract is specifically about row ordering and
+    attribution, which this gives exact control over."""
 
     def test_first_review_delta_and_untouched_field_dilutes_card_fold(
         self, db, client, existing_user, existing_deck
@@ -2536,7 +2535,7 @@ class TestBreakdownMastery:
         card = next(c for c in breakdown.cards if c.card_id == card_id)
         fields_by_id = {f.field_def_id: f for f in card.fields}
 
-        # field_def.position ascending (010 T3's contract), not touched-first.
+        # field_def.position ascending, not touched-first.
         assert [f.field_def_id for f in card.fields] == [answer_id, other_id]
 
         # Reviewed for the first time inside this run: delta is against the prior.
@@ -2547,8 +2546,9 @@ class TestBreakdownMastery:
         assert fields_by_id[other_id].mastery is None
         assert fields_by_id[other_id].delta == 0.0
 
-        # ADR 043's own stated cost: the untouched field dilutes the card fold —
-        # half the per-field movement here, since one of the two active fields moved.
+        # The accepted cost of folding over every active field: the untouched field
+        # dilutes the card fold — half the per-field movement here, since one of the
+        # two active fields moved.
         assert card.mastery == pytest.approx((expected_score + 50.0) / 2)
         assert card.delta == pytest.approx((expected_score - 50.0) / 2)
 
@@ -2664,9 +2664,9 @@ def _rerun(client, session_id, name):
 
 
 class TestRerun:
-    """POST .../rerun (ADR 039) — creates a new run from a completed run's own frozen
+    """POST .../rerun — creates a new run from a completed run's own frozen
     practice_deck snapshots, never a deck_practice_config lookup. The original run is
-    never deleted (that's the point of ADR 039, superseding ADR 030's delete half)."""
+    never deleted."""
 
     def test_rerun_creates_new_run_with_posted_name_and_keeps_the_original(
         self, client, db, existing_user, session_cards, session_config
@@ -2820,9 +2820,9 @@ class TestRerun:
     def test_rerun_refuses_when_nothing_survives(
         self, client, session_cards, session_config
     ):
-        """Archiving the config's only answer field, not deleting the deck — after
-        ADR 048 a run whose only deck is deleted is gone itself, so there would be no
-        run left to call rerun against at all."""
+        """Archiving the config's only answer field, not deleting the deck — a run
+        whose only deck is deleted is gone itself, so there would be no run left to
+        call rerun against at all."""
         session = _start(client, "Doomed run", [session_config["id"]])
         _finish_session(client, session["id"])
 
@@ -2860,11 +2860,11 @@ class TestRerun:
 
 
 class TestConfigLineage:
-    """practice_deck.source_config_id (ADR 040) — attribution-only: written at run
-    start, copied through rerun verbatim, nulled (snapshot untouched) if the source
-    config is later deleted. Never read by generation, validation, or rerun logic. The
-    link itself is not exposed on any payload — these tests reach it straight off the
-    ORM row — though the name it resolves to is, as `configuration_name` (ADR 068)."""
+    """practice_deck.source_config_id — attribution-only: written at run start, copied
+    through rerun verbatim, nulled (snapshot untouched) if the source config is later
+    deleted. Never read by generation, validation, or rerun logic. The link itself is
+    not exposed on any payload — these tests reach it straight off the ORM row —
+    though the name it resolves to is, as `configuration_name`."""
 
     def test_start_writes_the_configs_id_onto_the_snapshot(
         self, client, db, session_cards, session_config
@@ -2913,10 +2913,10 @@ class TestConfigLineage:
     def test_a_run_started_without_source_config_id_still_reruns_with_it_null(
         self, client, db, existing_user, session_cards, session_config
     ):
-        """Covers rerun's "possibly already null" case (contract): a snapshot with no
-        lineage of its own (simulating a config deleted before this session's own
-        first completion, or a future internally-generated session) must still copy
-        that null through rather than backfilling anything."""
+        """Covers rerun's "possibly already null" case: a snapshot with no lineage of
+        its own (simulating a config deleted before this session's own first
+        completion) must still copy that null through rather than backfilling
+        anything."""
         session = _start(client, "No lineage", [session_config["id"]])
         session_id = uuid.UUID(session["id"])
         snapshot = db.exec(
@@ -3006,9 +3006,9 @@ def _snapshot(db, session_id: str):
 
 
 class TestConfigEditSeversLineage:
-    """ADR 040 (cycle 009 T7): materially editing a config nulls source_config_id on
-    every snapshot cut from it — a rename alone, or an update that fails validation,
-    leaves every link untouched."""
+    """Materially editing a config nulls source_config_id on every snapshot cut from
+    it — a rename alone, or an update that fails validation, leaves every link
+    untouched."""
 
     def test_editing_a_pool_array_nulls_only_that_configs_snapshots(
         self, client, db, session_cards, session_config, session_fields
@@ -3064,9 +3064,9 @@ class TestConfigEditSeversLineage:
 
 
 class TestConfigRenamePropagates:
-    """ADR 068 (cycle 022 T2): a non-material update carrying a name writes it onto every
-    snapshot still linked to that configuration; a material update severs and writes
-    nothing, even when it also carries a name."""
+    """A non-material update carrying a name writes it onto every snapshot still
+    linked to that configuration; a material update severs and writes nothing, even
+    when it also carries a name."""
 
     def test_a_rename_updates_the_stored_name_on_linked_snapshots(
         self, client, db, session_cards, session_config
@@ -3142,8 +3142,8 @@ class TestConfigRenamePropagates:
 
 
 class TestConfigurationLabel:
-    """ADR 068 (cycle 022 T3): each summary deck's `configuration_name` is the live
-    configuration name while the snapshot is linked, else the stored name, else None."""
+    """Each summary deck's `configuration_name` is the live configuration name while
+    the snapshot is linked, else the stored name, else None."""
 
     @staticmethod
     def _label(client, session_id):
@@ -3190,7 +3190,7 @@ class TestConfigurationLabel:
     def test_label_prefers_the_live_name_over_a_stale_stored_one(
         self, client, db, session_cards, session_config
     ):
-        # Every API path keeps the two equal while linked (T2), so only a direct write
+        # Every API path keeps the two equal while linked, so only a direct write
         # can tell the live read apart from the stored fallback.
         session = _start(client, "Label run", [session_config["id"]])
         snapshot = _snapshot(db, session["id"])

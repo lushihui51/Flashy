@@ -4,7 +4,7 @@ Revision ID: 9de2fd4c3f06
 Revises: f6887865090a
 Create Date: 2026-10-01 21:15:00.233848
 
-ADR 068 (cycle 022 T1): practice_deck gains a nullable source_config_name, the name of
+practice_deck gains a nullable source_config_name, the name of
 the configuration a snapshot was cut from as of the last moment its source_config_id
 link existed. The practice summary falls back to it for a deck's configuration label
 once the link is gone.
@@ -13,8 +13,8 @@ Upgrade, in order:
 1. Add the nullable practice_deck.source_config_name column.
 2. Backfill it on every snapshot whose source_config_id still resolves, from the linked
    configuration's current name. A linked configuration's layout cannot have changed
-   since the snapshot (ADR 040's sever rule), only its name, so this is the value ADR
-   068's rules would have maintained. Snapshots with a null link stay null; there is
+   since the snapshot (a material edit severs the link), only its name, so this is
+   the value the rename rule would have maintained. Snapshots with a null link stay null; there is
    nothing to copy from.
 
 Downgrade drops the column, which removes the backfill with it.

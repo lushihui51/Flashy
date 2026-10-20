@@ -18,7 +18,7 @@ class MasteryStrategy(Protocol):
         ...
 
     def prior(self) -> FieldMasteryState:
-        """State assumed for a (card, field) with no row. Lazy creation, invariant 4."""
+        """State assumed for a (card, field) with no row, which means never reviewed."""
         ...
 
     def expand(

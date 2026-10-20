@@ -1,7 +1,6 @@
 """Composite request/response shapes for the practice_run router — models that nest
-another entity's shape or describe a flow or page rather than one row of a table
-(ADR 046); entity modules under `app/models/` hold only a table and its own
-single-row shapes."""
+another entity's shape or describe a flow or page rather than one row of a table;
+entity modules under `app/models/` hold only a table and its own single-row shapes."""
 
 import uuid
 from datetime import datetime
@@ -17,8 +16,8 @@ class PracticeRunDeckSummary(AppModel):
     """One deck a session touches, resolved through `practice_deck → deck → subject`.
 
     This chain is the only link between a session and a subject/deck, and the only thing
-    the filters use. `practice_deck.source_config_id` (ADR 040) is read here for the
-    label only (ADR 068): `configuration_name` is the live configuration's name while
+    the filters use. `practice_deck.source_config_id` is read here for the label
+    only: `configuration_name` is the live configuration's name while
     the link resolves, else the snapshot's stored `source_config_name`, else None. The
     link is never read for filtering, generation, validation or rerun."""
 
@@ -34,10 +33,10 @@ class PracticeRunSummary(PracticeRunRead):
     so the client can render and filter by subject/deck without a second round trip or a
     client-side join.
 
-    `decks` lists every snapshot of the run — a `practice_deck` no longer outlives its
-    deck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run
+    `decks` lists every snapshot of the run — a `practice_deck` never outlives its
+    deck: deleting a deck deletes its snapshots with it, and a run
     left owning no snapshot at all is deleted alongside its last one. There is no
-    "deleted deck" state left for a summary to represent."""
+    "deleted deck" state for a summary to represent."""
 
     decks: list[PracticeRunDeckSummary]
 
@@ -45,12 +44,12 @@ class PracticeRunSummary(PracticeRunRead):
 class ResolvedFieldValue(AppModel):
     """One prompt/answer field id from a practice_card's `prompts`/`answers` array,
     joined against its field_def (name, type) and this card's current value — the
-    server-side resolution ADR 031 replaces bare-id responses with. `value` is `""`
+    server-side resolution every run payload uses instead of bare ids. `value` is `""`
     when no card_field_value row exists for this (card, field) pair; it is passed
     through as-is even if blank, since a value can go blank *after* the practice_card
-    was generated (ADR 026 only governs generation-time candidacy, not later edits).
+    was generated (the blank filter governs generation-time candidacy, not later edits).
     `removed` is True only for a placeholder the breakdown emits for a stored id whose
-    field_def row no longer exists (ADR 052); every other resolution, including the
+    field_def row no longer exists; every other resolution, including the
     live run's current card, leaves it False."""
 
     field_def_id: uuid.UUID
@@ -61,7 +60,7 @@ class ResolvedFieldValue(AppModel):
 
 
 class RunProgress(AppModel):
-    """The ADR 028 live-progress counts: `total_cards` is fixed at session start
+    """The live-progress counts: `total_cards` is fixed at session start
     (distinct card_ids that received a practice_card row then) and never changes, so
     the other four counts — a partition of it by chain-fold bucket — only ever
     redistribute, never grow the denominator mid-session."""
@@ -76,13 +75,13 @@ class RunProgress(AppModel):
 class CurrentRunCard(AppModel):
     practice_card_id: uuid.UUID
     card_id: uuid.UUID
-    attempt: int  # 1-based index of this row in its card_id's chain (MD-3)
+    attempt: int  # 1-based index of this row in its card_id's chain
     prompts: list[ResolvedFieldValue]  # field_def.position ascending
     answers: list[ResolvedFieldValue]  # field_def.position ascending
 
 
 class PracticeRunState(AppModel):
-    """The whole `GET .../state` payload (ADR 031) — everything the run page needs to
+    """The whole `GET .../state` payload — everything the run page needs to
     render one screen, in one round trip. `current_card` is None once nothing is
     pending, which is also exactly when `session_status` reads `completed`."""
 
@@ -93,10 +92,10 @@ class PracticeRunState(AppModel):
 
 
 class BreakdownBucket(str, Enum):
-    """The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`
-    splits by chain length so the breakdown can distinguish a card that took retries
-    from one that didn't; `still_failed` — a chain whose last row is `failed` with no
-    successor, the ADR 013 stale-snapshot case — is unaffected by length and stays one
+    """The completion-time refinement of the chain fold: `passed` splits by chain
+    length so the breakdown can distinguish a card that took retries from one that
+    didn't; `still_failed` — a chain whose last row is `failed` with no successor,
+    because nothing was left to generate a retry from — is unaffected by length and stays one
     bucket, displayed to the user as "Failed"."""
 
     passed_first_try = "passed_first_try"
@@ -109,7 +108,7 @@ class RatedFieldValue(ResolvedFieldValue):
     """A resolved answer field plus the rating it was given, joined from `review_log`
     on `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`
     exactly for a removed field's placeholder, because its review rows cascaded with
-    the field (ADR 048)."""
+    the field."""
 
     rating: int | None
 
@@ -123,7 +122,7 @@ class BreakdownAttempt(AppModel):
 
 
 class FieldMasteryDelta(AppModel):
-    """One active field's session-delta entry (ADR 042, ADR 044, cycle 010 T3):
+    """One active field's session-delta entry:
     `mastery` is the after-state field score (`strategy.field_score`, the existing
     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
     is always a float, never None — 0.0 for a field this run's card left untouched."""
@@ -136,19 +135,19 @@ class FieldMasteryDelta(AppModel):
 
 
 class BreakdownCard(AppModel):
-    """One card's whole outcome chain for the completion breakdown (ADR 029):
-    `attempts` is chronological, so `attempts[-1]` is the determining attempt that
-    decided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR
-    042, ADR 043, ADR 044, cycle 010 T3): `mastery` is ADR 043's card fold over every
-    active field's after-state score; `delta` is that same fold's after-state minus
-    its before-state, exact (the client rounds per 010 MD-2); `fields` lists every
+    """One card's whole outcome chain for the completion breakdown: `attempts` is
+    chronological, so `attempts[-1]` is the determining attempt that decided `bucket`.
+    `mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold
+    (`strategy.card_score`) over every active field's after-state score; `delta` is
+    that same fold's after-state minus its before-state, exact (the client rounds);
+    `fields` lists every
     currently active field_def of the card's deck, field_def.position ascending —
     not just the ones this run's attempts happened to touch."""
 
     card_id: uuid.UUID
     bucket: BreakdownBucket
     attempt_count: int
-    primary_field: ResolvedFieldValue  # deck's active field_def at position 0 (ADR 032)
+    primary_field: ResolvedFieldValue  # deck's active field_def at position 0
     attempts: list[BreakdownAttempt]
     mastery: float
     delta: float
@@ -156,9 +155,9 @@ class BreakdownCard(AppModel):
 
 
 class PracticeRunBreakdown(AppModel):
-    """The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and
+    """The whole `GET .../breakdown` payload: bucket counts, and
     every card's full resolved history, so the completion screen's row-tap detail needs
-    no second request. Only ever built for a completed session (ADR 029) — the router
+    no second request. Only ever built for a completed session — the router
     409s an active one before this is composed."""
 
     total_cards: int

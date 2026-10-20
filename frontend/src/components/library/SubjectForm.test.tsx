@@ -196,7 +196,7 @@ describe('SubjectForm — edit mode', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
 
-    // Verbatim against the copy contract's own subject example (cycle 013).
+    // The whole sentence, verbatim: its clause order and wording are fixed copy.
     expect(
       await screen.findByText(
         "This also deletes 3 decks, 120 cards, 8 fields, 5 deck configurations and 4 practices. This can't be undone.",

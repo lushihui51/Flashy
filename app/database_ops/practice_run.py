@@ -52,7 +52,7 @@ def _summaries_for_runs(
         )
         .join(Deck, Deck.id == PracticeDeck.deck_id)
         .join(Subject, Subject.id == Deck.subject_id)
-        # ADR 068: the label only — live name while linked, else the stored name.
+        # For the label only — live name while linked, else the stored name.
         .outerjoin(
             DeckPracticeConfig,
             col(DeckPracticeConfig.id) == PracticeDeck.source_config_id,
@@ -96,7 +96,7 @@ def db_read_practice_runs_with_decks(
 
     `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
     matches if *any* of its snapshots points at a matching deck. A run left with no
-    snapshot at all is deleted alongside its last deck (ADR 047, ADR 048), so there is
+    snapshot at all is deleted alongside its last deck, so there is
     no dangling snapshot state for this filter to have to account for."""
     query = select(PracticeRun).where(PracticeRun.user_id == user_id)
 
@@ -120,7 +120,7 @@ def db_read_practice_runs_with_decks(
 def db_read_practice_run_with_decks(
     db: Session, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunSummary | None:
-    """The detail read (MD-3): the same summary shape as the list, narrowed to one
+    """The detail read: the same summary shape as the list, narrowed to one
     session via the existing ownership-scoped lookup. None for a missing or foreign
     session, same as db_read_practice_run."""
     session = db_read_practice_run(db, practice_run_id, user_id)
@@ -130,11 +130,10 @@ def db_read_practice_run_with_decks(
 
 
 def db_delete_practice_run(db: Session, session: PracticeRun) -> None:
-    """The session's practice_cards and practice_decks go with it (ON DELETE CASCADE,
-    ADR 015 as amended) — they are session-owned state, not history. review_log rows
-    are not touched at all: a run is a shell for the reviews inside it, not a resource
-    in its own right, so deleting it costs exactly its own attribution and nothing
-    else (ADR 047)."""
+    """The session's practice_cards and practice_decks go with it (ON DELETE CASCADE)
+    — they are session-owned state, not history. review_log rows are not touched at
+    all: a run is a shell for the reviews inside it, not a resource in its own right,
+    so deleting it costs exactly its own attribution and nothing else."""
     db.delete(session)
     db.commit()
 
@@ -143,8 +142,8 @@ def db_read_run_ids_with_all_decks_in(
     db: Session, user_id: uuid.UUID, deck_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """Runs of user_id with at least one practice_deck, none of whose practice_decks
-    points at a deck outside deck_ids — ADR 051 step 7's first half: a run entirely
-    contained in this closure of decks."""
+    points at a deck outside deck_ids: a run entirely contained in this closure of
+    decks, which the deletion closure deletes with them."""
     if not deck_ids:
         return set()
     has_a_deck = exists().where(PracticeDeck.practice_run_id == PracticeRun.id)
@@ -162,9 +161,9 @@ def db_read_active_run_ids_naming_fields(
     db: Session, user_id: uuid.UUID, field_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """Active runs of user_id with a practice_deck whose prompt/answer/pool field
-    arrays overlap field_ids — ADR 051 step 7's second half. Completed runs are never
-    touched by a field-only deletion: they still show their attempts, they just don't
-    need to be rateable any more (ADR 047)."""
+    arrays overlap field_ids, which the deletion closure deletes. Completed runs are
+    never touched by a field-only deletion: they still show their attempts, they just
+    don't need to be rateable any more."""
     if not field_ids:
         return set()
     ids = list(field_ids)
@@ -186,9 +185,9 @@ def db_read_active_run_ids_naming_fields(
 
 
 def db_stage_delete_practice_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
-    Its practice_decks and practice_cards cascade away with it; every review and
-    mastery value it produced stays (ADR 047, ADR 039)."""
+    """Bulk delete by id, no commit — apply_deletion owns the transaction. Its
+    practice_decks and practice_cards cascade away with it; every review and mastery
+    value it produced stays."""
     if not ids:
         return
     db.execute(delete(PracticeRun).where(col(PracticeRun.id).in_(ids)))

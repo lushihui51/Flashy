@@ -69,7 +69,7 @@ def read_practice_runs(
     """Newest first, each row carrying the decks (and their subjects) it snapshotted.
     Filters are the same relation, asked as a question: a session matches a subject or
     deck if any of its practice_deck rows points at a matching deck (`source_config_id`
-    is attribution only, never a filter — ADR 040)."""
+    is attribution only, never a filter)."""
     return db_read_practice_runs_with_decks(db, current_user.id, subject_id, deck_id)
 
 
@@ -81,7 +81,7 @@ def read_practice_runs(
 def read_practice_run(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
-    """MD-3: the detail page needs the same deck chips the list already renders, so this
+    """The detail page needs the same deck chips the list already renders, so this
     answers with PracticeRunSummary rather than the bare PracticeRunRead — API-
     first beats a client-side join of the list endpoint."""
     session = db_read_practice_run_with_decks(db, practice_run_id, current_user.id)
@@ -95,7 +95,7 @@ def delete_practice_run(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
     """User delete is the only way a session leaves the list — there is no `abandoned`
-    status for one to fall out of view into (ADR 015 as amended)."""
+    status for one to fall out of view into."""
     session = db_read_practice_run(db, practice_run_id, current_user.id)
     if not session:
         raise HTTPException(status_code=404, detail="Practice not found")
@@ -110,9 +110,9 @@ def delete_practice_run(
 def read_practice_run_state(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
-    """ADR 031: one server-composed payload, replacing the old bare-id `current_card`
-    endpoint. 404 for an unknown or foreign session; `current_card: null` once nothing
-    is pending, at which point `session_status` already reads "completed"."""
+    """One server-composed payload. 404 for an unknown or foreign session;
+    `current_card: null` once nothing is pending, at which point `session_status`
+    already reads "completed"."""
     state = get_practice_run_state(db, practice_run_id, current_user.id)
     if not state:
         raise HTTPException(status_code=404, detail="Practice not found")
@@ -127,8 +127,8 @@ def read_practice_run_state(
 def read_practice_run_breakdown(
     db: SessionDep, current_user: CurrentUserDep, practice_run_id: uuid.UUID
 ):
-    """ADR 029/031/042/043/044: the completion dataset behind the retrospective view,
-    including each card's mastery/delta and per-field detail (cycle 010 T3). 409 while
+    """The completion dataset behind the retrospective view, including each card's
+    mastery/delta and per-field detail. 409 while
     the session is still active — the bucket refinement only makes sense once nothing
     is pending; 404 for an unknown or foreign session."""
     strategy = get_mastery_strategy()
@@ -152,11 +152,11 @@ def rerun_run(
     practice_run_id: uuid.UUID,
     payload: PracticeRunRerun,
 ):
-    """ADR 039: creates a new run from the completed run's own frozen practice_deck
-    snapshots, named verbatim from the request body; the original run is untouched.
+    """Creates a new run from the completed run's own frozen practice_deck snapshots,
+    named verbatim from the request body; the original run is untouched.
     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400
-    `no_cards` if the surviving snapshots generate no practice card (ADR 056)."""
+    `no_cards` if the surviving snapshots generate no practice card."""
     strategy = get_mastery_strategy()
     try:
         return rerun_practice_run(db, strategy, current_user.id, practice_run_id, payload.name)

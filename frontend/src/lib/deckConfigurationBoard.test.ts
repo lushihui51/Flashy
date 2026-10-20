@@ -128,7 +128,7 @@ describe('boardFromConfig', () => {
 
   it('drops ids the deck no longer has live, and prunes counts to what survived', () => {
     // 'archived' was archived after the config was saved: it must not appear anywhere in
-    // the builder (invariant 5), and the count of 2 it made possible goes with it.
+    // the builder, and the count of 2 it made possible goes with it.
     const board = boardFromConfig(fieldDefs, {
       ...emptyConfigArrays,
       answer_field_ids: ['f1'],

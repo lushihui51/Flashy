@@ -9,8 +9,8 @@ from app.models.field_def import FieldDef, FieldType
 
 class TestDeckSummaryQueryBounds:
     def test_query_count_does_not_scale_with_deck_count(self, db, existing_user, existing_subject):
-        """Phase 2.6: db_read_decks_with_summary must use grouped aggregate queries,
-        never one query per deck — proven directly by counting statements, not just by
+        """db_read_decks_with_summary must use grouped aggregate queries, never one
+        query per deck — proven directly by counting statements, not just by
         eyeballing the implementation."""
         subject_id = uuid.UUID(existing_subject["id"])
         user_id = existing_user.id  # read before commit expires the ORM object below
@@ -53,8 +53,8 @@ class TestDeckCRUD:
         assert [d["id"] for d in response.json()] == [existing_deck["id"]]
 
     def test_read_decks_includes_card_count_and_field_names(self, client, existing_subject):
-        """DeckSummary (Phase 2.6): card_count and field_names, position order, active
-        fields only, computed without one query per deck."""
+        """DeckSummary: card_count and field_names, position order, active fields
+        only, computed without one query per deck."""
         deck = client.post(
             "/api/decks",
             json={
@@ -115,9 +115,9 @@ class TestDeckCRUD:
 
 class TestDeckCreateAtomic:
     """POST /api/decks — deck and field_defs created together in one transaction.
-    Cards are no longer part of this contract (ADR 023, cycle 008 T2): a deck is born
-    with a schema and no content; cards come afterward via POST /api/cards or the
-    batch-edit endpoint (see test_cards.py and test_deck_batch_edit.py)."""
+    Cards are not part of this contract: a deck is born with a schema and no content;
+    cards come afterward via POST /api/cards or the batch-edit endpoint (see
+    test_cards.py and test_deck_batch_edit.py)."""
 
     def _payload(self, subject_id, **overrides):
         payload = {
@@ -170,8 +170,8 @@ class TestDeckCreateAtomic:
         assert "at least two fields" in response.json()["detail"]
 
     def test_one_field_rejected(self, client, existing_subject):
-        """D3: a deck needs at least one prompt field and one answer field, so a
-        single-field deck — unlike the old ≥1 rule — is rejected too."""
+        """A deck needs at least one prompt field and one answer field, so a
+        single-field deck is rejected too."""
         response = client.post(
             "/api/decks",
             json=self._payload(

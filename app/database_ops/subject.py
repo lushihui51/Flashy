@@ -28,7 +28,7 @@ def db_read_subject(db: Session, subject_id: uuid.UUID, user_id: uuid.UUID) -> S
 
 
 def db_read_subjects(db: Session, user_id: uuid.UUID) -> list[Subject]:
-    # D13: recency order, server-side — the frontend never sorts this list.
+    # Recency order, server-side — the frontend never sorts this list.
     return list(
         db.exec(
             select(Subject)
@@ -40,8 +40,7 @@ def db_read_subjects(db: Session, user_id: uuid.UUID) -> list[Subject]:
 
 def db_read_subjects_with_summary(db: Session, user_id: uuid.UUID) -> list[SubjectSummary]:
     """Same subjects as db_read_subjects, plus each one's deck_count — one grouped
-    query regardless of how many subjects there are, never one query per subject
-    (Phase 2.6)."""
+    query regardless of how many subjects there are, never one query per subject."""
     subjects = db_read_subjects(db, user_id)
     if not subjects:
         return []
@@ -80,7 +79,7 @@ def db_read_owned_subject_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """The subset of `ids` that exist and belong to user_id — compute_deletion_impact's
-    ownership check (ADR 051 step 1). Missing from the returned set means either
+    ownership check. Missing from the returned set means either
     foreign or nonexistent; the caller can't tell which and doesn't need to."""
     if not ids:
         return set()
@@ -92,7 +91,7 @@ def db_read_owned_subject_ids(
 
 
 def db_stage_delete_subjects(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction.
+    """Bulk delete by id, no commit — apply_deletion owns the transaction.
     FK cascades remove everything the subject owns; the caller has already computed
     exactly which decks, fields, cards, configurations, and runs go with them."""
     if not ids:

@@ -18,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """D13's `updated_at` (audit field) has zero consumers — nothing reads, displays,
+    """`updated_at` (audit field) has zero consumers — nothing reads, displays,
     or sorts by it anywhere in the app. `last_activity_at` (the recency sort key) is
     unaffected and stays."""
     op.drop_column('deck', 'updated_at')

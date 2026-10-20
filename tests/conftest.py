@@ -43,9 +43,9 @@ def db(init_db):
 
 class _StatementCounter:
     """A resettable counter of statements whose compiled SQL names a given table,
-    issued against the module-level test `engine`. Used by 010 MD-4's statement-count
-    test: reset immediately before the request under test, read immediately after,
-    to prove a fixed statement count against `mastery_log` regardless of run size."""
+    issued against the module-level test `engine`. For a statement-count test: reset
+    immediately before the request under test, read immediately after, to prove a
+    fixed statement count against `mastery_log` regardless of run size."""
 
     def __init__(self, table_name: str):
         self._table_name = table_name
@@ -122,12 +122,13 @@ def existing_subject(client):
 
 @pytest.fixture
 def existing_deck(db, existing_subject):
-    """Inserted directly, not via POST /api/decks — that endpoint now requires
-    field_defs atomically (D3: a deck always has >=2 field_defs), but most tests that
-    depend on this fixture only care about having a deck to hang their own fields (via
-    existing_field_defs) or other rows on, not about exercising deck-create validation.
-    Bypassing the endpoint here keeps this fixture, and everything built on top of it,
-    unaffected by that invariant — same idea as existing_user bypassing Clerk."""
+    """Inserted directly, not via POST /api/decks — that endpoint creates the deck's
+    field_defs atomically and requires at least two, since a deck always has at least
+    two active fields, but most tests that depend on this fixture only care about
+    having a deck to hang their own fields (via existing_field_defs) or other rows on,
+    not about exercising deck-create validation. Bypassing the endpoint here keeps this
+    fixture, and everything built on top of it, unaffected by that invariant — same
+    idea as existing_user bypassing Clerk."""
     from app.models.deck import Deck
 
     deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Test Deck")

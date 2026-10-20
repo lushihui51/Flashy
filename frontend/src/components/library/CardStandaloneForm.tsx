@@ -15,11 +15,8 @@ type CardStandaloneFormProps = {
 
 type LocationState = { deckId?: string } | null;
 
-/** Standalone card create/edit (cycle 003 §4.6) — its own routes (`/cards/new`,
- * `/cards/:cardId/edit`), real API calls, real navigation, a routed page like
- * SubjectForm. The in-editor `CardForm.tsx` dialog it was originally a sibling to
- * was deleted along with DeckEditor's card entry (ADR 023); the piece they shared
- * survives as CardFieldsForm. */
+/** Standalone card create/edit — its own routes (`/cards/new`, `/cards/:cardId/edit`),
+ * real API calls, real navigation, a routed page like SubjectForm. */
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
@@ -47,10 +44,10 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
     if (!cardQuery.data) return null;
   }
 
-  // Same `state.deckId` shape for two different entry points (Phase 5.5 §4/§5): a
-  // contextual "New card" from a deck's own page, and returning from the deck
-  // editor's "New deck…" round-trip. Both preselect the deck combobox
-  // now — neither locks the picker (only card **edit** mode does, below).
+  // Same `state.deckId` shape for two different entry points: a contextual "New card"
+  // from a deck's own page, and returning from the deck editor's "New deck…"
+  // round-trip. Both preselect the deck combobox — neither locks the picker (only card
+  // **edit** mode does, below).
   const initialDeckId =
     mode === 'edit' ? cardQuery.data!.deck_id : ((location.state as LocationState)?.deckId ?? null);
 
@@ -109,14 +106,14 @@ function CardStandaloneFormBody({
     (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
 
   // A card can't move between decks once it exists — that's the only case the deck
-  // combobox is ever locked for (Phase 5.5 §5). A contextual "New card" and the deck-editor
-  // round-trip both just preselect via `defaultValue`, still fully editable (D1).
+  // combobox is ever locked for. A contextual "New card" and the deck-editor round-trip
+  // both just preselect it, still fully editable.
   const deckLocked = mode === 'edit';
 
   // Gate on the preselected deck's own fetch landing, so the combobox shows the real
   // deck name on its first render rather than an empty box that fills in a beat later.
-  // Doesn't apply once the user has picked something themselves (`deckId` no longer
-  // equals `initialDeckId`) — only the initial preselection needs this wait.
+  // Doesn't apply once the user has picked something themselves (`deckId` differs from
+  // `initialDeckId`) — only the initial preselection needs this wait.
   if (deckId === initialDeckId && initialDeckId && !deckQuery.data) return null;
 
   const dirty =
@@ -148,7 +145,7 @@ function CardStandaloneFormBody({
   };
 
   const goToCreateDeck = () => {
-    // ADR 024: returnTo rides the URL, not state.
+    // returnTo rides the URL, not router state.
     const params = new URLSearchParams();
     params.set('returnTo', `${location.pathname}${location.search}`);
     navigate({ pathname: '/decks/new', search: params.toString() });
@@ -242,9 +239,9 @@ function CardStandaloneFormBody({
           items={decksQuery.data ?? []}
           selected={selectedDeck}
           onSelect={(item) => handleDeckChange(item.id)}
-          // No inline create (D4: creating a card never creates a deck) — a deck editor is
-          // too heavy to nest in a dialog, so this always means leaving the page, and only
-          // this form knows whether there are typed values to confirm away first.
+          // No inline create (creating a card never creates a deck) — a deck editor is too
+          // heavy to nest in a dialog, so this always means leaving the page, and only this
+          // form knows whether there are typed values to confirm away first.
           onSelectCreate={handleCreateNewDeck}
           createLabel="New deck…"
           placeholder="Deck"

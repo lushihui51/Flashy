@@ -3,5 +3,5 @@ from sqlmodel import Session
 
 
 def db_ping(db: Session) -> None:
-    """Run `SELECT 1` to prove the database answers; commits nothing (ADR 064)."""
+    """Run `SELECT 1` to prove the database answers; commits nothing."""
     db.execute(text("SELECT 1"))

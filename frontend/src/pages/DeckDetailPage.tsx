@@ -176,7 +176,7 @@ export default function DeckDetailPage() {
            that's exactly what an empty deck has to show. The empty state is a sibling
            below it, outside CardTable's own horizontally-scrolling wrapper, so it
            stays put under the frozen first column instead of scrolling away with the
-           header (2.5 §1.4). */
+           header. */
         <div className="mt-2">
           {/* Inside the tab, and labeled: a control whose meaning depends on which tab
               is open has no business sitting in the page header. */}
@@ -240,8 +240,8 @@ export default function DeckDetailPage() {
       <ConfirmDialog
         open={pendingDelete !== null}
         title="Delete this configuration?"
-        // A practice copied what it needed the moment it started (ADR 013), so nothing
-        // that has already run is affected.
+        // A practice copied what it needed the moment it started, so nothing that has
+        // already run is affected.
         description="Practices that already used it are unaffected."
         confirmLabel="Delete"
         destructive
