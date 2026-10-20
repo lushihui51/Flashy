@@ -21,7 +21,6 @@ Give me one thing to answer per turn: one question, one path outside Files with 
 - "The task" is the task in it I name.
 - "The planner" is the agent of the /code-plan conversation that wrote the cycle file.
 - A "lesser decision" is a decision made in planning that earned no record; it reaches you through the task's Details.
-- "The record rules' test" is the Record-or-comment paragraph of `docs/rules/record-rules.md`.
 - A "peer" is another session working in this checkout.
 
 ## What you read
@@ -49,7 +48,7 @@ Check these five things, and if any fails, stop with the reason and touch nothin
 
 - Keep every constraint and every interface exactly as Details writes them. Do nothing Out of scope lists. Depart from guidance only when the code you have read shows a better way, and say in the Debrief what you did instead and why. A constraint you cannot keep is a block.
 - If the code contradicts what Details says of it, the file is wrong, and it's a block.
-- When you meet a choice the file does not settle, apply the record rules' test and determine whether to make the choice yourself or block.
+- When you meet a choice the file does not settle, ask whether a builder could reverse it inside a task. If so, the choice is yours. If not, it is a decision for me: block.
 - Whether a comment is written, and how, is your verdict after consulting `docs/rules/comment-rules.md`, overruled by no one but me. Nothing in the cycle file becomes a comment on its own. Fix any existing comment your change makes false.
 - If you feel the need to write to a file outside of the files in Files, raise it to me with your reasonings and the side effects this would have on other tasks and how you would resolve them. With my explicit go-ahead, add the path to the task's Files, and resolve the side effects.
 - A subagent you spawn reads and investigates only; it never writes.
