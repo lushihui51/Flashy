@@ -12,11 +12,11 @@
 
 ## The cycle
 
-**Sections.** Title; Goal, the cycle's single outcome, its scope, and how the engineer will judge it; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
+**Sections.** Title; Goal, the cycle's outcome, scope and judgement; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
 
 **Title.** A unique number in ascending order and a short noun phrase naming the cycle's outcome. The file is docs/cycles/NNN-<slug>.md, the slug taken from the phrase.
 
-**Goal.** Three things, in prose: the outcome in one sentence; the scope, what the cycle covers and what it leaves out; and the judgement, what the engineer will check, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
+**Goal.** Three labelled paragraphs, in prose, in this order. Outcome: the cycle's approved outcome, stated in one sentence. Scope: what the cycle covers and what it leaves out. Judgement: what the engineer checks, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
 
 **Records.** One line per active record, ADR or PDR: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
 

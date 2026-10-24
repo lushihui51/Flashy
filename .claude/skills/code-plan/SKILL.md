@@ -47,7 +47,7 @@ Take the remaining outcomes one at a time through the steps below to build the c
 
 #### Title and Goal
 
-Propose the Title and the Goal. The outcome is the Goal's outcome and its acceptance is the Goal's judgement.
+Propose the Title and the Goal. The Goal's Outcome is the outcome's statement; its Scope is what the cycle delivers from the outcome's records, lesser decisions and live sites, and what it leaves out; its Judgement says where and how the engineer checks the outcome's acceptance, whose criteria go in the last task's Done when.
 
 #### Records
 
