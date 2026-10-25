@@ -30,8 +30,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type", "X-Timezone"],
 )
-
-
-@app.get("/")
-async def read_root(db: SessionDep):
-    return {"Working": "As Expected."}
