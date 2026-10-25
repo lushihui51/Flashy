@@ -34,7 +34,7 @@ Written as prose, never as fixed sections to fill in.
 
 **Needed when.** The statements cannot answer "what is this for, and why is it here" on a first read, without ambiguity.
 
-**States.** What the code there does and why, in its own words. An ADR or PDR number may follow the reason, in parentheses, only when a reader about to change that code must read the record first, because the full reasoning is longer than a comment can hold.
+**States.** What the code there does and why, in its own words. An ADR or PDR number may follow the reason, in the form `(ADR NNN)` or `(PDR NNN)` and nothing more, only where a reader about to change that code must read the record first.
 
 **Never.** How the code works.
 
