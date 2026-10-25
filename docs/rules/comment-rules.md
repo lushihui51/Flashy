@@ -2,7 +2,7 @@
 
 **Reader.** The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR, PDR, or cycle file.
 
-**Scope.** The rules apply to every hand-written comment in every file of the repository. A comment's kind is set by where it sits; a comment directly above a declaration belongs to that declaration. A test's docstring, and the comment directly above a test or a group of tests, are implementation comments.
+**Scope.** The rules apply to every hand-written comment in every file of the repository. A comment's kind is set by where it sits; a comment directly above a declaration belongs to that declaration. A test's docstring, the comment directly above a test or a group of tests, an assertion message, and a lint rule's message are implementation comments. The name of a test or of a group of tests is not a comment.
 
 ## Interface comment
 
