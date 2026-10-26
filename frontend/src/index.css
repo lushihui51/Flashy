@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 
-/* TODO(defer:colors) placeholder palette; swap values here only. */
 @theme {
   --color-surface: #ffffff;
   --color-surface-elevated: #f4f4f6;

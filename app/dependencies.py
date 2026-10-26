@@ -18,8 +18,7 @@ from app.verify_clerk_session import verify_clerk_session
 
 logger = logging.getLogger(__name__)
 
-# TODO(defer:dev-auth-bypass) — remove this bypass once local testing no longer needs
-# it. Skips Clerk JWT verification entirely when both DEV_AUTH_USER_ID and
+# Skips Clerk JWT verification entirely when both DEV_AUTH_USER_ID and
 # ENV=development are set, so a request with no Authorization header at all is treated
 # as that clerk_user_id. Double gated (var + ENV) so it can never activate by accident
 # from a stray env var landing on a deployed environment (e.g. Railway) — never set

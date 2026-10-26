@@ -5,7 +5,7 @@ type SearchBarProps = {
   placeholder?: string;
 };
 
-// TODO(defer:search) no debounce, no results dropdown, Enter is inert.
+// No debounce, no results dropdown; Enter is inert.
 export default function SearchBar({ placeholder = 'Search' }: SearchBarProps) {
   const [value, setValue] = useState('');
 

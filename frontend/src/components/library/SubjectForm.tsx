@@ -234,9 +234,8 @@ export function SubjectFormBody({
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-(--color-text)">Icon</span>
-          {/* TODO(defer:icon-picker) plain text identifier input until a real picker
-              exists; see frontend/src/lib/subjectIcon.ts for the curated set this
-              maps into and its fallback. */}
+          {/* Plain text identifier input; see frontend/src/lib/subjectIcon.ts for the
+              curated set this maps into and its fallback. */}
           <input
             type="text"
             value={icon}

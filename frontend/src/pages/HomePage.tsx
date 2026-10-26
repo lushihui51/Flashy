@@ -1,4 +1,3 @@
-// TODO(defer:nav-targets) replace with the real home page.
 export default function HomePage() {
   return (
     <div className="p-4">

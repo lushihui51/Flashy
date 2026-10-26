@@ -1,4 +1,3 @@
-// TODO(defer:nav-targets) replace with the real notifications page.
 export default function NotificationsPage() {
   return (
     <div className="p-4">
