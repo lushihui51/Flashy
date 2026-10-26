@@ -40,6 +40,8 @@
 
 **Consequences.** List what becomes true because of this decision and would not be true under any rejected alternative. Use three labelled groups: "Positive", "Negative" and "Neutral". Write one full sentence per line, and name who is affected. A line belongs in Positive if someone gains, in Negative if someone pays (in cost, effort or risk), and in Neutral if someone does something differently without a clear gain or cost. A group with no qualifying lines keeps its heading and stands empty.
 
+**Examples.** Outside Context, state the decision in general words and give as few examples of it as possible.
+
 **Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments. Write one fact per paragraph: a paragraph holds one fact, force, or point and everything that belongs to it, at whatever length that takes, and a second fact starts a second paragraph.
 
 **No date line.**
