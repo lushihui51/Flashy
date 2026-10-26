@@ -24,7 +24,7 @@ Rejected — maximally confusing; one term would mean opposite things across tim
 
 ### Leave both names as-is
 
-Rejected — every future cycle (ledger attribution, statistics) builds on the run-vs-template split; encoding it now prevents compounding confusion.
+Rejected — every future cycle builds on the run-vs-template split; encoding it now prevents compounding confusion.
 
 ## Consequences
 

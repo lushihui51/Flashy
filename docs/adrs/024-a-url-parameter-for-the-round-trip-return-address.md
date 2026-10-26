@@ -16,21 +16,21 @@ We will carry `returnTo` as a URL query parameter, never router state. Its value
 
 Every reader goes through one helper, `internalReturnTo` in `frontend/src/lib/returnTo.ts`, which returns the value only when it starts with `/` and not with `//`, and `null` otherwise, since the parameter is user-editable and cannot be trusted as an app-internal path without the check.
 
-One-shot arrival results, `{deckId}` from the deck editor and `{configurationId}` from the configuration builder, stay in router state: they are consumed once, on arrival, by the page that asked, and never forwarded. The URL carries an address that must survive being forwarded; router state carries a result consumed once on arrival.
+One-shot arrival results stay in router state: they are consumed once, on arrival, by the page that asked, and never forwarded. The URL carries an address that must survive being forwarded; router state carries a result consumed once on arrival.
 
 ## Alternatives considered
 
 ### An explicit state blob threaded through every hop
 
-Rejected: this is what shipped, and it is exactly what broke. Fixing today's two-hop case by having the configuration builder also forward its inbound `returnTo` in the state it hands the deck editor would only move the ceiling — the same drop would recur at the next hop someone adds, and every new round trip would need to remember to carry the whole chain forward by hand.
+Rejected: this is what shipped, and it is exactly what broke. Fixing today's two-hop case by forwarding the inbound `returnTo` in the state handed to the next hop would only move the ceiling — the same drop would recur at the next hop someone adds, and every new round trip would need to remember to carry the whole chain forward by hand.
 
 ### Cancel as `navigate(-1)`
 
-Rejected: unwinds the visited stack naturally, but breaks after a _save_-return — back would land on the just-submitted, now-stale form instead of skipping over it — and it has no way to carry a result payload (`{deckId}`, `{configurationId}`), so Save would still need a different mechanism entirely. Two mechanisms for one concept was the thing being fixed.
+Rejected: unwinds the visited stack naturally, but breaks after a _save_-return — back would land on the just-submitted, now-stale form instead of skipping over it — and it has no way to carry a result payload, so Save would still need a different mechanism entirely. Two mechanisms for one concept was the thing being fixed.
 
 ### The URL parameter trusted without validation
 
-Rejected: `?returnTo=` is user-editable in a way router state never was. Passing an arbitrary string straight to `navigate()` risks landing the user on a confusing dead page inside the SPA (react-router treating a non-path string, e.g. a full external URL, as an app route it can't match) instead of the page's normal, sane fallback.
+Rejected: `?returnTo=` is user-editable in a way router state never was. Passing an arbitrary string straight to `navigate()` risks landing the user on a confusing dead page inside the SPA (react-router treating a string that is not a path as an app route it can't match) instead of the page's normal, sane fallback.
 
 ## Consequences
 

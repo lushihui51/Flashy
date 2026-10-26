@@ -18,7 +18,7 @@ We will keep mastery arithmetic, blending, scoring, and aggregation, only inside
 
 ## Alternatives considered
 
-### Atomic SQL blend (`UPDATE ... SET mastery = mastery*(1-alpha) + target*alpha`) or a trigger
+### An atomic SQL blend or a trigger
 
 Rejected, explicitly and pre-emptively — the plan doc calls out not to "optimize" back into this shape even under future performance pressure. It would reintroduce exactly the two-independent-implementations risk this pattern exists to avoid, and would make the incremental-write-vs-rebuild equivalence (ADR 011) unverifiable.
 

@@ -20,11 +20,11 @@ Where a sentence goes is not decided here. Today a failed mutation's error rende
 
 We will have the backend write no sentence the user reads. Every refusal the backend returns carries a detail object with a code and a message: the code names the refusal, and the message describes it in the code's own terms, for a developer. A refusal no screen can reach may stay a plain string.
 
-We will have one frontend function turn a failed request into the sentence the user reads, chosen by the error's code and status and never by its message, from the sentences `docs/vocabulary.md` gives, each beside the code that carries it. A known code renders its sentence. A 404 renders the page's "<Thing> not found.". No response and a 5xx render the two sentences `frontend/src/api/unwrap.ts` fixes. An unknown code, a plain-string detail, or a validation array renders "Something went wrong.".
+We will have one frontend function turn a failed request into the sentence the user reads, chosen by the error's code and status and never by its message, from the sentences `docs/vocabulary.md` gives, each beside the code that carries it. A known code renders its sentence. A 404 renders the page's not-found sentence. No response and a 5xx render the two sentences `frontend/src/api/unwrap.ts` fixes. An unknown code, a plain-string detail, or a validation array renders the one fallback sentence.
 
 The connectivity banner is the one sentence source outside that function.
 
-At adoption, the refusals a user reaches gain codes: a name already taken for a subject, deck, field, or configuration; a deck short of fields; a card already rated; a card that is not the current one. Tests that asserted a string detail assert the detail object.
+At adoption, every refusal a user reaches gains a code. Tests that asserted a string detail assert the detail object.
 
 ## Alternatives considered
 
@@ -32,9 +32,9 @@ At adoption, the refusals a user reaches gain codes: a name already taken for a 
 
 Rejected: copy would live in two languages, Python and TypeScript, and the next refusal worded in the code's terms would reach a screen the same way.
 
-### "Something went wrong." for every failed save
+### One fallback sentence for every failed save
 
-Rejected: it drops the sentences the vocabulary requires, a name already taken, a deck short of fields, a card already rated, which tell the user what to change.
+Rejected: it drops the sentences the vocabulary requires, which tell the user what to change.
 
 ### Match on message text
 
@@ -50,8 +50,8 @@ Rejected: it breaks silently when the backend's wording changes, the same break 
 
 **Negative**
 
-- The user reads "Something went wrong." for a refusal that ships without a code, and nothing fails; only the vocabulary check and review catch it.
-- The user reads "Something went wrong." for a validation failure a form did not catch, with no hint of the field.
+- The user reads the fallback sentence for a refusal that ships without a code, and nothing fails; only the vocabulary check and review catch it.
+- The user reads the fallback sentence for a validation failure a form did not catch, with no hint of the field.
 
 **Neutral**
 

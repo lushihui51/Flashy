@@ -61,7 +61,7 @@ Rejected. It sends more requests for little gain; queries that loaded before the
 
 ### Replay failed mutations on recovery
 
-Rejected. It risks a double submit, for example a rating the server recorded just before the connection dropped.
+Rejected. It risks a double submit of a mutation the server recorded just before the connection dropped.
 
 ### A timeout on every request
 

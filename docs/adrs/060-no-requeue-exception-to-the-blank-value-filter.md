@@ -36,7 +36,7 @@ Rejected. A field deletion already deletes the active practices naming the field
 
 ### A placeholder for a cleared value
 
-Rejected. The interface could tell a cleared value from a never-written one, since generation never selects a blank field, and the shared field renderer already shows "Removed field" for a deleted field. But the same responsibility the decision places on the user applies, and the app should not grow a guard for every mid-practice edit.
+Rejected. The interface could tell a cleared value from a never-written one, since generation never selects a blank field, and the shared field renderer already shows a placeholder for a deleted field. But the same responsibility the decision places on the user applies, and the app should not grow a guard for every mid-practice edit.
 
 ## Consequences
 
@@ -48,7 +48,7 @@ Rejected. The interface could tell a cleared value from a never-written one, sin
 **Negative**
 
 - The user who clears a value on a card mid-practice sees that card end the practice on a failed row, and the field it just failed is not asked again.
-- The user still meets the still-failed bucket, labelled "Failed".
+- The user still meets the still-failed bucket.
 - The developer reads the requeue guarantee as conditional, with the condition now explicit in the records rather than only in the code.
 
 **Neutral**

@@ -10,15 +10,15 @@ Every data-bearing page in the rebuilt frontend fetches through `@tanstack/react
 
 ## Decision
 
-We will make TanStack Query the frontend's server-state layer. Server data lives in the query cache, keyed by resource; pages and routed forms own their queries and mutations; mutations invalidate the affected keys inside the same component. No server response is copied into long-lived component state or a global store; `useState` holds UI state only, form drafts, dialog flags, transient error strings.
+We will make TanStack Query the frontend's server-state layer. Server data lives in the query cache, keyed by resource; pages and routed forms own their queries and mutations; mutations invalidate the affected keys inside the same component. No server response is copied into long-lived component state or a global store; `useState` holds UI state only.
 
 ## Alternatives considered
 
 ### Hand-rolled `useEffect` and `useState` fetching
 
-Rejected: every page would re-implement caching, deduplication, loading/error state, and refetch-after-write; the invalidation flow the app relies on (one mutation, several stale lists) is exactly what the library provides.
+Rejected: every page would re-implement caching, deduplication, loading/error state, and refetch-after-write; the invalidation flow the app relies on is exactly what the library provides.
 
-### A global client store (Redux and similar)
+### A global client store
 
 Rejected: the app has no client-only global state worth a store; putting server data in one recreates cache invalidation by hand, which is the problem being avoided.
 

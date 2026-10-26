@@ -58,7 +58,7 @@ Rejected: it is what first shipped and confused the schema's own author, and PDR
 
 - The developer or the product owner looks up a concept once and sees both its names.
 - The reviewer checks a code name on a screen against one file.
-- The developer sees code-side naming drift, such as the frontend's `session` beside the backend's `practice_run`, in one place.
+- The developer sees code-side naming drift in one place.
 
 **Negative**
 

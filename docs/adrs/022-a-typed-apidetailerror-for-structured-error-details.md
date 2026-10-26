@@ -20,7 +20,7 @@ Rejected: each structured endpoint would grow its own error-inspection fork, and
 
 ### Error unions instead of throwing
 
-Rejected: every existing call site and TanStack Query's thrown-error model (`isError`, `error` on queries/mutations) are built around exceptions; a union return would be a migration of the whole data layer to serve one page.
+Rejected: every existing call site and TanStack Query's thrown-error model are built around exceptions; a union return would be a migration of the whole data layer to serve one page.
 
 ## Consequences
 

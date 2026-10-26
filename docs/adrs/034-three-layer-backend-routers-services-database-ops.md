@@ -31,6 +31,6 @@ Rejected: module-level functions with explicit `db` and `user_id` parameters kee
 **Negative**
 
 - The developer holds the service-versus-direct-call line in review, since it is judgment, not mechanics.
-- The developer watches the per-table modules grow monotonically; 57 `db_*` functions at the time of writing.
+- The developer watches the per-table modules grow monotonically.
 
 **Neutral**

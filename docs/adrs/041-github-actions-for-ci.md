@@ -24,7 +24,7 @@ Rejected — self-hosted maintenance burden absurd for a solo project.
 
 Rejected — its advantage is being built into GitLab; the repo is on GitHub.
 
-### External services (CircleCI, Travis, Buildkite)
+### An external CI service
 
 Rejected — an extra account, code-access grant, and config dialect adding nothing the built-in option lacks at this scale.
 

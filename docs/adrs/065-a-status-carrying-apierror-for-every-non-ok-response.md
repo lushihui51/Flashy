@@ -26,9 +26,9 @@ Every non-ok response throws an `ApiError`, which carries `status` and a message
 
 - A structured `{code, message}` detail throws `ApiDetailError`, with `detail.message` as its message.
 - A string detail, a 422 validation array, or an object carrying a `message` keeps today's formatted text.
-- With no usable detail, the message is fixed: "Flashy is having trouble right now. Try again in a moment." for a `5xx`, and the existing unknown-error text otherwise.
+- With no usable detail, the message is fixed: one sentence for a `5xx`, and the existing unknown-error text otherwise.
 
-A `fetch` that throws — a network failure, a CORS rejection, an abort — is turned into a plain `Error` carrying "Couldn't reach Flashy. Check your connection and try again." `client.ts`'s `onError` middleware does the conversion. The result is never an `ApiError`, which is how the health probe tells "no response" from "an error response".
+A `fetch` that throws instead of answering is turned into a plain `Error` carrying one fixed sentence. `client.ts`'s `onError` middleware does the conversion. The result is never an `ApiError`, which is how the health probe tells "no response" from "an error response".
 
 `isNotFound(error)`, which tests for an `ApiError` with status 404, is the one 404 test. A page says "not found" only when it holds; any other failure says the content could not be loaded. Pages keep these errors inline, beneath the banner. The API layer still has no side effects.
 
@@ -68,6 +68,6 @@ Rejected: every page would be coupled to the shell, and the inline error is stil
 - The developer who string-matches messages still misses the structure, now that three error types flow from the API layer.
 - The developer keeps two messages as fixed copy inside the API layer, a small exception to leaving presentation to the UI edge, accepted because they are only the default message a call site may replace.
 - The developer supplies a `response` in every test that calls `unwrap` directly.
-- The user still sees nothing when a query with no error branch fails, such as `DeckEditor`'s subject query; left to the banner and the recovery refetch.
+- The user still sees nothing when a query with no error branch fails; left to the banner and the recovery refetch.
 
 **Neutral**

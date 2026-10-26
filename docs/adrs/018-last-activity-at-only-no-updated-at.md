@@ -29,7 +29,7 @@ Considered and rejected. Unused columns don't get easier to justify by aging in 
 
 ### Collapse to one column, let `last_activity_at` serve as the audit field too
 
-Rejected — this is what the original two-column split was avoiding. `last_activity_at` bubbles from child activity (a card added to a deck bumps the deck) and would give a misleading answer to "when did this row's own fields last change." Since nothing actually needs that answer today, the honest fix is to not carry a column for it, not to overload the one column that remains with two meanings.
+Rejected — this is what the original two-column split was avoiding. `last_activity_at` bubbles from child activity and would give a misleading answer to "when did this row's own fields last change." Since nothing actually needs that answer today, the honest fix is to not carry a column for it, not to overload the one column that remains with two meanings.
 
 ## Consequences
 

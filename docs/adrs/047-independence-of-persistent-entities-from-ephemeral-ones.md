@@ -28,7 +28,7 @@ Rejected. History that outlives the thing it is about is history nothing can rea
 
 ### Updates have maximum impact too
 
-Rejected. A field rename, a reorder, or fixing a card value from "chat" to "cat" would erase or rebuild the reviews of it. Identity is the id precisely so content edits leave history intact.
+Rejected. A field rename, a reorder, or a corrected card value would erase or rebuild the reviews of it. Identity is the id precisely so content edits leave history intact.
 
 ### Ephemeral dependents always cascade
 
@@ -43,13 +43,13 @@ Rejected. Tidying the run list would move card mastery. The reviews are facts ab
 **Positive**
 
 - The developer predicts every cascade from one rule, so a new table or delete path has a place to look before choosing its foreign-key mode.
-- The developer removes the null filters in the rebuild, the deleted-deck chip, and the null-deck rerun branch, because the states they handled can no longer exist.
+- The developer removes every filter and branch that handled orphaned history, because the states they handled can no longer exist.
 - The developer gets a run delete, a rerun, and a configuration edit provably free of side effects on the ledgers.
 
 **Negative**
 
-- The user's history changes on delete: after a field delete, sibling fields' mastery and old runs' deltas move, and a deck's "progress last month" can read differently afterwards.
-- The user sees a completed run's attempt chains keep traces a deleted field caused, a card still showing "one retry"; the run's record of what they did, not a mastery claim.
+- The user's history changes on delete: after a field delete, sibling fields' mastery and old runs' deltas move, and a deck's past progress can read differently afterwards.
+- The user sees a completed run's attempt chains keep traces a deleted field caused, a retry still showing; the run's record of what they did, not a mastery claim.
 - The developer reading the three attribution columns must know they are the deliberate exception.
 
 **Neutral**

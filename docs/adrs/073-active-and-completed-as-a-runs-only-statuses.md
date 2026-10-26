@@ -30,7 +30,7 @@ Rejected: a pending practice card whose card was deleted no longer exists as a r
 
 **Positive**
 
-- The user sees every finished or stranded run under one word, Completed, and both tabs of the overview have runs to show.
+- The user sees every finished or stranded run under one word, and both tabs of the overview have runs to show.
 
 **Negative**
 

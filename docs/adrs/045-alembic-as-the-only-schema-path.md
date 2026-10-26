@@ -30,7 +30,7 @@ Rejected for now — louder than silent drift, but it would also run inside ever
 
 ### Document the behavior in AGENTS.md and leave the code alone
 
-Rejected — leaves the trap armed for every future model change and turns "drop the stray table before testing a migration" into a recurring manual step that documentation cannot remove.
+Rejected — leaves the trap armed for every future model change and turns the cleanup of stray tables before testing a migration into a recurring manual step that documentation cannot remove.
 
 ## Consequences
 

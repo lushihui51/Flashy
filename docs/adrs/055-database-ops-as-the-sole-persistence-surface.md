@@ -18,7 +18,7 @@ Layers depend downward only. Nothing under `app/database_ops/` imports from `app
 
 A savepoint is a persistence operation. The requeue's "insert at this position, or report the collision" is `db_try_stage_create_practice_card`, which owns the savepoint, the switch of the position constraint to IMMEDIATE, the insert, the savepoint rollback, and the switch back to DEFERRED, returning `None` on a taken position; the service retries after renumbering.
 
-A caller reads commit behaviour off the name. A writer that does not commit is `db_stage_<verb>_<noun>`, meaning its rows are added and flushed inside the caller's open transaction and never committed; a writer without `stage_` commits; a staged operation that reports a constraint failure by returning `None` is `db_try_stage_<verb>_<noun>`. Verbs are the CRUD words where one fits, and a descriptive verb that says what CRUD cannot (`append` for a ledger, `scrub`, `clear`, `renumber`, `log`) keeps its word. Reads (`read`, `fetch`, `count`, `next`), the advisory `lock`, and a connectivity `ping` carry no prefix.
+A caller reads commit behaviour off the name. A writer that does not commit is `db_stage_<verb>_<noun>`, meaning its rows are added and flushed inside the caller's open transaction and never committed; a writer without `stage_` commits; a staged operation that reports a constraint failure by returning `None` is `db_try_stage_<verb>_<noun>`. Verbs are the CRUD words where one fits, and a descriptive verb that says what CRUD cannot keeps its word. Reads (`read`, `fetch`, `count`, `next`), the advisory `lock`, and a connectivity `ping` carry no prefix.
 
 A source-scan test asserts all four rules over `app/`: no statement-builder import outside `database_ops`, no session call outside the allowlist, downward imports only, and `stage_` in a writer's name if and only if its body never commits.
 
@@ -30,7 +30,7 @@ Rejected. `db.add` is exactly what a repository encapsulates; the guard costs th
 
 ### A unit-of-work abstraction over the session
 
-Rejected. Services would still hold a session-like handle and build model objects, so the only additional gain is a literal zero-line technology switch, a large refactor for a hypothetical. Every Postgres-specific piece (advisory locks, the deferrable constraint, arrays, `DISTINCT ON`, `array_remove`) already sits behind the surface this decision draws.
+Rejected. Services would still hold a session-like handle and build model objects, so the only additional gain is a literal zero-line technology switch, a large refactor for a hypothetical. Every Postgres-specific piece already sits behind the surface this decision draws.
 
 ### Allow `begin_nested` in the allowlist
 
