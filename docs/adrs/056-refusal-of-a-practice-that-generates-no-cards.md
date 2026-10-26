@@ -1,4 +1,4 @@
-# ADR 056: A practice that generates no cards is refused
+# ADR 056: Refusal of a practice that generates no cards
 
 ## Status
 
@@ -12,7 +12,7 @@ Two facts shape the rule. A practice spans several decks, one configuration each
 
 ## Decision
 
-Run start refuses with `RunStartError("no_cards")` when, after every selected configuration has been validated and snapshotted, zero practice cards were written across all decks. The check is `next_position == 0` after the per-deck loop and before the single commit, so the refused run, its snapshots, and nothing else are persisted, exactly as the existing `stale_config` refusal behaves. Rerun applies the same check with `RerunError("no_cards")` after its `nothing_to_rerun` check, since a completed practice whose cards were since deleted would otherwise rerun into an empty one. The router maps both to 400 with the `{code, message}` detail shape the other codes use (`config_id: null` on start). The message a user reads belongs to the frontend, keyed on the code, and names the two real causes: the selected decks have no cards, or every card is blank in every field its configuration shows on one side.
+We will have run start refuse with `RunStartError("no_cards")` when, after every selected configuration has been validated and snapshotted, zero practice cards were written across all decks. The check is `next_position == 0` after the per-deck loop and before the single commit, so the refused run, its snapshots, and nothing else are persisted, exactly as the existing `stale_config` refusal behaves. Rerun applies the same check with `RerunError("no_cards")` after its `nothing_to_rerun` check, since a completed practice whose cards were since deleted would otherwise rerun into an empty one. The router maps both to 400 with the coded detail shape the other codes use (`config_id: null` on start). The message a user reads belongs to the frontend, keyed on the code, and names the two real causes: the selected decks have no cards, or every card is blank in every field its configuration shows on one side.
 
 ## Alternatives considered
 
@@ -34,13 +34,15 @@ Rejected. Telling the two causes apart would mean exposing generation details th
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Invariant 2 holds again, for start and for rerun, and it holds collectively across a multi-deck practice.
-- The failure is explained in the user's terms, with the selection still on screen to fix.
+- The developer gets the no-cardless-run invariant back, for start and rerun, collectively across a multi-deck practice.
+- The user gets the failure explained in their terms, with the selection still on screen to fix.
 
-Costs:
+**Negative**
 
-- Generation runs to completion before the refusal, the same cost as a start that succeeds.
-- One more error code for the create page and the details page to render.
-- A cardless deck is discovered on Create, not in the picker.
+- The server runs generation to completion before refusing, the same cost as a start that succeeds.
+- The developer renders one more error code on the create page and the details page.
+- The user discovers a cardless deck on Create, not in the picker.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 031: Practice run and breakdown reads are server-composed
+# ADR 031: Server-composed reads for the practice run and its breakdown
 
 ## Status
 
-Active. `GET .../run` is `GET .../state` since ADR 038; the server-composition decision is unchanged.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ A practice card's prompt/answer ids only mean something to a client once joined 
 
 ## Decision
 
-`GET .../run` returns one payload — the resolved current card (field entries carrying name/type/value, not bare ids), the session's name/status, and the ADR 028 progress counts — replacing `GET .../current_card`, which returned only bare UUID arrays. `GET .../breakdown` returns the entire completion dataset in one payload — bucket counts and every card's full, resolved, rated attempt history — so the completion screen's row-tap detail needs no second request. Neither endpoint hands the client raw ids to resolve itself.
+We will have the run-state read return one payload, the resolved current card with field entries carrying name, type, and value rather than bare ids, the run's name and status, and the live progress counts, and the breakdown read return the entire completion dataset in one payload, bucket counts and every card's full, resolved, rated attempt history, so the completion screen's row-tap detail needs no second request. Neither hands the client raw ids to resolve itself.
 
 ## Alternatives considered
 
@@ -24,12 +24,14 @@ Rejected — a session's card count is bounded by its decks, not pagination terr
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The chain/bucket fold lives in one place server-side, backing both the live bar and the breakdown so they can't disagree.
-- The frontend carries no join logic.
+- The developer keeps the chain and bucket fold in one place on the server, backing both the live bar and the breakdown.
+- The frontend developer carries no join logic.
 
-Costs:
+**Negative**
 
-- The run-state payload is heavier than the old bare-array response on every card transition.
-- A large multi-deck session's breakdown payload returns every attempt's full detail up front rather than lazily.
+- The user's client receives a heavier run-state payload on every card transition.
+- The user with a large multi-deck run receives every attempt's full detail up front rather than lazily.
+
+**Neutral**

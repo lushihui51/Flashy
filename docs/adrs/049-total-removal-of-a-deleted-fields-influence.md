@@ -1,8 +1,8 @@
-# ADR 049: Field deletion drops all influence
+# ADR 049: Total removal of a deleted field's influence
 
 ## Status
 
-Active. Supersedes ADR 010's decision that field deletion means archival; the archive column, index, endpoints, and read filters stay in the code, unexposed, as an option not taken. Amends ADR 011: a field delete deletes the field's review rows and rebuilds its deck, so the ledger is rewritten for that deck. Amended by ADR 052: a completed run's breakdown renders a deleted field's id as a placeholder rather than dropping it; the decision here is otherwise unchanged.
+Active
 
 ## Context
 
@@ -12,12 +12,12 @@ The user's position was that a resource they delete should be gone, and that arc
 
 ## Decision
 
-Field removal is a user-facing hard delete whose meaning is that all influence of the field is gone. Concretely, in one transaction, through the deletion closure of ADR 051:
+We will make field removal a user-facing hard delete whose meaning is that all influence of the field is gone. Concretely, in one transaction, through the deletion closure:
 
 - Configurations on the deck whose four id arrays name the field are deleted.
 - Active runs holding a snapshot that names the field are deleted, after the user confirms; completed runs are untouched, their frozen arrays keeping the dead id, which rerun and the breakdown already tolerate.
 - The field's id is removed from every `shown_prompt_ids` array among the deck's cards' review rows, scoped by card so no other deck's rows are read.
-- The field row is deleted; its values, its ledger rows, and the review rows where it was rated cascade (ADR 048).
+- The field row is deleted; its values, its ledger rows, and the review rows where it was rated cascade.
 - The deck's mastery is rebuilt from the remaining review rows, deck-scoped. The result is exactly what the live path would have written had the same appearances happened without the field: a group where the field was one rated answer among others survives with one fewer rating and one less breadth; a group where it was a shown prompt loses that prompt; a group where it was the only rated answer vanishes.
 
 The save confirm names what goes — cards affected, configurations deleted, active practices deleted — and never internal rows. Archive stays in the code as an option not implemented: nothing in this decision touches `archived_at`, its partial unique index, `DELETE /fields/{id}`, `DELETE /fields/{id}/hard`, or the archived-row filters.
@@ -46,7 +46,7 @@ Rejected. It would be the only place in the design where a delete says no, and w
 
 ### Rebuild user-wide
 
-Rejected. A review group belongs to one card, so replaying one deck's groups reproduces that deck's rows exactly; ADR 050 makes a scoped rebuild safe for ordering. User-wide would replay every deck the user owns on every field delete.
+Rejected. A review group belongs to one card, so replaying one deck's groups reproduces that deck's rows exactly; the ledger's order is the review's timestamp, so a scoped rebuild is safe for ordering. User-wide would replay every deck the user owns on every field delete.
 
 ### Filter dead prompt ids at rebuild time instead of scrubbing
 
@@ -54,13 +54,15 @@ Rejected. A runtime filter hides a violated invariant. The scrub makes "every sh
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A field delete leaves nothing: no row, no array element, no configuration, no mastery influence. The stuck-run bug cannot occur, and a configuration cannot go stale from a field delete.
-- The rebuild runs inside the delete request, deck-scoped, so the user sees consistent mastery immediately.
+- The user's field delete leaves nothing: no row, no array element, no configuration, no mastery influence; the stuck-run bug cannot occur, and a configuration cannot go stale from a field delete.
+- The user sees consistent mastery immediately, since the rebuild runs inside the delete request, deck-scoped.
 
-Costs:
+**Negative**
 
-- History changes. Sibling fields' current mastery and old runs' deltas move after a delete. A completed run's attempt chains still show a retry the deleted field caused.
-- The rebuild is synchronous in the request; trivial at today's sizes, and scoping it further is a later optimization if it ever hurts.
-- The dormant archive code is a wart a reader must know is dormant; AGENTS.md says so.
+- The user's history changes: sibling fields' current mastery and old runs' deltas move after a delete, and a completed run's attempt chains still show a retry the deleted field caused.
+- The developer accepts a synchronous rebuild in the request, trivial at today's sizes; scoping it further is a later optimization if it ever hurts.
+- The developer must know the archive code is dormant; AGENTS.md says so.
+
+**Neutral**

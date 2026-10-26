@@ -1,8 +1,8 @@
-# ADR 042: An append-only mastery_log replaces card_field_mastery
+# ADR 042: An append-only mastery_log in place of card_field_mastery
 
 ## Status
 
-Active. Amended by ADR 050: the ledger's order is reviewed_at, stamped strictly increasing per card, and the id is a uuid; the rejection of CASCADE on the run foreign key stands. Amended by ADR 048: a deleted card's review rows cascade with it, so the Consequences' "the raw ratings survive in `review_log`" no longer holds. The ledger and per-card advisory lock here replace ADR 012's row-lock-and-upsert write mechanics.
+Active
 
 ## Context
 
@@ -10,9 +10,7 @@ Session deltas ("what did this run do to my mastery?") need a _before_ and an _a
 
 ## Decision
 
-One append-only `mastery_log` table replaces `card_field_mastery`: one row per (card, field) state change carrying the full post-blend `FieldMasteryState`, a BIGINT identity id as the ledger's total order, `reviewed_at` as display data, and a nullable `practice_run_id` (ON DELETE SET NULL) for attribution. Rows are appended inside the same transaction as their `review_log` group, practice_card status flip, and any requeue row; `record_review_group`'s RETRY guard suppresses duplicate appends. Current mastery is the latest row per (card, field); run deltas are read by attribution with per-field bounds — never a history replay. Read-modify-append is serialized by a per-card advisory lock, replacing the old row lock. `rebuild_mastery` truncates and regenerates the whole ledger from `review_log` atomically — which also backfills attribution and deltas for every pre-existing run.
-
-ADR 011 stands intact: `review_log` remains the sole source of truth, and the ledger is a stored but fully rebuildable projection of it — the same standing `card_field_mastery` had, now with history.
+We will replace `card_field_mastery` with one append-only `mastery_log` table: one row per state change of a card-and-field pair, carrying the full post-blend state and a nullable run reference for attribution that goes null when the run is deleted. Rows are appended inside the same transaction as their review group, the practice card's status flip, and any requeue row; a resubmitted group appends nothing. Current mastery is the latest row per pair, and a run's deltas are read by attribution with per-field bounds, never by replaying history. Read-modify-append is serialized per card. `rebuild_mastery` clears and regenerates the whole ledger from `review_log` atomically, which also backfills attribution and deltas for every run that predates the ledger.
 
 ## Alternatives considered
 
@@ -38,11 +36,13 @@ Deferred, not adopted — latest-row-per-pair queries are cheap at this scale; a
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One table serves current mastery, run deltas, and the future statistics time series; deltas exist retroactively after one rebuild.
+- The developer serves current mastery, run deltas, and the future statistics time series from one table, and deltas exist retroactively after one rebuild.
 
-Costs:
+**Negative**
 
-- Every mastery read becomes a latest-row query (indexed, but no longer a bare row fetch); the table grows without bound (append-only by design).
-- A deleted card's ledger rows cascade away with it (the raw ratings survive in `review_log`); a rebuild loses attribution for deleted cards, which no breakdown can display anyway.
+- The developer reads mastery as a latest-row query, indexed but no longer a bare row fetch, and the table grows without bound by design.
+- The developer loses a deleted card's ledger rows with it, and a rebuild loses attribution for deleted cards, which no breakdown can display anyway.
+
+**Neutral**

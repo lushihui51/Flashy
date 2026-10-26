@@ -1,8 +1,8 @@
-# ADR 036: Failed answer fields are guaranteed on requeue
+# ADR 036: A guarantee of every failed answer field on requeue
 
 ## Status
 
-Active. Confirmed by ADR 060: a failed field cleared after it was shown drops out of the retry; the guarantee holds for fields still live and non-blank.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ Requeueing a failed card regenerates its prompts and answers through the same we
 
 ## Decision
 
-On requeue, the answer pool count is drawn first, exactly as at session start. Every answer field rated "Again" that is still live and non-blank on the card fills those slots ahead of sampling; only the remaining slots (count minus forced, floored at zero) are weighted-low-mastery sampled from the rest. The answer count therefore stays consistent with the drawn pool count; only when the failed fields alone outnumber the drawn count does the total exceed it — dropping a failed field is never permitted. Prompt-side resolution and session-start generation are unchanged: the weighted, non-deterministic sampling principle survives everywhere except this one guarantee.
+We will draw the answer pool count first on requeue, exactly as at session start, and fill those slots ahead of sampling with every answer field rated "Again" that is still live and non-blank on the card; only the remaining slots, count minus forced and floored at zero, are weighted-low-mastery sampled from the rest. The answer count therefore stays consistent with the drawn pool count; only when the failed fields alone outnumber the drawn count does the total exceed it — dropping a failed field is never permitted. Prompt-side resolution and session-start generation are unchanged: the weighted, non-deterministic sampling principle survives everywhere except this one guarantee.
 
 ## Alternatives considered
 
@@ -32,11 +32,13 @@ Rejected — would silently drop a failed field whenever the new draw came up sm
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The retry always re-asks every still-askable field the user failed; the anti-loop variety of pool sampling is preserved for everything else.
+- The user is always re-asked every still-askable field they failed, while pool sampling keeps its anti-loop variety for everything else.
 
-Costs:
+**Negative**
 
-- A retry's answer set is partially deterministic, so a user who fails many pool fields at once sees less variety on that retry — accepted as the point, not a bug.
-- A failed field archived or blanked before the requeue silently drops out (the existing generation filters); nothing is forced in its place.
+- The user who fails many pool fields at once sees less variety on that retry, since its answer set is partly deterministic; the point, not a bug.
+- The user whose failed field was archived or blanked before the requeue sees it drop out silently; nothing is forced in its place.
+
+**Neutral**

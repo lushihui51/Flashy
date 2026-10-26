@@ -1,8 +1,8 @@
-# ADR 012: Confine mastery arithmetic to a strategy pattern
+# ADR 012: One strategy module for all mastery arithmetic
 
 ## Status
 
-Active. The row-lock and upsert write mechanics described below are replaced by ADR 042's append-only ledger and per-card advisory lock; the decision — arithmetic confined to `MasteryStrategy`, never in SQL — is unchanged.
+Active
 
 ## Context
 
@@ -12,13 +12,9 @@ That obvious approach directly threatens the guarantee ADR 011 depends on: if ar
 
 ## Decision
 
-Mastery arithmetic — blending, scoring, aggregation — lives only inside `MasteryStrategy` implementations under `app/mastery/`. Never in SQL, a SQLModel expression, or a trigger, in any phase. The database stores mastery state; it never computes it.
+We will keep mastery arithmetic, blending, scoring, and aggregation, only inside `MasteryStrategy` implementations under `app/mastery/`. Never in SQL, a SQLModel expression, or a trigger, in any phase. The database stores mastery state; it never computes it.
 
-The `MasteryStrategy` protocol (`app/mastery/strategy.py`) is the interface: `prior()` (state for an unreviewed pair), `expand(group)` (the one place that decides every `MasteryUpdate` for one appearance, because the prompt side needs the whole group to know its breadth), `apply_review(state, update)` (a pure function: state-or-None plus one decided update, in, new state out), `field_score` and `card_score` (collapsing state to display values). `EmaStrategy` (`app/mastery/ema.py`) is the concrete implementation currently in use; its constants (`alpha`, `beta`) deliberately live in that one file, not a shared module, so no other code can reach in and compute with them directly.
-
-The repository layer enforces the boundary from the other side — `app/database_ops/card_field_mastery.py` states it directly: "this module fetches and writes state; it never computes it. Every value written below is already-computed Python data handed in by a MasteryStrategy — no blending, scoring, or aggregation expression appears in any statement here." The write itself is a plain `SET x = <value>` upsert (`ON CONFLICT DO UPDATE SET prompt_mastery = excluded.prompt_mastery, ...`), never `SET x = <expression>`.
-
-Concurrency is handled with `SELECT ... FOR UPDATE` row locks instead of an atomic SQL blend — accepted explicitly, not by omission: "Row locks replace the atomic SQL blend. Contention is one user rating one card; this is fine. Do not 'optimize' back into SQL expressions."
+`MasteryStrategy` (`app/mastery/strategy.py`) is the interface, and the strategy in use is one implementation of it. Its constants live in that implementation's own module, not a shared one, so no other code can reach in and compute with them. Every value the persistence layer writes is already-computed data handed in by a strategy; no statement carries a blending, scoring, or aggregation expression. Concurrent writes are serialized with a lock rather than folded into an atomic SQL expression; contention is one user rating one card.
 
 ## Alternatives considered
 
@@ -28,11 +24,13 @@ Rejected, explicitly and pre-emptively — the plan doc calls out not to "optimi
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Swapping algorithms (tuning `alpha`, trying a different strategy entirely) is a rebuild, not a data migration, and the two paths (live write, full rebuild) are provably equivalent because they call the identical `apply_rating` primitive.
-- Every strategy method is pure — no I/O, no session, no clock — which is what makes the incremental-vs-rebuild property test and a deterministic purity test cheap to write and trust.
+- The developer swaps or tunes a strategy as a rebuild, not a data migration, and the live write and the rebuild are provably equivalent because both call the same primitive.
+- The developer writes every strategy method pure, with no I/O, session, or clock, which is what makes the incremental-versus-rebuild property test and a purity test cheap to write and trust.
 
-Costs:
+**Negative**
 
-- The pattern confines arithmetic to one module, but doesn't prevent the _same_ semantic rule from needing independent implementations at two different call sites when two different concerns both need it. The "harshest wins" rule — a `practice_card` fails if any one answer rating is 1 — is applied both in `submit_rating` (`app/services/practice_session.py`, deciding pass/fail) and in `EmaStrategy._aggregate_target` (`app/mastery/ema.py`, deciding the prompt-side mastery target). Both call sites implement the same rule independently; AGENTS.md flags that they "must stay consistent," because changing one without the other would make a card's pass/fail outcome silently disagree with the mastery value driving its own resurfacing. Confining arithmetic to `app/mastery/` doesn't, by itself, guarantee these two sites stay in sync — that has to be maintained by convention and cross-reference.
+- The developer keeps the harshest-wins rule consistent in two places by hand: the boundary puts a card's pass or fail in the rating service and the prompt-side target in the strategy, and changing one without the other makes a card's outcome silently disagree with the mastery that drives its own resurfacing.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 029: Retrospection lives only at session completion, grouped by outcome chain
+# ADR 029: Retrospection at completion only, grouped by outcome chain
 
 ## Status
 
-Active. Does not amend or supersede ADR 015 — see the note under Decision. The four-tab grouping is superseded by ADR 044; the outcome-chain semantics remain in force. The `still_failed` bucket is displayed as "Failed", not "Abandoned". ADR 060 names its reachable trigger: a card value cleared mid-practice, not an archived field.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,7 +10,7 @@ Active. Does not amend or supersede ADR 015 — see the note under Decision. The
 
 ## Decision
 
-No mid-run navigation to a previously-rated card — only the current card is ever shown while a session is active. A session's cards group by `card_id` into chains (rows ordered by `created_at`); a chain's bucket is read off its last row: passed chains split by length into first-try / after-one-fail / after-many-fails, and a chain whose last row is `failed` with no successor (the stale-snapshot case ADR 013 already accepted) becomes its own bucket, displayed to the user as "Abandoned." A completed session's retrospective view is one screen: a summary count line, four tabs matching the buckets, one row per card (its determining/last attempt), and a row tap opening the full detail — labeled fields, per-answer ratings, and every attempt in the chain. This one view renders in two places: the run page transitions to it in place once nothing is pending, and `PracticeDetailsPage` embeds it for any completed session, replacing its stub.
+We will allow no mid-run navigation to a previously-rated card — only the current card is ever shown while a session is active. A session's cards group by `card_id` into chains (rows ordered by `created_at`); a chain's bucket is read off its last row: passed chains split by length into first-try / after-one-fail / after-many-fails, and a chain whose last row is `failed` with no successor (the stale-snapshot case ADR 013 already accepted) becomes its own bucket, displayed to the user as "Abandoned." A completed session's retrospective view is one screen: a summary count line, four tabs matching the buckets, one row per card (its determining/last attempt), and a row tap opening the full detail — labeled fields, per-answer ratings, and every attempt in the chain. This one view renders in two places: the run page transitions to it in place once nothing is pending, and `PracticeDetailsPage` embeds it for any completed session, replacing its stub.
 
 **Note on "Abandoned":** ADR 015 (amended) dropped a session-level `abandoned` `SessionStatus` because nothing could set it reliably. This decision does not revive it — "Abandoned" here is display-only wording for a per-_card_, per-_session_ outcome bucket with a well-defined trigger (a requeue found nothing left to generate from), unrelated in mechanism to the session status ADR 015 removed.
 
@@ -30,12 +30,14 @@ Rejected — a card needing several retries would occupy several rows in the lis
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - A complete, honest outcome breakdown with no added complexity during the run itself.
 - The breakdown is a durable view, not a one-time artifact.
 - The stale-snapshot case — previously invisible — is now named, counted, and visible.
 
-Costs:
+**Negative**
 
 - Grouping by `card_id` requires a chain fold that must agree with the live progress bar's identical rule (ADR 028), or the two views could disagree about a card's state.
+
+**Neutral**

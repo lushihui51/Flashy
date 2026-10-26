@@ -1,8 +1,8 @@
-# ADR 003: Use SQLModel for ORM and validation
+# ADR 003: SQLModel as the ORM and validation layer
 
 ## Status
 
-Active. The shape family is `Base`/table/`Create`/`Read`/`Update`/`Summary` (ADR 046), not the base/table/create/read/delete set named below.
+Active
 
 ## Context
 
@@ -14,20 +14,26 @@ Considered alternative is SQLAlchemy for the ORM, paired with separate Pydantic 
 
 ## Decision
 
-Use SQLModel, which unifies SQLAlchemy and Pydantic into a single class hierarchy. Each entity follows the base/table/create/read/delete pattern: a base class holds the shared fields, and the table model and API variants inherit from it.
+We will use SQLModel, which unifies SQLAlchemy and Pydantic into a single class hierarchy: a base class holds an entity's shared fields, and its table model and API shapes inherit from it.
 
-### Alternative Considered: SQLAlchemy paired with Pydantic
+## Alternatives considered
+
+### SQLAlchemy paired with Pydantic
 
 Rejected because the two definitions have no structural relationship: the SQLAlchemy class and the Pydantic class for the same entity are kept consistent only by developer discipline, and a field renamed in one but not the other fails silently at runtime.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Each entity has multiple classes (base, table, create, read, delete), but they form one inheritance family, and a field renamed on the base propogates to every variant, so drifts are structurally impossible.
-- FastAPI, and SQLModel share a type system, so request validation, response serialization, and database models are declared in one vocabulary, and the OpenAPI schema (see ADR 006) is derived from the same definitions.
+- The developer renames a field on the base once and it propagates to every variant, so the table and API definitions cannot drift.
+- The developer declares request validation, response serialization, and database models in one vocabulary, and the OpenAPI schema is derived from the same definitions.
 
-Costs:
+**Negative**
 
-- SQLModel is a younger library with a smaller ecosystem and lagging documentation. In practice, `sa_column` is sometimes required to drop back into raw SQLAlchemy syntax for complex column definitions.
-- When API shapes diverge from table shapes, the read models stop inheriting cleanly and become effectively standalone Pydantic models. This is accepted because the inheritance benefits still covers the common fields, and the divergent models are isolated in one place.
+- The developer works with a younger library with a smaller ecosystem and lagging documentation, dropping to `sa_column` for complex column definitions.
+- The developer keeps a read model that diverges from its table shape as an effectively standalone Pydantic model, isolated in one place.
+
+**Neutral**
+
+- The table class and the API shapes share one base, so a field that belongs to the API alone, or to the table alone, is declared on the variant and never on the base.

@@ -1,4 +1,4 @@
-# ADR 001: Use PostgreSQL for database
+# ADR 001: PostgreSQL as the database
 
 ## Status
 
@@ -14,27 +14,32 @@ Joins are important, for example for fetching all flashcards in a deck, and all 
 
 Considered alternatives were SQLite and NoSQL databases like Firestore.
 
+PostgreSQL is a relational database, so joins and sorts are native to it, and it has JSONB and ARRAY columns for the collections.
+
 ## Decision
 
-I will use PostgreSQL as Flashy's database, with SQLModel handling the ORM layer. PostgreSQL is chosen specifically because it is a relational database (good with joins and sorts) that has efficient JSONB/ARRAY columns for the immutable user-defined collections.
+We will use PostgreSQL as Flashy's database.
 
-### Considered Alternative: SQLite
+## Alternatives considered
+
+### SQLite
 
 Rejected because it has weaker JSON/ARRAY support and no natural path to production hosting.
 
-### Considered Alternative: Firestore
+### Firestore
 
 Rejected because Flashy's data are predominantly relational, and joins and cross-entity queries becomes application-side work.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Joins and sorting are efficient and expressed directly in SQL rather than in application code.
-- Because collections live in JSONB and ARRAY columns, the remaining attributes are fixed and structured, so PostgreSQL enforces data integrity on everything outside those columns.
+- The developer writes joins and sorting in SQL rather than in application code.
+- Because collections live in JSONB and ARRAY columns, the developer gets PostgreSQL's integrity constraints on every other attribute.
 
-Costs:
+**Negative**
 
-- PostgreSQL cannot enforce the constraint that all flashcards within a deck share the same fields, since the fields live inside JSONB. This constraint is instead enforced at the application layer.
-- Schema evolution on the relational columns requires migrations. For example, adding new attributes to a subject to track status.
-- Running PostgreSQL locally and in production is more operational overhead than an embedded database like SQLite.
+- The developer writes a migration for every change to a relational column, for example a new attribute on a subject.
+- The developer runs a PostgreSQL server locally and in production, more operational overhead than an embedded database.
+
+**Neutral**

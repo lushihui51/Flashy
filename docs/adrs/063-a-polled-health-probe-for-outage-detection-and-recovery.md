@@ -1,8 +1,8 @@
-# ADR 063: A polled health probe detects outages and drives recovery
+# ADR 063: A polled health probe for outage detection and recovery
 
 ## Status
 
-Active. Implements ADR 062's detection. It is consistent with ADR 033, since the probe is a query the shell owns and recovery reruns each page's own query definition. It is consistent with ADR 035, since it adds no `QueryCache`/`MutationCache` handler.
+Active
 
 ## Context
 
@@ -18,18 +18,18 @@ Offline is different, because TanStack Query already tracks it. Its `onlineManag
 
 ## Decision
 
-The offline state is read from `onlineManager`, the same signal that pauses queries, so the banner and the paused state cannot disagree. The app never calls `onlineManager.setOnline`.
+We will read the offline state from `onlineManager`, the same signal that pauses queries, so the banner and the paused state cannot disagree. The app never calls `onlineManager.setOnline`.
 
 Server and database health comes from a `['health']` query that `AppShell` owns through the `useConnectionStatus` hook (`frontend/src/components/shell/useConnectionStatus.ts`), which only `AppShell` calls.
 
-- It polls `GET /api/health` (ADR 064) with no retries and an 8-second timeout.
+- It polls `GET /api/health` with no retries and an 8-second timeout.
 - It polls every 30 seconds while healthy, every 5 seconds while failing, and whenever the window regains focus.
 - It never polls from a background tab, and doesn't poll at all while the browser is offline.
-- An `ApiError` from the probe means server trouble. Any other failure, including the timeout, means can't connect; ADR 065 is what makes that distinction hold.
+- An `ApiError` from the probe means server trouble. Any other failure, including the timeout, means can't connect.
 
 The banner learns about trouble only from these two sources, never by watching the app's other requests.
 
-When the probe goes from failing to healthy, the hook refetches every active query that is in the error state, once. This is a command issued at one moment, not a listener. Failed mutations are never replayed; the user's input stays in place (ADR 035) and they submit again. Recovery from offline stays with TanStack's own reconnect behaviour, and the global retry defaults are unchanged.
+When the probe goes from failing to healthy, the hook refetches every active query that is in the error state, once. This is a command issued at one moment, not a listener. Failed mutations are never replayed; the user's input stays in place and they submit again. Recovery from offline stays with TanStack's own reconnect behaviour, and the global retry defaults are unchanged.
 
 The backend's connect timeout (3 seconds) stays shorter than the probe's timeout. A silent database host then answers `503` before the probe gives up, so it reads as server trouble rather than can't connect. A source-scan test in `tests/api_tests/test_health.py` guards this ordering.
 
@@ -37,7 +37,7 @@ The backend's connect timeout (3 seconds) stays shorter than the probe's timeout
 
 ### A global cache listener that classifies failures
 
-Rejected. It is the handler ADR 035 rejected. Recovery would go unnoticed until something happened to succeed, so the banner would stick until the user acted. An idle page would never learn, and a hang would never become a failure without putting a timeout on every real request.
+Rejected. It is the global handler the inline rule rejects. Recovery would go unnoticed until something happened to succeed, so the banner would stick until the user acted. An idle page would never learn, and a hang would never become a failure without putting a timeout on every real request.
 
 ### A hybrid: failures raise the banner, the probe clears it
 
@@ -69,16 +69,18 @@ Rejected. It would kill slow requests that are legitimate, and the probe alone a
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Hangs are caught without timing out real requests.
-- An idle page learns of an outage.
-- The banner and the failed pages clear together, without the user acting.
-- There is no global handler, so ADR 035's rejection of `QueryCache`/`MutationCache` handlers stands.
+- The user's hangs are caught without timing out real requests.
+- The user on an idle page learns of an outage.
+- The user sees the banner and the failed pages clear together, without acting.
+- The developer keeps no global handler, so the inline rule's rejection of cache handlers stands.
 
-Costs:
+**Negative**
 
-- On a healthy, idle page, detection can lag by up to 30 seconds, less when the user refocuses the tab. A page's own failed request does not raise the banner any sooner.
-- Every visible tab sends one small request every 30 seconds.
-- The shell acts on queries it does not own, though only to rerun them.
-- Once connections are pooled, a network partition can still hang the backend's pre-ping; the probe's timeout then reports it as can't connect. Tuning `tcp_user_timeout` or keepalives is out of scope.
+- The user on a healthy, idle page can wait up to 30 seconds for detection, less on refocus; a page's own failed request raises the banner no sooner.
+- The server receives one small request every 30 seconds from every visible tab.
+- The developer's shell acts on queries it does not own, though only to rerun them.
+- The developer accepts that once connections are pooled, a partition can hang the backend's pre-ping, which the probe's timeout reports as can't connect; tuning keepalives is out of scope.
+
+**Neutral**

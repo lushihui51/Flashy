@@ -1,8 +1,8 @@
-# ADR 032: Primary field — a deck's first active field identifies its cards
+# ADR 032: The first active field as a deck's primary field
 
 ## Status
 
-Active. `CardSummaryRow.tsx`, named below, no longer exists; `CardTable` and the breakdown row are the consumers of the convention.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,7 +10,7 @@ Active. `CardSummaryRow.tsx`, named below, no longer exists; `CardTable` and the
 
 ## Decision
 
-A deck's **primary field** is its active `field_def` at position 0, per the deck's existing field ordering (`db_read_field_defs`, `app/database_ops/field_def.py`, already active-only and position-sorted). It is derived, never stored. It becomes the one rule for identifying a card compactly: the practice completion breakdown's per-card row, and a visible marker in `DeckEditor`'s field list so a user reordering fields can see which one currently plays this role — scoped to `DeckEditor` only, since it's the one surface where field position is actually set; the read-only displays that already consume the convention (`CardSummaryRow`, `CardTable`) are unchanged.
+We will define a deck's primary field as its active field at position 0, derived from the deck's field order and never stored, and make it the one rule for identifying a card compactly wherever a surface needs one. `DeckEditor` shows a visible marker on it, since it is the one surface where field position is set.
 
 ## Alternatives considered
 
@@ -24,11 +24,13 @@ Rejected — that value can differ between attempts of the same card (pool sampl
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One named, stable rule for "which field represents this card," reusable anywhere a compact identifier is needed.
-- A user editing field order sees the consequence of position 0 directly instead of discovering it indirectly.
+- The developer has one named, stable rule for "which field represents this card", reusable anywhere a compact identifier is needed.
+- The user editing field order sees the consequence of position 0 directly.
 
-Costs:
+**Negative**
 
-- A deck whose most identifying content isn't in its first field shows a less useful label until the user notices and reorders — mitigated, not solved, by the visible `DeckEditor` marker.
+- The user whose most identifying content is not in the first field sees a less useful label until they reorder; the marker mitigates, not solves, it.
+
+**Neutral**

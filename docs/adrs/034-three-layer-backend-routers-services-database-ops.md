@@ -2,7 +2,7 @@
 
 ## Status
 
-Active. Amended by ADR 055: every statement and every session call outside commit, rollback, flush, and refresh lives in database_ops, a source-scan guard enforces it, and a non-committing writer is named db_stage_*; the layers, their direction, and the direct-call nuance are unchanged. Reads keyed by an already ownership-checked parent (the deletion closure's `*_for_decks`/`*_for_subjects` reads, `db_read_card_for_deck`) and the `app_user` module carry no `user_id` by design; the copy helpers are ADR 014's exception.
+Active
 
 ## Context
 
@@ -10,23 +10,27 @@ The rewritten backend settled into three layers: `app/routers/api/` (FastAPI han
 
 ## Decision
 
-Three layers with one-way dependencies: routers may call services and `database_ops`; services may call `database_ops`; `database_ops` calls nothing above it and contains all SQL. A service exists only where a flow spans multiple operations or owns non-trivial domain logic; a handler that is one query plus HTTP shaping calls the `db_*` function directly. `database_ops` stays one module per table with `db_*` naming, and every user-data read keeps ownership in the query, never filtered in Python afterward.
+We will keep three layers with one-way dependencies: routers may call services and `database_ops`, services may call `database_ops`, and `database_ops` calls nothing above it and holds every statement. A service exists only where a flow spans several operations or owns non-trivial domain logic; a handler that is one query plus HTTP shaping calls the `db_*` function directly. `database_ops` stays one module per table with `db_*` naming, and every user-data read keeps ownership in the query, either by taking the user's id or by being keyed by an id the caller has already scoped, never filtered in Python afterward.
 
-### Alternative considered: mandatory service layer (routers never touch database_ops)
+## Alternatives considered
+
+### A mandatory service layer
 
 Rejected: it manufactures one-line pass-through functions for every simple read, adding indirection with no seam worth testing; the codebase consistently chose directness where there is no orchestration.
 
-### Alternative considered: repository classes / ORM-centric active-record style
+### Repository classes or an active-record style
 
-Rejected: module-level functions with explicit `db` and `user_id` parameters keep ownership scoping visible at every call site and match how the strategy/mastery split (ADR 012) already passes dependencies.
+Rejected: module-level functions with explicit `db` and `user_id` parameters keep ownership scoping visible at every call site and match how the strategy/mastery split already passes dependencies.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- SQL is findable (one module per table), handlers stay thin, and the "where does this belong" question has a rule: orchestration → service, single operation → direct `db_*` call.
+- The developer finds SQL in one module per table, keeps handlers thin, and has a rule for "where does this belong": orchestration in a service, a single operation as a direct `db_*` call.
 
-Costs:
+**Negative**
 
-- The service/direct-call boundary is judgment, not mechanics; review has to hold the line when a handler starts accumulating steps.
-- 57 `db_*` functions and counting — the per-table modules grow monotonically.
+- The developer holds the service-versus-direct-call line in review, since it is judgment, not mechanics.
+- The developer watches the per-table modules grow monotonically; 57 `db_*` functions at the time of writing.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 055: `database_ops` is the sole persistence surface
+# ADR 055: `database_ops` as the sole persistence surface
 
 ## Status
 
-Active. Amends ADR 034: its "contains all SQL" clause becomes a mechanical rule covering every statement and every session call, enforced by a source-scan guard; the three-layer layout, the downward dependency rule, and the direct-call nuance are unchanged. Amended by ADR 064: a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing.
+Active
 
 ## Context
 
@@ -12,13 +12,13 @@ An inventory of the surface found eight statement constructions in three service
 
 ## Decision
 
-Outside `app/database_ops/`, no code constructs a statement (`select`, `update`, `delete`, `insert`, `text`) or calls any `Session` method other than `commit`, `rollback`, `flush`, and `refresh`. Every read, insert, update, delete, primary-key fetch, advisory lock, constraint-mode switch, and savepoint is a `db_*` function in its table's module; `app_user` gets `app/database_ops/app_user.py`. Transaction ownership is as ADR 034 left it: a service owns the transaction it composes, and a one-query handler calls a committing `db_*` function directly.
+We will allow no code outside `app/database_ops/` to construct a statement (`select`, `update`, `delete`, `insert`, `text`) or call any `Session` method other than `commit`, `rollback`, `flush`, and `refresh`. Every read, insert, update, delete, primary-key fetch, advisory lock, constraint-mode switch, and savepoint is a `db_*` function in its table's module, or in a module of its own when the operation belongs to no table; `app_user` gets `app/database_ops/app_user.py`. Transaction ownership is as the layering left it: a service owns the transaction it composes, and a one-query handler calls a committing `db_*` function directly.
 
-Layers depend downward only. Nothing under `app/database_ops/` imports from `app.services` or `app.routers`, and nothing under `app/services/` imports from `app.routers`. `touch()` stays the single write point of `last_activity_at` in `app/services/activity.py` (ADR 018) and makes no session call; `db_update_subject` no longer calls it, and the subject router calls it first.
+Layers depend downward only. Nothing under `app/database_ops/` imports from `app.services` or `app.routers`, and nothing under `app/services/` imports from `app.routers`. `touch()` stays the single write point of `last_activity_at` in `app/services/activity.py` and makes no session call; `db_update_subject` no longer calls it, and the subject router calls it first.
 
 A savepoint is a persistence operation. The requeue's "insert at this position, or report the collision" is `db_try_stage_create_practice_card`, which owns the savepoint, the switch of the position constraint to IMMEDIATE, the insert, the savepoint rollback, and the switch back to DEFERRED, returning `None` on a taken position; the service retries after renumbering.
 
-A caller reads commit behaviour off the name. A writer that does not commit is `db_stage_<verb>_<noun>`, meaning its rows are added and flushed inside the caller's open transaction and never committed; a writer without `stage_` commits; a staged operation that reports a constraint failure by returning `None` is `db_try_stage_<verb>_<noun>`. Verbs are the CRUD words where one fits, and a descriptive verb that says what CRUD cannot (`append` for a ledger, `scrub`, `clear`, `renumber`, `log`) keeps its word. Reads (`read`, `fetch`, `count`, `next`) and the advisory `lock` carry no prefix.
+A caller reads commit behaviour off the name. A writer that does not commit is `db_stage_<verb>_<noun>`, meaning its rows are added and flushed inside the caller's open transaction and never committed; a writer without `stage_` commits; a staged operation that reports a constraint failure by returning `None` is `db_try_stage_<verb>_<noun>`. Verbs are the CRUD words where one fits, and a descriptive verb that says what CRUD cannot (`append` for a ledger, `scrub`, `clear`, `renumber`, `log`) keeps its word. Reads (`read`, `fetch`, `count`, `next`), the advisory `lock`, and a connectivity `ping` carry no prefix.
 
 A source-scan test asserts all four rules over `app/`: no statement-builder import outside `database_ops`, no session call outside the allowlist, downward imports only, and `stage_` in a writer's name if and only if its body never commits.
 
@@ -26,7 +26,7 @@ A source-scan test asserts all four rules over `app/`: no statement-builder impo
 
 ### Statements and fetches only, leaving ORM inserts in services
 
-Rejected. `db.add` is exactly what a repository encapsulates; the guard costs the same either way; and a boundary drawn through the middle of the write path is the judgment call ADR 034 already lost.
+Rejected. `db.add` is exactly what a repository encapsulates; the guard costs the same either way; and a boundary drawn through the middle of the write path is the judgment call the layering already lost.
 
 ### A unit-of-work abstraction over the session
 
@@ -38,7 +38,7 @@ Rejected. One call site, and "try to insert at this position" is one operation t
 
 ### Move `touch()` into `database_ops` to fix the upward import
 
-Rejected. It would move ADR 018's single write point out of the layer AGENTS.md records it in; the router calling `touch` before `db_update_subject` fixes the direction in two lines.
+Rejected. It would move the single write point of `last_activity_at` out of the layer AGENTS.md records it in; the router calling `touch` before `db_update_subject` fixes the direction in two lines.
 
 ### Encode commit behaviour by verb pairs, a suffix, or a docstring sentence
 
@@ -50,15 +50,17 @@ Rejected. It would ratify the drift instead of removing it and leaves nothing me
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Every statement, lock, savepoint, and insert lives in one directory, and the engine-specific SQL is entirely behind it.
-- The guard replaces the review judgment ADR 034 relied on; the drift cannot recur silently.
-- A service author reaches for `db_stage_*`, a one-query handler for the bare name, and a premature commit inside a composed transaction is visible at the call site.
+- The developer finds every statement, lock, savepoint, and insert in one directory, with the engine-specific SQL entirely behind it.
+- The developer gets the guard in place of the review judgment the layering relied on; the drift cannot recur silently.
+- The developer reaches for `db_stage_*` in a service and the bare name in a one-query handler, and a premature commit inside a composed transaction is visible at the call site.
 
-Costs:
+**Negative**
 
-- One pass of mechanical movement: about twenty-two statement and fetch sites, nineteen `db.add` sites, seventeen renames.
-- Services still take a `Session`, call the four allowed methods, and construct SQLModel objects; a persistence-technology switch would still touch their signatures.
-- More small `db_*` functions, one per operation; the per-table modules keep growing, as ADR 034 noted.
-- The requeue function keeps the old inline code's asymmetry, leaving the constraint IMMEDIATE on success and resetting it only on collision; that quirk is now documented in `database_ops` rather than buried in a service.
+- The developer moved about twenty-two statement and fetch sites, nineteen `db.add` sites, and seventeen renames, once.
+- The developer's services still take a `Session`, call the four allowed methods, and construct SQLModel objects; a persistence-technology switch would still touch their signatures.
+- The developer writes more small `db_*` functions, one per operation, and the per-table modules keep growing.
+- The developer keeps the requeue function's asymmetry, constraint IMMEDIATE on success and reset only on collision, now documented in `database_ops`.
+
+**Neutral**

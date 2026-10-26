@@ -1,8 +1,8 @@
-# ADR 064: The health endpoint is the one unauthenticated route
+# ADR 064: The health endpoint as the one unauthenticated route
 
 ## Status
 
-Active. Amends ADR 055: a connectivity check that belongs to no table lives in `app/database_ops/health.py`, and `ping` joins the verbs that write nothing. Consistent with ADR 007, which verifies Clerk JWTs on protected routes.
+Superseded by ADR 072
 
 ## Context
 
@@ -14,7 +14,7 @@ ADR 055 confines every statement and session call to `app/database_ops/`, with o
 
 ## Decision
 
-`GET /api/health` (`read_health` in `app/routers/api/health.py`) takes no `CurrentUserDep`. It calls `db_ping` in `app/database_ops/health.py`, which runs `SELECT 1` and commits nothing.
+We will have `GET /api/health` (`read_health` in `app/routers/api/health.py`) take no `CurrentUserDep`. It calls `db_ping` in `app/database_ops/health.py`, which runs `SELECT 1` and commits nothing.
 
 - If the ping returns, the endpoint answers `200` with `{"status": "ok"}`.
 - If it raises any `SQLAlchemyError`, the endpoint answers `503` with the ADR 022 detail `{"code": "database_unavailable", "message": "Flashy is temporarily unavailable."}`.
@@ -49,13 +49,15 @@ Rejected: `db_read_*` and `db_fetch_*` misdescribe a connectivity check.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - The probe answers every visitor, works independently of Clerk, and writes nothing.
 - An outage carries a machine-readable code into logs and the network tab.
 
-Costs:
+**Negative**
 
 - Anyone can learn whether Flashy and its database are up, and can trigger a `SELECT 1`. Rate limiting belongs to the hosting cycle.
 - AGENTS.md's "every router depends on `CurrentUserDep`" rule and ADR 055's one-module-per-table rule each carry an exception.
 - Ordinary endpoints still answer a database outage with a plain `500`. Mapping them to `503` is deferred (`TODO(defer:db-unavailable-503)` in `app/main.py`). Across origins that `500` carries no CORS headers, so the browser reads it as a network failure.
+
+**Neutral**

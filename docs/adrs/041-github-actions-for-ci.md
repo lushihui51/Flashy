@@ -1,4 +1,4 @@
-# ADR 041: Use GitHub Actions for CI
+# ADR 041: GitHub Actions for CI
 
 ## Status
 
@@ -8,9 +8,11 @@ Active
 
 Every task ends with the same manual ritual — `pytest`, `npx vitest run`, `npm run lint`, `npm run build` — enforced only by convention. The repo already works through GitHub PRs. Two schema-heavy cycles (the rename, the mastery ledger) are about to land, and nothing anywhere exercises the alembic chain from zero: pytest builds its schema via `SQLModel.metadata.create_all`. Hosting and CD are deliberately out of scope — they are decision-dense enough to deserve their own cycle after the ledger lands.
 
+GitHub Actions is built into the forge the repo already lives on: zero integration distance, config versioned in-repo, native PR checks and branch protection, service containers for the real-Postgres test suite, and free at this scale.
+
 ## Decision
 
-A GitHub Actions workflow runs on every pull request and push to `main`: a backend job (uv-managed Python, a Postgres service container, `alembic upgrade head` from an empty database as an explicit migration check, then `pytest`) and a frontend job (`npm ci`, lint, vitest, build). CI is the built-in choice for the forge the repo already lives on: zero integration distance, config versioned in-repo, native PR checks and branch protection, service containers for the real-Postgres test suite, and free at this scale.
+We will run a GitHub Actions workflow on every pull request and push to `main`: a backend job, uv-managed Python, a Postgres service container, `alembic upgrade head` from an empty database as an explicit migration check, then `pytest`; and a frontend job, `npm ci`, lint, vitest, build.
 
 ## Alternatives considered
 
@@ -28,10 +30,12 @@ Rejected — an extra account, code-access grant, and config dialect adding noth
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The ritual becomes enforcement; the migration chain is finally exercised from zero, exactly before the cycles that stress it.
+- The developer gets the ritual enforced, and the migration chain exercised from zero before the cycles that stress it.
 
-Costs:
+**Negative**
 
-- CI minutes are bounded (free tier) but real; the workflow is one more file to keep honest as the ritual evolves.
+- The project spends bounded free-tier CI minutes, and the developer keeps one more file honest as the ritual evolves.
+
+**Neutral**

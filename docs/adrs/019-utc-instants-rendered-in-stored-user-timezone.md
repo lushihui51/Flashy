@@ -18,7 +18,7 @@ The obvious first instinct is to make the client set the timestamps, so that wha
 
 ## Decision
 
-Timestamps are **server-stamped UTC instants**. User-facing dates are **computed in the user's stored IANA timezone at read time**. Client clocks are never trusted for anything that orders or persists.
+We will stamp every timestamp on the server as a UTC instant and compute every user-facing date in the user's stored IANA timezone at read time; client clocks are never trusted for anything that orders or persists.
 
 Concretely:
 
@@ -46,16 +46,18 @@ Rejected. A zone that is re-derived per request makes historical rendering unrep
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Instants stay strictly ordered under DST transitions, travel, and clock skew, so `rebuild_mastery`'s replay of the append-only `review_log` is reproducible.
-- The zone is a single stored value per user, reachable by every read path — including ones with no browser attached — so display, day-bucketing, and streaks agree with each other by construction.
-- Changing a user's zone is a pure rendering change, requiring no data migration and rewriting no history.
-- The rule is being written before any date-rendering code exists, so no existing display has to be corrected.
+- The developer gets instants strictly ordered under DST transitions, travel, and clock skew, so the replay of the review log is reproducible.
+- The developer reaches one stored zone per user from every read path, browser attached or not, so display, day-bucketing, and streaks agree by construction.
+- The user changes their zone as a pure rendering change; no data migrates and no history is rewritten.
+- The developer corrects no existing display, since the rule predates any date-rendering code.
 
-Costs:
+**Negative**
 
-- Every date-formatting site has to pass the zone explicitly; a bare `toLocaleDateString()` is wrong, and being wrong is invisible for any developer whose own machine sits in the user's zone. The ESLint rule above covers the frontend; the equivalent care on the backend (never formatting or bucketing without `app_user.timezone` in hand) rests on review, since there is no analogous lint for it.
-- Every request now carries an extra header, and one that changes triggers a write. The write only fires on an actual change, so the steady state is a comparison and nothing more.
-- Cross-user aggregate reporting (e.g. "reviews per day across all users") has no single correct day boundary. This is inherent to per-user local days rather than a consequence of this choice, and no such report exists today.
-- Offline practice, if built, needs the narrow client-supplied `reviewed_at` exception and its clamping logic rather than getting it for free.
+- The developer passes the zone explicitly at every date-formatting site; the ESLint rule enforces it on the frontend, and the backend's equivalent care rests on review.
+- The server reads an extra header on every request, and a changed one triggers a write; the steady state is a comparison.
+- The developer has no single correct day boundary for cross-user aggregate reporting; inherent to per-user local days, and no such report exists.
+- The developer building offline practice adds the narrow client-supplied `reviewed_at` exception and its clamping.
+
+**Neutral**

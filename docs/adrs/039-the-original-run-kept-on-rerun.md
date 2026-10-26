@@ -1,8 +1,8 @@
-# ADR 039: Rerun keeps the original run
+# ADR 039: The original run kept on rerun
 
 ## Status
 
-Active. Supersedes the delete-the-original half of ADR 030. Reaffirmed by ADR 047.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ ADR 030 defined rerun's _source_ (the run's own frozen snapshots) and its _order
 
 ## Decision
 
-Rerun creates a new run from the completed run's frozen snapshots — all of ADR 030's source semantics, dropped-deck tolerance, and `nothing_to_rerun` refusal stand — but no longer deletes the original. The client supplies a fresh name, generated the same way the creation page pre-fills one. Runs remain user-deletable via the existing Delete action: the permanent record is `mastery_log`, whose run FK goes SET NULL, so deleting a run costs exactly that run's attribution and nothing else — a consequence the user owns.
+We will have rerun create a new run from the completed run's frozen snapshots and leave the original in place. The client supplies a fresh name, generated the same way the creation page pre-fills one. Runs stay user-deletable through the existing Delete action; the permanent record is the mastery ledger, whose run reference goes null, so deleting a run costs exactly that run's attribution and nothing else, a consequence the user owns.
 
 ## Alternatives considered
 
@@ -20,7 +20,7 @@ Rejected — destroys breakdown and delta history for a run the user chose to re
 
 ### Server-derived name for the new run
 
-Rejected — names are client-formatted timestamps by design (ADR 019); the server derives nothing.
+Rejected — names are client-formatted timestamps by design; the server derives nothing.
 
 ### Make runs undeletable / archive-only
 
@@ -28,10 +28,12 @@ Rejected for now — with SET NULL protecting mastery integrity, retention is pu
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Rerun becomes non-destructive; the transaction simplifies to a plain create.
+- The user keeps the breakdown and delta history of a run they repeat, and the developer's rerun transaction simplifies to a plain create.
 
-Costs:
+**Negative**
 
-- The run list grows with every rerun; the old and new runs coexist and are distinguished by their names.
+- The user's run list grows with every rerun; the old and new runs coexist, distinguished by their names.
+
+**Neutral**

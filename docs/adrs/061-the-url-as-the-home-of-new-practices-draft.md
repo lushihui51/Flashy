@@ -1,8 +1,8 @@
-# ADR 061: New practice's draft rides the URL
+# ADR 061: The URL as the home of New practice's draft
 
 ## Status
 
-Active. The configuration builder hands back `{configurationId}` from create mode only. Consistent with ADR 024 and ADR 025.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -14,13 +14,13 @@ ADR 024 already returns every round trip to the page's full `pathname + search`,
 
 ## Decision
 
-New practice's draft lives in its URL. Each selected configuration is a repeated `config=<id>` parameter, and the name is a `name=` parameter once the user has edited it; until then the page prefills the current time, as before. Every write uses `replace`, so ticking and typing add no history entries. The draft survives every round trip (New configuration, New deck, Edit configuration), a refresh, and browser back.
+We will keep New practice's draft in its URL. Each selected configuration is a repeated `config=<id>` parameter, and the name is a `name=` parameter once the user has edited it; until then the page prefills the current time, as before. Every write uses `replace`, so ticking and typing add no history entries. The draft survives every round trip (New configuration, New deck, Edit configuration), a refresh, and browser back.
 
 The draft never leaves the page. Cancel forwards only the overview's own parameters (`subject`, `deck`, `status`), and "Clear filters" removes only `subject` and `deck`. Otherwise the overview would carry the draft in its own URL and hand it back on the next New practice, and Cancel would stop meaning discard.
 
 A round trip returns to exactly the draft the user left. The configuration builder hands back `{configurationId}` only from create mode: building a configuration from New practice means wanting to use it, so it is still auto-selected, while an edit says nothing about wanting the configuration and returns with no result.
 
-ADR 024's rule is unchanged: the URL carries what must survive being forwarded, and router state carries results consumed once on arrival. The draft is now part of the address a round trip returns to.
+The round-trip rule is unchanged: the URL carries what must survive being forwarded, and router state carries results consumed once on arrival. The draft is now part of the address a round trip returns to.
 
 ## Alternatives considered
 
@@ -46,14 +46,16 @@ Rejected. After an edit, the auto-select would silently replace another selectio
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Round trips, refresh, and browser back keep the draft with no code in the pages visited; a round trip added to New practice later inherits it.
-- One mechanism, ADR 024's `returnTo`, carries both where to return and what to return to.
+- The user's draft survives round trips, refresh, and browser back with no code in the pages visited, and a round trip added later inherits it.
+- The developer has one mechanism, `returnTo`, carrying both where to return and what to return to.
 
-Costs:
+**Negative**
 
-- The URL grows by a UUID per selection plus the name, percent-encoded again inside every nested `returnTo`.
-- The name input edits a local buffer that is read from the URL once, at mount, and mirrored back on every change; binding the input straight to the URL would route each keystroke through a router navigation.
-- A bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck. The page removes the first as soon as it sees it and leaves the second to the server's `duplicate_deck`.
-- The page's URL writes that react to fetched data must share one effect, because two `setSearchParams` calls made after one render overwrite each other.
+- The user's URL grows by a UUID per selection plus the name, percent-encoded again inside every nested `returnTo`.
+- The developer binds the name input to a local buffer read from the URL once and mirrored back on every change, since binding it straight to the URL would route each keystroke through a router navigation.
+- The user with a bookmarked or hand-edited URL can name configurations that no longer exist, or two from one deck; the page removes the first and leaves the second to the server's `duplicate_deck`.
+- The developer keeps the page's URL writes that react to fetched data in one effect, because two `setSearchParams` calls after one render overwrite each other.
+
+**Neutral**

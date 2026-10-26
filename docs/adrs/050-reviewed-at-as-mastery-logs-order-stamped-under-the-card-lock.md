@@ -1,8 +1,8 @@
-# ADR 050: mastery_log is ordered by reviewed_at, stamped under the card lock; its id is a uuid
+# ADR 050: reviewed_at as mastery_log's order, stamped under the card lock
 
 ## Status
 
-Active. Amends ADR 042: the ledger's order is `reviewed_at`, not the identity id, and the id is a uuid with no ordering meaning. ADR 042's rejection of CASCADE on the run foreign key stands.
+Active
 
 ## Context
 
@@ -12,11 +12,9 @@ The intrinsic order is the review's timestamp, but as stamped it was not a total
 
 ## Decision
 
-- `mastery_log.id` is a uuid supplied by the application on every insert. It identifies a row and orders nothing.
-- The ledger's order is `reviewed_at`. `record_review_group` takes the per-card advisory lock first, then assigns `reviewed_at` as the greater of the proposed stamp and the card's latest review timestamp plus one microsecond (`db_read_latest_reviewed_at`, served by `ix_review_log_card_id_reviewed_at`), then logs the group, then applies it. Within a card the stamp is therefore strictly increasing in application order, and a tie within a `(card, field)` pair cannot exist. "Latest row per pair" is greatest `reviewed_at`; every `DISTINCT ON` and `ORDER BY` uses that one column, and the breakdown's bounds are timestamps.
-- `review_group_id` is stored on every row as provenance. It is never an order key. `UNIQUE (card_id, field_def_id, reviewed_at)` replaces the id-ordered index.
-- Rows of different cards may share a timestamp. Nothing compares rows of different pairs by order; the replay sorts groups by `(reviewed_at, review_group_id)` only to make its sequence deterministic across cards.
-- A rebuild never re-stamps: it replays the persisted timestamps, so a rebuild of any scope gives every row the position it had.
+We will make `mastery_log.id` a uuid supplied by the application on every insert; it identifies a row and orders nothing. The ledger's order is `reviewed_at`: `record_review_group` takes the per-card advisory lock first, then assigns `reviewed_at` as the greater of the proposed stamp and the card's latest review timestamp plus one microsecond, then logs the group, then applies it, so within a card the stamp is strictly increasing in application order and a tie within a pair cannot exist. "Latest row per pair" is greatest `reviewed_at`, every `DISTINCT ON` and `ORDER BY` uses that one column, and the breakdown's bounds are timestamps.
+
+`review_group_id` is stored on every row as provenance and is never an order key; `UNIQUE (card_id, field_def_id, reviewed_at)` replaces the id-ordered index. Rows of different cards may share a timestamp; nothing compares rows of different pairs by order, and the replay sorts groups by `(reviewed_at, review_group_id)` only to make its sequence deterministic across cards. A rebuild never re-stamps: it replays the persisted timestamps, so a rebuild of any scope gives every row the position it had.
 
 ## Alternatives considered
 
@@ -38,14 +36,16 @@ Rejected. It is transaction start time, shared by every row in a transaction and
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Order is intrinsic to the review a row came from, so scoped and user-wide rebuilds reproduce every row's position, and the breakdown's bound contract keeps its wording.
-- The before-bound query compares one column instead of a row value.
-- The unique constraint gives `record_review_group`'s idempotency a database backstop it did not have.
+- The developer gets order intrinsic to the review a row came from, so scoped and user-wide rebuilds reproduce every row's position and the breakdown's bound contract keeps its wording.
+- The developer's before-bound query compares one column instead of a row value.
+- The developer gets a database backstop for `record_review_group`'s idempotency from the unique constraint.
 
-Costs:
+**Negative**
 
-- A stamp may be nudged a few microseconds past wall clock when a card is rated twice within one microsecond; invisible in any display.
-- The migration replays the whole ledger once, and must fail loudly if any card already has two groups on one timestamp.
-- Every latest-row query orders by a timestamp rather than an integer; still an index range scan.
+- The user's stamp may be nudged a few microseconds past wall clock when a card is rated twice within one microsecond; invisible in any display.
+- The developer's migration replays the whole ledger once and must fail loudly if any card already has two groups on one timestamp.
+- The developer's latest-row queries order by a timestamp rather than an integer; still an index range scan.
+
+**Neutral**

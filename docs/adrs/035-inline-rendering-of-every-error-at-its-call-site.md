@@ -1,8 +1,8 @@
-# ADR 035: Errors render inline at their call site — no global handler, no toasts
+# ADR 035: Inline rendering of every error at its call site
 
 ## Status
 
-Active. Decides the display question ADR 006 left open under "Error normalization". Amended by ADR 062: connectivity is the one global error channel, reported by an app-level banner; every other error still renders inline at its call site.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,27 +10,31 @@ ADR 006 fixed the api layer as side-effect-free — `unwrap` throws and "the UI 
 
 ## Decision
 
-Errors are displayed where they happen, by the component that owns the query or mutation. A failed query renders an inline banner in place of the content it would have shown. A failed mutation stores the thrown error's message in component state and renders it adjacent to the triggering control — under the submit button, inside the still-open dialog — leaving the user's input intact for retry. There is no global error channel: no `ErrorBoundary` as an error-display mechanism, no `QueryClient`-level handlers, no toasts. A surface that needs different treatment changes this ADR first.
+We will display errors where they happen, by the component that owns the query or mutation. A failed query renders an inline banner in place of the content it would have shown. A failed mutation stores the thrown error's message in component state and renders it adjacent to the triggering control — under the submit button, inside the still-open dialog — leaving the user's input intact for retry. There is no global error channel: no `ErrorBoundary` as an error-display mechanism, no `QueryClient`-level handlers, no toasts. A surface that needs different treatment changes this ADR first.
 
-### Alternative considered: a toast/snackbar system
+## Alternatives considered
+
+### A toast or snackbar system
 
 Rejected: it detaches the message from the control that failed, and this app's forms are small enough that adjacency is strictly clearer. A toast layer is also a new dependency and design surface with no current need.
 
-### Alternative considered: global `QueryCache`/`MutationCache` `onError` handlers
+### Global `QueryCache` and `MutationCache` `onError` handlers
 
 Rejected: a global handler needs a global place to put messages — which is the toast decision by another name — and it hides per-surface copy and recovery choices (keep the ratings, keep the dialog open) that belong at the call site.
 
-### Alternative considered: React error boundaries
+### React error boundaries
 
 Rejected as the display mechanism: boundaries catch render crashes, not fetch failures, which are already ordinary values in query/mutation state. (Adding a crash boundary someday is a separate decision this ADR does not preclude.)
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - The message sits next to the failed action, with its context and its recovery affordance; tests assert error copy in the same render they already exercise; zero dependencies added.
 
-Costs:
+**Negative**
 
 - Every new surface hand-writes a few lines of error state; consistency is enforced only by review against this ADR.
 - A genuinely global failure mode (e.g. auth expiry mid-session) has no channel today and will force its own decision.
+
+**Neutral**

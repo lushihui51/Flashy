@@ -1,8 +1,8 @@
-# ADR 038: Rename practice_session to practice_run
+# ADR 038: `practice_run` in place of `practice_session`
 
 ## Status
 
-Active. Renames ADR 031's `GET .../run` to `GET .../state`. Frontend identifiers (`practiceSessionId` route params, `session` props) keep the old term; user-facing copy says "practice".
+Active
 
 ## Context
 
@@ -10,13 +10,13 @@ The rewrite saga ended with 006; the app's concepts are now stable enough to nam
 
 ## Decision
 
-Rename `practice_session` to `practice_run` across schema and code in one mechanical migration and sweep: table, FK columns, constraint/index names, Python modules and classes, API routes, and frontend modules. `deck_practice_config` keeps its name. Status enum values (`active`/`completed`) and user-facing copy are unchanged. The run-state endpoint moves to `/{id}/state` and the `session_active` error codes become `run_active`.
+We will rename `practice_session` to `practice_run` across schema and code in one mechanical migration and sweep: table, FK columns, constraint/index names, Python modules and classes, API routes, and frontend modules. `deck_practice_config` keeps its name. Status enum values (`active`/`completed`) and user-facing copy are unchanged. The run-state endpoint moves to `/{id}/state` and the `session_active` error codes become `run_active`.
 
 ## Alternatives considered
 
 ### User-facing vocabulary only
 
-Rejected — users never saw schema terms anyway (ADR 021); the mismatch being fixed is the developer-facing one.
+Rejected — users never saw schema terms anyway; the mismatch being fixed is the developer-facing one.
 
 ### Reuse "practice_session" as the new name for configs
 
@@ -28,10 +28,12 @@ Rejected — every future cycle (ledger attribution, statistics) builds on the r
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Code and concept align before the ledger cycle builds attribution on top of runs.
+- The developer aligns code and concept before the ledger cycle builds attribution on top of runs.
 
-Costs:
+**Negative**
 
-- Earlier ADRs keep the old term; readers map session → run.
+- The developer reads earlier records in the old term and maps session to run.
+
+**Neutral**

@@ -1,10 +1,8 @@
-# ADR 066: One add control per collection — the toolbar's, never the empty state's
+# ADR 066: One add control per collection, in its toolbar
 
 ## Status
 
-Active
-
-- **Amends ADR 023:** rule 2's "repeated in the collection's empty state" is superseded. The add control renders once, in the collection's toolbar row, and the empty state carries none. Rules 1 and 3, and the rest of rule 2 — labeled, inside the collection it adds to, never a header "+" whose meaning depends on invisible state — are unchanged.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -16,7 +14,7 @@ So three answers to the same question were live at once: two buttons, one in the
 
 ## Decision
 
-A collection's add control lives in its toolbar row — the labeled button inside the collection's content area that ADR 023 rule 2 placed there — and that row renders whenever the page body renders: while loading, once loaded, and when the load failed. It is the only add control on the surface.
+We will put a collection's add control in its toolbar row, the labeled button inside the collection's content area, and render that row whenever the page body renders: while loading, once loaded, and when the load failed. It is the only add control on the surface.
 
 The empty state is its text alone. Where filters, not an empty collection, produced the empty list, it offers "Clear filters", which the toolbar has no equivalent of.
 
@@ -30,7 +28,7 @@ The rule binds every collection surface: the deck page's Cards and Configuration
 
 The subject page's pattern. Rejected: the control's position then depends on the collection's count, and every surface needs a condition on its toolbar row. The empty state's text is one line, and the toolbar's button is one glance above it.
 
-### Keep both, as ADR 023 rule 2 wrote
+### Keep both, as the earlier placement rule wrote
 
 Rejected: it is what shipped, and the screenshot showed two identical buttons with nothing between them.
 
@@ -40,14 +38,16 @@ Rejected: one more conditional, on every surface that has a label, to hide a lin
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One add control per screen, in one place, whether the collection is empty or not.
-- No per-surface condition on the toolbar row; the empty state is a sentence.
-- ADR 023's "a button's scope is self-evident from where it sits" still holds — the button sits inside the collection it adds to.
+- The user finds one add control per screen, in one place, whether the collection is empty or not.
+- The developer writes no per-surface condition on the toolbar row; the empty state is a sentence.
+- The user still reads a button's scope from where it sits, inside the collection it adds to.
 
-Costs:
+**Negative**
 
-- On the Cards tab the button sits above the column headers and the sentence below them, so the eye travels up from the text to the action.
-- An empty Library tab reads "0 subjects" directly above "No subjects yet.", and the subject page shows "Decks" above an empty list.
-- The six tests that pinned two buttons, or the hidden "Decks" row, change with the surfaces.
+- The user on the Cards tab finds the button above the column headers and the sentence below them, so the eye travels up from the text to the action.
+- The user on an empty Library tab reads "0 subjects" directly above "No subjects yet.", and the subject page shows "Decks" above an empty list.
+- The developer changes the six tests that pinned two buttons or the hidden "Decks" row.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 059: Only the current card can be rated
+# ADR 059: Rejection of a rating on any card but the current one
 
 ## Status
 
-Active. Amends nothing; makes explicit an invariant ADR 008's serving order and ADR 037's placement had assumed.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ Active. Amends nothing; makes explicit an invariant ADR 008's serving order and 
 
 ## Decision
 
-`submit_rating` rejects a pending practice card that is not its run's current card with `ValueError("practice_card is not the current card")`, checked after the already-rated rejection and before the ratings-coverage one. The route maps it to 400 like the other rating rejections, and nothing is written. The current card is read with `db_read_current_practice_card`, so "current" keeps its single definition.
+We will have `submit_rating` reject a pending practice card that is not its run's current card, checked after the already-rated rejection and before the ratings-coverage one; the route maps it to 400 like the other rating rejections, and nothing is written. The current card is read with `db_read_current_practice_card`, so "current" keeps its single definition.
 
 ## Alternatives considered
 
@@ -28,13 +28,15 @@ Rejected. No feature asks for it, and a "skip" would be a repositioning operatio
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Every rated row lies below every pending row by construction; ADR 058's placements cannot collide except through gap exhaustion.
-- One definition of "current", the same query the state route serves.
+- The developer gets every rated row below every pending row by construction, so placements cannot collide except through gap exhaustion.
+- The developer keeps one definition of "current", the same query the state route serves.
 
-Costs:
+**Negative**
 
-- One extra read per rating.
-- A future feature that rates a card other than the front must revisit this ADR.
-- A test that fails a non-front card must rate the front instead; the collision test was rewritten for it.
+- The server reads once more per rating.
+- The developer building a feature that rates a card other than the front must revisit this record.
+- The developer's test that fails a non-front card must rate the front instead.
+
+**Neutral**

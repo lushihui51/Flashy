@@ -1,8 +1,8 @@
-# ADR 054: A metadata naming convention names every constraint and index
+# ADR 054: A metadata naming convention for every constraint and index
 
 ## Status
 
-Active. The source-scan guard the Consequences ask for exists: `test_alembic_env_imports_app_database_before_reading_metadata` and `test_metadata_naming_convention_is_the_adr_054_templates` in `tests/api_tests/test_schema_guard.py`.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ Active. The source-scan guard the Consequences ask for exists: `test_alembic_env
 
 ## Decision
 
-The naming convention in `app/database.py` is the source of every constraint and index name. It is applied at import, and `alembic/env.py` imports `app.database` before reading the metadata. A migration names constraints exactly as the convention derives them, hand-written operations included, and a column rename renames the constraints derived from that column in the same migration. A multi-column constraint or index may carry an explicit `name=` where the derived name (first column only) would collide or mislead, as `uq_mastery_log_card_field_reviewed` and `ix_mastery_log_run` do; the explicit name still uses the convention's prefix.
+We will make the naming convention in `app/database.py` the source of every constraint and index name. It is applied at import, and `alembic/env.py` imports `app.database` before reading the metadata. A migration names constraints exactly as the convention derives them, hand-written operations included, and a column rename renames the constraints derived from that column in the same migration. A multi-column constraint or index may carry an explicit `name=` where the derived name (first column only) would collide or mislead, as `uq_mastery_log_card_field_reviewed` and `ix_mastery_log_run` do; the explicit name still uses the convention's prefix.
 
 ## Alternatives considered
 
@@ -24,11 +24,13 @@ Rejected. The convention covers the single-column majority automatically and lea
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Autogenerate diffs are trustworthy, and a migration's `drop_constraint`/`drop_index` names are derivable from the model alone.
+- The developer trusts autogenerate diffs, and derives a migration's drop names from the model alone.
 
-Costs:
+**Negative**
 
-- A column rename silently changes the derived name; unless the migration renames the constraint, autogenerate proposes a drop-and-create, which is what the `practice_run` rename hit.
-- `alembic/env.py` must keep importing `app.database` before it reads the metadata; a source-scan guard test is needed so the import cannot be dropped silently.
+- The developer who renames a column must rename its derived constraints in the same migration, or autogenerate proposes a drop-and-create.
+- The developer keeps `alembic/env.py` importing `app.database` before it reads the metadata; a source-scan guard holds it.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 043: A card's display mastery is the fold over all its deck's active fields
+# ADR 043: The fold over all active fields as a card's display mastery
 
 ## Status
 
-Active
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,7 +10,7 @@ Until now, card-level mastery existed only relative to a config's field set — 
 
 ## Decision
 
-A card's display mastery is the existing strategy fold (`card_score`) over _all_ the deck's active fields, with never-reviewed fields contributing the prior (50). The same definition produces the card's delta (after-fold minus before-fold over the same domain). Session-internal ordering keeps using its config-scoped fold — this decision governs display, not scheduling.
+We will define a card's display mastery as the strategy fold, `card_score`, over all the deck's active fields, with a never-reviewed field contributing the prior. The same definition produces the card's delta, after-fold minus before-fold over the same domain. Run-internal ordering keeps its configuration-scoped fold; this decision governs display, not scheduling.
 
 ## Alternatives considered
 
@@ -24,14 +24,16 @@ Rejected — a card 100%-mastered on one field of five would display as fully ma
 
 ### No card-level number (per-field only)
 
-Rejected — rows, ranking, and statistics all need a scalar; the per-field detail exists alongside it (ADR 044).
+Rejected — rows, ranking, and statistics all need a scalar; the per-field detail exists alongside it.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One definition, decided once, reused by every future mastery surface.
+- The developer reuses one definition, decided once, on every mastery surface.
 
-Costs:
+**Negative**
 
-- Untouched fields dilute card-level deltas (a +15 swing on one field of five reads as +3) — the per-field detail view is the honest counterweight.
+- The user sees untouched fields dilute a card-level delta, a +15 swing on one field of five reading as +3; the per-field detail is the counterweight.
+
+**Neutral**

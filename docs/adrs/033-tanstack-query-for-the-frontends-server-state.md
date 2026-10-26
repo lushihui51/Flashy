@@ -1,4 +1,4 @@
-# ADR 033: TanStack Query owns server state on the frontend
+# ADR 033: TanStack Query for the frontend's server state
 
 ## Status
 
@@ -10,23 +10,27 @@ Every data-bearing page in the rebuilt frontend fetches through `@tanstack/react
 
 ## Decision
 
-TanStack Query is the frontend's server-state layer. Server data lives in the query cache, keyed by resource; pages and routed forms own their queries and mutations; mutations invalidate the affected keys inside the same component. No server response is copied into long-lived component state or a global store — `useState` holds UI state only (form drafts, dialog flags, transient error strings).
+We will make TanStack Query the frontend's server-state layer. Server data lives in the query cache, keyed by resource; pages and routed forms own their queries and mutations; mutations invalidate the affected keys inside the same component. No server response is copied into long-lived component state or a global store; `useState` holds UI state only, form drafts, dialog flags, transient error strings.
 
-### Alternative considered: hand-rolled `useEffect` + `useState` fetching
+## Alternatives considered
+
+### Hand-rolled `useEffect` and `useState` fetching
 
 Rejected: every page would re-implement caching, deduplication, loading/error state, and refetch-after-write; the invalidation flow the app relies on (one mutation, several stale lists) is exactly what the library provides.
 
-### Alternative considered: a global client store (Redux and similar)
+### A global client store (Redux and similar)
 
 Rejected: the app has no client-only global state worth a store; putting server data in one recreates cache invalidation by hand, which is the problem being avoided.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One idiom for every fetch site; invalidation-by-key matches the REST resource shapes; tests get deterministic data by wrapping a fresh `QueryClientProvider` over MSW.
+- The developer uses one idiom for every fetch site, invalidation by key that matches the REST resource shapes, and tests get deterministic data by wrapping a fresh `QueryClientProvider` over MSW.
 
-Costs:
+**Negative**
 
-- The default `QueryClient` configuration (retries, staleness) is implicit until something forces tuning it.
-- Query keys are stringly-typed conventions; a typo silently misses invalidation.
+- The developer leaves the default `QueryClient` configuration, retries and staleness, implicit until something forces tuning it.
+- The developer relies on stringly-typed query keys; a typo silently misses invalidation.
+
+**Neutral**

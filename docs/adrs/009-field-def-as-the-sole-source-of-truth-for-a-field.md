@@ -1,8 +1,8 @@
-# ADR 009: Use field_def as the sole source of truth for fields
+# ADR 009: field_def as the sole source of truth for a field
 
 ## Status
 
-Active. `card_field_mastery`, named among the dependents below, is the append-only `mastery_log` since ADR 042.
+Active
 
 ## Context
 
@@ -12,14 +12,7 @@ This meant a field's identity was its name string, in two independent JSON blobs
 
 ## Decision
 
-`field_def` is the only source of truth for what a field is. Names are display-only. Every reference to a field anywhere in the schema is `field_def.id` (a uuid), never a name string.
-
-This is backed by real constraints, not just convention:
-
-- A typed `FieldType` enum (`text`/`image`/`audio`) backed by a `CHECK` constraint (`app/models/field_def.py`), replacing the old per-request `TYPES = {"str": str, ...}` dict-driven dynamic model.
-- A deferred unique constraint on `(deck_id, position)` (`app/models/field_def.py`) so a whole-deck reorder can swap every field's position within one transaction without violating uniqueness mid-statement.
-- A partial unique index on `(deck_id, name) WHERE archived_at IS NULL` (`app/models/field_def.py`) — a name is unique only among _live_ fields, which is what makes "archive a field, then create a new one with the same name" legal (tested in `tests/api_tests/test_field_defs.py`, `test_archive_then_recreate_same_name_succeeds`).
-- Every dependent table (`card_field_value`, `review_log`, `card_field_mastery`, and all six `deck_practice_config` uuid[] arrays) references `field_def.id`, never a name — a rename never invalidates history, and a card's structure is queryable via a join instead of by re-parsing per-card JSON on every access.
+We will make `field_def` the only source of truth for what a field is. A field's name is display only, and every reference to a field anywhere in the schema is its id, never its name. The schema enforces this with constraints rather than convention: a typed field type, uniqueness of position within a deck, and uniqueness of name among a deck's live fields.
 
 ## Alternatives considered
 
@@ -29,12 +22,14 @@ Rejected. The rewrite instead did a full reset — the database had no productio
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A field's type, position, and lifecycle are schema-enforced, not re-validated by hand-built logic on every request.
-- Renaming a field is a metadata change, not an identity change — every table that references the field by id is unaffected.
-- New capabilities fall out of having a real row to attach data to: ordered display, archival (see ADR 010), and stable references for mastery/review history (see ADR 011).
+- The developer gets a field's type, position, and lifecycle enforced by the schema, not re-validated by hand-built logic on every request.
+- The user renames a field as a metadata change, not an identity change; every table that references the field by id is unaffected.
+- The developer gets a real row to attach data to, which is what makes ordered display, archival, and stable references for mastery and review history possible.
 
-Costs:
+**Negative**
 
-- Because dependents now assume a field's type is stable, type change is forbidden after creation — `PATCH /fields/{field_id}` explicitly 400s if the payload's type differs from the existing one (`app/routers/api/field_def.py`). The old untyped blob had no such restriction; this is a deliberate rigidity trade, not an oversight.
+- The user cannot change a field's type after creation, since dependents assume it is stable; the field update route refuses with a 400. The old untyped blob had no such restriction; this is a deliberate rigidity trade.
+
+**Neutral**

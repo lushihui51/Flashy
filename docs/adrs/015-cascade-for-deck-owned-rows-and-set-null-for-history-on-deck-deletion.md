@@ -1,8 +1,8 @@
-# ADR 015: Deck deletion cascades owned rows, preserves history via SET NULL
+# ADR 015: Cascade for deck-owned rows and SET NULL for history on deck deletion
 
 ## Status
 
-Active; see the Amendment below. The SET NULL half — review_log rows and practice_deck snapshots outliving what they reference, and the deleted-deck chip — is superseded by ADR 048 under the rule of ADR 047; the cascade of deck-owned rows, the two run statuses, and the lazy completion of a stranded run remain in force.
+Superseded by ADR 047, ADR 048 and ADR 073
 
 ## Context
 
@@ -12,7 +12,7 @@ So a deck-delete cascade needs two different answers depending on what a row _is
 
 ## Decision
 
-**Owned state cascades.** A row with no coherent meaning independent of its parent is deleted along with it, via `ON DELETE CASCADE`:
+**Owned state cascades.** We will delete a row with no coherent meaning independent of its parent along with it, via `ON DELETE CASCADE`:
 
 - `field_def.deck_id`, `card.deck_id`, `deck_practice_config.deck_id` — cascade with the deck. None of these have any use once the deck is gone.
 - `practice_card.card_id` — cascades with the card (and therefore transitively with the deck). **A practice_card without a card is meaningless, so it can't exist** — its `prompts`/`answers` arrays and `status` only make sense as "this card, in this session, at this position." This is `NOT NULL`, not nullable — the type system enforces the invariant rather than a comment or a runtime guard.
@@ -37,16 +37,18 @@ Rejected on review. A `practice_card` row's fields (`prompts`, `answers`, `statu
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - Deleting a deck is a normal, always-available operation regardless of how much it's been practiced — no raw 500s, no soft-delete workaround required.
 - Review history (`review_log`) and completed-session history (`practice_deck`) are structurally protected from disappearing as a side effect of deleting unrelated state, matching ADR 011's "never deleted, ever."
 - A practice_card whose card is gone is deleted, not a dangling nullable reference every reader has to check for — the invariant is enforced once, at the schema.
 
-Costs:
+**Negative**
 
 - `review_log` and `practice_deck` accumulate orphaned rows over time (nulled references) that nothing purges — acceptable, since they're append-only history by design, but worth knowing before writing a query against either table that assumes every foreign key is populated.
 - A downgrade of the migration that introduced these `ondelete` rules will fail once any row has actually gone null in production — expected (there's no data-preserving way to force a null back into a `NOT NULL`/no-`ondelete` column), not a defect in the migration.
+
+**Neutral**
 
 ## Amendment: two session statuses, and a session owns its snapshot rows
 

@@ -1,8 +1,8 @@
-# ADR 010: Archive fields instead of hard-deleting
+# ADR 010: Archival instead of hard deletion for field removal
 
 ## Status
 
-Superseded by ADR 049: field removal is a hard delete whose influence is removed entirely; the archive mechanism stays in the code, unexposed.
+Superseded by ADR 049
 
 ## Context
 
@@ -15,7 +15,7 @@ A field needs to be able to stop being usable — excluded from new cards, new c
 
 ## Decision
 
-Field "deletion" sets `field_def.archived_at`, never destroys the row. Hard delete is a separate, explicitly gated operation, permitted only when it's actually safe.
+We will have field "deletion" set `field_def.archived_at`, never destroy the row. Hard delete is a separate, explicitly gated operation, permitted only when it's actually safe.
 
 Mechanism:
 
@@ -32,14 +32,16 @@ Rejected. `review_log`'s `RESTRICT` would catch a delete with review history, bu
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - A field can be retired from active use without any risk to historical data, regardless of how much review/mastery/value data references it.
 - Hard delete is available for the case that actually is safe (an unused field with no values ever recorded), without being the default path.
 
-Costs:
+**Negative**
 
 - **Known gap, not yet fixed as of this writing.** The rewrite's invariant calls for checking four things before hard delete: `card_field_value`, `card_field_mastery`, `review_log`, and all six `deck_practice_config` uuid[] arrays across the deck. The shipped endpoint (`app/routers/api/field_def.py`) only checks `card_field_value` via `db_count_card_field_values`. In practice `review_log`'s `RESTRICT` FK still stops a delete with review history at the database level, and `card_field_mastery` CASCADEs silently (acceptable — it's a disposable cache, see ADR 011) — but a stale `deck_practice_config` array reference to the deleted field's id is checked nowhere at hard-delete time. This is a real discrepancy between the stated invariant and the implementation, left as a follow-up rather than fixed here.
+
+**Neutral**
 
 ## Amendment: the RESTRICT backstop no longer exists
 

@@ -1,4 +1,4 @@
-# ADR 007: Use Clerk for authentication
+# ADR 007: Clerk as the authentication provider
 
 ## Status
 
@@ -12,35 +12,27 @@ At the time of this decision, the tech stack is settled: the backend is FastAPI 
 
 ## Decision
 
-Use Clerk as the managed authentication provider. The React app uses Clerk's components and hooks for sign-in state, and the FastAPI backend verifies Clerk-issued JWTs on protected routes and uses the token's user ID as the ownership key in PostgreSQL.
+We will use Clerk as the managed authentication provider. The React app uses Clerk's components and hooks for sign-in state, and the FastAPI backend verifies Clerk-issued JWTs on protected routes and uses the token's user ID as the ownership key in PostgreSQL.
 
-### Considered Alternative: Build auth in-house
+## Alternatives considered
+
+### Building auth in-house
 
 Rejected because weeks of work would produce an undifferentiated feature with a higher security risk than a managed provider.
 
-### Considered Alternative: Self-hosted auth (e.g. Keycloak)
+### Self-hosted auth such as Keycloak
 
 This alternative avoids vendor dependencies, however it's rejected for the costs of running, upgrading and securing an auth server, which is too much operation burden for a solo project.
 
-### Implementation note
-
-The frontend package is `@clerk/react`, not `@clerk/clerk-react`. `@clerk/react` has no `<SignedIn>`/`<SignedOut>` components; the frontend branches on `useUser()`'s `isLoaded`/`isSignedIn` fields directly instead (`AuthSlot.tsx`). Sign-in uses `useClerk().openSignIn()`; sign-out uses `useClerk().signOut()`.
-
-### Implementation note — backend token verification
-
-Verification uses PyJWT (`pyjwt[crypto]`) with a module-cached `PyJWKClient` pointed at `{clerk_fapi_url}/.well-known/jwks.json` (`app/verify_clerk_session.py`): RS256 only, required claims `azp`/`sub`/`iss`, issuer checked against `clerk_fapi_url`, and `azp` checked against `permitted_origins`. Signing keys are cached and refetched on an unknown `kid`. Any failure raises a `jwt.PyJWTError` subclass, which callers map to 401.
-
-### Implementation note — local dev-auth bypass
-
-`get_current_app_user` (`app/dependencies.py`) skips token verification entirely when **both** `DEV_AUTH_USER_ID` and `ENV=development` are set, treating every request — including one with no `Authorization` header — as that `clerk_user_id`. Either variable alone does nothing; the double gate is what keeps a stray variable on a deployed environment from ever activating it, and the app logs a warning at import time when it is on. `tests/conftest.py` forces it off for the whole suite (it sets `DEV_AUTH_USER_ID=""` before `app.config` is imported). It exists for local browser checks and headless driving of the real app, is tagged `TODO(defer:dev-auth-bypass)` as cleanup, and must never be set outside local development.
-
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Auth is production-grade in days rather than weeks, including flows(social login, email verification) that would not be built at all in-house.
-- The backend stays stateless because JWT verification requires no session store.
+- The project gets production-grade auth in days rather than weeks, including flows such as social login and email verification that would not be built at all in-house.
+- The backend developer runs no session store, because JWT verification needs none.
 
-Costs:
+**Negative**
 
-- A hard vendor dependency on Clerk's availability and pricing; free-tier limits could bind if the app grew.
+- The project takes a hard dependency on Clerk's availability and pricing; free-tier limits could bind if the app grew.
+
+**Neutral**

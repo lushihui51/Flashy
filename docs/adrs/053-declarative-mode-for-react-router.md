@@ -1,4 +1,4 @@
-# ADR 053: React Router runs in declarative mode, not as a data router
+# ADR 053: Declarative mode for React Router
 
 ## Status
 
@@ -10,7 +10,7 @@ The frontend routes with `react-router-dom` 7: `App.tsx` mounts a `<BrowserRoute
 
 ## Decision
 
-React Router stays in declarative mode. Routing is `<BrowserRouter>` plus a `<Routes>` tree in `App.tsx`; the router maps URLs to components and carries navigation state, nothing more. Route loaders and actions are not used: every fetch and mutation belongs to the page that renders it, under ADR 033.
+We will keep React Router in declarative mode: routing is `<BrowserRouter>` plus a `<Routes>` tree in `App.tsx`; the router maps URLs to components and carries navigation state, nothing more. Route loaders and actions are not used: every fetch and mutation belongs to the page that renders it.
 
 ## Alternatives considered
 
@@ -24,12 +24,14 @@ Rejected. Flashy is a signed-in SPA behind Clerk with no rendering-on-the-server
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One fetch layer. Loading, error, and invalidation behaviour is defined once, in the page, under ADR 033 and ADR 035.
-- Tests mount a page in a `MemoryRouter` with no loader plumbing.
+- The developer has one fetch layer, with loading, error, and invalidation behaviour defined once, in the page.
+- The developer mounts a page in a `MemoryRouter` in tests with no loader plumbing.
 
-Costs:
+**Negative**
 
-- Declarative mode has no route-level pending UI or prefetch; each page renders its own loading state.
-- `useBlocker` requires a data router, so unsaved-changes guards are implemented at a form's own exits (its Cancel and back controls), not on arbitrary browser navigation.
+- The user gets no route-level pending UI or prefetch; each page renders its own loading state.
+- The developer implements unsaved-changes guards at a form's own exits, since `useBlocker` requires a data router.
+
+**Neutral**

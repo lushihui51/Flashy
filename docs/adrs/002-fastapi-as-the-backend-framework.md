@@ -1,4 +1,4 @@
-# ADR 002: Use FastAPI for backend
+# ADR 002: FastAPI as the backend framework
 
 ## Status
 
@@ -10,21 +10,34 @@ Flashy needs a backend to host core business logic and to receive and respond to
 
 At the time of the decision, both Python and Node/Express were viable options based on prior experience. FastAPI was chosen without a rigorous comparison. This ADR records the decision and evaluates it retrospectively, now that its consequences are observable.
 
-Alternatives that were available: Express (known from prior experience, and would have unified the project on TypeScript), Django (batteries included, but its bundled ORM, auth, and templating duplicate or conflict with SQLModel, Clerk, and a React SPA, see ADR 003 and ADR 007), and Flask (minimal, but request validation, serialization, and an OpenAPI schema would all be hand-assembled).
-
 ## Decision
 
-Use FastAPI for the backend, with endpoints typed via Pydantic models and an OpenAPI schema generated automatically from the endpoint definitions.
+We will use FastAPI for the backend, with endpoints typed via Pydantic models and an OpenAPI schema generated automatically from the endpoint definitions.
+
+## Alternatives considered
+
+### Express
+
+Known from prior experience, and it would have unified the project on TypeScript. The choice was made without a rigorous comparison; in retrospect, the OpenAPI schema that became the typed API client would have needed a separate tool or manual maintenance.
+
+### Django
+
+Rejected: batteries included, but its bundled ORM, auth, and templating duplicate or conflict with SQLModel, Clerk, and a React SPA.
+
+### Flask
+
+Rejected: minimal, but request validation, serialization, and an OpenAPI schema would all be hand-assembled.
 
 ## Consequences
 
-In retrospect, the choice has been validated by two consequences that were not part of the original reasoning:
+**Positive**
 
-- FastAPI's automatic OpenAPI schema generation became the enabling condition for the typed API client pipeline (see ADR 006). With Express or Flask, the schema would have required a separate tool or manual maintenance.
-- FastAPI's Pydantic-native design meant SQLModel (see ADR 003) integrates directly: the framework and the ORM share a type system, so request validation and database models are defined once.
+- The frontend developer got the typed API client from FastAPI's OpenAPI schema; with Express or Flask the schema would have needed a separate tool or manual maintenance.
+- The backend developer defines request validation and database models once, because FastAPI and SQLModel share Pydantic's type system.
 
-Costs accepted:
+**Negative**
 
-- The backend and frontend are in different languages, so type definitions cannot be shared directly between them. This cost is largely neutralized by the generated-types pipeline in ADR 006, but that pipeline exists partly because this cost had to be paid.
-- FastAPI is a younger framework with a smaller ecosystem than Django or Express, so more infrastructure is assembled from parts. The Alembic and SQLModel integration in particular required manual setup that a Django project would have gotten for free.
-- Choosing a framework without an explicit comparison was a process risk. It happened to land well here, but the outcome does not retroactively make the process sound. Later decisions in this log (ADR 006, ADR 008) were made with explicit alternatives for this reason.
+- The developer cannot share type definitions between backend and frontend, since they are in different languages; the generated-types pipeline exists partly to pay this cost.
+- The developer assembles more infrastructure from parts, FastAPI being younger than Django or Express; the Alembic and SQLModel integration in particular needed manual setup Django would have given for free.
+
+**Neutral**

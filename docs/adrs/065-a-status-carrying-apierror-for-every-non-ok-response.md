@@ -1,11 +1,8 @@
-# ADR 065: Every non-ok response throws a status-carrying ApiError
+# ADR 065: A status-carrying ApiError for every non-ok response
 
 ## Status
 
 Active
-
-- **Amends ADR 006:** `unwrap` and `unwrapVoid` decide failure by `response.ok`, not by whether `error` is set. A request that got no response is turned into readable text by `client.ts`'s `onError` middleware.
-- **Amends ADR 022:** `ApiDetailError` becomes a subclass of `ApiError`, so every thrown API failure carries its HTTP status.
 
 ## Context
 
@@ -23,17 +20,17 @@ Thrown errors also carried no status. Eight pages rendered every failed load as 
 
 ## Decision
 
-`unwrap` and `unwrapVoid` decide failure by `response.ok` alone.
+We will have `unwrap` and `unwrapVoid` decide failure by `response.ok` alone.
 
-Every non-ok response throws an `ApiError`, which carries `status` and a message. `ApiDetailError` (ADR 022) extends it. The message is chosen as follows:
+Every non-ok response throws an `ApiError`, which carries `status` and a message. `ApiDetailError` extends it. The message is chosen as follows:
 
 - A structured `{code, message}` detail throws `ApiDetailError`, with `detail.message` as its message.
 - A string detail, a 422 validation array, or an object carrying a `message` keeps today's formatted text.
 - With no usable detail, the message is fixed: "Flashy is having trouble right now. Try again in a moment." for a `5xx`, and the existing unknown-error text otherwise.
 
-A `fetch` that throws — a network failure, a CORS rejection, an abort — is turned into a plain `Error` carrying "Couldn't reach Flashy. Check your connection and try again." `client.ts`'s `onError` middleware does the conversion. The result is never an `ApiError`, which is how ADR 063's probe tells "no response" from "an error response".
+A `fetch` that throws — a network failure, a CORS rejection, an abort — is turned into a plain `Error` carrying "Couldn't reach Flashy. Check your connection and try again." `client.ts`'s `onError` middleware does the conversion. The result is never an `ApiError`, which is how the health probe tells "no response" from "an error response".
 
-`isNotFound(error)`, which tests for an `ApiError` with status 404, is the one 404 test. A page says "not found" only when it holds; any other failure says the content could not be loaded. Pages keep these errors inline, beneath the banner (ADR 035, ADR 062). The API layer still has no side effects (ADR 006).
+`isNotFound(error)`, which tests for an `ApiError` with status 404, is the one 404 test. A page says "not found" only when it holds; any other failure says the content could not be loaded. Pages keep these errors inline, beneath the banner. The API layer still has no side effects.
 
 ## Alternatives considered
 
@@ -47,7 +44,7 @@ Rejected: a status field covers the 404 and every future case that needs one.
 
 ### Converting transport failures at each call site
 
-Rejected: these are the per-call-site forks ADR 022 already rejected.
+Rejected: these are the per-call-site forks the typed detail error already rejected.
 
 ### Leaving pages as they were
 
@@ -59,16 +56,18 @@ Rejected: every page would be coupled to the shell, and the inline error is stil
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Empty-body failures fail visibly, and every failure carries its status.
-- Transport failures read plainly.
-- Pages no longer tell users their data is gone.
-- The probe's classification falls out of the error type.
+- The user sees empty-body failures fail visibly, and the developer gets a status on every failure.
+- The user reads transport failures plainly.
+- The user is no longer told their data is gone during an outage.
+- The developer gets the probe's classification from the error type.
 
-Costs:
+**Negative**
 
-- Three error types now flow from the API layer: a plain `Error` for no response, `ApiError`, and `ApiDetailError`. A caller that string-matches messages still misses the structure.
-- Two messages are fixed copy inside the API layer. ADR 006 left presentation to the UI edge; this is a small exception, accepted because they are only the default message, which a call site may still replace.
-- Every test that calls `unwrap` directly now has to supply a `response`.
-- Queries with no error branch, such as `DeckEditor`'s subject query, still render nothing when they fail. They are left to the banner and ADR 063's recovery refetch.
+- The developer who string-matches messages still misses the structure, now that three error types flow from the API layer.
+- The developer keeps two messages as fixed copy inside the API layer, a small exception to leaving presentation to the UI edge, accepted because they are only the default message a call site may replace.
+- The developer supplies a `response` in every test that calls `unwrap` directly.
+- The user still sees nothing when a query with no error branch fails, such as `DeckEditor`'s subject query; left to the banner and the recovery refetch.
+
+**Neutral**

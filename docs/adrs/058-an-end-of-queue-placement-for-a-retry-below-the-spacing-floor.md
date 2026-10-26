@@ -1,8 +1,8 @@
-# ADR 058: A retry below the spacing floor goes above every row the run has placed
+# ADR 058: An end-of-queue placement for a retry below the spacing floor
 
 ## Status
 
-Active. Amends ADR 037: its insertion formula applies only with at least `RETRY_SPACING_FLOOR` cards pending, and the "end of the queue" it promises for fewer is now defined. Amends ADR 008's status note: the no-successor fallback stays; the no-predecessor fallback is removed.
+Active
 
 ## Context
 
@@ -14,11 +14,11 @@ The user intends to redesign how cards are ordered at the start of a run and whe
 
 ## Decision
 
-The requeue has two cases, decoupled at the point where the pending queue is read.
+We will decouple the requeue into two cases, at the point where the pending queue is read.
 
 With fewer than `RETRY_SPACING_FLOOR` cards pending, zero included, no mastery is looked up. The retry is placed at the run-wide maximum `practice_card.position` over every status plus 500 (`_end_of_queue_position`), the max read by `db_read_max_practice_card_position`, which the renumber also bases itself on. Nothing in the run can sit at or above that position, so the insert cannot collide.
 
-With at least the floor's worth pending, ADR 037's mastery-ordered insertion runs unchanged: `final_index = max(mastery_index, RETRY_SPACING_FLOOR)`, the midpoint between predecessor and successor, or the last pending row plus 500 when there is no successor. `_insertion_position` takes the floor's worth of pending cards as a precondition. Its no-predecessor branch is deleted, since with the floor at least 1 a predecessor always exists, and a test pins `RETRY_SPACING_FLOOR >= 1`.
+With at least the floor's worth pending, the floor's mastery-ordered insertion runs unchanged: `final_index = max(mastery_index, RETRY_SPACING_FLOOR)`, the midpoint between predecessor and successor, or the last pending row plus 500 when there is no successor. `_insertion_position` takes the floor's worth of pending cards as a precondition. Its no-predecessor branch is deleted, since with the floor at least 1 a predecessor always exists, and a test pins `RETRY_SPACING_FLOOR >= 1`.
 
 The two-attempt renumber loop and its `RuntimeError` stay as the guard for the one collision left: a midpoint between two pending rows whose gap is exhausted.
 
@@ -26,11 +26,11 @@ The two-attempt renumber loop and its `RuntimeError` stay as the guard for the o
 
 ### The rated card's own position plus 500
 
-Rejected. Correct only when the rated card is the front of the queue, which the API did not enforce at the time (ADR 059 now does), and it would rely on that invariant having held for every row already in the run. The run-wide max holds regardless of history and costs one trivial query.
+Rejected. Correct only when the rated card is the front of the queue, which the API did not enforce at the time and the current-card rule now does, and it would rely on that invariant having held for every row already in the run. The run-wide max holds regardless of history and costs one trivial query.
 
 ### One end-of-queue formula for both cases
 
-Proposed as "run max + 500 wherever the retry has no successor", so the function would have a single end branch. Rejected: the enough-cards process would then change according to where it happens to land, and its only motivation, a rated row sitting above the last pending row, is exactly the situation ADR 059 makes impossible.
+Proposed as "run max + 500 wherever the retry has no successor", so the function would have a single end branch. Rejected: the enough-cards process would then change according to where it happens to land, and its only motivation, a rated row sitting above the last pending row, is exactly the situation the current-card rule makes impossible.
 
 ### Widen the retry loop, or make the renumber move rated rows
 
@@ -42,14 +42,16 @@ Rejected. The empty queue was the only path still reaching them, and it reached 
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Rating "Again" on the last pending card works; a run's final retries chain at the end, each above everything placed before it.
-- The below-floor rule depends only on integer positions and ascending serving, so the later redesign replaces the enough-cards branch without touching it.
-- No placement can collide except a midpoint between two pending rows whose gap is exhausted, which is the renumber's actual job.
+- The user can rate "Again" on the last pending card; a run's final retries chain at the end, each above everything placed before it.
+- The developer redesigning placement later replaces the enough-cards branch without touching the below-floor rule, which depends only on integer positions and ascending serving.
+- The developer gets no collision except a midpoint between two pending rows whose gap is exhausted, which is the renumber's job.
 
-Costs:
+**Negative**
 
-- One extra `max(position)` read per below-floor requeue.
-- `_insertion_position` has a precondition, and `RETRY_SPACING_FLOOR` cannot be set to 0 without restoring the no-predecessor branch.
-- ADR 037's single formula is now two branches, one per case.
+- The server reads one extra `max(position)` per below-floor requeue.
+- The developer keeps `_insertion_position`'s precondition and cannot set `RETRY_SPACING_FLOOR` to 0 without restoring the no-predecessor branch.
+- The developer reads the floor's single formula as two branches, one per case.
+
+**Neutral**

@@ -1,8 +1,8 @@
-# ADR 044: The breakdown is a delta-ranked list with outcome badges
+# ADR 044: A delta-ranked list with outcome badges as the breakdown
 
 ## Status
 
-Active. Supersedes ADR 029's four-tab grouping; its outcome-chain semantics remain in force.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,7 +10,7 @@ ADR 029's completion view groups cards into four outcome tabs (first try / one r
 
 ## Decision
 
-The four tabs are replaced by a single list of all the run's cards under a sort control (gains first / drops first / mastery). Every row shows the card's primary field, its mastery and delta, and an outcome badge carrying the old bucket meaning — the chain fold and bucket computation of ADR 029 survive unchanged, demoted from tabs to badges. The summary counts line stays. The tap-open detail keeps the full attempt history and gains a per-field section listing _every_ active field of the card's deck with its mastery and delta — untouched fields at ±0, prompt-side drift shown honestly rather than hidden. Both call sites (run completion and the details page) share the component and change together.
+We will replace the four outcome tabs with a single list of all the run's cards under a sort control, gains first, drops first, or mastery. Every row shows the card's primary field, its mastery and delta, and an outcome badge carrying the old bucket meaning — the chain fold and bucket computation survive unchanged, demoted from tabs to badges. The summary counts line stays. The tap-open detail keeps the full attempt history and gains a per-field section listing _every_ active field of the card's deck with its mastery and delta — untouched fields at ±0, prompt-side drift shown honestly rather than hidden. Both call sites (run completion and the details page) share the component and change together.
 
 ## Alternatives considered
 
@@ -24,14 +24,16 @@ Rejected — the badge preserves at-a-glance outcome information at near-zero co
 
 ### Showing only fields the run sampled in the detail
 
-Rejected — prompt-side mastery moves too (shown prompts absorb an aggregate score), and hiding untouched fields would misrepresent the card-level fold's domain (ADR 043).
+Rejected — prompt-side mastery moves too (shown prompts absorb an aggregate score), and hiding untouched fields would misrepresent the card-level fold's domain.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The completion screen answers the mastery question directly; outcome information survives as a cheaper visual element.
+- The user gets the mastery question answered directly on the completion screen, with outcome information kept as a cheaper visual element.
 
-Costs:
+**Negative**
 
-- Per-bucket empty states and the nonzero-default-tab logic disappear with the tabs; a user who liked filtering by outcome now scans badges instead.
+- The user who liked filtering by outcome now scans badges instead, and the developer removes the per-bucket empty states and the nonzero-default-tab logic.
+
+**Neutral**

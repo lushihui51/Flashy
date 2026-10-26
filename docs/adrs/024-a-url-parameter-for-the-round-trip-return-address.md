@@ -1,4 +1,4 @@
-# ADR 024: Round-trip return address travels as a URL parameter, not router state
+# ADR 024: A URL parameter for the round-trip return address
 
 ## Status
 
@@ -10,37 +10,39 @@ Several surfaces let a user step away mid-form to create something they need and
 
 Verifying the New practice flow surfaced a nested case the state-based design never handled: New practice → New configuration → New deck. The deck editor's own "New deck…" trip reads only its _own_ current location for the `returnTo` it hands forward — it has no way to see what router state the page above it was carrying, because router state isn't part of a location the way `pathname`/`search` are. So the practice page's return address was silently dropped at the second hop: Cancel from the deck editor landed back on the configuration builder correctly (one hop), but Cancel again from there fell through to the builder's default fallback (`/library`) instead of back to New practice. Saving had the same defect — the practice page's own auto-select hand-back (`{configurationId}`) never arrived, because the configuration builder had nothing to navigate back _to_.
 
-This pattern had never been given its own ADR, so the fix starts here rather than as a supersession.
-
 ## Decision
 
-`returnTo` is a URL query parameter, never router state. Its value is the `pathname + search` of the page to return to, built with `URLSearchParams.set` (never string concatenation) so a nested value — a `returnTo` whose own value contains a `returnTo` — encodes and decodes correctly with no special-casing: each hop hands over its _own_ full location, and since an inherited `returnTo` is already part of that location's `search`, it rides along automatically.
+We will carry `returnTo` as a URL query parameter, never router state. Its value is the `pathname + search` of the page to return to, built with `URLSearchParams.set`, so a nested value encodes and decodes correctly with no special-casing: each hop hands over its own full location, and an inherited `returnTo` rides along inside that location's search.
 
-Every reader goes through one shared helper, `internalReturnTo(searchParams): string | null` (`frontend/src/lib/returnTo.ts`), which returns the value only when it starts with `/` and does not start with `//` — otherwise `null`, so the caller falls back to its existing default. The parameter is user-editable (typed, bookmarked, or shared), so it cannot be trusted as an app-internal path without this check.
+Every reader goes through one helper, `internalReturnTo` in `frontend/src/lib/returnTo.ts`, which returns the value only when it starts with `/` and not with `//`, and `null` otherwise, since the parameter is user-editable and cannot be trusted as an app-internal path without the check.
 
-One-shot arrival results — `{deckId}` handed back by the deck editor, `{configurationId}` handed back by the configuration builder — stay in router state. They are consumed exactly once, on arrival, by the page that asked for them, and are never themselves forwarded through a further hop, so state already works correctly for them. The rule this leaves: **the URL carries an address that must survive being forwarded; router state carries a result consumed once on arrival.**
+One-shot arrival results, `{deckId}` from the deck editor and `{configurationId}` from the configuration builder, stay in router state: they are consumed once, on arrival, by the page that asked, and never forwarded. The URL carries an address that must survive being forwarded; router state carries a result consumed once on arrival.
 
-### Alternative considered: thread an explicit state blob through every hop
+## Alternatives considered
+
+### An explicit state blob threaded through every hop
 
 Rejected: this is what shipped, and it is exactly what broke. Fixing today's two-hop case by having the configuration builder also forward its inbound `returnTo` in the state it hands the deck editor would only move the ceiling — the same drop would recur at the next hop someone adds, and every new round trip would need to remember to carry the whole chain forward by hand.
 
-### Alternative considered: Cancel as `navigate(-1)`
+### Cancel as `navigate(-1)`
 
 Rejected: unwinds the visited stack naturally, but breaks after a _save_-return — back would land on the just-submitted, now-stale form instead of skipping over it — and it has no way to carry a result payload (`{deckId}`, `{configurationId}`), so Save would still need a different mechanism entirely. Two mechanisms for one concept was the thing being fixed.
 
-### Alternative considered: trust the URL parameter without validation
+### The URL parameter trusted without validation
 
 Rejected: `?returnTo=` is user-editable in a way router state never was. Passing an arbitrary string straight to `navigate()` risks landing the user on a confusing dead page inside the SPA (react-router treating a non-path string, e.g. a full external URL, as an app route it can't match) instead of the page's normal, sane fallback.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One mechanism for every round trip in the app, present and future — a round trip added later inherits correct nested behavior automatically by following the same pattern, with nothing to thread by hand.
-- Validation lives in exactly one place (`internalReturnTo`), so the "is this safe to navigate to" question is answered once, not per call site.
-- The URL fully describes where Cancel/Save will land, which matches this codebase's existing convention of putting page-describing state in the URL rather than component state (e.g. the practice overview's filters).
+- The developer adds a round trip that inherits correct nested behavior by following the pattern, with nothing to thread by hand.
+- The developer answers "is this safe to navigate to" once, in `internalReturnTo`.
+- The user's URL fully describes where Cancel and Save will land, matching the app's convention of page-describing state in the URL.
 
-Costs:
+**Negative**
 
-- URLs for these flows are less readable than the bare paths they replace (e.g. `/decks/new?returnTo=%2Fdeck-configurations%2Fnew%3Fsubject...`).
-- A contributor unaware of this ADR could still reintroduce a state-based sender for a new round trip; this ADR and AGENTS.md's round-trip rule are the guardrails against that, not a structural one.
+- The user sees less readable URLs for these flows.
+- The developer unaware of this record can still reintroduce a state-based sender; this record and AGENTS.md are the guardrails, not a structural one.
+
+**Neutral**

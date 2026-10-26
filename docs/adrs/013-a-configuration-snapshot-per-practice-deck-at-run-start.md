@@ -1,8 +1,8 @@
-# ADR 013: Snapshot practice config at session start
+# ADR 013: A configuration snapshot per practice deck at run start
 
 ## Status
 
-Active. Amended by ADR 040: `source_config_id` exists for attribution only; the behavioral isolation decided here is unchanged. ADR 060 names the trigger for the mid-practice stale case in Consequences: the archive endpoint is unexposed since ADR 049, and the case is reached by clearing a card's value while a practice uses it. Amended by ADR 068: the snapshot also copies the configuration's name, read for a label only.
+Active
 
 ## Context
 
@@ -12,27 +12,27 @@ If a session's card generation always read the _live_ config, editing the config
 
 ## Decision
 
-`practice_deck` holds a copy of the config's six array/count columns (`prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids`, `prompt_pool_counts`, `answer_pool_ids`, `answer_pool_counts`) taken at the moment a session starts. It has **no** `source_config_id` — the model's own docstring states the reasoning directly (`app/models/practice_deck.py`): "a self-contained snapshot of a deck_practice_config taken at session start. Editing or deleting the source config must never affect a session, so nothing here points back to it."
+We will have `practice_deck` hold a copy of the configuration's six array and count columns, taken at the moment a run starts. Every card generated for the run's lifetime, the initial batch and every requeue after a failed rating, reads from that frozen row; generation, validation, and rerun never read the live configuration again, so editing or deleting the configuration never affects a run built from it.
 
-Every card generated for the session's lifetime — the initial batch (`app/services/practice_session.py`) and every card requeued after a failed rating (`app/services/practice_session.py`) — reads from this frozen `practice_deck` row, never the live config again.
-
-Because a config can drift (a referenced field gets archived) in the gap between being saved and being used to start a session, validation runs twice: once at config save/update, and again immediately before the snapshot is cut (`app/services/practice_session.py`) — the snapshot has to be valid at the exact moment it becomes immutable, not just valid whenever it was last saved.
+Because a configuration can drift between being saved and being used to start a run, validation runs twice: once at configuration save or update, and again immediately before the snapshot is cut, so the snapshot is valid at the exact moment it becomes immutable.
 
 ## Alternatives considered
 
-### Store a `source_config_id` foreign key and always read the live config
+### A foreign key to the configuration, read live
 
-Rejected — this is the alternative the "no source_config_id" phrasing and the model docstring are directly pushing back against. It would make a session's behavior depend on the config's state at read time rather than at session-start time, breaking the guarantee that a session, once started, is isolated from ordinary config edits.
+Rejected: it would make a run's behavior depend on the configuration's state at read time rather than at run start, breaking the isolation of a started run from ordinary configuration edits.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A user can freely edit or delete a `deck_practice_config` without any risk to sessions already built from it.
-- A session's behavior for its whole lifetime is determined entirely by the state the config was in at start time — reproducible, not subject to concurrent edits.
+- The user edits or deletes a configuration freely, with no risk to runs already built from it.
+- The developer gets a run whose behavior for its whole lifetime is determined by the configuration's state at start, reproducible and immune to concurrent edits.
 
-Costs:
+**Negative**
 
-- Storage/duplication: six array columns are copied per `practice_deck` row per session, rather than a single small foreign key.
-- Double validation: the same config validation logic runs at both template save/update and session start, an extra check that wouldn't be needed if sessions simply always read the live config.
-- The snapshot itself can still go stale relative to the _deck's_ fields after being cut — if a field referenced by the snapshot gets archived mid-session, requeue generation can find nothing to work with and returns `None` (nothing to requeue). This is accepted as a legitimate, handled degraded case rather than something the snapshot tries to protect against by staying live-updated.
+- The database stores six array columns per practice deck per run instead of one small foreign key.
+- The developer runs the same validation at configuration save and at run start, an extra check a live read would not need.
+- The user whose snapshot goes stale against the deck's own fields after it was cut sees a requeue that finds nothing to generate return nothing; accepted as a handled degraded case rather than something the snapshot stays live to prevent.
+
+**Neutral**

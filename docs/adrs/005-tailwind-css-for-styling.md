@@ -1,4 +1,4 @@
-# ADR 005: Use Tailwind CSS for styling
+# ADR 005: Tailwind CSS for styling
 
 ## Status
 
@@ -6,22 +6,26 @@ Active
 
 ## Context
 
-Flashy's frontend needs a styling approach. The decision was made without evaluating alternatives (component libraries such as MUI, CSS modules, plain CSS); Tailwind was chosen from familiarity and its prevalence in the React ecosystem.
+Flashy's frontend needs a styling approach. Tailwind was chosen from familiarity and its prevalence in the React ecosystem, without evaluating alternatives.
 
 ## Decision
 
-Use Tailwind CSS (v4) with utility classes applied directly in components.
+We will use Tailwind CSS (v4) with utility classes applied directly in components. Colours are centralized as CSS custom properties in one `@theme` block in `src/index.css`, so a palette swap is a one-file edit.
 
-### Colour tokens
+## Alternatives considered
 
-Colours are centralized as CSS custom properties in one `@theme` block in `src/index.css` (`--color-surface`, `--color-surface-elevated`, `--color-text`, `--color-text-muted`, `--color-primary`, `--color-primary-contrast`, `--color-scrim`), referenced via Tailwind v4's canonical `bg-(--color-x)` shorthand (not the older `bg-[var(--color-x)]` arbitrary-value syntax), so a future palette swap is a one-file edit. The current values are a placeholder — `/* TODO(defer:colors) */` marks the block — no real brand palette or dark/light mode exists yet.
+### Component libraries, CSS modules, and plain CSS
+
+Not evaluated: component libraries such as MUI, CSS modules, and plain CSS were the candidates, and none was compared against Tailwind.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Styling stays colocated with markup and no separate CSS architecture needs to be maintained, which suits a solo project where development speed is the scarcest resource. \
+- The developer keeps styling colocated with markup and maintains no separate CSS architecture, which suits a solo project where development speed is the scarcest resource.
 
-Costs:
+**Negative**
 
-- Utility-heavy JSX is harder to scan, and the choice was made without comparison — accepted because styling is easily the most reversible decision in this log; unlike the database or API client, migrating away would touch presentation only, not data or contracts.
+- The developer reads utility-heavy JSX, which is harder to scan; accepted because styling is the most reversible decision here, touching presentation only, never data or contracts.
+
+**Neutral**

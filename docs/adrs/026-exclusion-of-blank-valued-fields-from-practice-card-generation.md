@@ -1,8 +1,8 @@
-# ADR 026: Exclude blank-valued fields from practice card generation
+# ADR 026: Exclusion of blank-valued fields from practice card generation
 
 ## Status
 
-Active. Confirmed by ADR 060: the blank filter has no requeue exception.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ Active. Confirmed by ADR 060: the blank filter has no requeue exception.
 
 ## Decision
 
-Add `CardFieldValue.value != ''` to `db_fetch_generation_candidates`'s join. A blank-valued field can no longer be selected as a card's prompt or answer, on the fixed side or the pool side, for either side of the card. `generate_practice_card_fields`'s existing skip-card behavior (returning `None` when a side ends up with zero fields) is unchanged, and now also fires legitimately whenever every eligible field on a side is blank.
+We will exclude a blank-valued field from a card's prompt and answer candidates, on the fixed side and the pool side alike, by filtering it in the generation query. A side left with no eligible field skips the card, as it already did for a side with zero fields.
 
 ## Alternatives considered
 
@@ -24,11 +24,13 @@ Rejected in favor of one rule for both sides: simpler, and a blank prompt still 
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- An answer field is never rated against nothing.
-- The docstrings finally describe real behavior.
+- The user is never asked to rate an answer field against nothing.
+- The developer reads docstrings that describe real behavior.
 
-Costs:
+**Negative**
 
-- A card with many optional fields left blank has a smaller effective candidate pool than its raw field count suggests; a configured `pool_count` higher than the number of non-blank survivors clamps down, same as the existing archived-field clamping, just blank-triggered too.
+- The user whose card has many blank optional fields gets a smaller candidate pool than its field count suggests; a draw count above the non-blank survivors clamps down.
+
+**Neutral**

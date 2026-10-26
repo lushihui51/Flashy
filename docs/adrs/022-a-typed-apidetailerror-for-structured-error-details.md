@@ -1,8 +1,8 @@
-# ADR 022: unwrap throws a typed ApiDetailError for structured error details
+# ADR 022: A typed ApiDetailError for structured error details
 
 ## Status
 
-Active. Amends ADR 006: `unwrap` throws a typed `ApiDetailError` for structured error details. Amended by ADR 065: `ApiDetailError` extends `ApiError`, so every thrown API failure carries its HTTP status.
+Active
 
 ## Context
 
@@ -10,23 +10,27 @@ ADR 006 normalized every api-layer call through `unwrap`/`unwrapVoid`: throw a f
 
 ## Decision
 
-`unwrap` and `unwrapVoid` throw `ApiDetailError` — an `Error` subclass carrying the raw `detail` object — whenever `detail` is an object with string `code` and `message` fields. `Error.message` stays exactly what `formatError` produces today. Callers that do not care catch an `Error` with an unchanged message; shape-aware callers `instanceof`-check and read `.detail`. The api layer still has no side effects (no `console.error`, no toast) — ADR 006's boundary is unchanged.
+We will have `unwrap` and `unwrapVoid` throw `ApiDetailError`, an error subclass carrying the raw `detail` object, whenever `detail` is an object with string `code` and `message` fields. Its message is the detail's message, so a caller that does not care catches an error with a readable message, and a shape-aware caller `instanceof`-checks and reads `.detail`. The API layer still has no side effects.
 
-### Alternative considered: per-call-site bypasses of unwrap
+## Alternatives considered
+
+### Per-call-site bypasses of unwrap
 
 Rejected: each structured endpoint would grow its own error-inspection fork, and the one-choke-point property that makes the api layer predictable would erode call by call.
 
-### Alternative considered: return error unions instead of throwing
+### Error unions instead of throwing
 
 Rejected: every existing call site and TanStack Query's thrown-error model (`isError`, `error` on queries/mutations) are built around exceptions; a union return would be a migration of the whole data layer to serve one page.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Structured errors reach the UI through one mechanism, backwards compatibly — no existing caller changes.
+- The developer gets structured errors through one mechanism, backwards compatibly; no existing caller changes.
 
-Costs:
+**Negative**
 
-- Two error types now flow from the api layer; a caller that string-matches messages instead of `instanceof`-checking silently misses the structure.
-- The `detail` shape is guarded at runtime, not compile time — it is only as stable as the backend keeps it.
+- The developer who string-matches messages instead of `instanceof`-checking silently misses the structure, now that two error types flow from the API layer.
+- The developer relies on a `detail` shape guarded at runtime, not compile time, only as stable as the backend keeps it.
+
+**Neutral**

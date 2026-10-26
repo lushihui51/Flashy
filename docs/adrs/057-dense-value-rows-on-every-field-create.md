@@ -1,8 +1,8 @@
-# ADR 057: Every field create writes the dense value rows
+# ADR 057: Dense value rows on every field create
 
 ## Status
 
-Active. Amends nothing.
+Active
 
 ## Context
 
@@ -12,9 +12,9 @@ A 2026-09-24 investigation found the gap while tracing why the batch edit's valu
 
 ## Decision
 
-`POST /decks/{deck_id}/fields` writes, in the same transaction as the field row, a `""` `card_field_value` row for every existing card of the deck. The flow spans two operations, so under ADR 034 it is a service: `create_field_def` in `app/services/field_def_create.py` touches the deck, stages the field at the next position, stages one value row per card, and commits. On an active-name collision it rolls back and raises the `ValueError` the route already maps to 400, so nothing is persisted. The route's request and response shapes are unchanged.
+We will have `POST /decks/{deck_id}/fields` write, in the same transaction as the field row, a `""` `card_field_value` row for every existing card of the deck. The flow spans two operations, so it is a service: `create_field_def` in `app/services/field_def_create.py` touches the deck, stages the field at the next position, stages one value row per card, and commits. On an active-name collision it rolls back and raises the `ValueError` the route already maps to 400, so nothing is persisted. The route's request and response shapes are unchanged.
 
-The committing `db_create_field_def` is deleted rather than kept beside the service. A field create that writes no value rows is the function this decision removes, and under ADR 055 its unprefixed name would advertise a complete, committing create.
+The committing `db_create_field_def` is deleted rather than kept beside the service. A field create that writes no value rows is the function this decision removes, and its unprefixed name would advertise a complete, committing create.
 
 Stated generally: every path that adds an active field to a deck writes that field's dense rows in the same transaction. Today those paths are deck create, the batch edit's field-add, and the standalone route. No data migration accompanies this: the dev database is dense and nothing is in production.
 
@@ -26,11 +26,11 @@ Rejected. It has no UI caller, but 11 test files and 124 `existing_field_defs` r
 
 ### Record the route as test-only and narrow the invariant's wording
 
-Rejected. It ratifies drift, the move ADR 055 rejected for the persistence surface, and an invariant with a standing exception is not one a reader can trust.
+Rejected. It ratifies drift, the move the persistence surface's record rejected, and an invariant with a standing exception is not one a reader can trust.
 
 ### Backfill inside `db_create_field_def`
 
-Rejected. A `database_ops` function writing a sibling table crosses ADR 034's one-module-per-table layout, and the two existing backfills already live in services, where ADR 034 puts a flow that spans several operations.
+Rejected. A `database_ops` function writing a sibling table crosses the one-module-per-table layout, and the two existing backfills already live in services, where the layering puts a flow that spans several operations.
 
 ### Make every read path fabricate `""` for a missing row
 
@@ -38,14 +38,16 @@ Rejected. The standalone card read already does this, and it is part of what hid
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The invariant AGENTS.md states is true on every write path, and an ADR now records it.
-- The batch edit's values loop, and every other reader, can keep trusting one row per active field.
-- The `existing_field_defs` fixture and every test built on it work unchanged.
+- The developer has the invariant AGENTS.md states true on every write path.
+- The developer's batch-edit values loop, and every other reader, keeps trusting one row per active field.
+- The developer's `existing_field_defs` fixture and every test built on it work unchanged.
 
-Costs:
+**Negative**
 
-- One more service module, for a one-field create; the route is no longer a one-query handler.
-- The route's cost grows with deck size, one insert per existing card, the same as the batch edit's field-add.
-- The route stays live with no UI caller. This ADR records that fact and does not decide the route's future.
+- The developer has one more service module, for a one-field create; the route is no longer a one-query handler.
+- The server's cost for the route grows with deck size, one insert per existing card.
+- The developer keeps a route live with no UI caller; this record does not decide its future.
+
+**Neutral**

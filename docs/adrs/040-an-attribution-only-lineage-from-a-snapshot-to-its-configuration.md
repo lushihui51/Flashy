@@ -1,8 +1,8 @@
-# ADR 040: Snapshots carry attribution-only config lineage, severed on material edit
+# ADR 040: An attribution-only lineage from a snapshot to its configuration
 
 ## Status
 
-Active. Amends ADR 013: attribution is now distinguished from behavioral coupling. Amended by ADR 068: the link gains a display use (the practice label), and a rename writes the configuration's new name onto linked snapshots; the sever rule is unchanged.
+Active
 
 ## Context
 
@@ -10,7 +10,7 @@ ADR 013 gave `practice_deck` no `source_config_id` so that "editing or deleting 
 
 ## Decision
 
-`practice_deck` gains nullable `source_config_id` (FK `deck_practice_config`, ON DELETE SET NULL), written at run start, copied through rerun, and never read by generation, validation, or rerun logic — ADR 013's behavioral isolation is untouched. The link means "cut from this config as currently defined": a material edit to a config — any change to its six prompt/answer field or pool arrays — nulls `source_config_id` on every snapshot pointing at it, in the same transaction as the update. A rename alone keeps the links. Internally-generated snapshots leave it null.
+We will give `practice_deck` a nullable `source_config_id`, set null when the configuration is deleted, written at run start, copied through rerun, and never read by generation, validation, or rerun. The link means "cut from this configuration as currently defined": a material edit to a configuration, any change to its six prompt, answer, or pool arrays, nulls the link on every snapshot pointing at it, in the same transaction as the update. A rename alone keeps the links. Internally generated snapshots leave it null.
 
 ## Alternatives considered
 
@@ -32,10 +32,12 @@ Rejected — heavy UX for an attribution no surface displays yet; may be revisit
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Per-config grouping and progress statistics become possible without touching generation semantics.
+- The developer building statistics can group runs per configuration and compute progress without touching generation semantics.
 
-Costs:
+**Negative**
 
-- Lineage is conservative: editing a config and reverting the edit still severs its links permanently, and pre-existing snapshots have no lineage at all.
+- The user who edits a configuration and reverts the edit still loses its links permanently, and snapshots from before the column have no lineage at all.
+
+**Neutral**

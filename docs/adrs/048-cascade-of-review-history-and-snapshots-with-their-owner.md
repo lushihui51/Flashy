@@ -1,8 +1,8 @@
-# ADR 048: Review history and snapshots cascade with their owner
+# ADR 048: Cascade of review history and snapshots with their owner
 
 ## Status
 
-Active. Supersedes the SET NULL half of ADR 015 — `review_log` rows and `practice_deck` snapshots outliving what they reference, `deleted_deck_count` and the "deleted deck" chip — under the rule of ADR 047. Amends ADR 011: a review row is owned by its card and field and is deleted with them; the ledger stays append-only in every other respect and remains the sole source mastery is rebuilt from. Makes ADR 030's null-`deck_id` rerun branch unreachable: a snapshot goes with its deck, and a run left with no decks is deleted.
+Active
 
 ## Context
 
@@ -12,12 +12,9 @@ ADR 047 makes history owned: a review is about a card and a field, and a snapsho
 
 ## Decision
 
-- `review_log.card_id` and `review_log.field_def_id` become `NOT NULL` with `ON DELETE CASCADE`. `review_log.practice_card_id` is dropped; `review_group_id`, which equals the practice card's id by construction in `submit_rating`, is the only link from a review to its appearance.
-- `practice_deck.deck_id` becomes `NOT NULL` with `ON DELETE CASCADE`. A run left with no practice decks is deleted in the same operation (through the deletion closure, ADR 051); a run that spanned other decks keeps them. `deleted_deck_count` leaves the run payloads and the chip is removed.
-- No rebuild follows a card or deck delete: a review group belongs to exactly one card, and `apply_rating` writes only that card's pairs, so deleting the card removes precisely the ledger rows its reviews produced and nothing else ever depended on them.
-- `rebuild_mastery` reads every row; the null filters go.
-- The lazy completion of a stranded run (ADR 015 as amended) stays, for a run whose cards are deleted or a multi-deck run that loses one deck.
-- The migration deletes the orphaned review rows, null-deck snapshots, and empty runs before tightening the constraints.
+We will make `review_log.card_id` and `review_log.field_def_id` `NOT NULL` with `ON DELETE CASCADE`, and drop `review_log.practice_card_id`; `review_group_id`, which equals the practice card's id by construction, is the only link from a review to its appearance. `practice_deck.deck_id` becomes `NOT NULL` with `ON DELETE CASCADE`; a run left with no practice decks is deleted in the same operation, through the deletion closure, and a run that spanned other decks keeps them. `deleted_deck_count` leaves the run payloads and the chip goes.
+
+No rebuild follows a card or deck delete: a review group belongs to exactly one card, and the live path writes only that card's pairs, so deleting the card removes precisely the ledger rows its reviews produced. `rebuild_mastery` reads every row; the null filters go. The lazy completion of a stranded run stays, for a run whose cards are deleted or a multi-deck run that loses one deck. The migration deletes the orphaned review rows, null-deck snapshots, and empty runs before tightening the constraints.
 
 ## Alternatives considered
 
@@ -27,7 +24,7 @@ Rejected. No such reader exists. When one does, per-card questions need live car
 
 ### Keep `practice_card_id` and start writing it
 
-Rejected. It would duplicate `review_group_id` and add a persistent-to-ephemeral pointer that ADR 047 forbids. A rebuild reconstructs attribution from `review_group_id` alone, and gets `None` exactly when the run has been deleted, which is what ADR 039 leaves.
+Rejected. It would duplicate `review_group_id` and add a persistent-to-ephemeral pointer that the persistent-never-depends-on-ephemeral rule forbids. A rebuild reconstructs attribution from `review_group_id` alone, and gets `None` exactly when the run has been deleted, which is what a kept-but-deletable run leaves.
 
 ### Keep null-deck snapshots for multi-deck runs
 
@@ -39,14 +36,16 @@ Deferred, not adopted. Nothing needs it yet, and it can be added as pure derivat
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- No reader anywhere filters for null references; every review row has a live card and field, and every snapshot a live deck.
-- The run list is exact: a run appears if and only if it has a deck.
-- Deleting a deck leaves zero rows that reference it, so the delete confirm can say what happens without qualification.
+- The developer filters for null references nowhere; every review row has a live card and field, every snapshot a live deck.
+- The user's run list is exact: a run appears if and only if it has a deck.
+- The user sees a delete confirm that says what happens without qualification, since deleting a deck leaves zero rows that reference it.
 
-Costs:
+**Negative**
 
-- Deleting a card or deck destroys its review history. This is the intent, and the delete confirms name it.
-- The migration's cleanup is not reversible; a downgrade restores the nullable columns but not the rows.
-- `test_rebuild_mastery_skips_orphaned_history` and the chip tests describe states that no longer exist and are replaced.
+- The user who deletes a card or deck destroys its review history; the intent, and the delete confirms name it.
+- The developer cannot reverse the migration's cleanup; a downgrade restores the nullable columns but not the rows.
+- The developer replaces the tests that described states that no longer exist.
+
+**Neutral**

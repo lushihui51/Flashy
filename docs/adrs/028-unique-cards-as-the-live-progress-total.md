@@ -1,8 +1,8 @@
-# ADR 028: Live progress counts unique cards, not attempt rows
+# ADR 028: Unique cards as the live progress total
 
 ## Status
 
-Active
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,7 +10,7 @@ A failed `practice_card` is never mutated — `_requeue_failed_card` (`app/servi
 
 ## Decision
 
-The run page's progress indicator is one proportional bar with four color segments — grey (pending, first attempt) · yellow (pending, retry) · green (passed) · red (failed, terminal) — sized by `count / total`. `total` is the number of distinct `card_id`s that received a `practice_card` row at session start, fixed for the session's lifetime, never the live `practice_card` row count. Each card's segment membership comes from folding its chain of same-`card_id` rows (ordered by `created_at`) down to a bucket from the last row — the same chain/bucket rule the completion breakdown uses (ADR 029), both in `app/services/practice_run.py`.
+We will make the run page's progress indicator one proportional bar with four color segments — grey (pending, first attempt) · yellow (pending, retry) · green (passed) · red (failed, terminal) — sized by `count / total`. `total` is the number of distinct `card_id`s that received a `practice_card` row at session start, fixed for the session's lifetime, never the live `practice_card` row count. Each card's segment membership comes from folding its chain of same-`card_id` rows (ordered by `created_at`) down to a bucket from the last row — the same chain/bucket rule the completion breakdown uses, both in `app/services/practice_run.py`.
 
 ## Alternatives considered
 
@@ -24,11 +24,13 @@ Rejected — same root cause: the row count isn't fixed at session start, so a d
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The bar's total never changes mid-session, so a segment only ever grows toward green, never regresses from a requeue.
-- The same fixed-total, unique-card model backs the completion breakdown's summary counts, so the two can't disagree about what "total" means.
+- The user sees a bar whose total never changes mid-run, so a segment only grows toward green and never regresses on a requeue.
+- The developer backs the breakdown's summary counts with the same fixed-total model, so the two cannot disagree about "total".
 
-Costs:
+**Negative**
 
-- The bar doesn't distinguish a card retried five times from one still pending its first attempt until it resolves — attempt count isn't visible live, only in the completion breakdown.
+- The user cannot tell a card retried five times from one pending its first attempt until it resolves; attempt count shows only in the breakdown.
+
+**Neutral**

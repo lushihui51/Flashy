@@ -1,4 +1,4 @@
-# ADR 045: Alembic is the only schema path; the app never creates tables on startup
+# ADR 045: Alembic as the only schema path
 
 ## Status
 
@@ -16,7 +16,7 @@ ADR 041 made CI exercise the alembic chain from an empty database, which catches
 
 ## Decision
 
-Remove the lifespan and `init_db()` from `app/main.py`, and delete `init_db`/`reset_db` from `app/database.py`. `alembic upgrade` is the only path by which any persistent database's schema changes. `SQLModel.metadata.create_all` survives in exactly one place — `tests/conftest.py`'s own fixture, against the disposable test database that is dropped after every test — and a source-scan test asserts that no file under `app/` calls `create_all` or `drop_all`. A fresh database needs `alembic upgrade head` before the server is useful; a forgotten migration fails loudly on the first query with "relation does not exist" instead of silently fabricating schema.
+We will make `alembic upgrade` the only path by which any persistent database's schema changes: the app's startup creates no tables, `SQLModel.metadata.create_all` survives in exactly one place, `tests/conftest.py`'s fixture against the disposable test database, and a source-scan test asserts that no file under `app/` calls `create_all` or `drop_all`. A fresh database needs `alembic upgrade head` before the server is useful, and a forgotten migration fails loudly on the first query instead of silently fabricating schema.
 
 ## Alternatives considered
 
@@ -34,13 +34,15 @@ Rejected — leaves the trap armed for every future model change and turns "drop
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A persistent database is only ever at an alembic revision; schema drift can no longer be created silently by running tests or the dev server.
-- Defuses a landmine before deployment: an app that creates tables on boot races across replicas and has no downgrade path.
+- The developer can no longer create schema drift silently by running tests or the dev server; a persistent database is only ever at an alembic revision.
+- The operator deploying later avoids an app that creates tables on boot, racing across replicas with no downgrade path.
 
-Costs:
+**Negative**
 
-- A fresh clone must run `alembic upgrade head` before `fastapi dev` does anything useful — one documented step instead of an invisible one.
-- The dev database that already drifted needs a one-time manual cleanup.
-- Tests still enter the app lifespan through `TestClient(app)`; it is now empty, which is harmless but slightly misleading to a reader of `conftest.py`.
+- The developer on a fresh clone runs `alembic upgrade head` before `fastapi dev` does anything useful.
+- The developer cleans up the dev database that already drifted, once.
+- The developer reading `conftest.py` sees tests enter an empty app lifespan, harmless but slightly misleading.
+
+**Neutral**

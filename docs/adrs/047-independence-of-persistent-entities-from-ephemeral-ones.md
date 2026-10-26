@@ -1,8 +1,8 @@
-# ADR 047: Persistent entities never depend on ephemeral ones
+# ADR 047: Independence of persistent entities from ephemeral ones
 
 ## Status
 
-Active. Supersedes the owned-state-versus-history framing of ADR 015 (its cascade of deck-owned rows stands; see ADR 048 for what replaces its SET NULL half). Reaffirms ADR 039: deleting a run costs exactly that run's attribution.
+Active
 
 ## Context
 
@@ -12,15 +12,13 @@ By the time field deletion was reopened, that line had produced only costs. The 
 
 ## Decision
 
-Persistent entities never depend on ephemeral ones.
+We will have persistent entities never depend on ephemeral ones.
 
 - **Persistent:** subject, deck, field, card, configuration, review log, mastery log. **Ephemeral:** practice run, practice deck, practice card. "Depends on" means references the id, by foreign key or inside an array.
 - **Deleting an ephemeral entity** touches nothing persistent except attribution, which nulls. Deleting a run deletes its practice decks and practice cards and nulls `mastery_log.practice_run_id`; every review row and every mastery value stays. A run is a shell for the reviews inside it, not a resource in its own right.
 - **Deleting a persistent entity** deletes every record that references its id and recomputes every value derived from the deleted records. Ephemeral dependents go only when they can no longer function: an active run that can no longer be rated, a run with no decks left. A completed run that still has cards to show keeps a dead id in its frozen arrays.
-- **Updating a persistent entity** affects nothing that references it, because references are by id (ADR 009); the one exception is attribution, which a material edit severs (ADR 040).
+- **Updating a persistent entity** affects nothing that references it, because references are by id; the one exception is attribution, which a material edit severs.
 - **The attribution pointers** — `mastery_log.practice_run_id`, `practice_deck.source_config_id`, and `review_group_id` equalling a practice card id by construction — are the only persistent-to-ephemeral references. They mean "which occasion", and they null or sever, never cascade.
-
-ADR 048, ADR 049, and ADR 051 are this rule applied to the schema, to field deletion, and to the code path that executes deletions.
 
 ## Alternatives considered
 
@@ -30,7 +28,7 @@ Rejected. History that outlives the thing it is about is history nothing can rea
 
 ### Updates have maximum impact too
 
-Rejected. A field rename, a reorder, or fixing a card value from "chat" to "cat" would erase or rebuild the reviews of it. ADR 009 made identity the id precisely so content edits leave history intact.
+Rejected. A field rename, a reorder, or fixing a card value from "chat" to "cat" would erase or rebuild the reviews of it. Identity is the id precisely so content edits leave history intact.
 
 ### Ephemeral dependents always cascade
 
@@ -42,14 +40,16 @@ Rejected. Tidying the run list would move card mastery. The reviews are facts ab
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One rule predicts every cascade, so a new table or a new delete path has a place to look before choosing its foreign-key mode.
-- The null filters in the rebuild, the deleted-deck chip, and the null-`deck_id` rerun branch go, because the states they handled can no longer exist.
-- A run delete, a run rerun, and a configuration edit are provably free of side effects on the ledgers.
+- The developer predicts every cascade from one rule, so a new table or delete path has a place to look before choosing its foreign-key mode.
+- The developer removes the null filters in the rebuild, the deleted-deck chip, and the null-deck rerun branch, because the states they handled can no longer exist.
+- The developer gets a run delete, a rerun, and a configuration edit provably free of side effects on the ledgers.
 
-Costs:
+**Negative**
 
-- History changes on delete. After a field delete, sibling fields' mastery and old runs' deltas move (ADR 049); a deck's "progress last month" can read differently afterwards. This is the meaning of "influence gone", accepted with eyes open.
-- A completed run's attempt chains keep traces a deleted field caused — a card retried because that field was rated Again still shows "one retry". That is the run's record of what the user did, not a mastery claim.
-- The attribution pointers are a deliberate exception every reader of those three columns has to know about.
+- The user's history changes on delete: after a field delete, sibling fields' mastery and old runs' deltas move, and a deck's "progress last month" can read differently afterwards.
+- The user sees a completed run's attempt chains keep traces a deleted field caused, a card still showing "one retry"; the run's record of what they did, not a mastery claim.
+- The developer reading the three attribution columns must know they are the deliberate exception.
+
+**Neutral**

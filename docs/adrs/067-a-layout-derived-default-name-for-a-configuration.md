@@ -1,8 +1,8 @@
-# ADR 067: A configuration's default name is derived from its layout
+# ADR 067: A layout-derived default name for a configuration
 
 ## Status
 
-Active
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,9 +10,9 @@ The configuration builder prefilled its Name with the current date-time, chosen 
 
 ## Decision
 
-A new configuration's default name is its prompt-side field names, an arrow, then its answer-side field names: "Word → Definition". Within a side, always-shown fields come first, then random-draw fields, each group in the deck's field order, comma-joined; random draw is not marked. Each side shows at most two names and renders the rest as "+N": "Word, Example +1 → Definition". The name is empty while either side has no field.
+We will derive a new configuration's default name from its prompt-side field names, an arrow, then its answer-side field names: "Word → Definition". Within a side, always-shown fields come first, then random-draw fields, each group in the deck's field order, comma-joined; random draw is not marked. Each side shows at most two names and renders the rest as "+N": "Word, Example +1 → Definition". The name is empty while either side has no field.
 
-In create mode the Name input follows the board until the user types in it, after which the text is theirs, through further assignments and a deck change. In edit mode the stored name is kept and never re-derived. The derivation lives with the board logic in `frontend/src/lib/deckConfigurationBoard.ts`; the server still derives nothing (ADR 039).
+In create mode the Name input follows the board until the user types in it, after which the text is theirs, through further assignments and a deck change. In edit mode the stored name is kept and never re-derived. The derivation lives with the board logic in `frontend/src/lib/deckConfigurationBoard.ts`; the server still derives nothing.
 
 Derived names are not unique the way timestamps were. Two configurations of one deck with the same layout, or with layouts that differ only in draw mode, get the same default, and the save fails with the existing inline "already exists" error for the user to fix in place. There is no automatic numbering.
 
@@ -40,11 +40,13 @@ Rejected: a same-layout duplicate is more likely a mistake than a second configu
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- The picker, the Selected list and practice rows read as layouts without the user naming anything.
+- The user reads the picker, the Selected list, and practice rows as layouts without naming anything.
 
-Costs:
+**Negative**
 
-- Field names repeat across decks, so a default name alone does not identify a deck; the practice row pairs it with the deck.
-- Renaming a field does not reach a saved configuration's name, which is a string once saved.
+- The user cannot identify a deck from a default name alone, since field names repeat across decks; the practice row pairs it with the deck.
+- The user who renames a field does not see the change reach a saved configuration's name, which is a string once saved.
+
+**Neutral**

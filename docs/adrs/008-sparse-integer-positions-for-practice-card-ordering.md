@@ -1,8 +1,8 @@
-# ADR 008: Use sparse positions for practice card ordering
+# ADR 008: Sparse integer positions for practice card ordering
 
 ## Status
 
-Active. The minimum-gap follow-up deferred below is decided by ADR 037. The no-successor fallback below is implemented as the midpoint of the last position and last + 1000 (+500), not +1000. ADR 058 defines the empty-queue case the fallbacks below never covered and removes the no-predecessor fallback. ADR 059 makes explicit the invariant this assumed: only the current card can be rated.
+Active
 
 ## Context
 
@@ -12,38 +12,35 @@ Considered alternatives are dense integers, floats with midpoint, and to have pr
 
 ## Decision
 
-I will use sparse positioning to assign a position for every flashcard in the beginning of a practice session, for example the first card will get assigned 0, the second 1000, the third 2000, etc. The flashcards are shown in the order of their positions, and after a flashcard is presented, if it's at the ith position and needs to reappear after x cards, then its position will be updated to (i+x)th card's position + (i+x+1)th card's position divided(integer division) by 2 (the mid point between the i+xth and the i+x+1th card). If there is no i+x+1th card, then the new position assigned will be i+xth card's position + 1000 instead.
+We will give every practice card an integer position when it is generated at the start of a run, the first at 0 and each next one 1000 higher, and serve cards in ascending position. A card that must reappear later in the run is given the integer midpoint between the positions of the two cards it is placed between, so no other card's position changes. When the midpoint collides with an existing position, the run's pending cards are renumbered to fresh 1000-spaced gaps and the placement is retried.
 
-### Alternative considered: dense integers
+## Alternatives considered
+
+### Dense integers
 
 Rejected because insert-between requires shifting every subsequent card's position, which is O(n) writes per reposition instead of O(1)
 
-### Alternative considered: floats with midpoint
+### Floats with midpoint
 
 Rejected because float precision exhausts silently after repeated halving, whereas integer division produces a detectable collision that triggers rebalancing.
 
-### Alternative considered: practice_session owns a postgres array of practice_card ids, in the order they are shown.
+### An ordered array of practice card ids on the session
 
-The array was not rejected on operation count: shifitng an array of at most a few thousand IDs is trivial in memory, and Postgres writes the whole row on updates anyway. However, sparse positioning allows all mid-session logic to exist on a practice_card, including the comfort_level and times_revised, and adding an array to practice_session means updating 2 tables. Moreover, practice_card.card_id is a foreign key, and when the flashcard is deleted the practice_card will cease to exist by CASCADE. This means if we use the array, the practice_card id will also need to be removed, creating a synchronization burden. Lastly finding the next card due with an array needs unnest(...) WITH ORDINALITY to join order to content, which is awkward.
+The array was not rejected on operation count: shifting an array of at most a few thousand IDs is trivial in memory, and Postgres writes the whole row on updates anyway. However, sparse positioning allows all mid-session logic to exist on a practice_card, including the comfort_level and times_revised, and adding an array to practice_session means updating 2 tables. Moreover, practice_card.card_id is a foreign key, and when the flashcard is deleted the practice_card will cease to exist by CASCADE. This means if we use the array, the practice_card id will also need to be removed, creating a synchronization burden. Lastly finding the next card due with an array needs unnest(...) WITH ORDINALITY to join order to content, which is awkward.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Repositioning would not involve changing the position of other cards.
-- The program can detect when the limit of repositioning at position x has been reached.
-- All mid-session logic lives on the practice_card alone, and only the practice_card table will get updated with each card pass.
-- There is no synchronization burden when a flashcard is deleted.
-- Keeps data in shapes that the relational engine queries natively, for example using ORDER BY position LIMIT 1.
-- Only an extra integer is stored per practice_card, which is light.
+- The developer repositions a card by writing one row; no other card's position changes.
+- The developer gets a detectable collision when a gap is exhausted, where floats would lose precision silently.
+- The developer keeps every mid-run fact on the practice card alone, so each card pass updates one table.
+- The developer has nothing to synchronize when a flashcard is deleted; its practice cards cascade.
+- The developer queries serving order natively, as `ORDER BY position LIMIT 1`.
+- The database stores one extra integer per practice card.
 
-Costs:
+**Negative**
 
-- There is a limit to how many times cards can be repositioned at position x, specifically log2(gap). When midpoint returns a collision, renumber the remaining cards' position to 1000-spaced gaps. It can take up to O(n)(let n be the deck size), which is accepted because it's cheap: deck size is at most a few thousand, and it happens rarely. The rebalancing is also safe: the positions are ephemeral, and exists for one user's one session.
-- Finding the right position to reposition a card can take up to O(n)(let n be the deck size), which is accepted because n is at most a few thousand, bounded by the deck size.
+- The developer accepts a limit of log2(gap) repositionings between two cards before a renumber, which is O(n) in the run's cards; cheap, because a run holds at most a few thousand cards and positions exist for one user's one run.
 
-## Amendment
-
-This ADR describes `x` — how many cards later a failed card should reappear — as "calculated internally," but never defines how. As shipped, `x` is not computed at all: `_insertion_position` (`app/services/practice_session.py`) does a pure mastery-ascending merge-insertion of the failed card against the session's current pending cards, with no minimum-gap floor. In practice this means a card whose post-fail mastery becomes the session-wide minimum — common for a card that was already weak enough to fail — is inserted immediately before whatever was next in the queue, making it literally the very next card served (`x = 0`), not "after x cards" in any spaced sense.
-
-This was surfaced in manual testing (a small deck produced a tight loop of 2 repeating cards) and confirmed by tracing the code rather than assumed. Defining a real `x` — and whatever minimum-gap guarantee should back it — is deferred to a follow-up change; `_insertion_position`/`_requeue_failed_card` in the same file is what that change will replace or extend.
+**Neutral**

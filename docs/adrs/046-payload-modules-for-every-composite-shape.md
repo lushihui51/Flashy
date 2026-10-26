@@ -1,4 +1,4 @@
-# ADR 046: Entity modules hold only a table's own row shapes; composite payloads live in payload modules
+# ADR 046: Payload modules for every composite shape
 
 ## Status
 
@@ -12,7 +12,7 @@ The convention held until composite shapes needed a home. The run page's `/state
 
 ## Decision
 
-An entity module `app/models/<table>.py` holds the table, its `Base`, and only shapes that are one row of that table going in or out: `Create`, `Read`, `Update`, `Summary`. A `Summary` may add scalars about that one row — a count, a parent's name, a derived fold such as `CardMasteryRead`'s two numbers — never a nested model. Everything else lives in a payload module named after the router it serves, `app/models/<router>_payloads.py`. Two tests decide, in order: any field typed as another model class → payload (`DeckDetail`, `PracticeRunSummary`, `RatingSubmissionResult`); scalar-only but not one row of this module's table → payload (`RunProgress` is a fold over a run, `RatingSubmission` is a flow request, `BreakdownBucket` exists only for the breakdown). Payload modules may import anything under `app/models/`.
+We will have an entity module `app/models/<table>.py` hold the table, its `Base`, and only shapes that are one row of that table going in or out: `Create`, `Read`, `Update`, `Summary`. A `Summary` may add scalars about that one row — a count, a parent's name, a derived fold such as `CardMasteryRead`'s two numbers — never a nested model. Everything else lives in a payload module named after the router it serves, `app/models/<router>_payloads.py`. Two tests decide, in order: any field typed as another model class → payload (`DeckDetail`, `PracticeRunSummary`, `RatingSubmissionResult`); scalar-only but not one row of this module's table → payload (`RunProgress` is a fold over a run, `RatingSubmission` is a flow request, `BreakdownBucket` exists only for the breakdown). Payload modules may import anything under `app/models/`.
 
 At adoption this moves 14 classes out of `practice_card.py` and `practice_run.py` into `practice_run_payloads.py` and 11 (ten classes and the `DeckFieldOrderKey` alias) out of `deck.py` into `deck_payloads.py`, by cut-and-paste: class bodies and docstrings unchanged, so OpenAPI schema names — and therefore the generated frontend types — are byte-identical. Afterward every entity module imports only `app.models.base`, with one principled exception: a table class imported from a sibling for a `Relationship`, as `card.py` imports `CardFieldValue`.
 
@@ -46,14 +46,16 @@ Rejected — the convention had already drifted once without anyone noticing; a 
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A page or flow payload is found in the module named after its router; an entity module is exactly the table and its own row shapes, and imports only `base`.
-- The coming browse and statistics cycles have a home for their payloads decided in advance.
-- The half of the rule that can drift silently through imports is enforced by a test, in the same style as ADR 045's `create_all` guard.
+- The developer finds a page or flow payload in the module named after its router, and an entity module is exactly the table and its own row shapes.
+- The developer of the browse and statistics cycles has a home for their payloads decided in advance.
+- The developer gets the import half of the rule enforced by a test.
 
-Costs:
+**Negative**
 
-- Two more modules under `app/models/`, and `git blame` on the moved classes now points at a move commit before their real history.
-- The scalar-only test ("is this one row of this table?") is judgment, not mechanics, and the guard cannot see a misfiled scalar-only shape; review holds that line.
-- `<router>_payloads.py` naming is convention only; nothing fails if a payload module is misnamed.
+- The developer has two more modules under `app/models/`, and `git blame` on the moved classes points at a move commit before their real history.
+- The developer holds the scalar-only test, "is this one row of this table?", in review, since the guard cannot see a misfiled scalar-only shape.
+- The developer gets no failure when a payload module is misnamed; the `<router>_payloads.py` naming is convention only.
+
+**Neutral**
