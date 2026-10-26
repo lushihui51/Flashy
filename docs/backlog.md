@@ -6,3 +6,54 @@
 - B2. Does a summary's sort order survive a refresh, browser back, and a shared address, as a page's open tab and filters do?
   - Reason: PDR 005 keeps the open tab and filters across browser back and PDR 010 gives the summary three sort orders; neither says whether the chosen order is kept, and today it resets to "Gains first".
   - Owner: /product-decide
+- B3. Does the app have a dark appearance, and what are its colours?
+  - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
+  - Owner: /product-decide
+- B4. What does the top bar's search find, and where do its results appear?
+  - Reason: `SearchBar` in `frontend/src/components/shell/SearchBar.tsx` takes typing, and Enter does nothing.
+  - Owner: /product-decide
+- B5. What does the Home page show?
+  - Reason: `HomePage` in `frontend/src/pages/HomePage.tsx` reads "Coming soon.", and it is where the app opens; a practice starts only from New practice, reached from the Practice page and the top bar's shortcut.
+  - Owner: /product-decide
+- B6. What is a notification, and what does the Notifications page show?
+  - Reason: `NotificationsPage` in `frontend/src/pages/NotificationsPage.tsx` reads "Coming soon.", and nothing in the app produces a notification.
+  - Owner: /product-decide
+- B7. What is the app's mark?
+  - Reason: `Logo` in `frontend/src/components/shell/Logo.tsx` renders a placeholder.
+  - Owner: /product-decide
+- B8. On a wide screen, are a deck's cards shown and edited as a table, one column per field, with a field's type and order set from its column header?
+  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form.
+  - Owner: /product-decide
+- B9. Can the user create many cards at once by pasting rows of text?
+  - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
+  - Owner: /product-decide
+- B10. Does an unsaved deck form survive leaving the page or closing the browser?
+  - Reason: `DeckEditor` keeps its draft in `useReducer` state and loses it on leaving, while New practice's draft lives in its address (ADR 061).
+  - Owner: /product-decide
+- B11. Which kinds of value can a field hold besides text, and how does the user enter each on a card?
+  - Reason: `FieldType` in `app/models/field_def.py` has `text`, `image` and `audio`; `SUPPORTED_FIELD_TYPES` in `frontend/src/lib/fieldTypes.ts` allows `text` alone, and `CardFieldsForm` in `frontend/src/components/library/CardFieldsForm.tsx` has no widget for the other two.
+  - Owner: /product-decide
+- B12. Can the user rename a practice after making it?
+  - Reason: A practice's name is typed on New practice or defaults to the date and time, and `app/routers/api/practice_run.py` has no route that changes it.
+  - Owner: /product-decide
+- B13. Does the app work out from a card's ratings when it should next be reviewed, and tell the user what is due and when?
+  - Reason: A scheduler, FSRS, is wanted later; today the user starts every practice themselves (PDR 011).
+  - Owner: /product-decide
+- B14. Can the user work a deck toward a date, such as a test, with the app pacing practices to reach it?
+  - Reason: Wanted later; today the user starts every practice themselves (PDR 011).
+  - Owner: /product-decide
+- B15. Can the user share a deck with another user, and does the other user get a copy of their own or a view of the original?
+  - Reason: Wanted later; today a deck reaches no other user (PDR 012).
+  - Owner: /product-decide
+- B16. Where and how are a deck's and a subject's mastery numbers shown?
+  - Reason: The numbers exist (PDR 013); the places in question are the deck and subject rows in the library and on a subject's page, and the header of a deck's or a subject's own page.
+  - Owner: /product-decide
+- B17. How is Flashy hosted and deployed: the provider for the API and for the frontend, whether they share an origin, the managed PostgreSQL, Clerk's production keys, where `alembic upgrade` runs on a deploy, and where secrets live?
+  - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 072); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 072); and a startup check that the database is at alembic head (ADR 045).
+  - Owner: /code-decide
+- B18. In what order does a practice show its cards, across its decks and within one, and where does a card come back after it is rated Again?
+  - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in `start_practice_run`'s docstring in `app/services/practice_run.py`, while the retry's placement is ADR 037 and ADR 058.
+  - Owner: /product-decide
+- B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
+  - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 010) is the only change the user sees.
+  - Owner: /product-decide
