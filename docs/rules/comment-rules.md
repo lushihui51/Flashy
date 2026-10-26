@@ -65,6 +65,6 @@ A fact about one member is stated at that member, not repeated in the comment of
 
 **Only what is needed.** A comment is written when, and only when, the reader needs it: without it they would have to guess, or read code they should not have to read. A comment that is needed says only what the reader needs; what the reader already has is left out.
 
-**Present state.** A comment describes the code as it is now. It never says what the code used to be, what it replaced, when it was added, or what will be done later. The test: a sentence that only makes sense to a reader who saw an earlier version does not belong. A `TODO(defer:<tag>)` marker is the one exception: it says what is deferred.
+**Present state.** A comment describes the code as it is now. It never says what the code used to be, what it replaced, when it was added, or what will be done later. The test: a sentence that only makes sense to a reader who saw an earlier version does not belong.
 
 **References.** A comment gives its reason in its own words and is complete without any reference.

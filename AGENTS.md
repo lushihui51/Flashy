@@ -53,7 +53,7 @@
 - Modals/sheets are Radix Dialog (ADR 016), never a hand-rolled focus trap or scroll lock. A trigger that isn't a `Dialog.Trigger` descendant needs `SideDrawer.tsx`'s `triggerRef` + `onPointerDownOutside` pattern, or Radix silently blocks it while the dialog is open
 - `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`) and never side-effect (ADR 006): every non-ok response throws an `ApiError` carrying its status, a structured `{code, message}` detail an `ApiDetailError` that shape-aware callers `instanceof`-check, and a page says "not found" only when `isNotFound` holds (ADR 022, ADR 065). Errors render inline at the call site; the connectivity banner is the one app-level channel, and there is no ErrorBoundary, global cache handler, or toast (ADR 035, ADR 062)
 - Connection state is `AppShell`'s `useConnectionStatus` alone: pages never read it, and nothing outside tests calls `onlineManager.setOnline` (ADR 063)
-- `// TODO(defer:<tag>)` marks every deliberately deferred item, backend included; `grep -rn "TODO(defer:" app/ frontend/src/` before calling a task or PR done
+- Nothing deferred is marked in code: a deferred item is a question in `docs/backlog.md` (`docs/rules/backlog-rules.md`)
 - Component tests: the Vitest environment is `node`; a DOM test opts in per file with `// @vitest-environment jsdom` (ADR 017). Reuse `src/test/testUtils.tsx` (`renderWithRouter`, `renderWithProviders`) and `src/test/mocks/clerk.ts` rather than re-mocking. RTL auto-cleanup doesn't fire (no `globals: true`); `test/setup.ts`'s `afterEach(cleanup)` does — don't remove it
 
 ## Mastery model

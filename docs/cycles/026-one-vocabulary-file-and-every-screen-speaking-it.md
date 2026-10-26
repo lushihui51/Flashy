@@ -161,7 +161,7 @@ Every test that asserted one of these string details asserts the detail object's
 - The frontend's rendering of any code: T3 to T6.
 - A code for a refusal no screen reaches: the validation errors of a configuration's arrays, a card with no values, the deck-copy and deletion-impact refusals: never.
 - Any HTTP status change: never.
-- Mapping a database outage to 503 on an endpoint other than health: a later cycle; the `TODO(defer:db-unavailable-503)` marker in `app/main.py` stays.
+- Mapping a database outage to 503 on an endpoint other than health: a later cycle.
 
 **Done when**
 
@@ -355,7 +355,7 @@ None.
 
 **Goal**
 
-The list of practices, New practice, a practice's own page, the run page and the summary read the file's words, with "Add practice", "New configuration…", "Subject · Deck", "Practice status" and "practiced", every failure through `failureSentence`, and the two deferred markers placed.
+The list of practices, New practice, a practice's own page, the run page and the summary read the file's words, with "Add practice", "New configuration…", "Subject · Deck", "Practice status" and "practiced", every failure through `failureSentence`.
 
 **Dependencies**
 
@@ -388,8 +388,6 @@ Every failure renders through `failureSentence`, and nothing reads `error.messag
 
 The run page and the summary keep what they are: one bar above the card shows the practice's progress in four parts, spoken as "N passed, N failed, N retrying, N unseen", its whole the number of cards the practice started with and never changing, a card rated "Again" counting as retrying until its retry is rated; the cards group by card id into chains and one fold in `app/services/practice_run.py` serves both the bar and the summary. `RunBreakdown.tsx` is the one component rendering the summary at completion and on a practice's own page, never fetching, under the pages' one query key `['practice_run_breakdown', <run id>]`; a card's mastery there is the fold over all its deck's active fields with a never-reviewed field at the prior, and its change the after-fold minus the before-fold; a field deleted after the practice used it stays in every attempt that asked it as "Removed field", with no value and no rating, through `ResolvedFieldValue.removed`, and the fields list shows only the deck's current fields.
 
-Two markers, in the form the comment rules allow. In `RunBreakdown.tsx`, at the `useState` holding the sort order: `// TODO(defer:summary-sort) whether the chosen sort order survives a refresh, browser back and a shared address is undecided; it lives in component state until then.` In `FieldValue.tsx`, at the branch rendering an image or audio chip: `// TODO(defer:field-types) how a picture or audio value shows on a card during a practice and in the summary is undecided; the chip stands in until then.`
-
 The seven test files assert the old words by role and text; change those assertions and keep every case: the group and item names read "<Subject> · <Deck>", the button "New configuration…", the Practice page's button "Add practice".
 
 **Out of scope**
@@ -397,13 +395,13 @@ The seven test files assert the old words by role and text; change those asserti
 - The breadcrumb rows on these pages: never here; they are another cycle's.
 - The browser tab's title: T7.
 - Any change to what the draft keeps, the bar counts or the summary sorts: never.
-- Answering either marker's question: never in this cycle.
+- Whether the summary's sort order survives a refresh, and how a picture or audio value shows on a card: a later cycle.
 - A sentence for `run_active`: never; no screen reaches it.
 
 **Done when**
 
 - In `frontend/`, `npx vitest run src/pages/PracticeOverviewPage.test.tsx src/pages/PracticeCreatePage.test.tsx src/pages/PracticeDetailsPage.test.tsx src/pages/PracticeRunPage.test.tsx src/pages/practicePrefilterChain.test.tsx src/components/practice/RunBreakdown.test.tsx` passes, with the three "New practice" button assertions reading "Add practice", the eight "New configuration" button assertions reading "New configuration…", and the six group or item names reading subject first, as "Alpha · Shared Deck Name".
-- `grep -rn "practised\|Session status\|error.message\|No deck configurations yet\|label=\"New configuration\"\|no longer produces" frontend/src/pages/PracticeOverviewPage.tsx frontend/src/pages/PracticeCreatePage.tsx frontend/src/pages/PracticeDetailsPage.tsx frontend/src/pages/PracticeRunPage.tsx frontend/src/components/practice/` prints nothing, and `grep -rn "TODO(defer:summary-sort)" frontend/src/components/practice/RunBreakdown.tsx` and `grep -rn "TODO(defer:field-types)" frontend/src/components/practice/FieldValue.tsx` each print one line.
+- `grep -rn "practised\|Session status\|error.message\|No deck configurations yet\|label=\"New configuration\"\|no longer produces" frontend/src/pages/PracticeOverviewPage.tsx frontend/src/pages/PracticeCreatePage.tsx frontend/src/pages/PracticeDetailsPage.tsx frontend/src/pages/PracticeRunPage.tsx frontend/src/components/practice/` prints nothing.
 - At `localhost:5173` with the backend running: the Practice page's header button reads "Add practice"; New practice's groups and its "Selected" rows read "<Subject> · <Deck>" and its toolbar button "New configuration…"; the delete confirm on a practice says "The decks it practiced are not affected.".
 - At `localhost:5173`, with the same practice's run page open in two browser tabs: rating the current card in the first and then in the second shows "This is not the current card." or "This card has already been rated." in the second.
 - At `localhost:5173`: after completing a practice whose one configuration uses a field, removing that field in the deck editor and tapping Re-run on the practice's page shows "This practice can't be re-run. A field it practiced has since been removed from each of its decks.".
