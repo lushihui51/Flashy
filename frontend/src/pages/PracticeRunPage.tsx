@@ -13,6 +13,7 @@ import RunBreakdown from 'src/components/practice/RunBreakdown';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
@@ -97,7 +98,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
       {breakdownQuery.isError && (
         <p role="alert" className="text-sm text-(--color-danger)">
-          {breakdownQuery.error.message}
+          {failureSentence(breakdownQuery.error, 'Practice not found.')}
         </p>
       )}
       {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
@@ -190,7 +191,7 @@ function PracticeCardView({
           </button>
           {rateMutation.isError && (
             <p role="alert" className="text-sm text-(--color-danger)">
-              {rateMutation.error.message}
+              {failureSentence(rateMutation.error, 'Practice not found.')}
             </p>
           )}
         </>

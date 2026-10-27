@@ -11,7 +11,8 @@ import ConfigurationPickList from 'src/components/practice/ConfigurationPickList
 import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
-import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { failureSentence } from 'src/lib/failureSentence';
+import { MISSING_CONFIGURATION_MESSAGE } from 'src/lib/practiceCopy';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
   readSelectedConfigIds,
@@ -20,7 +21,7 @@ import {
   withSelectedConfigIds,
 } from 'src/lib/practiceSelection';
 
-type RowError = { configId: string; message: string };
+type RowError = { configId: string; sentence: string };
 
 /** The overview's own params — the only ones Cancel hands back, so the draft never
  * leaves this page. */
@@ -146,19 +147,20 @@ export default function PracticeCreatePage() {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate(`/practice/${session.id}`);
     },
+    // The code decides only where the sentence renders: against the offending row for
+    // `stale_config`, above the list for everything else.
     onError: (error: Error) => {
+      const sentence = failureSentence(error, 'Deck configuration not found.');
       if (error instanceof ApiDetailError) {
         if (error.detail.code === 'stale_config' && error.detail.config_id) {
-          setRowError({
-            configId: error.detail.config_id,
-            message: 'This configuration no longer produces any prompts — edit it.',
-          });
+          setRowError({ configId: error.detail.config_id, sentence });
           return;
         }
         if (error.detail.code === 'config_not_found') {
           // Removed from the URL the same way the settled-list check removes it, so
-          // pressing Create again proceeds with the rest.
-          setTopError(MISSING_CONFIGURATION_MESSAGE);
+          // pressing Create again proceeds with the rest; the same state as that check,
+          // so the two never show the sentence twice.
+          setTopError(sentence);
           const goneId = error.detail.config_id;
           if (goneId) {
             setSearchParams(
@@ -172,15 +174,8 @@ export default function PracticeCreatePage() {
           queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
           return;
         }
-        // Emptiness is a property of the whole practice, so this names no configuration
-        // and renders above the list rather than against a row.
-        if (error.detail.code === 'no_cards') {
-          setTopError(NO_CARDS_MESSAGE);
-          return;
-        }
       }
-      // duplicate_deck (reachable only from a hand-edited URL) and anything else.
-      setSaveError(error.message);
+      setSaveError(sentence);
     },
   });
 
@@ -299,7 +294,7 @@ export default function PracticeCreatePage() {
         </h2>
         {selectedCount === 0 ? (
           <p className="text-sm text-(--color-text-muted)">
-            Select at least one configuration to practise.
+            Select at least one configuration to practice.
           </p>
         ) : allConfigsQuery.isError ? (
           <p role="alert" className="text-sm text-(--color-danger)">
@@ -321,12 +316,12 @@ export default function PracticeCreatePage() {
       </div>
 
       <div className="flex justify-end py-2">
-        <AddButton label="New configuration" onClick={newConfiguration} />
+        <AddButton label="New configuration…" onClick={newConfiguration} />
       </div>
 
       {configsQuery.isError && (
         <p role="alert" className="text-sm text-(--color-danger)">
-          Could not load deck configurations.
+          Could not load configurations.
         </p>
       )}
 
@@ -345,9 +340,9 @@ export default function PracticeCreatePage() {
       {configsQuery.data && groups.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-8">
           <p className="text-(--color-text-muted)">
-            {filtered ? 'No configurations match these filters.' : 'No deck configurations yet.'}
+            {filtered ? 'No configurations match these filters.' : 'No configurations yet.'}
           </p>
-          {/* No New configuration button here — the toolbar's is always on screen. */}
+          {/* No New configuration… button here — the toolbar's is always on screen. */}
           {filtered && (
             <button
               type="button"

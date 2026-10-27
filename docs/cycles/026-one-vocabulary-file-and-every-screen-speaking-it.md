@@ -440,7 +440,7 @@ Read the `onError` of `saveMutation` in `DeckConfigurationEditor.tsx`: it sends 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -497,7 +497,28 @@ The seven test files assert the old words by role and text; change those asserti
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named run prints `6 passed` files and `106 passed` tests. The three "New practice" button assertions, one in `PracticeOverviewPage.test.tsx` and two in `practicePrefilterChain.test.tsx`, read "Add practice". The eight "New configuration" button assertions, four in each of `PracticeCreatePage.test.tsx` and the chain test, read "New configuration…". The six group or item names read subject first: "Alpha · Shared Deck Name" and "Beta · Shared Deck Name" twice each in `PracticeCreatePage.test.tsx`, and "Beta · Beta Deck" and "Alpha · Alpha Deck" in the chain test.
+- The grep prints nothing (exit 1).
+- In headless Chromium at 390×844 against `localhost:5173`, the Practice page's header row reads "Practice" and "Add practice", and its tablist is named "Practice status". On New practice, the groups read "CompTIA A+ · Commands", "CompTIA A+ · Ports" and "T6 check · T6 Rerun". With a Ports configuration ticked, the Selected row reads "Oct 1, 2026 at 1:18 PM" over "CompTIA A+ · Ports". The toolbar button reads "New configuration…". The delete confirm on the Practice page and on a practice's own page both read "Delete this practice?" over "Its progress will be gone. The decks it practiced are not affected.". Both were cancelled.
+- A subject "T6 check" was made through the API, with a deck "T6 Rerun" holding the fields Term, Definition and Extra and two cards, a configuration "Term → Extra", a completed practice "T6 rerun check" and an active practice "T6 two-tab check". The active practice's run page was opened in two tabs. In the first, rating Extra Good and tapping Next card moved it to "term 2". The same in the second showed "This card has already been rated.".
+- On Edit deck for "T6 Rerun", removing Extra and saving asked "Save changes?" with "This removes 1 field from 2 cards, deletes 1 deck configuration and deletes 1 active practice. This can't be undone.". After Save, the fields read Term and Definition. Re-run on "T6 rerun check" then showed "This practice can't be re-run. A field it practiced has since been removed from each of its decks." and stayed on that practice's page. The subject, the deck with its two cards and the completed practice stay in the dev database. The deck save deleted the configuration and the active practice, as its confirm said.
+- Over the whole frontend, `npx vitest run` printed `538 passed`, and `npm run lint` and `npm run build` exited 0. `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing.
+
+Departures:
+
+- The Practice page's delete failure now renders inside the confirm dialog, as the practice's own page does, and a new attempt clears it. It used to render below the list, under the open dialog's scrim. A new case, "a delete of a practice already gone says Practice not found. inside the dialog", covers it.
+- In `PracticeCreatePage.tsx`, `onError` takes one `failureSentence(error, 'Deck configuration not found.')` and branches on `detail.code` only to place it. `stale_config` goes to its row. `config_not_found` goes to `topError`, which the settled-list check also sets, so the sentence never shows twice. Every other failure goes to `saveError`. The `no_cards` branch is gone: it set `topError`, which renders directly above `saveError`, so the sentence still renders in the same place.
+- The row error's field is renamed from `message` to `sentence` in `RowError` and in `ConfigurationPickList`'s `rowError` prop. It holds the function's sentence, and `rowError.message` was the one hit of T7's `.message` grep.
+- Two sentences outside the Done-when grep now read the file's words: "Could not load deck configurations." reads "Could not load configurations.", and "Select at least one configuration to practise." reads "practice.".
+- `practiceCopy.ts`'s comments said the pages render its constants so that the pages agree. They now say `failureSentence` renders them by code, and that the module keeps them so a screen with no failed request uses the same words.
+- Tests that read a backend message now read the sentence. The run page's rating failure answers a `card_already_rated` detail and reads "This card has already been rated.". The practice page's 500 delete reads "Flashy is having trouble right now. Try again in a moment.", and `nothing_to_rerun` reads its sentence. New practice's "any other error" case answers the detail "boom" and reads "Something went wrong.". Test names that named a button now name it by its new words.
+- Prettier was run on the two test files this task reformatted. `PracticeCreatePage.test.tsx` already had four unformatted statements at HEAD. Prettier reflowed them too, and they were put back as they were.
+- `FieldValue.tsx`, `RunBreakdown.tsx` and `RunBreakdown.test.tsx` are unchanged, because every word they show is already a row of the file.
+- New practice's header shows "N selected" beside Create, and `docs/vocabulary.md` has no row for it. It stays as it was. The other fix is to add that row or remove the count, and that choice is yours.
+
+Read `onError` of `createMutation` in `PracticeCreatePage.tsx`: it is the one place where a code decides where a failure renders. Every other site only swaps `error.message` for a `failureSentence` call.
 
 ### T7 — The browser tab's title
 

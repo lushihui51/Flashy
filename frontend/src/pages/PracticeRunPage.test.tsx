@@ -408,11 +408,19 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     expect(await screen.findByText('Bonsoir')).toBeInTheDocument();
   });
 
-  it('shows the error and keeps the chosen ratings when the submit fails', async () => {
+  it('shows the sentence and keeps the chosen ratings when the submit fails', async () => {
     mockRun();
     server.use(
       http.post(`${BASE}/api/practice_cards/:id/rate`, () =>
-        HttpResponse.json({ detail: 'practice_card has already been rated' }, { status: 400 }),
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'card_already_rated',
+              message: 'practice_card has already been rated',
+            },
+          },
+          { status: 400 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -423,9 +431,7 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     await user.click(screen.getByRole('button', { name: 'Good' }));
     await user.click(screen.getByRole('button', { name: 'Next card' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'practice_card has already been rated',
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('This card has already been rated.');
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
   });
 });
