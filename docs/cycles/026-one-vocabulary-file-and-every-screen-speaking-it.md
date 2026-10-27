@@ -64,7 +64,6 @@ The Sentences table's Code column carries these codes: `subject_name_taken`, `de
 - A line in AGENTS.md pointing at the file: never in a cycle.
 - Renaming anything in the code to match a word, or a word to match the code: never.
 - A lint rule, guard test or allowlist over the file: never.
-- The table in `docs/cycles/004-practice-setup.md`: never; it stays as written and nothing cites it.
 
 **Done when**
 

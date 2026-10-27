@@ -150,12 +150,12 @@ describe('DeckDetailPage', () => {
     mockDeck();
     renderAtDeckRoute();
 
-    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
-    const subjectLink = await screen.findByRole('link', { name: /French/ });
-    expect(libraryLink).toHaveAttribute('href', '/library');
-    expect(subjectLink).toHaveAttribute('href', '/subjects/s1');
-    // Same row: a shared ancestor no further out than the crumb container itself.
-    expect(libraryLink.parentElement).toBe(subjectLink.parentElement);
+    await screen.findByRole('link', { name: /French/ });
+    const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const links = within(row).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/library', '/subjects/s1']);
+    expect(links[0]).toHaveTextContent('Your library');
+    expect(links[1]).toHaveTextContent('French');
   });
 
   it('the library crumb link carries no ?tab — a structural link goes to the place, not a remembered view', async () => {

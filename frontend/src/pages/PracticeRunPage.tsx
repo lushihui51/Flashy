@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,6 +10,7 @@ import FieldValue from 'src/components/practice/FieldValue';
 import RatingChip from 'src/components/practice/RatingChip';
 import RunProgressBar from 'src/components/practice/RunProgressBar';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -32,14 +32,14 @@ export default function PracticeRunPage() {
 
   return (
     <div className="flex flex-col p-4">
-      <Link
-        to={`/practice/${practiceSessionId}`}
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        {/* Static until the session's real name is fetched, then upgraded. */}
-        {runQuery.data?.session_name ?? 'Practice'}
-      </Link>
+      <Breadcrumb
+        places={[
+          { label: 'Practice', to: '/practice' },
+          ...(runQuery.data
+            ? [{ label: runQuery.data.session_name, to: `/practice/${practiceSessionId}` }]
+            : []),
+        ]}
+      />
 
       {runQuery.isError &&
         (isNotFound(runQuery.error) ? (

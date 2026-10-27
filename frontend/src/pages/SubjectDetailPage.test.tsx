@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -116,8 +116,11 @@ describe('SubjectDetailPage', () => {
     mockSubject();
     renderAtSubjectRoute();
 
-    const crumb = await screen.findByRole('link', { name: /Your library/ });
-    expect(crumb).toHaveAttribute('href', '/library');
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    const links = within(row).getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent('Your library');
+    expect(links[0]).toHaveAttribute('href', '/library');
   });
 
   it('the deck row links to its detail page', async () => {

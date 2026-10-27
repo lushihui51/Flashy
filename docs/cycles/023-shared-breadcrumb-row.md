@@ -18,7 +18,7 @@ Judgement: On a live server, open a subject's page, a deck's page, a practice's 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -97,4 +97,34 @@ Page-view state, tabs and filters, lives in the URL, never in `useState`; the pa
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/components/ui/Breadcrumb.test.tsx --reporter=verbose` printed `Test Files 1 passed (1)`, `Tests 4 passed (4)`, with ✓ on "renders each place as a link to its address, in order, inside a navigation named Breadcrumb", "puts one separator between places and none before the first", "renders a place's icon inside its link" and "renders a single place with no separator".
+- `npx vitest run src/pages --reporter=verbose` printed `Test Files 9 passed (9)`, `Tests 155 passed (155)`, with ✓ on `PracticeRunPage > shows Practice above the practice's name, linking to the list of practices`. That case clicks the link named "Practice" inside the row and asserts the location is exactly `/practice`.
+- `grep -rn "ChevronLeft" frontend/src/pages/` printed nothing. `grep -rl "components/ui/Breadcrumb" frontend/src/pages/` printed `PracticeRunPage.tsx`, `DeckDetailPage.tsx`, `SubjectDetailPage.tsx` and `PracticeDetailsPage.tsx` under `frontend/src/pages/`, and nothing else.
+- Headless Chromium through playwright-core at `localhost:5173`, signed out of Clerk, with the backend on `DEV_AUTH_USER_ID`:
+  - The deck "Commands" showed the row "Your library › CompTIA A+": `/library`, then `/subjects/65f5…` with an svg icon inside its link.
+  - The subject "CompTIA A+" showed "Your library": `/library`.
+  - A practice's own page showed "Practice": `/practice`.
+  - Its run page showed "Practice › Oct 1, 2026 at 1:18 PM": `/practice`, then `/practice/0ec5…`.
+  - Clicking each place landed on its address. The screenshots match the row as `DeckDetailPage.tsx` drew it before: the leading chevron, 13px secondary text and the muted "›".
+- At `localhost:5173`, the count of navigations named Breadcrumb was 0 on `/library`, `/practice`, `/`, `/subjects/new`, `/decks/new`, `/cards/new`, `/deck-configurations/new` and `/practice/new`.
+- At `localhost:5173`, back navigation:
+  - On `/library` I clicked the Decks tab, which made the URL `/library?tab=decks`, then opened a deck from the Decks section and went back. It landed on `/library?tab=decks` with the Decks tab selected.
+  - On `/practice` I clicked the Completed tab and picked "Commands" in the deck filter, which made the URL `/practice?status=completed&subject=65f5…&deck=d82f…`. I then opened the practice `/practice/6b13…` and went back. It landed on the same URL, with the Completed tab selected and the deck filter showing "Commands".
+  - The browser reported no page errors.
+- Over the whole frontend, `npx vitest run` printed 47 files and 516 tests passed, `npm run lint` printed no problems, and `npm run build` built. The build's chunk-size warning is the one it already printed before this task.
+
+Departures from Details and Files: none.
+
+Changes to existing tests that the engineer should know about:
+
+- `DeckDetailPage.test.tsx` "renders a two-link breadcrumb chain: library then subject, both in one row" used to assert that both links shared a `parentElement`. It now asserts, inside the navigation named Breadcrumb, the two links' order, addresses and labels.
+- The row cases in `SubjectDetailPage.test.tsx`, `PracticeDetailsPage.test.tsx` and `PracticeRunPage.test.tsx` now find the row as the navigation named Breadcrumb.
+- The not-found case in `PracticeDetailsPage.test.tsx` now asserts that no such navigation exists.
+- The 404 case in `PracticeRunPage.test.tsx` now also asserts that the row's "Practice" link to `/practice` renders in the error state.
+- `renderRun` gained a `/practice` route for the new case.
+
+Behaviour change on the run page: before the run state loads, its row used to read "Practice" and link to `/practice/<id>`. It now reads "Practice" and links to `/practice`, as Details requires.
+
+Code to read: none beyond `frontend/src/components/ui/Breadcrumb.tsx`, which is short.

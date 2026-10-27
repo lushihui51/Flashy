@@ -1,11 +1,12 @@
-import { ChevronLeft, Pencil, Play } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Pencil, Play } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -58,13 +59,7 @@ export default function SubjectDetailPage() {
 
   return (
     <div className="p-4">
-      <Link
-        to="/library"
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        Your library
-      </Link>
+      <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
       {subject && (
         <div className="mt-2 flex items-start gap-3">

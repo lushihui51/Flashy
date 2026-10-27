@@ -10,7 +10,7 @@ The practice surfaces name concepts users touch constantly: practices, deck conf
 
 ## Decision
 
-We will keep the user-facing word set as a canonical contract — one word per concept — maintained as the vocabulary table in the governing cycle file (`docs/cycles/004-practice-setup.md`, Contracts): **practice**, **deck configuration**, **New practice**, **New configuration**; **Prompt side** / **Answer side**; **Always shown** / **Random draw**; **Not used**; and **"Each card shows [1] [2] … of these"** for the draw counts.
+We will keep the user-facing word set as a canonical contract — one word per concept — maintained as the vocabulary table in the governing cycle file: **practice**, **deck configuration**, **New practice**, **New configuration**; **Prompt side** / **Answer side**; **Always shown** / **Random draw**; **Not used**; and **"Each card shows [1] [2] … of these"** for the draw counts.
 
 The rule behind the table: schema identifiers never appear in UI copy. Tables, models, and endpoints keep their names (`deck_practice_config`, `*_pool_ids` are accurate, deck-first names); what changes is that no label, heading, button, or error string may echo them. Changing a user-facing word means changing the vocabulary table first, then every surface that uses it.
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -101,6 +101,7 @@ function renderRun(practiceSessionId = 'ps1') {
     <Routes>
       <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
       <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
+      <Route path="/practice" element={<LocationProbe />} />
     </Routes>,
     [`/practice/${practiceSessionId}/run`],
   );
@@ -171,7 +172,24 @@ describe('PracticeRunPage', () => {
     mockRun(runState({ session_name: 'Kanji drills' }));
     renderRun();
 
-    expect(await screen.findByRole('link', { name: 'Kanji drills' })).toBeInTheDocument();
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(await within(row).findByRole('link', { name: 'Kanji drills' })).toBeInTheDocument();
+  });
+
+  it("shows Practice above the practice's name, linking to the list of practices", async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun('ps1');
+
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    await within(row).findByRole('link', { name: 'Evening run' });
+    const links = within(row).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Practice', 'Evening run']);
+    expect(row).toHaveTextContent(/^Practice›Evening run$/);
+
+    await user.click(within(row).getByRole('link', { name: 'Practice' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/practice$/);
   });
 
   it('shows a breadcrumb back to its own session, for whichever id is in the URL', async () => {
@@ -213,6 +231,11 @@ describe('PracticeRunPage', () => {
     renderRun('nope');
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
+    const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getByRole('link', { name: 'Practice' })).toHaveAttribute(
+      'href',
+      '/practice',
+    );
   });
 
   it('a load failure other than 404 says it could not load, not that it was not found', async () => {

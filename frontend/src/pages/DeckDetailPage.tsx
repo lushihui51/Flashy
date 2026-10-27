@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ChevronLeft, Pencil, Play } from 'lucide-react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Pencil, Play } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
 import { readSubject } from 'src/api/subject';
@@ -10,6 +10,7 @@ import CardTable from 'src/components/library/CardTable';
 import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
@@ -101,21 +102,20 @@ export default function DeckDetailPage() {
 
   return (
     <div className="p-4">
-      <div className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)">
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        <Link to="/library">Your library</Link>
-        {subject && (
-          <>
-            <span aria-hidden="true" className="text-(--color-text-muted)">
-              ›
-            </span>
-            <Link to={`/subjects/${subject.id}`} className="inline-flex items-center gap-1">
-              <SubjectIcon icon={subject.icon} className="h-[15px] w-[15px]" />
-              {subject.name}
-            </Link>
-          </>
-        )}
-      </div>
+      <Breadcrumb
+        places={[
+          { label: 'Your library', to: '/library' },
+          ...(subject
+            ? [
+                {
+                  label: subject.name,
+                  to: `/subjects/${subject.id}`,
+                  icon: <SubjectIcon icon={subject.icon} className="h-[15px] w-[15px]" />,
+                },
+              ]
+            : []),
+        ]}
+      />
 
       <h1 className="mt-1 text-[22px] font-medium text-(--color-text)">{deck.name}</h1>
       <p className="text-[13px] text-(--color-text-muted)">

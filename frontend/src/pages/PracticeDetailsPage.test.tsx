@@ -110,8 +110,9 @@ describe('PracticeDetailsPage', () => {
     const user = userEvent.setup();
     renderDetails();
 
-    const crumb = await screen.findByRole('link', { name: 'Practice' });
-    await user.click(crumb);
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getAllByRole('link')).toHaveLength(1);
+    await user.click(within(row).getByRole('link', { name: 'Practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice');
   });
@@ -258,7 +259,7 @@ describe('PracticeDetailsPage', () => {
     renderDetails('nope');
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });
 
   it('a load failure other than 404 says it could not load, not that it was not found', async () => {
