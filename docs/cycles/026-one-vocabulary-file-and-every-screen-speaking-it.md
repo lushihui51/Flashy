@@ -291,7 +291,7 @@ Nothing in the code needs reading beyond `failureSentence` itself.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -339,7 +339,25 @@ The three test files assert the old labels by role and text; change those assert
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The three files print `59 passed`. The library's three "New subject" and one "New deck" button assertions read "Add subject" and "Add deck". The subject page's empty case finds "No decks yet." and "0 decks · 0 cards", and its zero-card row case finds "0 cards". The deck page's three "New configuration" assertions read "Add configuration".
+- The grep prints nothing (exit 1).
+- Headless Chromium at 390×844 against `localhost:5173`, with the toolbar row read as the add button's parent's text: the library's Subjects tab shows "9 subjects Add subject" and its Decks tab "3 decks Add deck". On CompTIA A+, the element after the heading block is the Practice row, and the toolbar shows "2 decks · 75 cards Add deck". On Ports, the element after the `h1` is the Practice row, the Cards tab shows "21 cards · 4 fields Add card", and the Configurations tab "3 configurations Add configuration".
+- On Reformer Repertoire, the Cards tab shows "0 cards · 5 fields Add card" above "No cards in this deck yet.", and the Configurations tab "0 configurations Add configuration" above "No configurations yet.".
+- A configuration "T4 delete check 360759" was created on Ports through the API, and the deck's Configurations tab was opened in two tabs. Deleting it in the first closed the dialog. Deleting it in the second showed "Deck configuration not found." inside the dialog. The check deleted the configuration, so the dev database holds what it held before.
+- Over the whole frontend, `npx vitest run` printed `534 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures:
+
+- The configuration delete's failure now renders inside the confirm dialog, as the practice page's delete does, and a new attempt clears the old sentence. It used to render below the list. There the open dialog's scrim covered it, and Cancel cleared it before the user could read it.
+- The Library's "Add subject" and "Add deck" now show `AddButton`'s plus icon, as every other add button does.
+- `DeckDetailPage.test.tsx` gains one case, "a delete of a configuration already gone says Deck configuration not found.", which answers a 404 and finds the sentence in the dialog. The empty-configurations case now finds "No configurations yet." exactly and "0 configurations", and is renamed to match. Three test and group names that said "meta line" or "No cards" now name the toolbar label and "0 cards".
+- In `SubjectDetailPage.tsx`, `formatFieldNames`'s interface comment said the deck's field count was on "the deck detail page's own meta line". It now says the deck page's Cards tab toolbar.
+
+After a "Deck configuration not found." in the second tab, the gone row stays in that tab's list until the query refetches, for example on window focus. This task does not change that.
+
+Nothing in the code needs reading beyond the three pages' diffs.
 
 ### T5 — The forms and the shortcut
 

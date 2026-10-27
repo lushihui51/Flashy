@@ -146,7 +146,7 @@ describe('LibraryPage', () => {
     expect(await screen.findByText('No subjects yet.')).toBeInTheDocument();
     // The count row's create button is the only one; the empty state is its text
     // alone. getByRole throws on a second match.
-    expect(screen.getByRole('button', { name: 'New subject' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add subject' })).toBeInTheDocument();
   });
 
   it('shows an empty state with a create button when there are no decks', async () => {
@@ -159,7 +159,7 @@ describe('LibraryPage', () => {
 
     expect(await screen.findByText('No decks yet.')).toBeInTheDocument();
     // The count row's create button is the only one.
-    expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
   });
 
   it('the Subjects tab create button is present and sized for touch', async () => {
@@ -167,7 +167,7 @@ describe('LibraryPage', () => {
     renderWithProviders(<LibraryPage />);
 
     await screen.findByText('Math');
-    const button = screen.getByRole('button', { name: 'New subject' });
+    const button = screen.getByRole('button', { name: 'Add subject' });
     expect(button).toBeInTheDocument();
     expect(button.className).toMatch(/h-9/);
   });
@@ -183,7 +183,7 @@ describe('LibraryPage', () => {
     );
 
     await screen.findByText('Math');
-    await user.click(screen.getByRole('button', { name: 'New subject' }));
+    await user.click(screen.getByRole('button', { name: 'Add subject' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/subjects/new');
   });

@@ -131,7 +131,7 @@ describe('SubjectDetailPage', () => {
     expect(row).toHaveAttribute('href', '/decks/d1');
   });
 
-  describe('meta line pluralization', () => {
+  describe('toolbar label pluralization', () => {
     it('reads "1 deck · 6 cards" for a single deck', async () => {
       mockSubject();
       renderAtSubjectRoute();
@@ -160,7 +160,7 @@ describe('SubjectDetailPage', () => {
   });
 
   describe('deck row subtitle (field names) and meta (card count)', () => {
-    it('meta reads "No cards" for a deck with zero cards; subtitle is just the field names', async () => {
+    it('meta reads "0 cards" for a deck with zero cards; subtitle is just the field names', async () => {
       mockSubject({
         decksData: [
           { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, field_names: ['Front'] },
@@ -168,7 +168,7 @@ describe('SubjectDetailPage', () => {
       });
       renderAtSubjectRoute();
 
-      expect(await screen.findByText('No cards')).toBeInTheDocument();
+      expect(await screen.findByText('0 cards')).toBeInTheDocument();
       expect(screen.getByText('Front')).toBeInTheDocument();
     });
 
@@ -225,8 +225,8 @@ describe('SubjectDetailPage', () => {
     mockSubject({ decksData: [] });
     renderAtSubjectRoute();
 
-    expect(await screen.findByText('No decks in this subject yet.')).toBeInTheDocument();
-    expect(screen.getByText('Decks')).toBeInTheDocument();
+    expect(await screen.findByText('No decks yet.')).toBeInTheDocument();
+    expect(screen.getByText('0 decks · 0 cards')).toBeInTheDocument();
     // The row's button is the one add control; the empty state is its text alone.
     // getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();

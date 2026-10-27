@@ -12,14 +12,10 @@ import { isNotFound } from 'src/api/unwrap';
 
 /** First two field names, `+N` for the rest — computed by count, not measured text,
  * so it's deterministic regardless of how the names actually render. The row carries
- * no total field count — that lives on the deck detail page's own meta line. */
+ * no total field count — that lives in the deck page's Cards tab toolbar. */
 function formatFieldNames(names: string[]): string {
   if (names.length <= 2) return names.join(', ');
   return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
-}
-
-function deckMeta(cardCount: number): string {
-  return cardCount === 0 ? 'No cards' : pluralize(cardCount, 'card');
 }
 
 export default function SubjectDetailPage() {
@@ -75,12 +71,6 @@ export default function SubjectDetailPage() {
         </div>
       )}
 
-      {decks && (
-        <p className="mt-2 text-[13px] text-(--color-text-muted)">
-          {pluralize(decks.length, 'deck')} · {pluralize(totalCards, 'card')}
-        </p>
-      )}
-
       <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
@@ -108,12 +98,14 @@ export default function SubjectDetailPage() {
         {/* The add control sits with the collection it adds to, carrying this
             subject so the deck form opens with it preselected. */}
         <div className="flex items-center justify-between">
-          <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
+          <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+            {decks ? `${pluralize(decks.length, 'deck')} · ${pluralize(totalCards, 'card')}` : 'Decks'}
+          </h2>
           <AddButton label="Add deck" onClick={addDeck} />
         </div>
         {decks && decks.length === 0 ? (
           // No button here — the row's above is the one add control.
-          <p className="py-8 text-(--color-text-muted)">No decks in this subject yet.</p>
+          <p className="py-8 text-(--color-text-muted)">No decks yet.</p>
         ) : (
           <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
             {(decks ?? []).map((deck) => (
@@ -123,7 +115,7 @@ export default function SubjectDetailPage() {
                   subtitle={
                     deck.field_names.length > 0 ? formatFieldNames(deck.field_names) : undefined
                   }
-                  meta={deckMeta(deck.card_count)}
+                  meta={pluralize(deck.card_count, 'card')}
                   to={`/decks/${deck.id}`}
                 />
               </li>

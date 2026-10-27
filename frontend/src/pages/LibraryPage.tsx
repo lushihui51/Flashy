@@ -4,6 +4,7 @@ import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
+import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
 
 const TABS = ['subjects', 'decks'] as const;
@@ -11,19 +12,6 @@ type Tab = (typeof TABS)[number];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
-}
-
-function CreateButton({ label, to }: { label: string; to: string }) {
-  const navigate = useNavigate();
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(to)}
-      className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-    >
-      {label}
-    </button>
-  );
 }
 
 function EmptyState({ copy }: { copy: string }) {
@@ -35,6 +23,7 @@ function EmptyState({ copy }: { copy: string }) {
 }
 
 export default function LibraryPage() {
+  const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,7 +74,7 @@ export default function LibraryPage() {
             <h2 className="text-sm font-medium text-(--color-text-muted)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
-            <CreateButton label="New subject" to="/subjects/new" />
+            <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
@@ -121,7 +110,7 @@ export default function LibraryPage() {
             <h2 className="text-sm font-medium text-(--color-text-muted)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
-            <CreateButton label="New deck" to="/decks/new" />
+            <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
