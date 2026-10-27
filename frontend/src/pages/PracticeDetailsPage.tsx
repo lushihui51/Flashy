@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import {
   deletePracticeRun,
   readPracticeRun,
@@ -11,6 +11,7 @@ import {
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { formatDateTime } from 'src/lib/datetime';
@@ -104,13 +105,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
 
   return (
     <div className="p-4">
-      <Link
-        to="/practice"
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        Practice
-      </Link>
+      <Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />
 
       <div className="mt-1 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
