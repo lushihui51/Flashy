@@ -363,7 +363,7 @@ Nothing in the code needs reading beyond the three pages' diffs.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -417,7 +417,24 @@ The ten test files assert the old words by role and text; change those assertion
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named run prints `12 passed` files and `162 passed` tests. The subject form has seven submit assertions, not five: four read "Create" and three read "Save". The card form's two "Add card" assertions read "Create". The deck editor's three create-flow "Save" assertions and the overlay's "Create subject" read "Create". Its "Save changes" assertion reads "Save", scoped to the dialog, since the header's Save also matches. The configuration editor's two hint assertions are both in create flows, so both read "Give this configuration a name to create it.". A new edit case, "a cleared name keeps Save disabled with the reason shown", reads "Give this configuration a name to save it.". Its four create-flow "Save" assertions read "Create". Its region queries are five, not four, and read "Prompt · always shown", "Answer · always shown" and "Prompt · random draw". The top bar's three "Create" assertions read "New". The sheet's dialog is named "New", and its rows are "New subject", "New deck", "New card" and "New practice". The chain test's two create-flow "Save" clicks read "Create", and its edit-flow click stays "Save".
+- The grep prints nothing (exit 1).
+- In headless Chromium against `localhost:5173`, these were the buttons each form showed: New subject `Cancel, Create`; Edit subject `Cancel, Save, Delete subject`; New deck `Cancel, Create, Add field`; Edit deck `Done, Undo, Save, Add field, Delete deck`; New card `Cancel, Create`; Edit card `Cancel, Save, Delete card`; New configuration `Cancel, Create`; Edit configuration `Cancel, Save`. Renaming the deck Commands to "Commands T5" and saving flashed "Saved ✓". A second save renamed it back to "Commands", so the dev database holds the name it held before. On New configuration, after assigning two fields, the regions read "Not used", "Prompt · always shown", "Prompt · random draw", "Answer · always shown" and "Answer · random draw". The suggested name read "Command → Command purpose". With the name cleared, the page showed "Give this configuration a name to create it." and Create was disabled. Edit configuration with the name cleared showed "Give this configuration a name to save it.". On Home, the top bar's "New" button opened a dialog named "New" with the rows "New subject", "New deck", "New card" and "New practice".
+- New subject with the name "Twice" showed "A subject with this name already exists." in the form's alert. On Edit configuration for "Command to Purpose", renaming it to "Purpose to Command" and saving showed "A configuration with this name already exists." in the name field's alert, with `aria-invalid="true"`. Neither check wrote a row.
+- Over the whole frontend, `npx vitest run` printed `537 passed`, and `npm run lint` and `npm run build` exited 0. These runs included the peer's uncommitted T4 pages.
+
+Departures:
+
+- "Change deck" has no row in `docs/vocabulary.md`. It was the confirm button of "Change deck?" in `CardStandaloneForm.tsx` and of the board's deck switch in `DeckConfigurationEditor.tsx`. Both now read "Continue", the file's word for accepting a warning. The file's Continue row lists only New card and Edit card under Where, not New configuration. The other fix is a "Change deck" row in the file, and that choice is yours. Three test assertions changed with it.
+- `FieldAssignmentBoard.tsx`'s `DESTINATIONS` is now a list of slots, and each row's text comes from `SLOT_LABELS`. A sheet row and an area's spoken name now come from one table.
+- New cases besides the edit-hint case: "a blank field name shows an inline error" in `DeckEditor.test.tsx` reads "Name is required.". "names each slot by the move sheet's row words" in `deckConfigurationBoard.test.ts` asserts `SLOT_LABELS`.
+- Tests that read a backend message now read the sentence. The duplicate-name mocks answer a `{code, message}` detail. A 404 from deletion-impact reads "Subject not found." or "Deck not found.", and a 422 with a string detail reads "Something went wrong.".
+- Some comments named the create-mode button "Save" or the top bar's button "Create". Those in `DeckEditor.tsx`, `DeckConfigurationEditor.tsx`, `deckConfigurationBoard.ts` and `TopBar.tsx` now name the button it is. `SLOT_LABELS`'s comment states where the labels are used. `CreateSheet.tsx`'s interface comment said "practise", which now reads "practice". Test names that said "Save" for a create-mode button say "Create".
+- Prettier was run on the three files this task reformatted. `DeckConfigurationEditor.tsx` also has the line `const name =`, which was already unformatted at HEAD. Prettier would reflow it, and it is left as it was.
+
+Read the `onError` of `saveMutation` in `DeckConfigurationEditor.tsx`: it sends a failure to the name field by `detail.code` alone. In the other three forms each failure site only swaps its expression for a `failureSentence` call. That means a 404 on a create also reads that form's not-found sentence. Creating a card in a deck deleted meanwhile, for example, reads "Card not found.".
 
 ### T6 — The practice pages
 

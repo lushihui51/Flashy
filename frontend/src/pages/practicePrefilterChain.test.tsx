@@ -449,7 +449,7 @@ describe('practice pre-filter chains', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Deck name' }), 'Fresh Deck');
     await user.click(screen.getByPlaceholderText('Subject'));
     await user.click(await screen.findByRole('option', { name: 'Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Back on the builder, resumed on the freshly created deck.
     await waitFor(() => expect(currentLocation().full).toBe(builderLocation));
@@ -462,7 +462,7 @@ describe('practice pre-filter chains', () => {
     await assign(user, 'Definition', 'Answer · always shown');
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'Fresh Config');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Back on New practice: the new configuration is auto-selected and the two
     // selections made before leaving are still there, in tick order.

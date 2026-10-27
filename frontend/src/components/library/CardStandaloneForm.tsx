@@ -8,6 +8,7 @@ import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -188,7 +189,7 @@ function CardStandaloneFormBody({
       await invalidateAfterWrite(deckId, deckQuery.data.subject_id);
       navigate(`/decks/${deckId}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+      setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
     }
   };
@@ -201,7 +202,7 @@ function CardStandaloneFormBody({
       await invalidateAfterWrite(deckId, deckQuery.data?.subject_id);
       navigate(`/decks/${deckId}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+      setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
       setConfirmDeleteOpen(false);
     }
@@ -261,7 +262,7 @@ function CardStandaloneFormBody({
           disabled={!canSubmit}
           className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
         >
-          {mode === 'create' ? 'Add card' : 'Save'}
+          {mode === 'create' ? 'Create' : 'Save'}
         </button>
       </form>
 
@@ -289,7 +290,7 @@ function CardStandaloneFormBody({
         open={deckChange !== null}
         title="Change deck?"
         description="Switching decks will clear the card you were filling in."
-        confirmLabel="Change deck"
+        confirmLabel="Continue"
         destructive
         onConfirm={() => {
           setValues({});

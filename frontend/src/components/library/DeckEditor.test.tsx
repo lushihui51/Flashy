@@ -105,13 +105,13 @@ afterEach(() => {
 });
 
 describe('DeckEditor — create mode', () => {
-  it('starts with Term and Definition fields and a disabled Save', async () => {
+  it('starts with Term and Definition fields and a disabled Create', async () => {
     mockSubjects();
     renderEditor();
 
     expect(await screen.findByDisplayValue('Term')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Definition')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
   it('the field type select offers only Text', async () => {
@@ -176,6 +176,17 @@ describe('DeckEditor — create mode', () => {
 
     // Both the original "Term" and the renamed field now collide — both flagged.
     expect(await screen.findAllByText('Duplicate name')).toHaveLength(2);
+  });
+
+  it('a blank field name shows an inline error', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    const [first] = await screen.findAllByRole('textbox', { name: 'Field name' });
+    await user.clear(first!);
+
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
   });
 
   it('removing a brand-new field (no confirm — create mode never has a saved field to stage)', async () => {
@@ -260,7 +271,7 @@ describe('DeckEditor — create mode', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'New subject' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'History');
-    await user.click(within(dialog).getByRole('button', { name: 'Create subject' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByPlaceholderText('Subject')).toHaveValue('History'));
     expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
@@ -289,7 +300,7 @@ describe('DeckEditor — create mode', () => {
     ).toBeInTheDocument();
   });
 
-  it('opened via a "New deck…" round-trip: Save navigates back to returnTo with the new deck id', async () => {
+  it('opened via a "New deck…" round-trip: Create navigates back to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(
       http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
@@ -307,7 +318,7 @@ describe('DeckEditor — create mode', () => {
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
     await user.click(screen.getByPlaceholderText('Subject'));
     await user.click(await screen.findByRole('option', { name: 'Math' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
     expect(screen.getByTestId('location')).toHaveAttribute(
@@ -383,7 +394,7 @@ describe('DeckEditor — create mode', () => {
     await user.clear(termInput!);
     await user.type(termInput!, 'Word');
 
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
@@ -619,7 +630,7 @@ describe('DeckEditor — edit mode', () => {
       ),
     ).toBeInTheDocument();
     expect(patchCallCount).toBe(0);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(patchCallCount).toBe(1));
     // Stays on the editor — no navigation.
@@ -712,7 +723,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('at least one id is required');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
     expect(screen.queryByText('Save changes?')).not.toBeInTheDocument();
     expect(patchCallCount).toBe(0);
   });
@@ -820,7 +831,7 @@ describe('DeckEditor — edit mode', () => {
     await screen.findByDisplayValue('French Vocab');
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('deck 1 not found');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Deck not found.');
     expect(screen.queryByText('Delete deck?')).not.toBeInTheDocument();
   });
 

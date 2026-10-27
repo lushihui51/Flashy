@@ -10,6 +10,7 @@ import { deletionSummaryText } from 'src/lib/deletionSummary';
 import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
 
 type SubjectFormProps = {
   mode: 'create' | 'edit';
@@ -152,7 +153,7 @@ export function SubjectFormBody({
         onSuccess(updated);
       }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+      setFormError(failureSentence(err, 'Subject not found.'));
       setSubmitting(false);
     }
   };
@@ -164,7 +165,7 @@ export function SubjectFormBody({
       await queryClient.invalidateQueries({ queryKey: ['subjects'] });
       onDelete?.();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+      setFormError(failureSentence(err, 'Subject not found.'));
       setSubmitting(false);
       setConfirmDeleteOpen(false);
     }
@@ -182,7 +183,7 @@ export function SubjectFormBody({
       setDeletionImpact(impact);
       setConfirmDeleteOpen(true);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Something went wrong.');
+      setFormError(failureSentence(err, 'Subject not found.'));
     } finally {
       setCheckingDeletionImpact(false);
     }
@@ -260,7 +261,7 @@ export function SubjectFormBody({
           disabled={submitting}
           className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
         >
-          {mode === 'create' ? 'Create subject' : 'Save changes'}
+          {mode === 'create' ? 'Create' : 'Save'}
         </button>
       </form>
 

@@ -57,7 +57,7 @@ describe('SubjectForm — create mode', () => {
     const user = userEvent.setup();
     renderForm('/subjects/new');
 
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
     expect(createCalled).toBe(false);
@@ -75,7 +75,7 @@ describe('SubjectForm — create mode', () => {
     renderForm('/subjects/new');
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
   });
@@ -113,7 +113,7 @@ describe('SubjectForm — create mode', () => {
 
     expect(screen.queryByRole('dialog', { name: 'Icon' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Icon: Atom' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
     expect(body).toEqual({ name: 'Chemistry', icon: 'atom' });
@@ -123,7 +123,12 @@ describe('SubjectForm — create mode', () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
-          { detail: 'Subject with this name already exists for this user' },
+          {
+            detail: {
+              code: 'subject_name_taken',
+              message: 'subject (user_id, name) already exists',
+            },
+          },
           { status: 400 },
         ),
       ),
@@ -132,11 +137,9 @@ describe('SubjectForm — create mode', () => {
     renderForm('/subjects/new');
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Math');
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(
-      await screen.findByText('Subject with this name already exists for this user'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('A subject with this name already exists.')).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
   });
 
@@ -192,7 +195,7 @@ describe('SubjectForm — edit mode', () => {
     await user.click(
       within(screen.getByRole('dialog', { name: 'Icon' })).getByRole('button', { name: 'Atom' }),
     );
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
     expect(body).toEqual({ icon: 'atom' });
@@ -213,7 +216,7 @@ describe('SubjectForm — edit mode', () => {
     const descriptionInput = await screen.findByRole('textbox', { name: 'Description' });
     await user.clear(descriptionInput);
     await user.type(descriptionInput, 'Updated description');
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
   });
@@ -225,7 +228,7 @@ describe('SubjectForm — edit mode', () => {
 
     const nameInput = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(nameInput);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
   });
@@ -315,7 +318,7 @@ describe('SubjectForm — edit mode', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('subject 1 not found');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Subject not found.');
     expect(screen.queryByText('Delete subject?')).not.toBeInTheDocument();
   });
 
