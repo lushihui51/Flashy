@@ -42,7 +42,7 @@
 
 **Examples.** Outside Context, state the decision in general words and give as few examples of it as possible.
 
-**Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments. Write one fact per paragraph: a paragraph holds one fact, force, or point and everything that belongs to it, at whatever length that takes, and a second fact starts a second paragraph.
+**Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments. Write one fact per paragraph: a paragraph holds one fact, force, or point and everything that belongs to it, at whatever length that takes, and a second fact starts a second paragraph. Name code by file and symbol, never by line number.
 
 **No date line.**
 

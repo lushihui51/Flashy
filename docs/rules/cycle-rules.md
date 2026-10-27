@@ -44,4 +44,4 @@
 
 **Debrief.** Written by the builder, in the file, when the task is done or blocked. Done: the evidence for each Done-when criterion, in order; every departure from Details or Files; and what in the code the engineer should read, if anything, and why. Blocked: what was attempted, what was found, and why the file cannot settle it. Never restate the task.
 
-**Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision, one that no record and no docket item settles, and is never written around.
+**Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision, one that no record and no docket item settles, and is never written around. Name code by file and symbol, never by line number.
