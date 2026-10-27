@@ -97,7 +97,7 @@ Nothing in the code needs reading beyond the diff.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -135,4 +135,19 @@ AGENTS.md is a scan root and never a builder's file. Its citations are repointed
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run pytest tests/api_tests/test_record_citation_guard.py -q`: `2 passed in 0.03s`.
+- With ADR 045's Status set to `Superseded by ADR 999` in the working tree, the same command printed `1 failed, 1 passed`, and the message listed two lines, `AGENTS.md:29: ADR 045 — Superseded by ADR 999` and `tests/api_tests/test_schema_guard.py:12: ADR 045 — Superseded by ADR 999`. After `git checkout -- docs/adrs/045-alembic-as-the-only-schema-path.md`, `git status` showed only the new test file, and the command printed `2 passed in 0.03s`.
+- The grep over the six roots printed eleven lines: `app/services/practice_run.py:73` `(ADR 037).`, the nine guard docstring lines T1 wrote, and `frontend/eslint.config.js:27` `// (ADR 019)`. Each carries the number inside `(ADR ` and `)`. Piping the output through `grep -vE "\((ADR|PDR) [0-9]{3}\)"` printed nothing, and none of the lines is a test or describe name.
+- `--durations=1`: `0.02s call tests/api_tests/test_record_citation_guard.py::test_every_cited_record_is_active`.
+
+Commit checks: pg_stat_activity showed 0 other connections to `flashy_test_b`, and a full `uv run pytest -q` gave `349 passed in 34.14s`. The task touches no frontend file.
+
+Departures:
+
+- `_scanned_files`, `_record_status` and `_offenders` take the root as an argument, so the second test runs the real parser and listing on `tmp_path`. That test passes the citing file to `_offenders` directly rather than through `_scanned_files`.
+- The second test builds its record numbers and its `Superseded by …` status from an `adr = "ADR"` variable at runtime, because the guard scans its own file and literal numbers there would fail it.
+- A record file with no `## Status` heading reports `no status`, which fails like any other status that is not Active. Details does not cover this case.
+
+Nothing in the code needs reading beyond `tests/api_tests/test_record_citation_guard.py` itself.
