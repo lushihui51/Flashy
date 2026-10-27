@@ -524,7 +524,7 @@ Read `onError` of `createMutation` in `PracticeCreatePage.tsx`: it is the one pl
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -574,4 +574,24 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 
 **Debrief**
 
-None.
+Attempted: the whole task, as Files and Details give it. `usePageTitle` in `src/lib/pageTitle.ts` sets the title in one effect keyed on `name` and restores "Flashy" in a second effect's unmount cleanup, so a name that turns undefined leaves the title as it is. Each of the thirteen routed components calls it before any early return. An edit form passes its heading only once its record has loaded, so a not-found form reads "Flashy". `index.html` reads `<title>Flashy</title>`. The first three Done-when lines hold:
+
+- `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` prints `8 passed`: the four named hook cases, and the two pages' `document.title` reading "Home · Flashy" and "Notifications · Flashy".
+- `grep -n "<title>" frontend/index.html` prints `7:    <title>Flashy</title>`. `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files, and `grep -rn "<title" frontend/src` prints nothing.
+- In headless Chromium at 390×844, every route reads as Details gives it: "Home · Flashy", "Your library · Flashy", "Notifications · Flashy", "Practice · Flashy", "New practice · Flashy", "CompTIA A+ · Flashy", "Ports · Flashy", "Sep 29, 2026 at 8:41 AM · Flashy" on a practice's page, "T7 two-tab check · Flashy" on a run page, the four "New …" forms and the four "Edit …" forms. A subject that is not found reads "Flashy". With New deck's New subject overlay open, the tab reads "New deck · Flashy".
+- Over the whole frontend, `npx vitest run` prints `544 passed`, and `npm run lint` and `npm run build` exit 0.
+
+The fourth line, the cycle's judgement, does not hold, for two reasons.
+
+Found, first: no screen can reach "This is not the current card." from a second tab. `submit_rating` in `app/services/practice_run.py` refuses a card that is not pending, with `card_already_rated`, before it checks that the card is current, with `not_current_card`. A tab only rates the card that was current when it loaded. Rating changes the current card only by taking that card out of pending, and a retry is always queued behind it. So a stale tab's card has always been rated, and it answers `card_already_rated`. The check was run: a practice "T7 two-tab check" was made through the API, and its run page opened in two tabs. In the first, rating Good and tapping Next card showed the next card. The same in the second showed "This card has already been rated.". T6's line allowed either sentence; this line names only the one that cannot be reached.
+
+Found, second: the screens show four words that `docs/vocabulary.md` has no row for. Each screen's visible text, accessible names, placeholders and tab title were checked against the file's quoted words. The screens walked: Home, with the menu open and with the New sheet open; Notifications; the library's two tabs; a subject's page; a deck's Cards and Configurations tabs and its delete-configuration confirm; an empty deck's two tabs; New subject and its Icon sheet; Edit subject and its delete confirm; New deck, its subject picker and its New subject overlay; Edit deck and its delete confirm; New card and its deck picker; Edit card; New configuration and its move sheet; Edit configuration; the Practice page, its Completed tab and its delete confirm; New practice, with and without a selection; a completed practice's page and its Re-run confirm; an active practice's page; the run page, before and after Show answer; and a completed practice's run page. Every string was a row, a templated row or user data, except these:
+
+- "N selected" in New practice's header, which T6's Debrief already raised.
+- A deck row's field names on a subject's page, as "Command, Command purpose +10", from `formatFieldNames` in `SubjectDetailPage.tsx`. The "A deck counted" row gives "N cards" and "N fields", not the names.
+- A card's label in the summary, "<field>: <value>", as "Command: netstat", from `RunBreakdown.tsx`. Only "Untitled card", for a blank first field, has a row.
+- The rating chip's spoken name "Rate <field>", as "Rate Command purpose", from `RatingChip.tsx`. The file gives "Rate" bare. It gives the spoken "Re-run <name>" and "Remove <name>" as their own words.
+
+The logo's "F" is a letter drawn inside its SVG, which is `aria-hidden`; the logo is spoken as "Flashy home". The rest of the line holds. "A subject with this name already exists." and "A configuration with this name already exists." read as given, the second on the name field's alert with `aria-invalid="true"`. `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing. `grep -c '^| ' docs/vocabulary.md` prints `191`.
+
+Why the file cannot settle it: the first reason needs the line itself changed, or the order of `submit_rating`'s two checks, and `app/services/practice_run.py` is outside Files. The second needs a word for each of the four in `docs/vocabulary.md`, or each screen changed to a word the file has. Out of scope keeps every word but the tab's title out of this task, and the file is the engineer's to change. No row was written for the check, besides the practice "T7 two-tab check" and its one rating, which stay in the dev database.
