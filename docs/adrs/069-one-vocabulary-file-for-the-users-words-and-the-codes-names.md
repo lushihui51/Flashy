@@ -67,5 +67,5 @@ Rejected: it is what first shipped and confused the schema's own author, and PDR
 
 **Neutral**
 
-- The developer editing AGENTS.md keeps the entity vocabulary's invariants there; the file holds names, not rules.
+- The developer finds an entity's invariants in the records that decided them, never in the file, which holds names, not rules.
 - The developer leaves merged cycle files that cite the old table as they are.
