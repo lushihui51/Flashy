@@ -866,7 +866,7 @@ describe('DeckEditor — edit mode', () => {
   });
 });
 
-describe('DeckEditor — primary field marker (ADR 032)', () => {
+describe('DeckEditor — primary field marker', () => {
   it('the first field carries the Primary marker, and no other field does', async () => {
     mockSubjects();
     renderEditor();

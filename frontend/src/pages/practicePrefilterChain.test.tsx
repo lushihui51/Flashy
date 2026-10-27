@@ -426,7 +426,7 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
   });
 
-  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5, ADR 061)', async () => {
+  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');
@@ -476,7 +476,7 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByText('3 selected')).toBeInTheDocument();
   });
 
-  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6, ADR 061)', async () => {
+  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');

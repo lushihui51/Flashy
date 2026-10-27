@@ -44,7 +44,7 @@ def test_table_modules_never_import_a_non_table_shape_from_a_sibling():
     only a table class itself — never a request/response shape, which belongs in a
     <router>_payloads.py module instead. This is the half of the rule that can drift
     silently through an import; the other half (a scalar-only shape misfiled in an
-    entity module) imports nothing and isn't mechanically checkable."""
+    entity module) imports nothing and isn't mechanically checkable. (ADR 046)"""
     for path in _table_modules():
         module_name = path.stem
         for sibling, name in _sibling_imports(path):
@@ -52,14 +52,14 @@ def test_table_modules_never_import_a_non_table_shape_from_a_sibling():
             assert _is_table_class(obj), (
                 f"{module_name}.py imports {name} from {sibling}.py, which is not a "
                 "table class — non-table shapes belong in a <router>_payloads.py "
-                "module (ADR 046), not a sibling entity module"
+                "module, not a sibling entity module"
             )
 
 
 def test_table_class_predicate_distinguishes_card_field_value_from_card_read():
     """The case the table-class exception exists for: card.py legitimately imports the
     CardFieldValue table class for its Relationship, and the guard above must keep
-    passing because of this predicate, not by accident."""
+    passing because of this predicate, not by accident. (ADR 046)"""
     from app.models.card import CardFieldValue, CardRead
 
     assert _is_table_class(CardFieldValue) is True

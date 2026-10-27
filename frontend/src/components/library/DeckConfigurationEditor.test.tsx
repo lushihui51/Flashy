@@ -463,7 +463,7 @@ describe('DeckConfigurationEditor — create', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
-  it('a create’s Save returns to returnTo handing back the saved configuration (ADR 061)', async () => {
+  it('a create’s Save returns to returnTo handing back the saved configuration', async () => {
     mockLibrary();
     server.use(
       http.post(`${BASE}/api/deck_practice_configs`, () =>
@@ -637,7 +637,7 @@ describe('DeckConfigurationEditor — edit', () => {
     });
   });
 
-  it('an edit’s Save returns to returnTo with no configuration handed back (ADR 061)', async () => {
+  it('an edit’s Save returns to returnTo with no configuration handed back', async () => {
     mockLibrary();
     mockConfig();
     server.use(
