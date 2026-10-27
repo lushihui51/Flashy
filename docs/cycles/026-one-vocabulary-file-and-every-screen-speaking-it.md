@@ -224,7 +224,7 @@ Read `apply_deck_batch_edit` in `app/services/deck_batch_edit.py`: it is the one
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -276,7 +276,16 @@ In `src/api/unwrap.ts`, change no thrown value; rewrite the interface comments o
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/lib/failureSentence.test.ts` printed `7 passed`, one per named case: "renders each known code's sentence, whatever the status", over all thirteen codes at 400, 404, 409, 422, 500 and 503; "a known code wins over a 404", with `config_not_found` at 404; "a 404 without a known code renders the caller's not-found sentence"; "a 5xx without a known code renders the server-trouble sentence, and database_unavailable its own"; "an error that is not an ApiError renders the connection sentence"; "a string detail, a validation array and an unknown code render Something went wrong", the first two thrown by `unwrap` and `run_active` as the unknown code; "never reads the message", with `subject_name_taken` and the message "xyz".
+- `grep -F` found each of these in `docs/vocabulary.md`, each code's on the Sentences row that carries that code: "A subject with this name already exists.", "A deck with this name already exists.", "A field with this name already exists.", "A configuration with this name already exists.", "A deck needs at least two fields.", "This card has already been rated.", "This is not the current card.", "This configuration no longer produces any prompts — edit it.", "Choose one configuration per deck.", "This practice can't be re-run. A field it practiced has since been removed from each of its decks.", "Flashy is temporarily unavailable." and "Something went wrong.". The four sentences the function imports were checked the same way: `NO_CARDS_MESSAGE` and `MISSING_CONFIGURATION_MESSAGE`, on the `no_cards` and `config_not_found` rows, and `CONNECTION_FAILED_MESSAGE` and `SERVER_TROUBLE_MESSAGE`, on their "—" rows.
+- `grep -rln "failureSentence" frontend/src --include=*.tsx` printed nothing (exit 1).
+- Over the whole frontend, `npx vitest run` printed `533 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures: none. The map is a `ReadonlyMap`, since `npm run build` refuses an indexed read of a `Record` as `string | undefined`, and a `Map` also never answers for a key such as `constructor`. `unwrap.ts` changes only the interface comments on `ApiError` and `ApiDetailError`; no comment `unwrap.test.ts` quotes changed, so it is untouched.
+
+Nothing in the code needs reading beyond `failureSentence` itself.
 
 ### T4 — The library's pages
 
