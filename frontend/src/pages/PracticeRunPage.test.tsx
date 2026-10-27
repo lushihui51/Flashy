@@ -430,7 +430,7 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
   });
 });
 
-describe('PracticeRunPage progress bar and retry badge (ADR 028, MD-3)', () => {
+describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
   it('reflects the given counts as proportional segment widths, omitting zero-count segments', async () => {
     mockRun(
       runState({

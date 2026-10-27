@@ -70,7 +70,7 @@ describe('useConnectionStatus', () => {
     await expectStatus('server_trouble');
   });
 
-  it('is server_trouble on a 404 (ADR 062)', async () => {
+  it('is server_trouble on a 404', async () => {
     server.use(http.get(HEALTH, () => HttpResponse.json({ detail: 'Not Found' }, { status: 404 })));
     renderWithProviders(<StatusProbe />);
 

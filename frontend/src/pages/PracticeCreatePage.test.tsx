@@ -221,7 +221,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
-  it('the selection rides the URL as repeated config params, in tick order (ADR 061)', async () => {
+  it('the selection rides the URL as repeated config params, in tick order', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -234,7 +234,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c1', 'c3']);
   });
 
-  it('mounting with config params shows them ticked and counted (ADR 061)', async () => {
+  it('mounting with config params shows them ticked and counted', async () => {
     mockLibrary();
     renderCreate('/practice/new?config=c1&config=c3');
 
@@ -283,7 +283,7 @@ describe('PracticeCreatePage', () => {
     );
   });
 
-  it('the name is prefilled with no name param, and an edit writes the name param (ADR 061)', async () => {
+  it('the name is prefilled with no name param, and an edit writes the name param', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -300,7 +300,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.get('name')).toBe('Exam cram');
   });
 
-  it('the typed name survives the New configuration round trip (ADR 061)', async () => {
+  it('the typed name survives the New configuration round trip', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -572,7 +572,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
-  it('Clear filters drops only the filters, keeping the selection (ADR 061)', async () => {
+  it('Clear filters drops only the filters, keeping the selection', async () => {
     mockLibrary((query) => (query.get('subject_id') === 's1' ? [] : ALL_CONFIGS));
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&config=c3');
@@ -737,7 +737,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c2']);
   });
 
-  it('the New configuration round trip keeps the draft, and the returned config replaces its deck’s tick (ADR 061)', async () => {
+  it('the New configuration round trip keeps the draft, and the returned config replaces its deck’s tick', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -765,7 +765,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
   });
 
-  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6, ADR 061)', async () => {
+  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&config=c1&name=Exam');
@@ -790,7 +790,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().pathname).toBe('/practice/new');
   });
 
-  it('Cancel returns to the practice list with the overview’s own params and none of the draft (ADR 061)', async () => {
+  it('Cancel returns to the practice list with the overview’s own params and none of the draft', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&status=completed&config=c1');

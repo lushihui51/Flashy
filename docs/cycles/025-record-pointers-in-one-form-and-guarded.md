@@ -22,7 +22,7 @@ Judgement: In the repository, run pytest and see the guard pass; grep the six ro
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -76,13 +76,28 @@ In `frontend/eslint.config.js`, the comment above `'no-restricted-syntax'` must 
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The three guard files: `9 passed in 0.06s`. `--collect-only` on `test_schema_guard.py` lists `test_no_create_all_or_drop_all_under_app`, `test_alembic_env_imports_app_database_before_reading_metadata` and `test_metadata_naming_convention_matches_the_templates`, 3 tests collected, none containing `adr`.
+- `grep -n "ADR"` over the three guard files prints nine lines, each a docstring's last line ending in the pointer and the closing quotes: `test_models_layout_guard.py:47` and `:62` `(ADR 046)"""`; `test_layering_guard.py:68`, `:99`, `:120`, `:157` `(ADR 055)"""`; `test_schema_guard.py:12` `(ADR 045)"""`, `:40` and `:79` `(ADR 054)"""`.
+- `grep -rn "ADR"` over the eight frontend test files prints nothing (exit 1). The diff is 17 lines changed across them, one per name; the three "(MD-n, ADR 061)" and "(ADR 028, MD-3)" names now end in "(MD-6)", "(MD-5)", "(MD-6)" and "(MD-3)".
+- `grep -n "ADR" frontend/eslint.config.js` prints one line: `27:      // (ADR 019)`.
+- `npx eslint src/lib/datetime.test.ts` exits 0 with no output. Piping `export const s = new Date().toLocaleDateString()` to `npx eslint --stdin --stdin-filename src/x.ts` reports `1:18  error  format dates via formatDate/formatDateTime in src/lib/datetime.ts, which pins the user timezone. For numbers, use Intl.NumberFormat  no-restricted-syntax`. The input was piped, so no file was written.
+
+Commit checks: `npx vitest run` gives 48 files and 526 tests passed; `npm run lint` exits 0; `npm run build` exits 0, with the chunk-size warning it already gave before this change.
+
+Departures:
+
+- In `test_only_database_ops_calls_the_session`, the docstring's last line was already 86 characters, so the pointer sits alone on a new last line, `    (ADR 055)"""`, and does not lengthen that line. Every other pointer is added after the last sentence's full stop on the existing line.
+- The ESLint comment's first three lines are rewrapped because "ADR 019: instants" became "Instants". The pointer sits on its own last comment line, after the last sentence. A formatter hook also rewrote the second `selector:` string onto two lines with double quotes; I restored it word for word, so the diff in that file is the comment and the two messages only.
+
+Nothing in the code needs reading beyond the diff.
 
 ### T2 — A guard that every cited record is Active
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -120,4 +135,19 @@ AGENTS.md is a scan root and never a builder's file. Its citations are repointed
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run pytest tests/api_tests/test_record_citation_guard.py -q`: `2 passed in 0.03s`.
+- With ADR 045's Status set to `Superseded by ADR 999` in the working tree, the same command printed `1 failed, 1 passed`, and the message listed two lines, `AGENTS.md:29: ADR 045 — Superseded by ADR 999` and `tests/api_tests/test_schema_guard.py:12: ADR 045 — Superseded by ADR 999`. After `git checkout -- docs/adrs/045-alembic-as-the-only-schema-path.md`, `git status` showed only the new test file, and the command printed `2 passed in 0.03s`.
+- The grep over the six roots printed eleven lines: `app/services/practice_run.py:73` `(ADR 037).`, the nine guard docstring lines T1 wrote, and `frontend/eslint.config.js:27` `// (ADR 019)`. Each carries the number inside `(ADR ` and `)`. Piping the output through `grep -vE "\((ADR|PDR) [0-9]{3}\)"` printed nothing, and none of the lines is a test or describe name.
+- `--durations=1`: `0.02s call tests/api_tests/test_record_citation_guard.py::test_every_cited_record_is_active`.
+
+Commit checks: pg_stat_activity showed 0 other connections to `flashy_test_b`, and a full `uv run pytest -q` gave `349 passed in 34.14s`. The task touches no frontend file.
+
+Departures:
+
+- `_scanned_files`, `_record_status` and `_offenders` take the root as an argument, so the second test runs the real parser and listing on `tmp_path`. That test passes the citing file to `_offenders` directly rather than through `_scanned_files`.
+- The second test builds its record numbers and its `Superseded by …` status from an `adr = "ADR"` variable at runtime, because the guard scans its own file and literal numbers there would fail it.
+- A record file with no `## Status` heading reports `no status`, which fails like any other status that is not Active. Details does not cover this case.
+
+Nothing in the code needs reading beyond `tests/api_tests/test_record_citation_guard.py` itself.

@@ -26,7 +26,7 @@ describe('client', () => {
     expect((thrown as Error).message).toBe(CONNECTION_FAILED_MESSAGE);
   });
 
-  it('rejects an empty-body 502 with a status-carrying ApiError (ADR 065)', async () => {
+  it('rejects an empty-body 502 with a status-carrying ApiError', async () => {
     // An empty error body must still reject: `unwrap` decides on `response.ok`, not on
     // `error`.
     server.use(http.get(`${BASE}/api/subjects`, () => new HttpResponse(null, { status: 502 })));
