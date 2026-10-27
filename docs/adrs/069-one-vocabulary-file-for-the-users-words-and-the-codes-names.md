@@ -8,7 +8,7 @@ Active
 
 PDR 001 decides that the app has one vocabulary: one reference, kept apart from the record and pointed at by AGENTS.md, gives the word for each concept the app shows and each act on it, and says how words are joined when a screen names a thing by the places it belongs to. Only words the reference gives appear on a screen, and a name from the code never does. Where the reference lives, PDR 001 leaves to the engineers.
 
-The reference so far has been the "Canonical vocabulary" table in `docs/cycles/004-practice-setup.md`. ADR 021 made that table the contract's home and ruled that a user-facing word changes there first, then on every surface, and AGENTS.md's "UI copy" line points at it. The table covers practice alone, and the cycle rules forbid editing a merged cycle file or citing one, so the table can neither grow to the library's words nor stay the file AGENTS.md points at.
+The reference was the "Canonical vocabulary" table in a merged cycle file. ADR 021 made that table the contract's home and ruled that a user-facing word changes there first, then on every surface, and AGENTS.md's "UI copy" line pointed at it. The table covered practice alone, and the cycle rules forbid editing a merged cycle file or citing one, so the table could neither grow to the library's words nor stay the file AGENTS.md points at.
 
 The code's names and the user's words have already moved apart on their own. ADR 038 renamed `practice_session` to `practice_run` across the schema, the backend, and the frontend's modules, and left every user word as it was; the frontend's own identifiers, `session` props and `practiceSessionId` route params, kept the old term. One concept thus has three code names and one user word, no file lists a concept's names on both sides, and a code name that reaches a screen is checked against nothing.
 
@@ -20,11 +20,9 @@ We will keep the vocabulary in one file, `docs/vocabulary.md`, holding for every
 
 We will keep the code's names independent of the user's words. A change to a user's word never renames a table, a model, an endpoint, or a frontend identifier, and a rename in the code never changes a word. The file lists the two namespaces side by side; it does not tie them.
 
-The "Canonical vocabulary" table in `docs/cycles/004-practice-setup.md` stays as written, and nothing cites it.
-
 ## Alternatives considered
 
-### The table left in cycle 004
+### The table left in its cycle file
 
 Rejected: the cycle rules forbid editing or citing a merged cycle file, so the table could not take the library's words and AGENTS.md could not point at it.
 
@@ -68,4 +66,3 @@ Rejected: it is what first shipped and confused the schema's own author, and PDR
 **Neutral**
 
 - The developer finds an entity's invariants in the records that decided them, never in the file, which holds names, not rules.
-- The developer leaves merged cycle files that cite the old table as they are.
