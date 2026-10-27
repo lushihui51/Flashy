@@ -18,7 +18,7 @@ Judgement: On a live server, make a subject from New subject choosing a picture,
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -108,4 +108,25 @@ The picker's and the form's tests are jsdom tests; the picker's follows `CreateS
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/lib/subjectIcon.test.ts`: 7 passed, among them "lists every picture of the set once, each resolving to its own icon" and "names the current picture, and the default for a blank or unknown key".
+- `npx vitest run src/components/library/SubjectIconPicker.test.tsx`: 4 passed: the three named cases and a fourth, "marks the default as pressed when none is chosen".
+- `npx vitest run src/components/library/SubjectForm.test.tsx`: 16 passed. "prefills from the existing subject" finds the button named "Icon: Brain"; "creates a subject with only a name and navigates to its page" is unchanged; "has no text box for the icon", "choosing a picture sends it with the create" (POST body `{ name: 'Chemistry', icon: 'atom' }`) and "changing the picture sends only the icon on save" (PATCH body `{ icon: 'atom' }`) are new.
+- `npx vitest run src/components/library/DeckEditor.test.tsx`: 41 passed, among them "the Icon control inside the New subject overlay opens the picker", which finds the dialog named "Icon" from `screen`, chooses Atom, and sees the overlay's control named "Icon: Atom".
+- `grep -c 'type="text"' frontend/src/components/library/SubjectForm.tsx` printed `1`.
+- Headless Chromium at 390×844 against `localhost:5173`, signed out with the dev auth bypass, New subject: the control was named "Icon: Open book" and showed `lucide-book-open`; tapping it opened the dialog "Icon" with 26 buttons; tapping Atom closed it and the control read "Icon: Atom" showing `lucide-atom`; Create landed on `/subjects/fc6fc254-…` showing `lucide-atom`, and the library's Subjects tab row showed `lucide-atom`.
+- Same run: a subject created without touching the control showed `lucide-book-open` on its page; Edit subject on the first one showed "Icon: Atom"; choosing Rocket and saving showed `lucide-rocket` on its page.
+- Same run, New deck: "New subject…" opened the overlay; its Icon control opened the sheet, and `elementFromPoint` at the centre of the Leaf button returned that button, so the sheet sits above the overlay; choosing Leaf and creating the subject closed the overlay, the deck form's Subject read the new subject's name, and the API returned its icon as `leaf`.
+- Whole frontend: `npx vitest run` 48 files, 526 tests passed; `npm run lint` clean; `npm run build` built, printing its chunk-size warning (over 500 kB).
+
+Departures:
+
+- `subjectIcon.ts` keeps the name `ICONS` for its table, now an array of entries carrying key, name and component, so the comment in `SubjectIcon.tsx`, which names `ICONS`, stays true without touching that file. Its comment drops "typed" and says the names are spoken only.
+- The picker has the fourth test case named above.
+- Because the picker always passes `aboveDialogs`, on the routed New subject and Edit subject pages its scrim also covers AppShell's header (z-40), where the shell's own sheets leave the header on top.
+- The text box's comment went with it; no other deferred marker was in the Files.
+
+The browser checks left subjects named "Icon check A/B/C" with numeric suffixes in the dev database, five in all: a first run created A and B before stopping on a wrong URL wait in the script.
+
+Nothing in the code needs reading beyond the diff.

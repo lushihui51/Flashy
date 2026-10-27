@@ -1,10 +1,13 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import SubjectIcon from 'src/components/library/SubjectIcon';
+import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
+import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -87,7 +90,11 @@ export function SubjectFormBody({
 
   const [name, setName] = useState(original?.name ?? '');
   const [description, setDescription] = useState(original?.description ?? '');
+  // '' means no picture was chosen: a create then omits `icon` and the backend's
+  // default applies.
   const [icon, setIcon] = useState(original?.icon ?? '');
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const iconButtonRef = useRef<HTMLButtonElement>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -232,18 +239,21 @@ export function SubjectFormBody({
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Icon</span>
-          {/* Plain text identifier input; see frontend/src/lib/subjectIcon.ts for the
-              curated set this maps into and its fallback. */}
-          <input
-            type="text"
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            placeholder="book-open"
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          {/* Hidden from screen readers: the button's own name already says "Icon". */}
+          <span aria-hidden="true" className="text-sm font-medium text-(--color-text)">
+            Icon
+          </span>
+          <button
+            ref={iconButtonRef}
+            type="button"
+            aria-label={`Icon: ${subjectIconName(icon)}`}
+            onClick={() => setIconPickerOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-(--color-surface-elevated) text-(--color-text)"
+          >
+            <SubjectIcon icon={icon} className="h-6 w-6" />
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -264,6 +274,17 @@ export function SubjectFormBody({
           Delete subject
         </button>
       )}
+
+      <SubjectIconPicker
+        open={iconPickerOpen}
+        onClose={() => setIconPickerOpen(false)}
+        triggerRef={iconButtonRef}
+        value={icon}
+        onChange={(key) => {
+          setIcon(key);
+          setIconPickerOpen(false);
+        }}
+      />
 
       <ConfirmDialog
         open={confirmCancelOpen}

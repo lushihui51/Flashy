@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -80,6 +80,45 @@ describe('SubjectForm — create mode', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
   });
 
+  it('has no text box for the icon', () => {
+    renderForm('/subjects/new');
+
+    expect(screen.queryByRole('textbox', { name: /Icon/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('textbox').map((box) => box.getAttribute('type'))).toEqual([
+      'text',
+      null,
+    ]);
+    expect(screen.getByRole('button', { name: 'Icon: Open book' })).toBeInTheDocument();
+  });
+
+  it('choosing a picture sends it with the create', async () => {
+    let body: unknown;
+    server.use(
+      http.post(`${BASE}/api/subjects`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          { ...subject, id: 's2', name: 'Chemistry', icon: 'atom' },
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+    await user.click(screen.getByRole('button', { name: 'Icon: Open book' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Icon' })).getByRole('button', { name: 'Atom' }),
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Icon' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Icon: Atom' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
+    expect(body).toEqual({ name: 'Chemistry', icon: 'atom' });
+  });
+
   it('shows the API error and does not navigate on a failed create', async () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
@@ -134,7 +173,29 @@ describe('SubjectForm — edit mode', () => {
 
     expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Math');
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('Numbers and shapes');
-    expect(screen.getByRole('textbox', { name: 'Icon' })).toHaveValue('brain');
+    expect(screen.getByRole('button', { name: 'Icon: Brain' })).toBeInTheDocument();
+  });
+
+  it('changing the picture sends only the icon on save', async () => {
+    mockEdit();
+    let body: unknown;
+    server.use(
+      http.patch(`${BASE}/api/subjects/:id`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ ...subject, icon: 'atom' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/s1/edit');
+
+    await user.click(await screen.findByRole('button', { name: 'Icon: Brain' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Icon' })).getByRole('button', { name: 'Atom' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    expect(body).toEqual({ icon: 'atom' });
   });
 
   it('sends only the changed field on submit and stays on the subject page', async () => {

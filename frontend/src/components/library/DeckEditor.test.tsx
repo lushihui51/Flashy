@@ -266,6 +266,29 @@ describe('DeckEditor — create mode', () => {
     expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
   });
 
+  it('the Icon control inside the New subject overlay opens the picker', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const overlay = await screen.findByRole('dialog', { name: 'New subject' });
+    await user.click(within(overlay).getByRole('button', { name: 'Icon: Open book' }));
+
+    // From screen: the overlay is aria-hidden while the picker is open over it.
+    const picker = await screen.findByRole('dialog', { name: 'Icon' });
+    await user.click(within(picker).getByRole('button', { name: 'Atom' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Icon' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('dialog', { name: 'New subject' })).getByRole('button', {
+        name: 'Icon: Atom',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('opened via a "New deck…" round-trip: Save navigates back to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(
