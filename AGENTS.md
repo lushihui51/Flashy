@@ -1,90 +1,158 @@
-# AGENTS.md
+# Project
 
-## Project
+- Flashy is a flashcard web app: a card is a record of named fields, and mastery is tracked per field.
+  - Reason: None
+  - Guard: None
+- The backend lives under app/ and the frontend under frontend/.
+  - Reason: None
+  - Guard: None
+- The user is a person using the app, never the engineer or the product owner building it.
+  - Reason: None
+  - Guard: None
+- Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
+  - Reason: ADR 007, ADR 072
+  - Guard: tests/api_tests/test_auth_scoping.py
+- docs/rules/ holds the rules for every file an agent writes under docs/, for comments in code, and for this file.
+  - Reason: None
+  - Guard: None
 
-- Flashy — flashcard SaaS. Frontend: React/TypeScript/Vite (`frontend/`). Backend: FastAPI/SQLModel/PostgreSQL (`app/`)
-- "The user" is a person using the app, never the human building it: the engineer, or the product owner in a product conversation
-- Auth: Clerk (ADR 007). Every router but `GET /api/health` (ADR 064) depends on `CurrentUserDep` (`app/dependencies.py`); ownership is scoped in the query, and a foreign or unknown id is a 404, never a 403. The local bypass needs both `DEV_AUTH_USER_ID` and `ENV=development` and is never set outside local dev
-- Frontend auth: `@clerk/react` (not `@clerk/clerk-react`) — it has no `<SignedIn>`/`<SignedOut>`; branch on `useUser()`'s `isLoaded`/`isSignedIn` instead
+# Commands
 
-## Commands
+- Run Python through `uv run` or inside .venv.
+  - Reason: the system Python lacks the project's packages
+  - Guard: None
+- Run frontend tests with `npx vitest run` in frontend/, never `npm run test`.
+  - Reason: npm run test is watch mode and never exits
+  - Guard: None
+- Dry-run a new migration on a `pg_dump` copy of the dev database before applying it.
+  - Reason: a bad migration would cost the seeded dev data
+  - Guard: None
+- Apply a new migration to the dev database with `alembic upgrade head` in the task that writes it.
+  - Reason: fastapi dev reloads new models before the schema
+  - Guard: None
+- A browser check drives the signed-out app at localhost:5173 with headless Chromium through playwright-core from the session scratchpad, the dev-auth bypass in app/dependencies.py on.
+  - Reason: None
+  - Guard: None
 
-- Frontend (in /frontend): `npm run dev`; tests `npx vitest run` (`npm run test` is watch mode and never exits); regenerate API types `npm run gen:api`
-- Backend: `fastapi dev`; tests `pytest`. The app never creates tables — a fresh database needs `alembic upgrade head` first (ADR 045)
-- Migrations: `alembic revision --autogenerate -m "message"`, read the generated file, verify it on a `pg_dump` copy of the dev database, then `alembic upgrade head` against the dev database at once, `fastapi dev` running or not, while `alembic heads` shows a single head. Constraint and index names come from the naming convention in `app/database.py`, hand-written operations included (ADR 054)
-- CI (`.github/workflows/ci.yml`, ADR 041) runs `pytest`, the alembic chain from an empty database, `vitest`, lint, and build on every PR and push to `main`; changes reach `main` only through a PR with both checks green, never by a direct push
-- Browser checks: with the ADR 007 bypass on, headless Chromium (`playwright-core` in the session scratchpad, browser build in `~/.cache/ms-playwright`) can drive the signed-out app at `localhost:5173` against the real backend
+# Hard rules
 
-## Hard rules
+- Never edit frontend/src/api/types.ts by hand.
+  - Reason: ADR 006
+  - Guard: None
+- Regenerate frontend/src/api/types.ts with `npm run gen:api` after any change under app/models/ or app/routers/ and commit it with that change.
+  - Reason: ADR 006
+  - Guard: None
+- Commit a frontend change only when `npx vitest run`, `npm run lint` and `npm run build` are all clean over the whole frontend.
+  - Reason: ADR 041
+  - Guard: None
+- Never push to main; a change reaches main only by a pull request with both CI checks green.
+  - Reason: ADR 041
+  - Guard: None
+- Change a database's schema only through an alembic migration, never from code under app/.
+  - Reason: ADR 045
+  - Guard: tests/api_tests/test_schema_guard.py
+- Keep mastery arithmetic only in a MasteryStrategy under app/mastery/, never in SQL, a SQLModel expression or a trigger.
+  - Reason: ADR 012
+  - Guard: tests/api_tests/test_mastery.py
+- Append to review_log only through record_review_group in app/services/mastery.py.
+  - Reason: ADR 011
+  - Guard: None
+- Never update or delete a review_log row outside the deletion closure.
+  - Reason: ADR 011
+  - Guard: None
+- Delete a subject, deck, field or card only through compute_deletion_impact then apply_deletion in app/services/deletion.py, inside the deleting transaction.
+  - Reason: ADR 051
+  - Guard: None
+- Take every instant from the server's clock in UTC, never from a caller.
+  - Reason: ADR 019
+  - Guard: None
+- Use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
+  - Reason: ADR 019
+  - Guard: tests/api_tests/test_user_timezone.py
+- Stage with `git add -p` and commit only your task's hunks.
+  - Reason: a peer session may share this checkout
+  - Guard: None
+- Never start a full `pytest` while a peer session in this checkout is mid-run.
+  - Reason: peer sessions share TEST_DATABASE_URL
+  - Guard: None
+- Never delete rows from the dev database as cleanup after a browser check; seeded data stays.
+  - Reason: None
+  - Guard: None
+- Never write under docs/ beyond what the running skill lists or the engineer orders.
+  - Reason: every docs/ file records the human's decision
+  - Guard: None
+- Raise a finding that must outlive the session to the engineer for /code-decide; never fix it in passing.
+  - Reason: a lasting finding is a decision for the docket
+  - Guard: None
+- Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
+  - Reason: None
+  - Guard: None
+- Number a new file under docs/ one above the highest its folder has ever held on any branch, read after `git fetch`; never reuse a number.
+  - Reason: two branches must never take one number
+  - Guard: None
+- Never mark deferred work in code; raise it to the engineer as a question for docs/backlog.md.
+  - Reason: the backlog is a kept question's one home
+  - Guard: None
+- Show on a screen only words docs/vocabulary.md gives, never a name from the code.
+  - Reason: PDR 001, ADR 069
+  - Guard: None
+- Change a user-facing word in docs/vocabulary.md first, then on every surface.
+  - Reason: PDR 001, ADR 069
+  - Guard: None
+- Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
+  - Reason: ADR 012
+  - Guard: None
+- Never expose the field archive endpoints or build on archived_at; the archive code stays dormant.
+  - Reason: ADR 049
+  - Guard: None
+- Write a "" card_field_value row for every existing card in the same transaction as any path that adds a field to a deck.
+  - Reason: ADR 057
+  - Guard: None
 
-- Python runs only inside the project venv (`source .venv/bin/activate`, or `uv run …`); Python dependencies via `uv`, Node dependencies via `npm` (in /frontend)
-- Never edit `frontend/src/api/types.ts` by hand — run `npm run gen:api` after any change under `app/models/` or `app/routers/` and commit the result with that change
-- Before committing any frontend change, `npx vitest run`, `npm run lint`, and `npm run build` (which includes `tsc -b`) must all be clean, not just for the files you touched
-- Schema changes reach any persistent database only through an alembic migration; nothing under `app/` calls `create_all`/`drop_all` (ADR 045; `tests/api_tests/test_schema_guard.py`). Only `tests/conftest.py` may, and only against `TEST_DATABASE_URL`
-- Mastery arithmetic (blending, scoring, aggregation) lives only in `MasteryStrategy` implementations under `app/mastery/` — never in SQL, a SQLModel expression, or a trigger (ADR 012; `test_no_mastery_arithmetic_outside_strategy`)
-- A `review_group_id`'s rows are logged atomically, in one transaction, and never appended to afterward (ADR 011)
-- Every deletion of a subject, deck, field, or card goes through `compute_deletion_impact` then `apply_deletion` in `app/services/deletion.py`, inside the deleting transaction (ADR 051); the unexposed archive endpoints are the one exception ADR 049 keeps
-- Timestamps are server-stamped UTC instants; the user's timezone is a rendering input only (ADR 019). Never accept a caller-supplied timestamp on a write endpoint, never store, order, or compare instants in anything but UTC, and compute every user-facing date in `app_user.timezone` at read time
-- Several sessions may work in this checkout and against `TEST_DATABASE_URL` at once: stage with `git add -p`, commit only hunks that belong to your task, and don't start a full `pytest` run while a peer session in this checkout is mid-run; a session in another worktree has its own `.env` and shares neither the tree nor the test database
-- Never bulk-delete rows from the local dev database as "cleanup" after a browser check; leave seeded data in place
-- Findings that must outlive a session go on a roundtable docket through `/code-decide` (`docs/rules/roundtable-docket-rules.md`); `roundtable-dockets` is the only directory under `docs/` you may write to without asking
-- Never edit a file in `docs/rules/` without the engineer's explicit permission
-- An explicit order from the engineer overrides any rule in a skill or under `docs/rules/` for that one act: name the rule it breaks, show the old and new text of every edit it needs, and act only after the engineer confirms; the rule itself stays as written
-- Code references in ADRs and cycle files name the file and the symbol, never a line number
-- A numbered file under `docs/` (ADR, PDR, cycle file) takes the number one above the highest its folder has ever held on any branch or in the history, read after `git fetch`; a number is never reused, even one whose file is gone
+# Conventions
 
-## Conventions
-
-- Backend layering (ADR 034, ADR 055, ADR 064; `test_layering_guard.py`): `app/routers/api/` → `app/services/` → `app/database_ops/` (one module per table plus `practice_generation.py` and `health.py`; public functions `db_*`-prefixed, `db_stage_*` when they don't commit, ownership scoped in the query). A service exists only where a flow spans several operations; a one-query handler calls its `db_*` function directly
-- A list read returns the whole collection and derives per-row figures in a bounded number of statements, never one per row; nothing paginates (ADR 082)
-- `app/models/` (ADR 046): `<table>.py` holds the table, its `Base`, and only that table's flat `Create`/`Read`/`Update`/`Summary` shapes; a shape that nests another model or describes a page/flow lives in `app/models/<router>_payloads.py`. A table module imports a sibling's table class only for a `Relationship`, never a shape (`test_models_layout_guard.py`)
-- Array columns are the generic `sqlalchemy.ARRAY`: `.overlap()` does not exist and `.contains()` raises, so overlap is `.op("&&")(ids)` and membership is `.any(id)`
-- A rule that can drift silently gets a source-scan guard test in `tests/api_tests/`; extend those rather than relying on review
-- Frontend dates go through `formatDate`/`formatDateTime` in `src/lib/datetime.ts`, which pins `timeZone`; ESLint blocks `toLocale*String` and `Intl.DateTimeFormat` everywhere else (ADR 019)
-- Server data is fetched through TanStack Query only (ADR 033) and lives in the query cache, never copied into long-lived component state. Reusable components and everything in `ui/` never fetch: data arrives as props and the page, or `AppShell`, owns the query
-- Routing is declarative react-router: `<Routes>` in `App.tsx`, never the data router's loaders or actions (ADR 053)
-- Extend an existing component with props rather than forking a near-duplicate; a genuinely new component is named for its purpose, never a generic name that leaves two similar components indistinguishable at the import site
-- Layout: one directory per functional area under `src/components/` (`shell/`, `library/`, `practice/`) plus `ui/` for domain-free primitives (see the directory — the inventory drifts). Pages are `src/pages/<Name>Page.tsx`, except routed create/edit forms, which live in their area directory and take a `mode: 'create' | 'edit'` prop (see `App.tsx`)
-- UI copy never echoes schema terms (ADR 021): the user-facing words are the vocabulary table in `docs/cycles/004-practice-setup.md`; change the table first, then every surface. Never "practice config", "pool", a slot name, "in progress", or "ended" in a label, heading, button, or error string
-- Every non-top-level detail page carries one structural breadcrumb row above its `<h1>`, pointing at its hierarchy parent however it was reached; shell destinations and create/edit forms are exempt (ADR 025). Page-view state (tabs, filters) lives in the URL, never `useState`
-- Round-trip return addresses ride the URL as `?returnTo=`, read only through `internalReturnTo` (`src/lib/returnTo.ts`); one-shot arrival results (`{deckId}`, `{configurationId}`) stay in router state (ADR 024)
-- A `.tsx` file exports only components (`react-refresh/only-export-components`); shared values live in a sibling `.ts` (`ratingTiers.ts`, `navItems.ts`) or `src/lib/`
-- Imports are absolute from `src/` (alias in `vite.config.ts` and `tsconfig.app.json`), never relative `../..` chains
-- Routed pages render below `AppShell`'s sticky header — never size them with `min-h-dvh`/`h-screen`/full-height `flex-1`, or bottom controls land below the fold
-- Modals/sheets are Radix Dialog (ADR 016) and an anchored non-modal overlay is Radix Popover (ADR 081), never a hand-rolled focus trap, scroll lock or positioner. A trigger that isn't a `Dialog.Trigger` descendant needs `SideDrawer.tsx`'s `triggerRef` + `onPointerDownOutside` pattern, or Radix silently blocks it while the dialog is open
-- Icons are `lucide-react`, imported by name, never through its `icons` record (ADR 080)
-- `src/api/*.ts` functions throw via `unwrap`/`unwrapVoid` (`src/api/unwrap.ts`) and never side-effect (ADR 006): every non-ok response throws an `ApiError` carrying its status, a structured `{code, message}` detail an `ApiDetailError` that shape-aware callers `instanceof`-check, and a page says "not found" only when `isNotFound` holds (ADR 022, ADR 065). Errors render inline at the call site; the connectivity banner is the one app-level channel, and there is no ErrorBoundary, global cache handler, or toast (ADR 035, ADR 062)
-- Connection state is `AppShell`'s `useConnectionStatus` alone: pages never read it, and nothing outside tests calls `onlineManager.setOnline` (ADR 063)
-- Nothing deferred is marked in code: a deferred item is a question in `docs/backlog.md` (`docs/rules/backlog-rules.md`)
-- Component tests: the Vitest environment is `node`; a DOM test opts in per file with `// @vitest-environment jsdom` (ADR 017). Reuse `src/test/testUtils.tsx` (`renderWithRouter`, `renderWithProviders`) and `src/test/mocks/clerk.ts` rather than re-mocking. RTL auto-cleanup doesn't fire (no `globals: true`); `test/setup.ts`'s `afterEach(cleanup)` does — don't remove it
-
-## Mastery model
-
-- One `review_group_id` is one appearance: a `ReviewGroup` bundling every rated answer field and the prompt fields shown with them
-- `MasteryStrategy.expand(group)` decides every `(card_id, field_def_id, side)` update for an appearance up front (ADR 012). Breadth (how many rated answers a prompt was shown for) changes the prompt-side update's _weight_, never its _target_ — see the comment above `EMA_BETA` in `app/mastery/ema.py`; both review counts increment by exactly 1 per appearance regardless
-- **Harshest-wins** must stay consistent in two places: `submit_rating` (`app/services/practice_run.py`) fails a `practice_card` if _any_ answer field is rated 1, and `EmaStrategy._aggregate_target` makes the prompt-side target the rating-1 score if any answer failed, otherwise the mean (ADR 012)
-- A card's display mastery is `strategy.card_score` over all its deck's active fields, unreviewed ones at the prior (ADR 043) — one definition for every surface. Run deltas never replay history; the bound rule is the docstring of `_compute_field_mastery_deltas` in `app/services/practice_run.py` (ADR 042)
-
-## Entity vocabulary
-
-The 12 tables under `app/models/`; the model files and the ADRs cited hold the column-level detail.
-
-- `app_user` — the authenticated user (keyed by `clerk_user_id`), root of every ownership chain; `timezone` is their IANA zone, synced from the `X-Timezone` header on every request (ADR 019)
-- `subject` — a user's top-level grouping of decks; owns `deck` rows. `icon` is a key into the curated set in `frontend/src/lib/subjectIcon.ts`, a `lucide-react` icon name (ADR 080). `last_activity_at` (there is no `updated_at`, ADR 018) is the server-side sort key for every subject and deck list — the frontend never re-sorts — written after insert only by `touch()` in `app/services/activity.py`
-- `deck` — a named collection of cards under one `subject`; owns `card`, `field_def`, and `deck_practice_config` rows. Always has ≥2 active fields, enforced on create, batch edit, and archive. Deleting a deck deletes everything that references it, review rows and snapshots included, and a run left with no deck goes with it (ADR 047, ADR 048). Created in one transaction and edited in one batched `PATCH` whose operations apply in a fixed order, a field made in the request named by its `client_key` (ADR 079)
-- `field_def` — the sole source of truth for a field (name, `FieldType`, `position`), referenced by id everywhere (ADR 009); removed only by a hard delete through the deletion closure (ADR 049); `archived_at` and the archive endpoints stay in the code, unexposed. The active field at position 0 is the deck's **primary field**, derived, never stored (ADR 032)
-- `card` — one flashcard in a `deck`; holds no content itself
-- `card_field_value` — a card's per-field content, dense: exactly one row per active `field_def` of the deck, `""` when unfilled, never a missing row; every path that adds a field backfills every existing card in the same transaction (ADR 057); archived fields keep their rows but are excluded from every read path. An all-blank card is never persisted
-- `review_log` — append-only ledger of every rated field review, the source of truth mastery is rebuilt from; a row is owned by its card and field and cascades with them (ADR 011, ADR 047, ADR 048); every id in `shown_prompt_ids` is a live `field_def` id (ADR 049)
-- `mastery_log` — append-only ledger of `(card, field)` state changes, ordered by `reviewed_at` (ADR 050), current mastery being the latest row per pair; a disposable projection of `review_log`, regenerated whole by `rebuild_mastery` or per deck by `rebuild_deck_mastery` (ADR 042, ADR 049)
-- `deck_practice_config` — a saved, named, mutable template of which fields are prompts/answers and the pool-sampling rules; validated on save and again at run start (ADR 013) by `validate_deck_practice_config`: a field in at most one of the four lists, every id a live field of its deck, every pool counted within its size, a field on each side (ADR 077)
-- `practice_run` — one user's run (`practice_session` before ADR 038; the UI says "practice", ADR 021), `active` or `completed` only, spanning one `practice_deck` per deck, a second configuration for a deck refused at start (ADR 078); the only status transition is in `get_current_practice_card` (ADR 015 amended). Start and rerun refuse a practice that generates no card (ADR 056). Rerun creates a new run and keeps the original (ADR 039). A run left owning no `practice_deck` is deleted alongside its last deck (ADR 048)
-- `practice_deck` — an immutable snapshot of a `deck_practice_config` taken at run start (ADR 013); cascades with its deck and with its run (ADR 048); `source_config_id` is attribution only (ADR 040)
-- `practice_card` — one generated card instance in a run (`pending`/`passed`/`failed`), ordered by a sparse `position` (ADR 008); a failed card is requeued as a new row, never mutated (ADR 036, ADR 037, ADR 058), and a value cleared mid-practice drops out of the retry (ADR 060); only the current card can be rated (ADR 059); cascades with its card and its run (ADR 015)
-
-## Context
-
-- A record is an ADR in `docs/adrs/` or a PDR in `docs/pdrs/`; before writing or editing one, read `docs/rules/record-rules.md`
-- Before writing or editing a cycle file in `docs/cycles/`, read `docs/rules/cycle-rules.md`
-- Before writing or editing code, read `docs/rules/comment-rules.md`
-- Before writing to a roundtable docket, read `docs/rules/roundtable-docket-rules.md`
+- Scope ownership inside the query, never in Python after the fetch.
+  - Reason: ADR 034
+  - Guard: tests/api_tests/test_auth_scoping.py
+- Keep the three backend layers, app/routers/api/ over app/services/ over app/database_ops/, with dependencies downward only.
+  - Reason: ADR 034, ADR 055
+  - Guard: tests/api_tests/test_layering_guard.py
+- Put every statement and session call in app/database_ops/, as a db_* function.
+  - Reason: ADR 055
+  - Guard: tests/api_tests/test_layering_guard.py
+- Return a whole collection from a list read; nothing paginates.
+  - Reason: ADR 082
+  - Guard: None
+- Derive a list's per-row figures in a bounded number of statements, never one per row.
+  - Reason: ADR 082
+  - Guard: None
+- Fetch server data through TanStack Query only and keep it in the query cache, never in long-lived component state.
+  - Reason: ADR 033
+  - Guard: None
+- Never fetch in a reusable component, everything under src/components/ui/ included: data arrives as props and the page owns the query.
+  - Reason: ADR 033
+  - Guard: None
+- Route with the declarative Routes tree in App.tsx, never a data router's loaders or actions.
+  - Reason: ADR 053
+  - Guard: None
+- Keep page-view state, tabs and filters, in the URL, never in useState.
+  - Reason: PDR 005
+  - Guard: None
+- Carry a round-trip return address as the ?returnTo= URL parameter, read only through internalReturnTo in src/lib/returnTo.ts.
+  - Reason: ADR 024
+  - Guard: None
+- Never size a routed page to the viewport height.
+  - Reason: the page renders below AppShell's sticky header
+  - Guard: None
+- Render every failure inline where it happened.
+  - Reason: PDR 002
+  - Guard: None
+- Keep the connectivity banner in AppShell the one app-level error channel: no error boundary, no cache handler, no toast.
+  - Reason: PDR 002, ADR 063
+  - Guard: None
+- Read connection state only in AppShell through useConnectionStatus; a page never reads it.
+  - Reason: ADR 063
+  - Guard: None
+- Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
+  - Reason: ADR 018
+  - Guard: tests/api_tests/test_activity_tracking.py
