@@ -32,7 +32,7 @@
 
 **Status.** Status holds a state and record pointers, nothing else. The states are "Active"; "Superseded by" followed by the replacing record or records; and "Deprecated by" followed by the record that records the change of context that dropped the decision, or a few words on the cause when no record holds it.
 
-**Context.** Context states the forces the decision answers and the tension between them, as facts in value-neutral language. It says why a decision is needed and describes the situation in detail: the constraints and the clearances that make the decision and its alternatives possible. It cites another record only as a force. The test for a sentence is that a reader who would have chosen a rejected alternative must still agree it is true.
+**Context.** Context states the forces the decision answers and the tension between them, as facts in value-neutral language. It says why a decision is needed and describes the situation in detail: the constraints and the clearances that make the decision and its alternatives possible. It cites another record only as a force. For a decision built before its record is written, Context holds only facts that held then and still hold, and cites no record younger than the decision. State only what is; what an alternative would make true is written with "would", or left to Alternatives considered. The test for a sentence is that a reader who would have chosen a rejected alternative must still agree it is true.
 
 **Decision.** The Decision is written in full sentences, active voice, "We will". It states what was decided at the level the record stands or falls by. The test for a sentence is that changing what it says would be worth superseding the record. A sentence that fails it lives at the code.
 

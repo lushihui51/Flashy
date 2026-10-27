@@ -1,11 +1,12 @@
 # Project
 
 - Flashy is a flashcard web app.
-- The user is a person using the app, not the engineer or the product owner building it.
+- The user is a person using the app, not the engineer or the product owner building it; there are none yet, so a product decision covers only what is built.
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
 - docs/rules/ holds the rules for every file an agent writes under docs/, for comments in code, and for this file.
+- README.md is for a human reader and self-contained; it never points at AGENTS.md.
 
 # Commands
 
@@ -42,6 +43,7 @@
 - Start a full `pytest` only when `pg_stat_activity` shows no other connection to the TEST_DATABASE_URL database.
   - Reason: peer sessions share TEST_DATABASE_URL
 - Never delete rows from the dev database as cleanup after a browser check; seeded data stays.
+- Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
 - Never write under docs/ beyond what the running skill lists or the engineer orders.
   - Reason: every docs/ file records the human's decision
 - Raise a finding that must outlive the session to the engineer for /code-decide; never fix it in passing.
@@ -72,6 +74,8 @@
   - Reason: ADR 024
 - Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no error boundary, cache handler or toast.
   - Reason: PDR 002, ADR 063
+- Carry a rename through every tracked file and path, quoted literals and generated files included; only an occurrence with a different meaning stays.
+  - Reason: one word per concept, history included
 
 # Conventions
 
@@ -85,3 +89,5 @@
   - Reason: PDR 005
 - Size a routed page to its content rather than the viewport height.
   - Reason: the page renders below AppShell's sticky header
+- Declare a typing.Protocol attribute as a read-only property rather than a plain annotated field.
+  - Reason: a plain field reads as settable to a type checker

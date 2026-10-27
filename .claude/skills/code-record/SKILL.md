@@ -59,6 +59,7 @@ Once I have approved of the sections, go through the ADRs under "What ADRs it co
 
 The ADR in question can be:
 
+- Untouched, when no new decision changes its Decision
 - Superseded by the proposed ADR
 - Superseded by a new ADR
 - Deprecated and dropped altogether
@@ -68,7 +69,7 @@ Or, the proposed ADR needs rethinking: with my approval, put the question on the
 
 For every ADR to be superseded or deprecated, list the active ADRs and the live sites citing it. For each ADR citing, add the ADR to "What ADRs it contradicts or extends". Each live site citing goes on the docket.
 
-Once the fate of all affected ADRs has been settled, draft the proposed ADR and any new ADR we've decided on adding, one by one. Nothing is written until I've approved. Never draft an ADR on a decision that rests on an open question.
+Once the fate of all affected ADRs has been settled, draft the proposed ADR and any new ADR we've decided on adding, one by one. For a decision built before its record, date it and each candidate citation from git history, and keep only the citations older than the decision. Nothing is written until I've approved. Never draft an ADR on a decision that rests on an open question.
 
 Once all new ADRs are written, with my go-ahead mark any existing ADR superseded or deprecated as concluded; a decision moved below ADR level becomes a lesser decision.
 

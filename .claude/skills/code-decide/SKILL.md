@@ -53,6 +53,7 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 ## Confirming decisions
 
 - A decision is confirmed only when I say so. State it plainly and ask me directly.
+- A proposed decision states that decision alone: nothing restated from an earlier one, nothing settled for a later one.
 - Label confirmed decisions CD1 upward, above the highest label the docket holds.
 - Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.

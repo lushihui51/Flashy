@@ -59,6 +59,7 @@ Once I have approved of the sections, go through the PDRs under "What PDRs it co
 
 The PDR in question can be:
 
+- Untouched, when no new decision changes its Decision
 - Superseded by the proposed PDR
 - Superseded by a new PDR
 - Deprecated and dropped altogether
