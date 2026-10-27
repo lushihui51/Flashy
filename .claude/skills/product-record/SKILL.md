@@ -17,6 +17,7 @@ Files you may write in this conversation:
 - New PDRs in `docs/pdrs/`
 - The Status line of an existing PDR in `docs/pdrs/` that this conversation superseded or deprecated
 - The docket, following `docs/rules/roundtable-docket-rules.md`
+- A design canvas, when I ask to see how something would look
 
 Give me one thing to answer per turn: one question, the triage table, one PDR's relations, one PDR's fate, or one draft, for me to approve or change.
 
@@ -45,7 +46,7 @@ The final decision on the triage is mine.
 
 ### 2. The pass
 
-Once I approve the triage, take the rows one at a time, in the table's order, and settle each with me before the next.
+Once I approve the triage, take the rows one at a time, in the table's order, and settle each with me before the next. Open each row with a one-line summary of the decision, then why it is record level or a lesser decision, in a sentence or two.
 
 #### For a proposed PDR:
 
@@ -89,6 +90,6 @@ Once all new PDRs are written, with my go-ahead mark any existing PDR superseded
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every PDR written, every PDR superseded or deprecated, every lesser decision, and the Product decisions taken out. Then stop; /product-decide is next if you put a question back to it, otherwise /code-decide.
+When every row is settled, show me the docket edit, then make it: every PDR written, every PDR superseded or deprecated, every lesser decision, the Product decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything rests on a question you put for it, otherwise /code-decide.
 
 Docket for this conversation: $ARGUMENTS

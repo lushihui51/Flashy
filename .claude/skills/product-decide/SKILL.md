@@ -54,6 +54,6 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, and the open questions you decided taken out. Then stop; /product-record is next.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-record is next.
 
 Docket and topic for this conversation: $ARGUMENTS

@@ -68,6 +68,6 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, and the changed PDRs you checked taken out. Then stop; /product-decide is next if you put a question to it, otherwise /code-record.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, the changed PDRs you checked taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything rests on a question you put for it, otherwise /code-record.
 
 Docket and topic for this conversation: $ARGUMENTS

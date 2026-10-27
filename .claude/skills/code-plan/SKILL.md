@@ -12,6 +12,7 @@ Files you may write in this conversation:
 - The cycle files, in `docs/cycles/`
 - The docket, following `docs/rules/roundtable-docket-rules.md`
 - The backlog, `docs/backlog.md`, following `docs/rules/backlog-rules.md`
+- A design canvas, when I ask to see how something would look
 
 Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
 
@@ -89,6 +90,6 @@ Once I've approved of the draft, it is final: write it to `docs/cycles/`, commit
 
 ## Ending
 
-When the last cycle file is committed, show me the docket edit and the backlog edit, then make them, and commit them: every record, lesser decision and live site a cycle file carries taken out; every open question no task and no deferred outcome needs taken out of the docket and entered in the backlog, unless I drop it; every backlog entry whose decision a cycle file's task delivers taken out of the backlog; every deferred outcome put in. The docket is clean when every item left on it is carried by a deferred outcome; until it is, the work is not finished. Then stop.
+When the last cycle file is committed, show me the docket edit and the backlog edit, then make them, and commit them: every record, lesser decision and live site a cycle file carries taken out; every open question no task and no deferred outcome needs taken out of the docket and entered in the backlog, unless I drop it; every backlog entry whose decision a cycle file's task delivers taken out of the backlog; every deferred outcome put in; and, once I approve them, the references in other skills' items to anything you changed fixed. The docket is clean when every item left on it is carried by a deferred outcome; until it is, the work is not finished. Then stop.
 
 Docket for this conversation: $ARGUMENTS
