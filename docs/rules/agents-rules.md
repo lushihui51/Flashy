@@ -25,6 +25,6 @@
 
 **Skills.** A line never restates what a skill says for an act an agent reaches only through that skill. An act an agent can reach with no skill loaded keeps its line even where a skill states the same rule.
 
-**Budget** The file holds at most forty lines. Once it is full, a line that enters names the line it displaces.
+**Budget** The file holds at most fifty lines. Once it is full, a line that enters names the line it displaces.
 
 **Changes.** Only the human can initiate a change, but any agents can edit the file under the human's command.
