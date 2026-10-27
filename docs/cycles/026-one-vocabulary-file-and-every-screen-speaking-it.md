@@ -30,7 +30,7 @@ Judgement: On a live server, walk every screen and read each heading, button, ta
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -43,6 +43,7 @@ None.
 **Files**
 
 - `docs/vocabulary.md` (new)
+- `AGENTS.md`
 
 **Details**
 
@@ -75,7 +76,36 @@ The Sentences table's Code column carries these codes: `subject_name_taken`, `de
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `head -1` prints `# Vocabulary`. `grep -c '^#'` prints `1`, `grep -c '^- '` prints `0`, and `grep -c 'ADR \|PDR \|docket'` prints `0`.
+- `grep -n '^| Area |'` prints `5:| Area | Concept | User reads | Where | Code |` and `131:| Area | Situation | Code | User reads |`.
+- Each of `"Add practice"`, `"New configuration…"`, `"Breadcrumb"`, `"Open book"`, `"N configurations"` and `can't be re-run` matches exactly one line. `grep -n 'to create it."' | grep -c configuration` prints `1`.
+- Each of the thirteen codes in backticks matches exactly one line after line 131, the Sentences table's header. `grep -c 'run_active'` prints `0`.
+- `grep -c '^| '` prints `191`: the Words table has 123 rows of 5 cells, the Sentences table 64 rows of 4 cells, plus two header and two separator rows. `grep -c practis` prints `0`.
+
+Departures:
+
+- Name taken: the Sentences table has four rows, one sentence per code, from "A subject with this name already exists." to "A configuration with this name already exists.", in place of one "A <thing> with this name already exists." row carrying four codes. Each code then sits beside the literal sentence it carries, so T3's `grep -F` of each literal in `failureSentence.ts` finds a line.
+- Not found: "<Thing> not found." stays one placeholder row under Failure. Details names "Deck configuration not found." among the configuration's sentences, so that one also has its own row under Configuration.
+- Words and sentences outside Details' list: Details does not name every word a screen shows today. For each word the screens show that the cycle does not change, the file has a row in that word's area:
+  - App: "Flashy home"; "Account menu for <name>"; "Showing N of N · type to narrow"; "Name"; "Delete <name>"; "Edit <name>".
+  - Library: "Library", spoken.
+  - Subject: "Description"; "Subject" as the picker's label; "Delete subject" and "Delete subject?".
+  - Deck: "Deck" as the picker's label; "Deck contents"; "Delete deck" and "Delete deck?".
+  - Field: "Unsupported field type".
+  - Card: "Cards in <deck>"; "Delete card" and "Delete card?".
+  - Configuration: "Loading fields…"; "Delete this configuration?"; the answer-side twins of two of the board's rules, "The answer side needs at least one field — always shown or random draw." and "Check how many random answer fields each card shows.".
+  - Practice: "Start practice"; "Re-run this practice?"; "Could not load your selected configurations.".
+  - Summary: "Sort".
+- Two Failure rows in the Words table, "The connection's state" and "A failed request", read "—" under User reads. Their sentences are rows of the Sentences table; the Words rows hold the code names: `ConnectionStatus` and its four values, `ApiError`, `ApiDetailError`, `unwrap` and `isNotFound`.
+- The Words table holds the words this cycle puts on screens, not today's: "Add subject", the "New" shortcut, "Practice status", "practiced", "Subject · Deck" and the rest. Until T4 to T7 land, the screens differ from the file where those tasks change them.
+
+- AGENTS.md: on the engineer's explicit order, which overrides this task's Out of scope line "A line in AGENTS.md pointing at the file: never in a cycle" for this one act, AGENTS.md is added to Files and two Hard rules follow the vocabulary line. "Name a concept in code by the name docs/vocabulary.md's Code column gives it, and change a code name there first, then in every file." cites ADR 069. "Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message." cites ADR 070. The Out of scope line stays as written. AGENTS.md now holds 44 bullets, and `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed in 0.03s` after the edit. The preamble's "a code name changes in the code and is recorded here" stays as Details gives it, although the first new line puts the file first.
+
+- Preamble: on the engineer's explicit order, which overrides the Details line giving a three-sentence preamble, the preamble keeps only its first sentence, "This file gives the word for every concept Flashy shows and every act on it, the sentence for every situation, and the code's name for each, side by side." The two dropped sentences' rules live in AGENTS.md. The Details line stays as written. The Done-when checks were rerun after the edit and print what is listed above.
+
+To judge this task, read `docs/vocabulary.md` and the two new lines in AGENTS.md. No code changed.
 
 ### T2 — Refusal codes on the backend
 

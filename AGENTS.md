@@ -55,6 +55,10 @@
   - Reason: the backlog is a kept question's one home
 - Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
   - Reason: PDR 001, ADR 069
+- Name a concept in code by the name docs/vocabulary.md's Code column gives it, and change a code name there first, then in every file.
+  - Reason: ADR 069
+- Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
+  - Reason: ADR 070
 - Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
   - Reason: ADR 012
 - Never expose the field archive endpoints or build on archived_at; the archive code stays dormant.
