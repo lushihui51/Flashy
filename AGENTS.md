@@ -1,158 +1,87 @@
 # Project
 
-- Flashy is a flashcard web app: a card is a record of named fields, and mastery is tracked per field.
-  - Reason: None
-  - Guard: None
-- The backend lives under app/ and the frontend under frontend/.
-  - Reason: None
-  - Guard: None
-- The user is a person using the app, never the engineer or the product owner building it.
-  - Reason: None
-  - Guard: None
+- Flashy is a flashcard web app.
+- The user is a person using the app, not the engineer or the product owner building it.
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
 - docs/rules/ holds the rules for every file an agent writes under docs/, for comments in code, and for this file.
-  - Reason: None
-  - Guard: None
 
 # Commands
 
 - Run Python through `uv run` or inside .venv.
-  - Reason: the system Python lacks the project's packages
-  - Guard: None
-- Run frontend tests with `npx vitest run` in frontend/, never `npm run test`.
-  - Reason: npm run test is watch mode and never exits
-  - Guard: None
-- Dry-run a new migration on a `pg_dump` copy of the dev database before applying it.
-  - Reason: a bad migration would cost the seeded dev data
-  - Guard: None
-- Apply a new migration to the dev database with `alembic upgrade head` in the task that writes it.
+- Run frontend tests with `npx vitest run` in frontend/ rather than `npm run test`.
+  - Reason: npm run test is watch mode and does not exit
+- Dry-run a new migration on a `pg_dump` copy of the dev database, then apply it with `alembic upgrade head` in the task that writes it.
   - Reason: fastapi dev reloads new models before the schema
-  - Guard: None
-- A browser check drives the signed-out app at localhost:5173 with headless Chromium through playwright-core from the session scratchpad, the dev-auth bypass in app/dependencies.py on.
-  - Reason: None
-  - Guard: None
+- Check a frontend change in headless Chromium through playwright-core, run from the session scratchpad against localhost:5173, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development` set.
 
 # Hard rules
 
-- Never edit frontend/src/api/types.ts by hand.
+- Regenerate frontend/src/api/types.ts with `npm run gen:api` after any change under app/models/ or app/routers/, commit it with that change, and never edit it by hand.
   - Reason: ADR 006
-  - Guard: None
-- Regenerate frontend/src/api/types.ts with `npm run gen:api` after any change under app/models/ or app/routers/ and commit it with that change.
-  - Reason: ADR 006
-  - Guard: None
 - Commit a frontend change only when `npx vitest run`, `npm run lint` and `npm run build` are all clean over the whole frontend.
   - Reason: ADR 041
-  - Guard: None
 - Never push to main; a change reaches main only by a pull request with both CI checks green.
   - Reason: ADR 041
-  - Guard: None
 - Change a database's schema only through an alembic migration, never from code under app/.
   - Reason: ADR 045
   - Guard: tests/api_tests/test_schema_guard.py
 - Keep mastery arithmetic only in a MasteryStrategy under app/mastery/, never in SQL, a SQLModel expression or a trigger.
   - Reason: ADR 012
   - Guard: tests/api_tests/test_mastery.py
-- Append to review_log only through record_review_group in app/services/mastery.py.
+- Append to review_log only through record_review_group in app/services/mastery.py, and never update or delete its rows outside the deletion closure.
   - Reason: ADR 011
-  - Guard: None
-- Never update or delete a review_log row outside the deletion closure.
-  - Reason: ADR 011
-  - Guard: None
 - Delete a subject, deck, field or card only through compute_deletion_impact then apply_deletion in app/services/deletion.py, inside the deleting transaction.
   - Reason: ADR 051
-  - Guard: None
-- Take every instant from the server's clock in UTC, never from a caller.
-  - Reason: ADR 019
-  - Guard: None
-- Use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
+- Take every instant from the server's clock in UTC, never from a caller, and use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
   - Reason: ADR 019
   - Guard: tests/api_tests/test_user_timezone.py
 - Stage with `git add -p` and commit only your task's hunks.
   - Reason: a peer session may share this checkout
-  - Guard: None
-- Never start a full `pytest` while a peer session in this checkout is mid-run.
+- Start a full `pytest` only when `pg_stat_activity` shows no other connection to the TEST_DATABASE_URL database.
   - Reason: peer sessions share TEST_DATABASE_URL
-  - Guard: None
 - Never delete rows from the dev database as cleanup after a browser check; seeded data stays.
-  - Reason: None
-  - Guard: None
 - Never write under docs/ beyond what the running skill lists or the engineer orders.
   - Reason: every docs/ file records the human's decision
-  - Guard: None
 - Raise a finding that must outlive the session to the engineer for /code-decide; never fix it in passing.
   - Reason: a lasting finding is a decision for the docket
-  - Guard: None
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
-  - Reason: None
-  - Guard: None
 - Number a new file under docs/ one above the highest its folder has ever held on any branch, read after `git fetch`; never reuse a number.
   - Reason: two branches must never take one number
-  - Guard: None
 - Never mark deferred work in code; raise it to the engineer as a question for docs/backlog.md.
   - Reason: the backlog is a kept question's one home
-  - Guard: None
-- Show on a screen only words docs/vocabulary.md gives, never a name from the code.
+- Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
   - Reason: PDR 001, ADR 069
-  - Guard: None
-- Change a user-facing word in docs/vocabulary.md first, then on every surface.
-  - Reason: PDR 001, ADR 069
-  - Guard: None
 - Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
   - Reason: ADR 012
-  - Guard: None
 - Never expose the field archive endpoints or build on archived_at; the archive code stays dormant.
   - Reason: ADR 049
-  - Guard: None
 - Write a "" card_field_value row for every existing card in the same transaction as any path that adds a field to a deck.
   - Reason: ADR 057
-  - Guard: None
-
-# Conventions
-
-- Scope ownership inside the query, never in Python after the fetch.
+- Scope every read and write to the requesting user, so another user's resource returns 404.
   - Reason: ADR 034
   - Guard: tests/api_tests/test_auth_scoping.py
-- Keep the three backend layers, app/routers/api/ over app/services/ over app/database_ops/, with dependencies downward only.
+- Keep the three backend layers, app/routers/api/ over app/services/ over app/database_ops/, dependencies downward only, every statement and session call in a `db_*` function.
   - Reason: ADR 034, ADR 055
   - Guard: tests/api_tests/test_layering_guard.py
-- Put every statement and session call in app/database_ops/, as a db_* function.
-  - Reason: ADR 055
-  - Guard: tests/api_tests/test_layering_guard.py
-- Return a whole collection from a list read; nothing paginates.
-  - Reason: ADR 082
-  - Guard: None
-- Derive a list's per-row figures in a bounded number of statements, never one per row.
-  - Reason: ADR 082
-  - Guard: None
-- Fetch server data through TanStack Query only and keep it in the query cache, never in long-lived component state.
-  - Reason: ADR 033
-  - Guard: None
-- Never fetch in a reusable component, everything under src/components/ui/ included: data arrives as props and the page owns the query.
-  - Reason: ADR 033
-  - Guard: None
-- Route with the declarative Routes tree in App.tsx, never a data router's loaders or actions.
-  - Reason: ADR 053
-  - Guard: None
-- Keep page-view state, tabs and filters, in the URL, never in useState.
-  - Reason: PDR 005
-  - Guard: None
-- Carry a round-trip return address as the ?returnTo= URL parameter, read only through internalReturnTo in src/lib/returnTo.ts.
-  - Reason: ADR 024
-  - Guard: None
-- Never size a routed page to the viewport height.
-  - Reason: the page renders below AppShell's sticky header
-  - Guard: None
-- Render every failure inline where it happened.
-  - Reason: PDR 002
-  - Guard: None
-- Keep the connectivity banner in AppShell the one app-level error channel: no error boundary, no cache handler, no toast.
-  - Reason: PDR 002, ADR 063
-  - Guard: None
-- Read connection state only in AppShell through useConnectionStatus; a page never reads it.
-  - Reason: ADR 063
-  - Guard: None
 - Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
   - Reason: ADR 018
   - Guard: tests/api_tests/test_activity_tracking.py
+- Carry a round-trip return address as the ?returnTo= URL parameter, read only through internalReturnTo in src/lib/returnTo.ts.
+  - Reason: ADR 024
+- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no error boundary, cache handler or toast.
+  - Reason: PDR 002, ADR 063
+
+# Conventions
+
+- Scope ownership inside the query rather than in Python after the fetch.
+  - Reason: ADR 034
+- Return a whole collection from a list read and derive its per-row figures in a bounded number of statements rather than one per row.
+  - Reason: ADR 082
+- Fetch server data through TanStack Query in the page, hand it to reusable components, src/components/ui/ included, as props, and keep it in the query cache rather than long-lived component state.
+  - Reason: ADR 033
+- Keep page-view state, tabs and filters, in the URL rather than useState.
+  - Reason: PDR 005
+- Size a routed page to its content rather than the viewport height.
+  - Reason: the page renders below AppShell's sticky header

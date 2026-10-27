@@ -13,13 +13,13 @@
 - Hard rules: the acts that are never done, an agent will stop and ask.
 - Conventions: the default judgment calls, an agent who departs from one says so and why.
 
-**Line.** One bullet is a statement and two sub-lines under it, `Reason:` and `Guard:`, always both present.
+**Line.** One bullet is a statement and two optional sub-lines under it, `Reason:` and `Guard:`.
 
-**Statement.** One fact or one rule in one sentence, about 200 characters; split a longer one into its facts or cut it. A rule is an imperative. Present tense. Name a thing by the stablest handle that still identifies it: a command, a directory, a file, a symbol. Never a line number, a count, a date, a version, or any value the next commit can change. Give no mechanism or example; they live in the record the Reason names. Add no emphasis marker: a rule agents keep breaking gets a guard, not capitals.
+**Statement.** The facts or rules about one topic, in one sentence that states them unambiguously in about 200 characters; split a longer one into its facts, or cut it. A rule is an imperative. Present tense. Name a thing by the stablest handle that still identifies it: a command, a directory, a file, a symbol. Never a line number, a count, a date, a version, or any value the next commit can change. Give no mechanism or example; they live in the record the Reason names. Add no emphasis marker: a rule agents keep breaking gets a guard, not capitals.
 
-**Reason.** Names the records the line rests on, as `ADR NNN` or `PDR NNN`. With no record, gives the reason in about 50 characters. With neither, `None`.
+**Reason.** Names the records the line rests on, as `ADR NNN` or `PDR NNN`. With no record, gives the reason in about 50 characters. With neither, exclude this sub-line.
 
-**Guard.** Names the test file that enforces the line and nothing else. With no test, `None`.
+**Guard.** Names the test file that enforces the line and nothing else. With no test, exclude this sub-line.
 
 **Inclusion Test.** A line earns its place in one of two ways. It prevents a mistake an agent makes without it and nothing else prevents at the time the work is done: a rule broken, a wrong command run, or work done on a wrong fact, where the agent would not ask the human first and no check catches it before the work would have to be redone. Or it saves a question the human would otherwise answer every session.
 
