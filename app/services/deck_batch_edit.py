@@ -19,6 +19,7 @@ from app.mastery.strategy import MasteryStrategy
 from app.models.deck import Deck
 from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
+from app.refusals import Refusal
 from app.services.activity import touch
 from app.services.deletion import apply_deletion, compute_deletion_impact
 
@@ -50,7 +51,36 @@ def apply_deck_batch_edit(
     """Applies a changeset to `deck` in one transaction: field create → field
     update → field delete → reorder → card delete → card update → card create, then a
     single commit. Any validation failure raises before that commit, so nothing
-    partial — not even an already-renamed deck — ever reaches the database."""
+    partial — not even an already-renamed deck — ever reaches the database. A name the
+    deck's subject or the deck's active fields already hold raises a `deck_name_taken`
+    or `field_name_taken` Refusal; any other refused input raises
+    DeckBatchEditValidationError."""
+    try:
+        _stage_deck_batch_edit(db, user_id, deck, payload, strategy)
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        # A taken name surfaces at whichever flush first writes it, an autoflush ahead
+        # of a read included, so the whole staging sits inside this handler.
+        constraint = getattr(getattr(e.orig, "diag", None), "constraint_name", None)
+        if constraint == "uq_deck_subject_id":
+            raise Refusal(
+                "deck_name_taken", "deck (subject_id, name) already exists"
+            ) from e
+        if constraint == "uq_field_def_deck_id_name_active":
+            raise Refusal(
+                "field_name_taken", "an active field_def (deck_id, name) already exists"
+            ) from e
+        raise DeckBatchEditValidationError(
+            "a conflicting deck or field name already exists"
+        ) from e
+    db.refresh(deck)
+    return deck
+
+
+def _stage_deck_batch_edit(
+    db: Session, user_id: uuid.UUID, deck: Deck, payload: DeckBatchEdit, strategy: MasteryStrategy
+) -> None:
     touch_deck = False
     touch_subject_ids: set[uuid.UUID] = set()
 
@@ -136,7 +166,7 @@ def apply_deck_batch_edit(
             del active_fields[field_id]
 
         if len(active_fields) < 2:
-            raise DeckBatchEditValidationError("a deck needs at least two fields")
+            raise Refusal("too_few_fields", "the deck would keep fewer than two active field_defs")
 
         # No manual cleanup of configurations, active runs, review rows, or
         # shown_prompt_ids references — apply_deletion is the only way a field_def
@@ -244,13 +274,3 @@ def apply_deck_batch_edit(
     if touch_subject_ids:
         subjects = [db_read_subject(db, sid, user_id) for sid in touch_subject_ids]
         touch(db, *(s for s in subjects if s is not None))
-
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        raise DeckBatchEditValidationError(
-            "a conflicting deck or field name already exists"
-        ) from e
-    db.refresh(deck)
-    return deck

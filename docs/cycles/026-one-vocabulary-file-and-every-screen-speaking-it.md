@@ -111,7 +111,7 @@ To judge this task, read `docs/vocabulary.md` and the two new lines in AGENTS.md
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -202,7 +202,23 @@ Every test that asserted one of these string details asserts the detail object's
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The seven files print `212 passed`. Run by name with `-v`, these pass: `test_duplicate_name_for_same_user_rejected` (`subject_name_taken`), `test_rate_non_current_pending_card_rejected` (`not_current_card`), `test_batch_edit_deck_name_clash_answers_deck_name_taken`, `test_batch_edit_field_name_clash_answers_field_name_taken`, `test_duplicate_configuration_name_answers_configuration_name_taken`, `test_rating_a_rated_card_answers_card_already_rated` and `test_health_reports_database_unavailable`, which asserts the message "SELECT 1 raised SQLAlchemyError; the database did not answer". The three "at least two fields" tests in `test_deck_batch_edit.py`, the two in `test_decks.py` and the one in `test_field_defs.py` now assert `too_few_fields`. `test_duplicate_deck_name_in_subject_rejected_and_rolled_back` asserts `deck_name_taken`, and `test_duplicate_active_name_leaves_no_rows` asserts `field_name_taken`.
+- The two guards print `6 passed`.
+- The grep prints nothing (exit 1).
+- Against the running `fastapi dev`, the first POST of `{"name":"Twice"}` answered 201. The second answered `{"detail":{"code":"subject_name_taken","message":"subject (user_id, name) already exists"}}` with status 400. The subject "Twice" stays in the dev database.
+- `npm run gen:api` changes both files, so both are in this commit. The only change drops the `GET /` "Read Root" operation: 90c3761 removed that route without regenerating. Every refusal detail here comes from an `HTTPException`, which the schema does not describe, so this task changes no type.
+- The full backend suite, run with no other connection to the test database, printed `351 passed`. In `frontend/`, `npx vitest run` printed `526 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures:
+
+- Batch edit: today a deck or field rename that clashes never reaches the commit's `except IntegrityError`. An autoflush ahead of a read, or the field phase's own flush, raises it first, and the request answered 500; a probe test showed both cases. So `apply_deck_batch_edit` now wraps a private `_stage_deck_batch_edit`, which holds the old body without its commit, together with the commit, in one `except IntegrityError`. That handler maps the two constraints to their `Refusal`s and any other constraint to today's `DeckBatchEditValidationError`.
+- Two of the four new cases were already tests that asserted only the status: `test_rate_already_rated_card_rejected` and `test_duplicate_name_rejected`. Each is renamed to its Done-when name and gains the code assertion, so no case is duplicated. The configuration case also renames a second configuration to the taken name, which reaches the PATCH branch in `db_update_deck_practice_config`.
+- On the engineer's order, two cases beyond the Done when cover the two rename sites no test reached: `test_rename_to_taken_name_answers_subject_name_taken` in `test_subjects.py`, for `db_update_subject`, and `test_rename_to_taken_name_answers_field_name_taken` in `test_field_defs.py`, for `db_rename_field_def`. Each asserts the code and that the name is unchanged, and both pass. Every `Refusal` site is now reached by a test. The routers' `except ValueError` branches after `except Refusal` in `subject.py` and in `field_def.py`'s create and rename handlers can no longer be reached. They stay because Details gives every handler both branches.
+- Every name-taken message says "already exists", for example "deck_practice_config (deck_id, name) already exists". Until T5, `DeckConfigurationEditor.tsx` sends a name clash to the name field by matching `/already exists/` in the message, so this wording keeps that working. Until T4 to T6 land, a form shows these developer messages where it showed the old sentences.
+
+Read `apply_deck_batch_edit` in `app/services/deck_batch_edit.py`: it is the one change in structure. Every other site changes only the exception it raises.
 
 ### T3 — The sentence function
 

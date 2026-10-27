@@ -156,7 +156,7 @@ class TestPracticeRunHTTPFlow:
         )
         assert res.status_code == 400
 
-    def test_rate_already_rated_card_rejected(
+    def test_rating_a_rated_card_answers_card_already_rated(
         self, client, existing_user, session_cards, session_config
     ):
         start_res = client.post(
@@ -180,6 +180,7 @@ class TestPracticeRunHTTPFlow:
             f"/api/practice_cards/{card['practice_card_id']}/rate", json={"ratings": ratings}
         )
         assert second.status_code == 400
+        assert second.json()["detail"]["code"] == "card_already_rated"
 
     def test_rate_non_current_pending_card_rejected(
         self, client, db, existing_user, session_cards, session_config
@@ -211,7 +212,7 @@ class TestPracticeRunHTTPFlow:
             json={"ratings": {str(fid): 4 for fid in not_current.answers}},
         )
         assert res.status_code == 400
-        assert res.json()["detail"] == "practice_card is not the current card"
+        assert res.json()["detail"]["code"] == "not_current_card"
 
         db.refresh(not_current)
         assert not_current.status == PracticeCardStatus.pending

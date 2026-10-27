@@ -411,7 +411,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=[field_id])},
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
     def test_delete_all_active_fields_at_once_rejected(self, client, existing_deck, existing_field_defs):
         extra = client.post(
@@ -423,7 +423,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=field_ids)},
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
         # rejected before commit — nothing persisted, all three still active.
         get_response = client.get(f"/api/decks/{existing_deck['id']}")
@@ -442,7 +442,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=[field_id])},
         )
         assert response.status_code == 422, response.text
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
         assert mastery_log_statement_counter.count == 0
 
 
@@ -824,6 +824,49 @@ class TestForeignAndUnknownIdsRejected:
             f"/api/decks/{existing_deck['id']}", json={"subject_id": str(uuid.uuid4())}
         )
         assert response.status_code == 422
+
+
+class TestNameClashes:
+    def test_batch_edit_deck_name_clash_answers_deck_name_taken(
+        self, client, existing_subject, existing_deck, existing_field_defs
+    ):
+        other = client.post(
+            "/api/decks",
+            json={
+                "name": "Other Deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
+            },
+        )
+        assert other.status_code == 201, other.text
+
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "name": "Other Deck",
+                "field_defs": _field_defs(create=[{"client_key": "c1", "name": "Notes", "type": "text"}]),
+            },
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"]["code"] == "deck_name_taken"
+
+        check = client.get(f"/api/decks/{existing_deck['id']}").json()
+        assert check["name"] == "Test Deck"
+        assert {fd["name"] for fd in check["field_defs"]} == {"front", "back"}
+
+    def test_batch_edit_field_name_clash_answers_field_name_taken(
+        self, client, existing_deck, existing_field_defs
+    ):
+        front, back = existing_field_defs
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={"field_defs": _field_defs(update=[{"id": front["id"], "name": back["name"]}])},
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"]["code"] == "field_name_taken"
+
+        check = client.get(f"/api/decks/{existing_deck['id']}").json()
+        assert {fd["name"] for fd in check["field_defs"]} == {"front", "back"}
 
 
 class TestRollback:
