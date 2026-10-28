@@ -52,13 +52,10 @@ function formatDelta(delta: number): string {
   return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
 }
 
-/** The compact row's text: only the deck's primary field, name and value — never
- * prompt/answer content. Falls back to "Untitled card" when the primary field itself
- * is blank. */
+/** The card's name in its row and its detail sheet's heading: the value of its deck's
+ * first field alone, or "Untitled card" when that value is blank. */
 function cardTitle(card: BreakdownCard): string {
-  return card.primary_field.value
-    ? `${card.primary_field.name}: ${card.primary_field.value}`
-    : 'Untitled card';
+  return card.primary_field.value || 'Untitled card';
 }
 
 type RunBreakdownProps = {

@@ -1,29 +1,19 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
+import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
+import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
-}
-
-function CreateButton({ label, to }: { label: string; to: string }) {
-  const navigate = useNavigate();
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(to)}
-      className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-    >
-      {label}
-    </button>
-  );
 }
 
 function EmptyState({ copy }: { copy: string }) {
@@ -35,6 +25,8 @@ function EmptyState({ copy }: { copy: string }) {
 }
 
 export default function LibraryPage() {
+  usePageTitle('Your library');
+  const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,7 +77,7 @@ export default function LibraryPage() {
             <h2 className="text-sm font-medium text-(--color-text-muted)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
-            <CreateButton label="New subject" to="/subjects/new" />
+            <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
@@ -121,7 +113,7 @@ export default function LibraryPage() {
             <h2 className="text-sm font-medium text-(--color-text-muted)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
-            <CreateButton label="New deck" to="/decks/new" />
+            <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
@@ -135,17 +127,7 @@ export default function LibraryPage() {
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
-                  <Link
-                    to={`/decks/${deck.id}`}
-                    className="flex min-h-14 flex-col justify-center py-2"
-                  >
-                    <span className="font-medium text-(--color-text)">{deck.name}</span>
-                    {subjectNameById.get(deck.subject_id) && (
-                      <span className="text-sm text-(--color-text-muted)">
-                        {subjectNameById.get(deck.subject_id)}
-                      </span>
-                    )}
-                  </Link>
+                  <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />
                 </li>
               ))}
             </ul>

@@ -23,12 +23,12 @@ type FieldAssignmentBoardProps = {
 /** The sheet's five possible destinations, in this fixed order. A field's own current
  * slot is filtered out at render time, so the sheet always offers exactly the other
  * four. */
-const DESTINATIONS: { slot: BoardSlot; label: string }[] = [
-  { slot: 'prompt_fields', label: 'Prompt · always shown' },
-  { slot: 'prompt_pool', label: 'Prompt · random draw' },
-  { slot: 'answer_fields', label: 'Answer · always shown' },
-  { slot: 'answer_pool', label: 'Answer · random draw' },
-  { slot: 'unassigned', label: 'Not used' },
+const DESTINATIONS: BoardSlot[] = [
+  'prompt_fields',
+  'prompt_pool',
+  'answer_fields',
+  'answer_pool',
+  'unassigned',
 ];
 
 const RANDOM_DRAW_LEGEND: Record<PoolSlot, string> = {
@@ -158,22 +158,20 @@ export default function FieldAssignmentBoard({
           Move "{activeName}" to…
         </h2>
         <ul className="flex flex-col">
-          {DESTINATIONS.filter((destination) => destination.slot !== activeSlot).map(
-            (destination) => (
-              <li key={destination.slot}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeFieldId) onMove(activeFieldId, destination.slot);
-                    closeSheet();
-                  }}
-                  className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
-                >
-                  {destination.label}
-                </button>
-              </li>
-            ),
-          )}
+          {DESTINATIONS.filter((destination) => destination !== activeSlot).map((destination) => (
+            <li key={destination}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeFieldId) onMove(activeFieldId, destination);
+                  closeSheet();
+                }}
+                className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
+              >
+                {SLOT_LABELS[destination]}
+              </button>
+            </li>
+          ))}
         </ul>
       </BottomSheet>
     </div>

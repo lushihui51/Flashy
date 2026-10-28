@@ -274,13 +274,13 @@ describe('PracticeOverviewPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
   });
 
-  it('New practice carries the current filters into the creation surface', async () => {
+  it('Add practice carries the current filters into the creation surface', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderOverview('/practice?subject=s1&deck=d1');
     await screen.findByText('Alpha run');
 
-    await user.click(screen.getByRole('button', { name: 'New practice' }));
+    await user.click(screen.getByRole('button', { name: 'Add practice' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/new?subject=s1&deck=d1');
   });
 
@@ -326,6 +326,24 @@ describe('PracticeOverviewPage', () => {
 
     expect(deleteCalls).toBe(0);
     expect(screen.getByText('Alpha run')).toBeInTheDocument();
+  });
+
+  it('a delete of a practice already gone says Practice not found. inside the dialog', async () => {
+    mockLibrary();
+    server.use(
+      http.delete(`${BASE}/api/practice_runs/:id`, () =>
+        HttpResponse.json({ detail: 'practice_run not found' }, { status: 404 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderOverview();
+    await screen.findByText('Alpha run');
+
+    await user.click(screen.getByRole('button', { name: 'Delete Alpha run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Practice not found.');
   });
 
   it('empty with filters offers to clear them; empty with none offers to start one', async () => {

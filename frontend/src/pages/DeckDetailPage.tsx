@@ -12,6 +12,8 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
+import { failureSentence } from 'src/lib/failureSentence';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -42,6 +44,7 @@ export default function DeckDetailPage() {
     enabled: !!deckId,
   });
   const deck = deckQuery.data;
+  usePageTitle(deck?.name);
 
   const subjectQuery = useQuery({
     queryKey: ['subject', deck?.subject_id],
@@ -64,7 +67,7 @@ export default function DeckDetailPage() {
       setDeleteError(null);
       await queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
     },
-    onError: (error: Error) => setDeleteError(error.message),
+    onError: (error) => setDeleteError(failureSentence(error, 'Deck configuration not found.')),
   });
 
   if (deckQuery.isError) {
@@ -97,7 +100,7 @@ export default function DeckDetailPage() {
   // Both carry the deck in router state — the same deck-context wiring the card form
   // and the configuration builder already read on arrival.
   const addCard = () => navigate('/cards/new', { state: { deckId: deck.id } });
-  const newConfiguration = () =>
+  const addConfiguration = () =>
     navigate('/deck-configurations/new', { state: { deckId: deck.id } });
 
   return (
@@ -118,9 +121,6 @@ export default function DeckDetailPage() {
       />
 
       <h1 className="mt-1 text-[22px] font-medium text-(--color-text)">{deck.name}</h1>
-      <p className="text-[13px] text-(--color-text-muted)">
-        {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
-      </p>
 
       <div className="mt-3 flex items-center gap-2">
         <button
@@ -180,7 +180,10 @@ export default function DeckDetailPage() {
         <div className="mt-2">
           {/* Inside the tab, and labeled: a control whose meaning depends on which tab
               is open has no business sitting in the page header. */}
-          <div className="flex justify-end py-2">
+          <div className="flex items-center justify-between py-2">
+            <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+              {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
+            </h2>
             <AddButton label="Add card" onClick={addCard} />
           </div>
           {fieldDefs.length > 0 && (
@@ -199,22 +202,24 @@ export default function DeckDetailPage() {
         </div>
       ) : (
         <section aria-label="Configurations" className="mt-2">
-          <div className="flex justify-end py-2">
-            <AddButton label="New configuration" onClick={newConfiguration} />
+          <div className="flex items-center justify-between py-2">
+            <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+              {configurationsQuery.data
+                ? pluralize(configurations.length, 'configuration')
+                : 'Configurations'}
+            </h2>
+            <AddButton label="Add configuration" onClick={addConfiguration} />
           </div>
 
           {configurationsQuery.isError && (
             <p role="alert" className="mt-2 text-sm text-(--color-danger)">
-              Could not load this deck&apos;s configurations.
+              Could not load configurations.
             </p>
           )}
 
           {configurationsQuery.data && configurations.length === 0 ? (
             <div className="py-8">
-              <p className="text-(--color-text-muted)">
-                No configurations yet. One says which of this deck&apos;s fields are prompts and
-                which are answers; a practice is built out of them.
-              </p>
+              <p className="text-(--color-text-muted)">No configurations yet.</p>
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
@@ -228,12 +233,6 @@ export default function DeckDetailPage() {
               ))}
             </ul>
           )}
-
-          {deleteError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
-              {deleteError}
-            </p>
-          )}
         </section>
       )}
 
@@ -246,13 +245,21 @@ export default function DeckDetailPage() {
         confirmLabel="Delete"
         destructive
         onConfirm={() => {
+          setDeleteError(null);
           if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
         }}
         onCancel={() => {
           setPendingDelete(null);
           setDeleteError(null);
         }}
-      />
+      >
+        {/* In the dialog, since the scrim covers the page while it stays open. */}
+        {deleteError && (
+          <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            {deleteError}
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

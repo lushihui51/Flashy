@@ -8,6 +8,7 @@ from app.database_ops.field_def import db_stage_create_field_def
 from app.database_ops.subject import db_read_subject
 from app.models.deck import Deck
 from app.models.field_def import FieldDefCreate
+from app.refusals import Refusal
 from app.services.activity import touch
 
 
@@ -36,7 +37,7 @@ def create_deck_atomic(
         raise DeckCreateValidationError(f"subject_id {subject_id} not found")
 
     if len(field_defs) < 2:
-        raise DeckCreateValidationError("a deck needs at least two fields")
+        raise Refusal("too_few_fields", "field_defs has fewer than two entries")
 
     trimmed_names: list[str] = []
     seen_names: set[str] = set()
@@ -56,8 +57,8 @@ def create_deck_atomic(
         deck = db_stage_create_deck(db, subject_id, name)
     except IntegrityError:
         db.rollback()
-        raise DeckCreateValidationError(
-            f"a deck named {name!r} already exists in this subject"
+        raise Refusal(
+            "deck_name_taken", f"deck (subject_id, name) {name!r} already exists"
         ) from None
 
     for position, (field_def, field_name) in enumerate(zip(field_defs, trimmed_names)):

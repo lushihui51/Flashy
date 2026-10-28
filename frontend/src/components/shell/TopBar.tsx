@@ -58,7 +58,7 @@ export default function TopBar({
           ref={createButtonRef}
           type="button"
           onClick={onCreateClick}
-          aria-label="Create"
+          aria-label="New"
           className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
         >
           <Plus aria-hidden="true" className="h-5 w-5" />
@@ -74,7 +74,7 @@ export default function TopBar({
         </Link>
 
         {/* Sized by its content, not padded out to a fixed width — that padding was
-            what put ~50px of dead space between Create and the avatar. Only the wider
+            what put ~50px of dead space between New and the avatar. Only the wider
             signed-out "Log in" pill breaks the rhythm, once per load. */}
         <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">
           <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />

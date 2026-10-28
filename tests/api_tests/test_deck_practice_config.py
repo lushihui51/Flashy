@@ -85,9 +85,23 @@ class TestDeckPracticeConfigCRUD:
         get_res = client.get(f"/api/deck_practice_configs/{existing_config['id']}")
         assert get_res.status_code == 404
 
-    def test_duplicate_name_rejected(self, client, valid_config_payload, existing_config):
+    def test_duplicate_configuration_name_answers_configuration_name_taken(
+        self, client, valid_config_payload, existing_config
+    ):
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
+        assert res.json()["detail"]["code"] == "configuration_name_taken"
+
+        other = client.post(
+            "/api/deck_practice_configs", json={**valid_config_payload, "name": "Other Config"}
+        )
+        assert other.status_code == 201, other.text
+        res = client.patch(
+            f"/api/deck_practice_configs/{other.json()['id']}",
+            json={"name": existing_config["name"]},
+        )
+        assert res.status_code == 400
+        assert res.json()["detail"]["code"] == "configuration_name_taken"
 
 
 class TestDeckPracticeConfigValidation:

@@ -54,6 +54,7 @@ from app.models.practice_run_payloads import (
     ResolvedFieldValue,
     RunProgress,
 )
+from app.refusals import Refusal
 from app.services.deck_practice_config import validate_deck_practice_config
 from app.services.mastery import card_mastery, record_review_group
 from app.services.practice_generation import generate_practice_card_fields
@@ -926,19 +927,19 @@ def submit_rating(
     """One explicit transaction, in this order: record_review_group, then update
     practice_card.status, then — if failed — requeue a new row. Raises
     LookupError if the practice_card doesn't exist (including: exists but belongs to
-    another user — a foreign id 404s, it doesn't 403), ValueError if it's already been
-    rated, if it is not its run's current card, or if the ratings don't cover
-    exactly its answer fields."""
+    another user — a foreign id 404s, it doesn't 403), a `card_already_rated` or
+    `not_current_card` Refusal if it's already been rated or is not its run's current
+    card, and ValueError if the ratings don't cover exactly its answer fields."""
     rng = rng or random.Random()
 
     practice_card = db_read_practice_card(db, practice_card_id, user_id)
     if not practice_card:
         raise LookupError(f"practice_card {practice_card_id} not found")
     if practice_card.status != PracticeCardStatus.pending:
-        raise ValueError("practice_card has already been rated")
+        raise Refusal("card_already_rated", "practice_card is no longer pending")
     current = db_read_current_practice_card(db, practice_card.practice_run_id, user_id)
     if current is None or current.id != practice_card.id:
-        raise ValueError("practice_card is not the current card")
+        raise Refusal("not_current_card", "practice_card is not its run's current card")
     if set(ratings.keys()) != set(practice_card.answers):
         raise ValueError("ratings must cover exactly this practice_card's answer fields")
 

@@ -19,7 +19,7 @@ type CreateSheetProps = {
  * A deck configuration is deliberately absent. It is not a top-level resource — it
  * belongs to one deck and only means anything beside that deck's fields, so it is made
  * from the deck's own Configurations tab, or from New practice while choosing what to
- * practise. */
+ * practice. */
 export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: CreateSheetProps) {
   const navigate = useNavigate();
 
@@ -29,7 +29,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} triggerRef={triggerRef} ariaLabel="Create">
+    <BottomSheet open={open} onClose={onClose} triggerRef={triggerRef} ariaLabel="New">
       <ul className="flex flex-col">
         <li>
           <button
@@ -38,7 +38,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
             <Folder aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">Subject</span>
+            <span className="font-medium text-(--color-text)">New subject</span>
           </button>
         </li>
         <li>
@@ -48,7 +48,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
             <Layers aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">Deck</span>
+            <span className="font-medium text-(--color-text)">New deck</span>
           </button>
         </li>
         <li>
@@ -59,7 +59,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
           >
             <CreditCard aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
             <span className="flex flex-col">
-              <span className="font-medium text-(--color-text)">Card</span>
+              <span className="font-medium text-(--color-text)">New card</span>
               {hasDecks === false && (
                 <span className="text-sm text-(--color-text-muted)">Create a deck first</span>
               )}
@@ -75,7 +75,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
             <Zap aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">Practice</span>
+            <span className="font-medium text-(--color-text)">New practice</span>
           </button>
         </li>
       </ul>

@@ -4,9 +4,9 @@
 
 Outcome: `docs/vocabulary.md` holds every word and sentence the app shows beside the code's names, and every screen shows only what it gives, the sentences a failed save answers with included, each chosen by its refusal code.
 
-Scope: The file in its two-table shape; the words for starting, making and saving a thing on every button, heading, picker row and shortcut; each list's toolbar label and count, with the lines under the subject and deck headings gone; New practice's address order; the browser tab's title on every page; the two code names and the one misspelling still on screens; refusal codes on every refusal a user can reach, the health endpoint's message in developer terms, and one frontend function that turns a failed request into the sentence the user reads, with every call site rendering through it; and the tests that assert the old words. Not covered: the structure of the breadcrumb row and the mechanics of the icon picker, whose words the file only lists; the ESLint rule and the guard tests; any refusal no screen reaches; and the mapping of a database outage to 503 on endpoints other than health, which stays deferred.
+Scope: The file in its two-table shape; the words for starting, making and saving a thing on every button, heading, picker row and shortcut; each list's toolbar label and count, with the lines under the subject and deck headings gone; New practice's address order; the browser tab's title on every page; a deck's row in the library's Decks tab and on a subject's page as one two-line row carrying its counts; a card's row in a practice's summary named by its first field's value alone; New practice's count of selected configurations and the rating control's spoken names as words of the file; the two code names and the one misspelling still on screens; refusal codes on every refusal a user can reach, the health endpoint's message in developer terms, and one frontend function that turns a failed request into the sentence the user reads, with every call site rendering through it; and the tests that assert the old words. Not covered: the structure of the breadcrumb row and the mechanics of the icon picker, whose words the file only lists; the ESLint rule and the guard tests; any refusal no screen reaches; the order of `submit_rating`'s checks and the payload fields no screen renders any longer, `BreakdownCard.primary_field`'s name and `DeckSummary.field_names`, which all stay as built; and the mapping of a database outage to 503 on endpoints other than health, which stays deferred.
 
-Judgement: On a live server, walk every screen and read each heading, button, tab, label, empty state, picker row and browser tab against the file; make a subject with a taken name, save a configuration with a taken name, and rate a card from a second tab after the first has moved on, and read the three sentences; then read `docs/vocabulary.md` for its preamble and two tables, and grep the frontend for a rendered `.message` and find none.
+Judgement: On a live server, walk every screen and read each heading, button, tab, label, empty state, picker row, spoken name and browser tab against the file, a deck's row in both lists and a summary's card rows included; make a subject with a taken name, save a configuration with a taken name, and rate a card from a second tab after the first has moved on, and read the three sentences; then read `docs/vocabulary.md` for its preamble and two tables, and grep the frontend for a rendered `.message` and find none.
 
 ## Records
 
@@ -30,7 +30,7 @@ Judgement: On a live server, walk every screen and read each heading, button, ta
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -43,6 +43,7 @@ None.
 **Files**
 
 - `docs/vocabulary.md` (new)
+- `AGENTS.md`
 
 **Details**
 
@@ -75,13 +76,42 @@ The Sentences table's Code column carries these codes: `subject_name_taken`, `de
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `head -1` prints `# Vocabulary`. `grep -c '^#'` prints `1`, `grep -c '^- '` prints `0`, and `grep -c 'ADR \|PDR \|docket'` prints `0`.
+- `grep -n '^| Area |'` prints `5:| Area | Concept | User reads | Where | Code |` and `131:| Area | Situation | Code | User reads |`.
+- Each of `"Add practice"`, `"New configuration…"`, `"Breadcrumb"`, `"Open book"`, `"N configurations"` and `can't be re-run` matches exactly one line. `grep -n 'to create it."' | grep -c configuration` prints `1`.
+- Each of the thirteen codes in backticks matches exactly one line after line 131, the Sentences table's header. `grep -c 'run_active'` prints `0`.
+- `grep -c '^| '` prints `191`: the Words table has 123 rows of 5 cells, the Sentences table 64 rows of 4 cells, plus two header and two separator rows. `grep -c practis` prints `0`.
+
+Departures:
+
+- Name taken: the Sentences table has four rows, one sentence per code, from "A subject with this name already exists." to "A configuration with this name already exists.", in place of one "A <thing> with this name already exists." row carrying four codes. Each code then sits beside the literal sentence it carries, so T3's `grep -F` of each literal in `failureSentence.ts` finds a line.
+- Not found: "<Thing> not found." stays one placeholder row under Failure. Details names "Deck configuration not found." among the configuration's sentences, so that one also has its own row under Configuration.
+- Words and sentences outside Details' list: Details does not name every word a screen shows today. For each word the screens show that the cycle does not change, the file has a row in that word's area:
+  - App: "Flashy home"; "Account menu for <name>"; "Showing N of N · type to narrow"; "Name"; "Delete <name>"; "Edit <name>".
+  - Library: "Library", spoken.
+  - Subject: "Description"; "Subject" as the picker's label; "Delete subject" and "Delete subject?".
+  - Deck: "Deck" as the picker's label; "Deck contents"; "Delete deck" and "Delete deck?".
+  - Field: "Unsupported field type".
+  - Card: "Cards in <deck>"; "Delete card" and "Delete card?".
+  - Configuration: "Loading fields…"; "Delete this configuration?"; the answer-side twins of two of the board's rules, "The answer side needs at least one field — always shown or random draw." and "Check how many random answer fields each card shows.".
+  - Practice: "Start practice"; "Re-run this practice?"; "Could not load your selected configurations.".
+  - Summary: "Sort".
+- Two Failure rows in the Words table, "The connection's state" and "A failed request", read "—" under User reads. Their sentences are rows of the Sentences table; the Words rows hold the code names: `ConnectionStatus` and its four values, `ApiError`, `ApiDetailError`, `unwrap` and `isNotFound`.
+- The Words table holds the words this cycle puts on screens, not today's: "Add subject", the "New" shortcut, "Practice status", "practiced", "Subject · Deck" and the rest. Until T4 to T7 land, the screens differ from the file where those tasks change them.
+
+- AGENTS.md: on the engineer's explicit order, which overrides this task's Out of scope line "A line in AGENTS.md pointing at the file: never in a cycle" for this one act, AGENTS.md is added to Files and two Hard rules follow the vocabulary line. "Name a concept in code by the name docs/vocabulary.md's Code column gives it, and change a code name there first, then in every file." cites ADR 069. "Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message." cites ADR 070. The Out of scope line stays as written. AGENTS.md now holds 44 bullets, and `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed in 0.03s` after the edit. The preamble's "a code name changes in the code and is recorded here" stays as Details gives it, although the first new line puts the file first.
+
+- Preamble: on the engineer's explicit order, which overrides the Details line giving a three-sentence preamble, the preamble keeps only its first sentence, "This file gives the word for every concept Flashy shows and every act on it, the sentence for every situation, and the code's name for each, side by side." The two dropped sentences' rules live in AGENTS.md. The Details line stays as written. The Done-when checks were rerun after the edit and print what is listed above.
+
+To judge this task, read `docs/vocabulary.md` and the two new lines in AGENTS.md. No code changed.
 
 ### T2 — Refusal codes on the backend
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -172,13 +202,29 @@ Every test that asserted one of these string details asserts the detail object's
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The seven files print `212 passed`. Run by name with `-v`, these pass: `test_duplicate_name_for_same_user_rejected` (`subject_name_taken`), `test_rate_non_current_pending_card_rejected` (`not_current_card`), `test_batch_edit_deck_name_clash_answers_deck_name_taken`, `test_batch_edit_field_name_clash_answers_field_name_taken`, `test_duplicate_configuration_name_answers_configuration_name_taken`, `test_rating_a_rated_card_answers_card_already_rated` and `test_health_reports_database_unavailable`, which asserts the message "SELECT 1 raised SQLAlchemyError; the database did not answer". The three "at least two fields" tests in `test_deck_batch_edit.py`, the two in `test_decks.py` and the one in `test_field_defs.py` now assert `too_few_fields`. `test_duplicate_deck_name_in_subject_rejected_and_rolled_back` asserts `deck_name_taken`, and `test_duplicate_active_name_leaves_no_rows` asserts `field_name_taken`.
+- The two guards print `6 passed`.
+- The grep prints nothing (exit 1).
+- Against the running `fastapi dev`, the first POST of `{"name":"Twice"}` answered 201. The second answered `{"detail":{"code":"subject_name_taken","message":"subject (user_id, name) already exists"}}` with status 400. The subject "Twice" stays in the dev database.
+- `npm run gen:api` changes both files, so both are in this commit. The only change drops the `GET /` "Read Root" operation: 90c3761 removed that route without regenerating. Every refusal detail here comes from an `HTTPException`, which the schema does not describe, so this task changes no type.
+- The full backend suite, run with no other connection to the test database, printed `351 passed`. In `frontend/`, `npx vitest run` printed `526 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures:
+
+- Batch edit: today a deck or field rename that clashes never reaches the commit's `except IntegrityError`. An autoflush ahead of a read, or the field phase's own flush, raises it first, and the request answered 500; a probe test showed both cases. So `apply_deck_batch_edit` now wraps a private `_stage_deck_batch_edit`, which holds the old body without its commit, together with the commit, in one `except IntegrityError`. That handler maps the two constraints to their `Refusal`s and any other constraint to today's `DeckBatchEditValidationError`.
+- Two of the four new cases were already tests that asserted only the status: `test_rate_already_rated_card_rejected` and `test_duplicate_name_rejected`. Each is renamed to its Done-when name and gains the code assertion, so no case is duplicated. The configuration case also renames a second configuration to the taken name, which reaches the PATCH branch in `db_update_deck_practice_config`.
+- On the engineer's order, two cases beyond the Done when cover the two rename sites no test reached: `test_rename_to_taken_name_answers_subject_name_taken` in `test_subjects.py`, for `db_update_subject`, and `test_rename_to_taken_name_answers_field_name_taken` in `test_field_defs.py`, for `db_rename_field_def`. Each asserts the code and that the name is unchanged, and both pass. Every `Refusal` site is now reached by a test. The routers' `except ValueError` branches after `except Refusal` in `subject.py` and in `field_def.py`'s create and rename handlers can no longer be reached. They stay because Details gives every handler both branches.
+- Every name-taken message says "already exists", for example "deck_practice_config (deck_id, name) already exists". Until T5, `DeckConfigurationEditor.tsx` sends a name clash to the name field by matching `/already exists/` in the message, so this wording keeps that working. Until T4 to T6 land, a form shows these developer messages where it showed the old sentences.
+
+Read `apply_deck_batch_edit` in `app/services/deck_batch_edit.py`: it is the one change in structure. Every other site changes only the exception it raises.
 
 ### T3 — The sentence function
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -230,13 +276,22 @@ In `src/api/unwrap.ts`, change no thrown value; rewrite the interface comments o
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/lib/failureSentence.test.ts` printed `7 passed`, one per named case: "renders each known code's sentence, whatever the status", over all thirteen codes at 400, 404, 409, 422, 500 and 503; "a known code wins over a 404", with `config_not_found` at 404; "a 404 without a known code renders the caller's not-found sentence"; "a 5xx without a known code renders the server-trouble sentence, and database_unavailable its own"; "an error that is not an ApiError renders the connection sentence"; "a string detail, a validation array and an unknown code render Something went wrong", the first two thrown by `unwrap` and `run_active` as the unknown code; "never reads the message", with `subject_name_taken` and the message "xyz".
+- `grep -F` found each of these in `docs/vocabulary.md`, each code's on the Sentences row that carries that code: "A subject with this name already exists.", "A deck with this name already exists.", "A field with this name already exists.", "A configuration with this name already exists.", "A deck needs at least two fields.", "This card has already been rated.", "This is not the current card.", "This configuration no longer produces any prompts — edit it.", "Choose one configuration per deck.", "This practice can't be re-run. A field it practiced has since been removed from each of its decks.", "Flashy is temporarily unavailable." and "Something went wrong.". The four sentences the function imports were checked the same way: `NO_CARDS_MESSAGE` and `MISSING_CONFIGURATION_MESSAGE`, on the `no_cards` and `config_not_found` rows, and `CONNECTION_FAILED_MESSAGE` and `SERVER_TROUBLE_MESSAGE`, on their "—" rows.
+- `grep -rln "failureSentence" frontend/src --include=*.tsx` printed nothing (exit 1).
+- Over the whole frontend, `npx vitest run` printed `533 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures: none. The map is a `ReadonlyMap`, since `npm run build` refuses an indexed read of a `Record` as `string | undefined`, and a `Map` also never answers for a key such as `constructor`. `unwrap.ts` changes only the interface comments on `ApiError` and `ApiDetailError`; no comment `unwrap.test.ts` quotes changed, so it is untouched.
+
+Nothing in the code needs reading beyond `failureSentence` itself.
 
 ### T4 — The library's pages
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -284,13 +339,31 @@ The three test files assert the old labels by role and text; change those assert
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The three files print `59 passed`. The library's three "New subject" and one "New deck" button assertions read "Add subject" and "Add deck". The subject page's empty case finds "No decks yet." and "0 decks · 0 cards", and its zero-card row case finds "0 cards". The deck page's three "New configuration" assertions read "Add configuration".
+- The grep prints nothing (exit 1).
+- Headless Chromium at 390×844 against `localhost:5173`, with the toolbar row read as the add button's parent's text: the library's Subjects tab shows "9 subjects Add subject" and its Decks tab "3 decks Add deck". On CompTIA A+, the element after the heading block is the Practice row, and the toolbar shows "2 decks · 75 cards Add deck". On Ports, the element after the `h1` is the Practice row, the Cards tab shows "21 cards · 4 fields Add card", and the Configurations tab "3 configurations Add configuration".
+- On Reformer Repertoire, the Cards tab shows "0 cards · 5 fields Add card" above "No cards in this deck yet.", and the Configurations tab "0 configurations Add configuration" above "No configurations yet.".
+- A configuration "T4 delete check 360759" was created on Ports through the API, and the deck's Configurations tab was opened in two tabs. Deleting it in the first closed the dialog. Deleting it in the second showed "Deck configuration not found." inside the dialog. The check deleted the configuration, so the dev database holds what it held before.
+- Over the whole frontend, `npx vitest run` printed `534 passed`, and `npm run lint` and `npm run build` exited 0.
+
+Departures:
+
+- The configuration delete's failure now renders inside the confirm dialog, as the practice page's delete does, and a new attempt clears the old sentence. It used to render below the list. There the open dialog's scrim covered it, and Cancel cleared it before the user could read it.
+- The Library's "Add subject" and "Add deck" now show `AddButton`'s plus icon, as every other add button does.
+- `DeckDetailPage.test.tsx` gains one case, "a delete of a configuration already gone says Deck configuration not found.", which answers a 404 and finds the sentence in the dialog. The empty-configurations case now finds "No configurations yet." exactly and "0 configurations", and is renamed to match. Three test and group names that said "meta line" or "No cards" now name the toolbar label and "0 cards".
+- In `SubjectDetailPage.tsx`, `formatFieldNames`'s interface comment said the deck's field count was on "the deck detail page's own meta line". It now says the deck page's Cards tab toolbar.
+
+After a "Deck configuration not found." in the second tab, the gone row stays in that tab's list until the query refetches, for example on window focus. This task does not change that.
+
+Nothing in the code needs reading beyond the three pages' diffs.
 
 ### T5 — The forms and the shortcut
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -344,13 +417,30 @@ The ten test files assert the old words by role and text; change those assertion
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named run prints `12 passed` files and `162 passed` tests. The subject form has seven submit assertions, not five: four read "Create" and three read "Save". The card form's two "Add card" assertions read "Create". The deck editor's three create-flow "Save" assertions and the overlay's "Create subject" read "Create". Its "Save changes" assertion reads "Save", scoped to the dialog, since the header's Save also matches. The configuration editor's two hint assertions are both in create flows, so both read "Give this configuration a name to create it.". A new edit case, "a cleared name keeps Save disabled with the reason shown", reads "Give this configuration a name to save it.". Its four create-flow "Save" assertions read "Create". Its region queries are five, not four, and read "Prompt · always shown", "Answer · always shown" and "Prompt · random draw". The top bar's three "Create" assertions read "New". The sheet's dialog is named "New", and its rows are "New subject", "New deck", "New card" and "New practice". The chain test's two create-flow "Save" clicks read "Create", and its edit-flow click stays "Save".
+- The grep prints nothing (exit 1).
+- In headless Chromium against `localhost:5173`, these were the buttons each form showed: New subject `Cancel, Create`; Edit subject `Cancel, Save, Delete subject`; New deck `Cancel, Create, Add field`; Edit deck `Done, Undo, Save, Add field, Delete deck`; New card `Cancel, Create`; Edit card `Cancel, Save, Delete card`; New configuration `Cancel, Create`; Edit configuration `Cancel, Save`. Renaming the deck Commands to "Commands T5" and saving flashed "Saved ✓". A second save renamed it back to "Commands", so the dev database holds the name it held before. On New configuration, after assigning two fields, the regions read "Not used", "Prompt · always shown", "Prompt · random draw", "Answer · always shown" and "Answer · random draw". The suggested name read "Command → Command purpose". With the name cleared, the page showed "Give this configuration a name to create it." and Create was disabled. Edit configuration with the name cleared showed "Give this configuration a name to save it.". On Home, the top bar's "New" button opened a dialog named "New" with the rows "New subject", "New deck", "New card" and "New practice".
+- New subject with the name "Twice" showed "A subject with this name already exists." in the form's alert. On Edit configuration for "Command to Purpose", renaming it to "Purpose to Command" and saving showed "A configuration with this name already exists." in the name field's alert, with `aria-invalid="true"`. Neither check wrote a row.
+- Over the whole frontend, `npx vitest run` printed `537 passed`, and `npm run lint` and `npm run build` exited 0. These runs included the peer's uncommitted T4 pages.
+
+Departures:
+
+- "Change deck" has no row in `docs/vocabulary.md`. It was the confirm button of "Change deck?" in `CardStandaloneForm.tsx` and of the board's deck switch in `DeckConfigurationEditor.tsx`. Both now read "Continue", the file's word for accepting a warning. The file's Continue row lists only New card and Edit card under Where, not New configuration. The other fix is a "Change deck" row in the file, and that choice is yours. Three test assertions changed with it.
+- `FieldAssignmentBoard.tsx`'s `DESTINATIONS` is now a list of slots, and each row's text comes from `SLOT_LABELS`. A sheet row and an area's spoken name now come from one table.
+- New cases besides the edit-hint case: "a blank field name shows an inline error" in `DeckEditor.test.tsx` reads "Name is required.". "names each slot by the move sheet's row words" in `deckConfigurationBoard.test.ts` asserts `SLOT_LABELS`.
+- Tests that read a backend message now read the sentence. The duplicate-name mocks answer a `{code, message}` detail. A 404 from deletion-impact reads "Subject not found." or "Deck not found.", and a 422 with a string detail reads "Something went wrong.".
+- Some comments named the create-mode button "Save" or the top bar's button "Create". Those in `DeckEditor.tsx`, `DeckConfigurationEditor.tsx`, `deckConfigurationBoard.ts` and `TopBar.tsx` now name the button it is. `SLOT_LABELS`'s comment states where the labels are used. `CreateSheet.tsx`'s interface comment said "practise", which now reads "practice". Test names that said "Save" for a create-mode button say "Create".
+- Prettier was run on the three files this task reformatted. `DeckConfigurationEditor.tsx` also has the line `const name =`, which was already unformatted at HEAD. Prettier would reflow it, and it is left as it was.
+
+Read the `onError` of `saveMutation` in `DeckConfigurationEditor.tsx`: it sends a failure to the name field by `detail.code` alone. In the other three forms each failure site only swaps its expression for a `failureSentence` call. That means a 404 on a create also reads that form's not-found sentence. Creating a card in a deck deleted meanwhile, for example, reads "Card not found.".
 
 ### T6 — The practice pages
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -407,13 +497,34 @@ The seven test files assert the old words by role and text; change those asserti
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named run prints `6 passed` files and `106 passed` tests. The three "New practice" button assertions, one in `PracticeOverviewPage.test.tsx` and two in `practicePrefilterChain.test.tsx`, read "Add practice". The eight "New configuration" button assertions, four in each of `PracticeCreatePage.test.tsx` and the chain test, read "New configuration…". The six group or item names read subject first: "Alpha · Shared Deck Name" and "Beta · Shared Deck Name" twice each in `PracticeCreatePage.test.tsx`, and "Beta · Beta Deck" and "Alpha · Alpha Deck" in the chain test.
+- The grep prints nothing (exit 1).
+- In headless Chromium at 390×844 against `localhost:5173`, the Practice page's header row reads "Practice" and "Add practice", and its tablist is named "Practice status". On New practice, the groups read "CompTIA A+ · Commands", "CompTIA A+ · Ports" and "T6 check · T6 Rerun". With a Ports configuration ticked, the Selected row reads "Oct 1, 2026 at 1:18 PM" over "CompTIA A+ · Ports". The toolbar button reads "New configuration…". The delete confirm on the Practice page and on a practice's own page both read "Delete this practice?" over "Its progress will be gone. The decks it practiced are not affected.". Both were cancelled.
+- A subject "T6 check" was made through the API, with a deck "T6 Rerun" holding the fields Term, Definition and Extra and two cards, a configuration "Term → Extra", a completed practice "T6 rerun check" and an active practice "T6 two-tab check". The active practice's run page was opened in two tabs. In the first, rating Extra Good and tapping Next card moved it to "term 2". The same in the second showed "This card has already been rated.".
+- On Edit deck for "T6 Rerun", removing Extra and saving asked "Save changes?" with "This removes 1 field from 2 cards, deletes 1 deck configuration and deletes 1 active practice. This can't be undone.". After Save, the fields read Term and Definition. Re-run on "T6 rerun check" then showed "This practice can't be re-run. A field it practiced has since been removed from each of its decks." and stayed on that practice's page. The subject, the deck with its two cards and the completed practice stay in the dev database. The deck save deleted the configuration and the active practice, as its confirm said.
+- Over the whole frontend, `npx vitest run` printed `538 passed`, and `npm run lint` and `npm run build` exited 0. `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing.
+
+Departures:
+
+- The Practice page's delete failure now renders inside the confirm dialog, as the practice's own page does, and a new attempt clears it. It used to render below the list, under the open dialog's scrim. A new case, "a delete of a practice already gone says Practice not found. inside the dialog", covers it.
+- In `PracticeCreatePage.tsx`, `onError` takes one `failureSentence(error, 'Deck configuration not found.')` and branches on `detail.code` only to place it. `stale_config` goes to its row. `config_not_found` goes to `topError`, which the settled-list check also sets, so the sentence never shows twice. Every other failure goes to `saveError`. The `no_cards` branch is gone: it set `topError`, which renders directly above `saveError`, so the sentence still renders in the same place.
+- The row error's field is renamed from `message` to `sentence` in `RowError` and in `ConfigurationPickList`'s `rowError` prop. It holds the function's sentence, and `rowError.message` was the one hit of T7's `.message` grep.
+- Two sentences outside the Done-when grep now read the file's words: "Could not load deck configurations." reads "Could not load configurations.", and "Select at least one configuration to practise." reads "practice.".
+- `practiceCopy.ts`'s comments said the pages render its constants so that the pages agree. They now say `failureSentence` renders them by code, and that the module keeps them so a screen with no failed request uses the same words.
+- Tests that read a backend message now read the sentence. The run page's rating failure answers a `card_already_rated` detail and reads "This card has already been rated.". The practice page's 500 delete reads "Flashy is having trouble right now. Try again in a moment.", and `nothing_to_rerun` reads its sentence. New practice's "any other error" case answers the detail "boom" and reads "Something went wrong.". Test names that named a button now name it by its new words.
+- Prettier was run on the two test files this task reformatted. `PracticeCreatePage.test.tsx` already had four unformatted statements at HEAD. Prettier reflowed them too, and they were put back as they were.
+- `FieldValue.tsx`, `RunBreakdown.tsx` and `RunBreakdown.test.tsx` are unchanged, because every word they show is already a row of the file.
+- New practice's header shows "N selected" beside Create, and `docs/vocabulary.md` has no row for it. It stays as it was. The other fix is to add that row or remove the count, and that choice is yours.
+
+Read `onError` of `createMutation` in `PracticeCreatePage.tsx`: it is the one place where a code decides where a failure renders. Every other site only swaps `error.message` for a `failureSentence` call.
 
 ### T7 — The browser tab's title
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -450,7 +561,7 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 
 **Out of scope**
 
-- Any other word on these pages: T4 to T6.
+- Any other word on these pages: T4 to T6, and T9 for a deck's row.
 - A title for a state no page owns, such as a not-found body: never; the tab reads "Flashy".
 - `<title>` rendered from a component: never; the reason is above.
 
@@ -459,8 +570,245 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 - In `frontend/`, `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` passes, with `pageTitle.test.ts` covering "sets the title to the name then Flashy", "follows a changed name", "leaves the title alone while the name is undefined" and "restores Flashy on unmount", and `placeholderPages.test.tsx` asserting `document.title` reads "Home · Flashy" and "Notifications · Flashy".
 - `grep -n "<title>" frontend/index.html` prints a line containing `<title>Flashy</title>`, `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files, and `grep -rn "<title" frontend/src` prints nothing.
 - At `localhost:5173` with the backend running, reading the tab's title on each route: "Home · Flashy" at `/`, "Your library · Flashy" at `/library`, "Notifications · Flashy" at `/notifications`, "Practice · Flashy" at `/practice`, "New practice · Flashy" at `/practice/new`, a subject's and a deck's name on their pages, a practice's name on its page and its run page, "New subject · Flashy", "New deck · Flashy", "New card · Flashy" and "New configuration · Flashy" on the four create forms and "Edit subject · Flashy", "Edit deck · Flashy", "Edit card · Flashy" and "Edit configuration · Flashy" on the edit forms; with the deck form's New subject overlay open, still "New deck · Flashy".
-- The cycle's judgement, at `localhost:5173`: every heading, button, tab, label, empty state, picker row and browser tab on every screen is a row of `docs/vocabulary.md`, the Debrief listing each screen walked; creating a subject with a taken name shows "A subject with this name already exists.", saving a configuration with a taken name "A configuration with this name already exists.", and rating a card from a second tab after the first has moved on "This is not the current card."; `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing; and `grep -c '^| ' docs/vocabulary.md` prints a number between 150 and 220.
 
 **Debrief**
 
+Evidence, in the order of Done when:
+
+- `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` prints `Test Files  2 passed (2)` and `Tests  8 passed (8)`: the four named cases in `pageTitle.test.ts`, and a new `it.each` in `placeholderPages.test.tsx`, "%s titles the browser tab", asserting `document.title` reads "Home · Flashy" and "Notifications · Flashy".
+- `grep -n "<title>" frontend/index.html` prints `7:    <title>Flashy</title>`. `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files: the nine pages and the four forms. `grep -rn "<title" frontend/src` prints nothing.
+- In headless Chromium at 390×844, each route loaded directly reads: "Home · Flashy" at `/`, "Your library · Flashy", "Notifications · Flashy", "Practice · Flashy", "New practice · Flashy", "T6 check · Flashy" on that subject's page, "T6 Rerun · Flashy" on that deck's page, "T6 rerun check · Flashy" on a completed practice's page and its run page, "T7 two-tab check · Flashy" on an active practice's page and its run page, "New subject · Flashy", "New deck · Flashy", "New card · Flashy", "New configuration · Flashy", "Edit subject · Flashy", "Edit deck · Flashy", "Edit card · Flashy" and "Edit configuration · Flashy". With New deck's New subject overlay open, the tab reads "New deck · Flashy". A subject that is not found reads "Flashy". Navigating inside the app reads the same: the subject page's "Your library" crumb, then a deck's row, then Edit deck, then browser back twice, read "Your library · Flashy", "T6 Rerun · Flashy", "Edit deck · Flashy", "T6 Rerun · Flashy" and "Your library · Flashy". Every word in these titles is a row of `docs/vocabulary.md`: "The browser tab's title", "The main places", and the "New …" and "Edit …" rows of each form.
+
+Over the whole frontend, `npx vitest run` prints `544 passed`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- The browser check ran against this worktree's own Vite server on port 5174, not `localhost:5173`. The server on 5173 runs from the main checkout, which is on `main` and does not have this task's code. The 5174 server used the same backend on port 8000, also the main checkout's, whose read payloads match this branch's `types.ts` except for doc comments. The server was stopped after the check. Nothing was written to the dev database.
+- An edit form passes its heading to `usePageTitle` only once its record has loaded, matching the condition on which it renders its form, so an edit form whose record is not found reads "Flashy". `DeckEditor` waits for both the deck and its subject, as its render does.
+
+Code worth reading: `usePageTitle` in `frontend/src/lib/pageTitle.ts`. It uses two effects. The first, keyed on `name`, sets the title. The second, with no keys, restores "Flashy" only on unmount, so a name that turns undefined keeps the title it had.
+
+### T8 — The four words in the vocabulary file
+
+**Status**
+
+- [x]
+
+**Goal**
+
+`docs/vocabulary.md` gives New practice's count of selected configurations, the rating control's two spoken names, a deck's row in the library and on a subject's page, and a card's name in a practice's summary.
+
+**Dependencies**
+
 None.
+
+**Files**
+
+- `docs/vocabulary.md`
+
+**Details**
+
+Four edits to the first table. Each must keep the file's row grammar: a spoken word marked ", spoken", and a template followed by an example, as "as …".
+
+- The "The chosen configurations" row's User reads must read `"Selected"; "N selected", beside Create; "Remove <name>", spoken`, and its Code column gains `selectedCount`.
+- The "Rating an answer" row's User reads must read `"Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy"`, and its Code column gains `RatingChip`.
+- A new row must follow "A deck counted": `| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page | `DeckRow` |`.
+- A new row must precede "A card whose first field is blank": `| Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |`.
+
+The "A deck counted" row must stay as it is, `field_names` in its Code column included. Never change any other row or the preamble.
+
+**Out of scope**
+
+- A deck's row on a screen: T9.
+- A summary's card name on a screen: T10.
+- "N selected" and the rating control's spoken names on a screen: never; the screens already show them.
+- Rewording any other row: never.
+
+**Done when**
+
+- `grep -c '^| ' docs/vocabulary.md` prints `193`.
+- `grep -cF '"N selected", beside Create' docs/vocabulary.md`, `grep -cF '"Rate <field>", spoken' docs/vocabulary.md`, `grep -cF '"<field>: <rating>", spoken' docs/vocabulary.md`, `grep -cF "| A deck's row |" docs/vocabulary.md` and `grep -cF '| A card named in a list |' docs/vocabulary.md` each print `1`.
+
+**Debrief**
+
+Evidence, in the order of Done when:
+
+- `grep -c '^| '` prints `193`.
+- Each of the five `grep -cF` prints `1`.
+
+`git diff` on `docs/vocabulary.md` shows two changed rows and two added rows, and nothing else. "A deck counted" is unchanged. The new deck row sits directly below it, and the new card row sits directly above "A card whose first field is blank". The four rows read exactly as Details gives them.
+
+The new code names were checked against the code. `selectedCount` is a local in `PracticeCreatePage`. `RatingChip`'s `aria-label` reads `` `${fieldName}: ${tier.label}` `` once rated and `` `Rate ${fieldName}` `` before. `cardTitle` is a function in `RunBreakdown.tsx`. `DeckRow` does not exist yet: T9 creates it.
+
+Departures: none.
+
+To judge this task, read the four rows in `docs/vocabulary.md`. No code changed, so no frontend check ran.
+
+### T9 — One row for a deck in both lists
+
+**Status**
+
+- [x]
+
+**Goal**
+
+A deck's row reads its name over "N cards · N fields" on a subject's page, and over "<subject> · N cards · N fields" in the library's Decks tab.
+
+**Dependencies**
+
+- T7: `frontend/src/pages/LibraryPage.tsx` and `frontend/src/pages/SubjectDetailPage.tsx`, which this task edits after it.
+- T8: the "A deck's row" row of `docs/vocabulary.md`.
+
+**Files**
+
+- `frontend/src/components/library/DeckRow.tsx` (new)
+- `frontend/src/components/library/DeckRow.test.tsx` (new)
+- `frontend/src/pages/LibraryPage.tsx`
+- `frontend/src/pages/LibraryPage.test.tsx`
+- `frontend/src/pages/SubjectDetailPage.tsx`
+- `frontend/src/pages/SubjectDetailPage.test.tsx`
+
+**Details**
+
+The interface:
+
+```tsx
+// frontend/src/components/library/DeckRow.tsx
+type DeckSummary = components["schemas"]["DeckSummary"];
+
+type DeckRowProps = {
+  deck: DeckSummary;
+  /** The deck's subject's name, given where the list spans subjects; the row's second
+   * line then opens with it. */
+  subjectName?: string;
+};
+
+export default function DeckRow({
+  deck,
+  subjectName,
+}: DeckRowProps): JSX.Element;
+```
+
+- `DeckRow` must render a `ListRow` from `frontend/src/components/ui/ListRow.tsx` with the deck's name as `title`, "N cards · N fields" as `subtitle` preceded by "<subjectName> · " when `subjectName` is given, no `meta`, and `to` set to `/decks/<deck.id>`.
+- The field count must be `deck.field_names.length`. `DeckSummary`, every file under `app/` and `frontend/src/api/types.ts` never change.
+- Both counts must go through `pluralize` in `frontend/src/lib/pluralize.ts`, so a deck with one card and one field reads "1 card · 1 field".
+- `LibraryPage`'s Decks tab must render each deck through `DeckRow`, passing `subjectNameById.get(deck.subject_id)`, and its own `Link` row must go. `SubjectDetailPage` must render each deck through `DeckRow` with no `subjectName`, and `formatFieldNames` must be deleted. No list shows a deck's field names.
+- Never add a loading state for a subject's name: until the library's subjects load, `subjectNameById` has no entry and the row shows the counts alone.
+- In `SubjectDetailPage.test.tsx`, the describe "deck row subtitle (field names) and meta (card count)" asserts the old row. Replace it with assertions on the new subtitle, among them that "Front, Back" no longer appears. In `LibraryPage.test.tsx`, the Decks tab test asserts the subject-prefixed subtitle.
+- Guidance: the canvases show both rows, https://claude.ai/artifact/E4toNfxF25X3g62G3YRKFc and https://claude.ai/artifact/NC8oEnN6UujtwAnxbq1erc.
+
+**Out of scope**
+
+- A deck's mastery on its row: a later cycle, from backlog B16.
+- A `field_count` on `DeckSummary`, or any change to `field_names`: never.
+- `ListRow` itself, the library's Subjects tab, or either list's toolbar label: never.
+
+**Done when**
+
+- In `frontend/`, `npx vitest run src/components/library/DeckRow.test.tsx src/pages/LibraryPage.test.tsx src/pages/SubjectDetailPage.test.tsx` passes, with `DeckRow.test.tsx` covering "shows the name over its counts", "opens its second line with the subject's name when given", "counts one card and one field in the singular", "never shows a field's name" and "links to the deck's page".
+- `grep -rn "formatFieldNames" frontend/src` prints nothing, and `grep -rln "DeckRow" frontend/src/pages` prints exactly `frontend/src/pages/LibraryPage.tsx` and `frontend/src/pages/SubjectDetailPage.tsx`.
+- At `localhost:5173`, a subject's page shows each deck as its name over "N cards · N fields", with nothing at the row's right end but the chevron. The library's Decks tab shows the same row for each deck with "<subject> · " opening its second line, at the same height as on a subject's page. Clicking a row in either list opens that deck's page.
+
+**Debrief**
+
+Evidence, in the order of Done when:
+
+- The named run prints `Test Files  3 passed (3)` and `Tests  39 passed (39)`. `DeckRow.test.tsx` passes its five named cases: "shows the name over its counts", "opens its second line with the subject's name when given", "counts one card and one field in the singular", "never shows a field's name" and "links to the deck's page". In `SubjectDetailPage.test.tsx`, the old describe is now "deck row subtitle (card and field counts)". It holds four cases: "0 cards · 1 field"; "1 card · 2 fields"; "2 cards · 4 fields", with neither "Front, Back" nor any "Front" shown; and a row whose whole text is "Algebra6 cards · 2 fields", with no "6 cards" at its right end. In `LibraryPage.test.tsx`, the Decks tab test finds "Math · 3 cards · 2 fields" and "Bio · 0 cards · 1 field".
+- `grep -rn "formatFieldNames" frontend/src` prints nothing (exit 1). `grep -rln "DeckRow" frontend/src/pages` prints `frontend/src/pages/SubjectDetailPage.tsx` and `frontend/src/pages/LibraryPage.tsx`.
+- Headless Chromium at 390×844 read each row's two lines, what follows its text, and its height:
+  - The library's Decks tab: "T6 Rerun" over "T6 check · 2 cards · 2 fields"; "Commands" over "CompTIA A+ · 54 cards · 12 fields"; "Ports" over "CompTIA A+ · 21 cards · 4 fields"; "Reformer Repertoire" over "Stott Pilates · 0 cards · 5 fields".
+  - Each subject's page: "T6 Rerun" over "2 cards · 2 fields" on T6 check; "Commands" over "54 cards · 12 fields" and "Ports" over "21 cards · 4 fields" on CompTIA A+; "Reformer Repertoire" over "0 cards · 5 fields" on Stott Pilates. The other seven subjects have no decks.
+  - In both lists, the only element after a row's text is the chevron's `svg`, and every row is 64px tall.
+  - Clicking the first row of the library's Decks tab opened `/decks/201021c5-…`, headed "T6 Rerun". Clicking the first row on T6 check's page opened the same deck.
+
+Over the whole frontend, `npx vitest run` prints `550 passed`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- The browser check ran against this worktree's own Vite server on port 5174, as T7's did, since the server on 5173 runs from the main checkout on `main`. It used the backend on port 8000. The server was stopped after the check. Nothing was written to the dev database.
+- `LibraryPage.test.tsx` gains one case beyond the Done when: "a deck row shows its counts alone while its subject's name is unknown". The subjects request never answers, and the Decks tab's rows read "3 cards · 2 fields" and "0 cards · 1 field". The file's two deck fixtures now carry field names, so the counts are not all zero.
+- `DeckRow.test.tsx`'s fixture carries `last_activity_at`, which `DeckSummary` requires, so `npm run build` type-checks the test.
+- `DeckRow` has an interface comment: "A deck in a list of decks: its name over its card and field counts, linking to the deck's page." The `subjectName` member comment is the one Details gives.
+- Prettier was run over the lines this task wrote. `SubjectDetailPage.tsx` and `SubjectDetailPage.test.tsx` already had unformatted lines at HEAD. They are left as they were.
+- The cycle file already held an uncommitted hunk when this task began, not written by this task. It is a Prettier reflow of the interface block in this task's Details, to double quotes and an 80-column width. `.claude/settings.json`'s PostToolUse hook runs Prettier on every file an agent edits, under the root `.prettierrc`, so any edit of this file brings the reflow back. On the engineer's explicit order, which overrides the cycle rule "Until the cycle's merge, the builder writes only a task's Status and Debrief" for this one act, the hunk is in this task's commit. It changes no word. The rule stays as written.
+
+Nothing in the code needs reading beyond `DeckRow.tsx`.
+
+### T10 — A summary's card by its value alone, and the cycle's judgement
+
+**Status**
+
+- [x]
+
+**Goal**
+
+A card's row in a practice's summary reads its deck's first field's value alone, and the cycle's judgement holds.
+
+**Dependencies**
+
+- T7: `usePageTitle`, whose browser-tab titles the judgement's walk reads.
+- T8: the "A card named in a list" row of `docs/vocabulary.md`.
+- T9: `DeckRow`, whose rows the judgement's walk reads.
+
+**Files**
+
+- `frontend/src/components/practice/RunBreakdown.tsx`
+- `frontend/src/components/practice/RunBreakdown.test.tsx`
+- `frontend/src/pages/PracticeRunPage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
+
+**Details**
+
+- `cardTitle` in `RunBreakdown.tsx` must return `card.primary_field.value` when it is not blank, and "Untitled card" otherwise, and its comment must say so.
+- `BreakdownCard.primary_field` must keep its `name`. Every file under `app/` and `frontend/src/api/types.ts` never change.
+- In `RunBreakdown.test.tsx`, every assertion that matches "Front: …" must match the value alone, `rowTitles` included. The test "a row shows only the primary field's name and value, not prompt/answer content" must become "a row shows its first field's value alone, never the field's name".
+- A rating sent from a second tab after the first has moved on answers "This card has already been rated." The order of `submit_rating`'s checks in `app/services/practice_run.py` must stay as ADR 059 decides it. The `not_current_card` code, its entry in `failureSentence` in `frontend/src/lib/failureSentence.ts` and its row in `docs/vocabulary.md` must stay as built.
+- A word the walk finds with no row in `docs/vocabulary.md` must never be fixed in this task: set the task blocked and list each word in the Debrief.
+
+**Out of scope**
+
+- Narrowing `primary_field` to its value: never.
+- Reordering `submit_rating`'s checks, or removing `not_current_card`: never.
+- Writing a row in `docs/vocabulary.md`: never; a word without a row blocks the task, as Details says.
+- Changing a word on any screen besides a summary's card name: never.
+
+**Done when**
+
+- In `frontend/`, `npx vitest run src/components/practice/RunBreakdown.test.tsx` passes. "a row shows its first field's value alone, never the field's name" asserts "Bonjour" is shown and "Front: Bonjour" is not, and "shows "Untitled card" for a card whose primary field is blank" passes unchanged.
+- `grep -rn "primary_field.name" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing.
+- At `localhost:5173`, a completed practice's summary, on its page and on its run page, lists each card by its first field's value alone, and that card's detail sheet is headed by the same value.
+- The cycle's judgement, at `localhost:5173`: every heading, button, tab, label, empty state, picker row, spoken name and browser tab on every screen is a row of `docs/vocabulary.md`, the Debrief listing each screen walked, New practice's "N selected", a deck's row in the library's Decks tab and on a subject's page, a summary's card rows, and the rating control's accessible name, "Rate <field>" before rating and "<field>: <rating>" after, included; creating a subject with a taken name shows "A subject with this name already exists.", saving a configuration with a taken name "A configuration with this name already exists.", and rating a card from a second tab after the first has moved on "This card has already been rated."; `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing; and `grep -c '^| ' docs/vocabulary.md` prints a number between 150 and 220.
+
+**Debrief**
+
+Evidence, in the order of Done when:
+
+- `npx vitest run src/components/practice/RunBreakdown.test.tsx` prints `Tests  10 passed (10)`. "a row shows its first field's value alone, never the field's name" finds "Bonjour", finds no "Front: Bonjour", and finds no text containing "Front". "shows "Untitled card" for a card whose primary field is blank" passes unchanged.
+- `grep -rn "primary_field.name" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing (exit 1).
+- In headless Chromium at 390×844, en-US: on the completed practice "Sep 28, 2026 at 5:28 PM" (Ports), the rows on its page and on its run page read "138", "143", "389" and so on, each followed only by its badge, mastery and change, as "138 First try 65 +4". Tapping the first row opens a sheet headed "138" on both pages. On "Sep 24, 2026 at 5:02 PM" (Commands), the rows read "cd", "dir", "md", and the "2+ retries" row's sheet is headed "netstat". On "T6 rerun check", the rows read "term 1" and "term 2".
+- The cycle's judgement:
+  - Screens walked, each read through its accessibility tree, its `aria-label`s and its visible text: Home, with the menu and the New sheet open; Your library's Subjects and Decks tabs; Notifications; a subject's page, and one with no decks; New subject, with the Icon sheet open; Edit subject, with its delete confirm and its discard confirm; a deck's Cards and Configurations tabs, the configuration delete confirm, and a deck with no cards and no configurations; New deck, with the subject picker open, the New subject overlay and the discard confirm; Edit deck, with its delete confirm; New card, with the deck picker open, a deck chosen, the "Change deck?" and "Create a new deck?" confirms and the discard confirm; Edit card, with its delete confirm; New configuration, with the move sheet from an unassigned and from an assigned field, every field assigned and a prompt draw; Edit configuration; the Practice page's All, Active and Completed tabs, the subject filter open, and a filter with no match; New practice with nothing selected, with one selected and with a blank name; a completed practice's page, with its re-run confirm and card sheet; an active practice's page, with its delete confirm; the run page before and after Show answer, with the rating open and with one answer rated; the summary on the run page; the not-found body of a subject, deck, practice, run page, card, configuration, Edit subject and Edit deck; and the banner with the backend stopped and with the browser offline.
+  - Every heading, button, tab, label, empty state, picker row, spoken name and browser tab these screens show is a row of `docs/vocabulary.md`. Among them: New practice shows "1" and "selected" side by side, beside Create. A deck's row reads "Ports" over "CompTIA A+ · 21 cards · 4 fields" in the library's Decks tab and "Ports" over "21 cards · 4 fields" on its subject's page. A summary's rows are named as above. The rating control is spoken as "Rate Protocol Name" before it is rated and "Protocol Name: Good" after. The breadcrumb is spoken as "Breadcrumb", the Practice page's tabs as "Practice status", the deck page's as "Deck contents", the library's as "Library", the summary's sort as "Sort", and the progress bar as "0 passed, 0 failed, 0 retrying, 20 unseen". The not-found bodies read "Subject not found.", "Deck not found.", "Practice not found.", "Card not found." and "Deck configuration not found.", each with the tab "Flashy". The banner reads "Flashy is having trouble right now. Retrying automatically." with the backend stopped and "You're offline. Flashy will reconnect automatically." offline. The run page's "PROMPT" and "ANSWER", the sheet's "FIELDS" and "ATTEMPT 1 OF 3 · FAILED" are the file's "Prompt", "Answer", "Fields" and "Attempt N of M · Failed" in capitals: the source text is the file's, and the `uppercase` class capitalises it. The letter "F" in the top bar is drawn inside the logo's `aria-hidden` SVG, which is spoken as "Flashy home".
+  - New subject with the name "Twice" shows "A subject with this name already exists." in the form's alert. Edit configuration for "Port Number to Protocol Name", renamed to "Test Port Name and Function" and saved, shows "A configuration with this name already exists." in the name field's alert. With "T7 two-tab check"'s run page open in two tabs, the first rated its card Good and tapped Next card, then the second rated the same card Good and tapped Next card and showed "This card has already been rated.".
+  - `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing (exit 1). `grep -c '^| ' docs/vocabulary.md` prints `193`.
+
+Over the whole frontend, `npx vitest run` prints `Tests  550 passed (550)`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- Files: with the engineer's go-ahead, `frontend/src/pages/PracticeRunPage.test.tsx` and `frontend/src/pages/PracticeDetailsPage.test.tsx` are added. Each found a summary row by `/Front: Bonjour/`, and each now finds it by `/Bonjour/`. Nothing else in either file changed.
+- In `RunBreakdown.test.tsx`, the sheet's heading now carries the card's value, so two sheet cases count it. The two-attempt case finds a level-2 heading "Bonsoir" and three "Bonsoir" texts in place of two. The single-attempt case finds a level-2 heading "Bonjour" and two "Bonjour" texts in place of one `getByText`. `rowTitles` matches the four cards' values and "Untitled card" in place of `/Front:|Untitled card/`.
+- `cardTitle` returns `card.primary_field.value || 'Untitled card'`. A blank value is stored as "", so "not blank" is the empty-string check that was already there.
+- The Prettier hook reflowed one untouched assertion in `RunBreakdown.test.tsx` when the file was edited. It is put back as it was.
+- The browser checks ran against this worktree's own Vite server on port 5174, since the server on 5173 runs from the main checkout on `main`. The 5174 server used this worktree's own backend on port 8001, since the backend on 8000 also runs `main`, which has no refusal codes. The last read-only check, the "2+ retries" sheet and Edit subject's discard confirm, used the backend on 8000. Both servers were stopped after the checks.
+- Writes to the dev database: on "T7 two-tab check", two cards were rated Good from the first tab. The refused ratings, the two taken names and the unsaved edits wrote nothing. Nothing was deleted.
+
+States not reached, so their words were not read on a screen: the Account sheet, "Account", "Account menu for <name>" and "Log out", since the development bypass is signed out of Clerk; "Create a deck first", which needs a user with no deck; "Saved ✓" and "Save changes?", which write, and were read in T5 and T6; "Retry" on the run page and "Unrated"; "No practices yet." and "No subjects yet.", since the seeded lists are not empty; "Can't reach Flashy. Check your connection; retrying automatically.", since Vite's proxy answers a stopped backend with an error, so the health check always gets a response; and the request-failure sentences other than those above.
+
+Found on the walk, outside this task, and not changed:
+
+- Edit deck's delete confirm reads "This also deletes 1 deck, 21 cards, 4 fields, 3 deck configurations and 8 practices. This can't be undone.", and its count of decks includes the deck being deleted.
+- While a not-found subject's query retries, for a few seconds its page shows "0 decks · 0 cards", "Add deck" and "No decks yet." under no heading, before "Subject not found.".
+- New configuration's Cancel with fields assigned, and leaving Edit deck through the top bar's Practice link with an unsaved name, both leave without a discard confirm.
+
+Nothing in the code needs reading beyond `cardTitle` in `RunBreakdown.tsx`.

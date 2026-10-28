@@ -26,7 +26,9 @@ import {
 } from 'src/lib/deckConfigurationBoard';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -79,6 +81,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     queryFn: () => readDeckPracticeConfig(configId!),
     enabled: mode === 'edit' && !!configId,
   });
+  usePageTitle(
+    mode === 'create' ? 'New configuration' : configQuery.data ? 'Edit configuration' : undefined,
+  );
 
   if (mode === 'edit' && configQuery.isError) {
     return (
@@ -119,7 +124,7 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  /** Where Cancel and a successful Save land. Null means "the deck's own page", which
+  /** Where Cancel and a successful Create or Save land. Null means "the deck's own page", which
    * is only knowable once a deck is chosen. */
   returnTo: string | null;
 };
@@ -202,11 +207,15 @@ function DeckConfigurationEditorBody({
         mode === 'create' ? { state: { configurationId: saved.id } } : undefined,
       );
     },
-    onError: (error: Error) => {
+    onError: (error) => {
+      const sentence = failureSentence(error, 'Deck configuration not found.');
       // A duplicate name is the one failure the user fixes in place, so it belongs on
       // the input rather than in a banner that costs them the rest of the form.
-      if (/already exists/i.test(error.message)) setNameError(error.message);
-      else setSaveError(error.message);
+      if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
+        setNameError(sentence);
+      } else {
+        setSaveError(sentence);
+      }
     },
   });
 
@@ -252,7 +261,7 @@ function DeckConfigurationEditorBody({
           }}
           className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
         >
-          Save
+          {mode === 'edit' ? 'Save' : 'Create'}
         </button>
       </div>
 
@@ -342,7 +351,10 @@ function DeckConfigurationEditorBody({
 
       {deck && board && (validationError || nameMissing) && (
         <p className="mt-3 text-sm text-(--color-text-muted)">
-          {validationError ?? 'Give this config a name to save it.'}
+          {validationError ??
+            (mode === 'edit'
+              ? 'Give this configuration a name to save it.'
+              : 'Give this configuration a name to create it.')}
         </p>
       )}
 
@@ -356,7 +368,7 @@ function DeckConfigurationEditorBody({
         open={pendingDeck !== null}
         title="Change deck?"
         description="Fields belong to their own deck, so switching clears everything assigned here."
-        confirmLabel="Change deck"
+        confirmLabel="Continue"
         destructive
         onConfirm={() => pendingDeck && applyDeck(pendingDeck)}
         onCancel={() => setPendingDeck(null)}

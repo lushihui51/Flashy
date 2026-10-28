@@ -91,6 +91,19 @@ class TestSubjectsCRUD:
         assert data["id"] == existing_subject["id"]
         assert data["name"] == "Updated Subject Name"
 
+    def test_rename_to_taken_name_answers_subject_name_taken(self, client, existing_subject):
+        other = client.post("/api/subjects", json={"name": "Other Subject"})
+        assert other.status_code == 201, other.text
+
+        response = client.patch(
+            f"/api/subjects/{other.json()['id']}", json={"name": existing_subject["name"]}
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"]["code"] == "subject_name_taken"
+
+        check = client.get(f"/api/subjects/{other.json()['id']}").json()
+        assert check["name"] == "Other Subject"
+
     def test_delete_subject(self, client, existing_subject):
         response = client.delete(f"/api/subjects/{existing_subject['id']}")
         assert response.status_code == 204
@@ -131,6 +144,7 @@ class TestSubjectsCRUD:
             json={"user_id": str(existing_user.id), "name": existing_subject["name"]},
         )
         assert response.status_code == 400
+        assert response.json()["detail"]["code"] == "subject_name_taken"
 
     def test_create_subject_defaults_description_and_icon(self, client):
         response = client.post("/api/subjects", json={"name": "Defaults Test Subject"})

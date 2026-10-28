@@ -167,7 +167,7 @@ class TestDeckCreateAtomic:
             json=self._payload(existing_subject["id"], field_defs=[]),
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
     def test_one_field_rejected(self, client, existing_subject):
         """A deck needs at least one prompt field and one answer field, so a
@@ -180,7 +180,7 @@ class TestDeckCreateAtomic:
             ),
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
     def test_duplicate_field_names_rejected(self, client, existing_subject):
         response = client.post(
@@ -208,7 +208,7 @@ class TestDeckCreateAtomic:
 
         second = client.post("/api/decks", json=self._payload(existing_subject["id"]))
         assert second.status_code == 422, second.text
-        assert "already exists in this subject" in second.json()["detail"]
+        assert second.json()["detail"]["code"] == "deck_name_taken"
 
         decks = client.get("/api/decks", params={"subject_id": existing_subject["id"]}).json()
         assert [d["name"] for d in decks] == ["Vocab Deck"]

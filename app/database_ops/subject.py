@@ -7,6 +7,7 @@ from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
 from app.models.subject import Subject, SubjectSummary
+from app.refusals import Refusal
 
 
 def db_create_subject(db: Session, data: dict) -> Subject:
@@ -16,7 +17,9 @@ def db_create_subject(db: Session, data: dict) -> Subject:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("Subject with this name already exists for this user") from None
+        raise Refusal(
+            "subject_name_taken", "subject (user_id, name) already exists"
+        ) from None
     db.refresh(subject)
     return subject
 
@@ -70,7 +73,9 @@ def db_update_subject(db: Session, subject: Subject, data: dict) -> Subject:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("Subject with this name already exists for this user") from None
+        raise Refusal(
+            "subject_name_taken", "subject (user_id, name) already exists"
+        ) from None
     db.refresh(subject)
     return subject
 

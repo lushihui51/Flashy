@@ -5,13 +5,15 @@ from app.database_ops.card import db_read_card_ids_for_deck, db_stage_create_car
 from app.database_ops.field_def import db_next_position, db_stage_create_field_def
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
+from app.refusals import Refusal
 from app.services.activity import touch
 
 
 def create_field_def(db: Session, deck: Deck, name: str, field_type: FieldType) -> FieldDef:
     """Adds one active field at the deck's next position and, in the same transaction,
     a `""` value row for every existing card, keeping `card_field_value` dense.
-    An active-name collision rolls everything back and raises `ValueError`."""
+    An active-name collision rolls everything back and raises a `field_name_taken`
+    `Refusal`."""
     touch(db, deck)
     try:
         field_def = db_stage_create_field_def(
@@ -22,6 +24,8 @@ def create_field_def(db: Session, deck: Deck, name: str, field_type: FieldType) 
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("An active field with this name already exists") from None
+        raise Refusal(
+            "field_name_taken", "an active field_def (deck_id, name) already exists"
+        ) from None
     db.refresh(field_def)
     return field_def
