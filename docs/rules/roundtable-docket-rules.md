@@ -35,4 +35,4 @@
 
 **Order.** The skills run on a docket in this order: /product-decide, /product-record, /code-decide, /code-record, /code-plan. Going back to a skill means running every skill after it again, in that order.
 
-**Writing.** Write every sentence as a statement. Keep an item as short as the next skill's act allows; never say what happened, when, or in which conversation. Write a product item in the user-facing vocabulary AGENTS.md points at, so it makes sense to someone who has never seen code. Name code by file and symbol, never by line number. Never write "etc.", "as needed", or any wording that leaves the next skill to guess.
+**Writing.** Write every sentence as a statement. Keep an item as short as the next skill's act allows; never say what happened, when, or in which conversation. Write a product item in the user-facing vocabulary of `docs/vocabulary.md`, so it makes sense to someone who has never seen code. Name code by file and symbol, never by line number. Never write "etc.", "as needed", or any wording that leaves the next skill to guess.

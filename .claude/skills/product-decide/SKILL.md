@@ -29,7 +29,7 @@ Facts about how the app is used and what the user needs come from me. Never inve
   ````
   awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($0,5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$0; next} part=="**Status**"{s=$0; sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $0; part=""}' docs/cycles/*.md
   ````
-- The user-facing vocabulary AGENTS.md points at. Those are the words the user sees, so they are the words of every decision here.
+- The user-facing vocabulary in `docs/vocabulary.md`. Those are the words the user sees, so they are the words of every decision here.
 - Nothing else without my explicit permission.
 
 ## How you think
