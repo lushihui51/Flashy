@@ -189,7 +189,7 @@ describe('PracticeDetailsPage', () => {
     expect(
       screen.queryByText('A summary of this practice is coming later.'),
     ).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
     expect(screen.getByText('First try')).toBeInTheDocument();
   });
 

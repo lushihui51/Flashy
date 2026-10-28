@@ -223,7 +223,7 @@ describe('PracticeRunPage', () => {
     renderRun('ps1');
 
     expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
   });
 
   it('shows "not found" for an unknown or foreign session, without crashing', async () => {

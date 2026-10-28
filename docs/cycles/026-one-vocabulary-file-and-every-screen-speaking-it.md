@@ -738,7 +738,7 @@ Nothing in the code needs reading beyond `DeckRow.tsx`.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -754,6 +754,8 @@ A card's row in a practice's summary reads its deck's first field's value alone,
 
 - `frontend/src/components/practice/RunBreakdown.tsx`
 - `frontend/src/components/practice/RunBreakdown.test.tsx`
+- `frontend/src/pages/PracticeRunPage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
 
 **Details**
 
@@ -779,4 +781,34 @@ A card's row in a practice's summary reads its deck's first field's value alone,
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/components/practice/RunBreakdown.test.tsx` prints `Tests  10 passed (10)`. "a row shows its first field's value alone, never the field's name" finds "Bonjour", finds no "Front: Bonjour", and finds no text containing "Front". "shows "Untitled card" for a card whose primary field is blank" passes unchanged.
+- `grep -rn "primary_field.name" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing (exit 1).
+- In headless Chromium at 390×844, en-US: on the completed practice "Sep 28, 2026 at 5:28 PM" (Ports), the rows on its page and on its run page read "138", "143", "389" and so on, each followed only by its badge, mastery and change, as "138 First try 65 +4". Tapping the first row opens a sheet headed "138" on both pages. On "Sep 24, 2026 at 5:02 PM" (Commands), the rows read "cd", "dir", "md", and the "2+ retries" row's sheet is headed "netstat". On "T6 rerun check", the rows read "term 1" and "term 2".
+- The cycle's judgement:
+  - Screens walked, each read through its accessibility tree, its `aria-label`s and its visible text: Home, with the menu and the New sheet open; Your library's Subjects and Decks tabs; Notifications; a subject's page, and one with no decks; New subject, with the Icon sheet open; Edit subject, with its delete confirm and its discard confirm; a deck's Cards and Configurations tabs, the configuration delete confirm, and a deck with no cards and no configurations; New deck, with the subject picker open, the New subject overlay and the discard confirm; Edit deck, with its delete confirm; New card, with the deck picker open, a deck chosen, the "Change deck?" and "Create a new deck?" confirms and the discard confirm; Edit card, with its delete confirm; New configuration, with the move sheet from an unassigned and from an assigned field, every field assigned and a prompt draw; Edit configuration; the Practice page's All, Active and Completed tabs, the subject filter open, and a filter with no match; New practice with nothing selected, with one selected and with a blank name; a completed practice's page, with its re-run confirm and card sheet; an active practice's page, with its delete confirm; the run page before and after Show answer, with the rating open and with one answer rated; the summary on the run page; the not-found body of a subject, deck, practice, run page, card, configuration, Edit subject and Edit deck; and the banner with the backend stopped and with the browser offline.
+  - Every heading, button, tab, label, empty state, picker row, spoken name and browser tab these screens show is a row of `docs/vocabulary.md`. Among them: New practice shows "1" and "selected" side by side, beside Create. A deck's row reads "Ports" over "CompTIA A+ · 21 cards · 4 fields" in the library's Decks tab and "Ports" over "21 cards · 4 fields" on its subject's page. A summary's rows are named as above. The rating control is spoken as "Rate Protocol Name" before it is rated and "Protocol Name: Good" after. The breadcrumb is spoken as "Breadcrumb", the Practice page's tabs as "Practice status", the deck page's as "Deck contents", the library's as "Library", the summary's sort as "Sort", and the progress bar as "0 passed, 0 failed, 0 retrying, 20 unseen". The not-found bodies read "Subject not found.", "Deck not found.", "Practice not found.", "Card not found." and "Deck configuration not found.", each with the tab "Flashy". The banner reads "Flashy is having trouble right now. Retrying automatically." with the backend stopped and "You're offline. Flashy will reconnect automatically." offline. The run page's "PROMPT" and "ANSWER", the sheet's "FIELDS" and "ATTEMPT 1 OF 3 · FAILED" are the file's "Prompt", "Answer", "Fields" and "Attempt N of M · Failed" in capitals: the source text is the file's, and the `uppercase` class capitalises it. The letter "F" in the top bar is drawn inside the logo's `aria-hidden` SVG, which is spoken as "Flashy home".
+  - New subject with the name "Twice" shows "A subject with this name already exists." in the form's alert. Edit configuration for "Port Number to Protocol Name", renamed to "Test Port Name and Function" and saved, shows "A configuration with this name already exists." in the name field's alert. With "T7 two-tab check"'s run page open in two tabs, the first rated its card Good and tapped Next card, then the second rated the same card Good and tapped Next card and showed "This card has already been rated.".
+  - `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing (exit 1). `grep -c '^| ' docs/vocabulary.md` prints `193`.
+
+Over the whole frontend, `npx vitest run` prints `Tests  550 passed (550)`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- Files: with the engineer's go-ahead, `frontend/src/pages/PracticeRunPage.test.tsx` and `frontend/src/pages/PracticeDetailsPage.test.tsx` are added. Each found a summary row by `/Front: Bonjour/`, and each now finds it by `/Bonjour/`. Nothing else in either file changed.
+- In `RunBreakdown.test.tsx`, the sheet's heading now carries the card's value, so two sheet cases count it. The two-attempt case finds a level-2 heading "Bonsoir" and three "Bonsoir" texts in place of two. The single-attempt case finds a level-2 heading "Bonjour" and two "Bonjour" texts in place of one `getByText`. `rowTitles` matches the four cards' values and "Untitled card" in place of `/Front:|Untitled card/`.
+- `cardTitle` returns `card.primary_field.value || 'Untitled card'`. A blank value is stored as "", so "not blank" is the empty-string check that was already there.
+- The Prettier hook reflowed one untouched assertion in `RunBreakdown.test.tsx` when the file was edited. It is put back as it was.
+- The browser checks ran against this worktree's own Vite server on port 5174, since the server on 5173 runs from the main checkout on `main`. The 5174 server used this worktree's own backend on port 8001, since the backend on 8000 also runs `main`, which has no refusal codes. The last read-only check, the "2+ retries" sheet and Edit subject's discard confirm, used the backend on 8000. Both servers were stopped after the checks.
+- Writes to the dev database: on "T7 two-tab check", two cards were rated Good from the first tab. The refused ratings, the two taken names and the unsaved edits wrote nothing. Nothing was deleted.
+
+States not reached, so their words were not read on a screen: the Account sheet, "Account", "Account menu for <name>" and "Log out", since the development bypass is signed out of Clerk; "Create a deck first", which needs a user with no deck; "Saved ✓" and "Save changes?", which write, and were read in T5 and T6; "Retry" on the run page and "Unrated"; "No practices yet." and "No subjects yet.", since the seeded lists are not empty; "Can't reach Flashy. Check your connection; retrying automatically.", since Vite's proxy answers a stopped backend with an error, so the health check always gets a response; and the request-failure sentences other than those above.
+
+Found on the walk, outside this task, and not changed:
+
+- Edit deck's delete confirm reads "This also deletes 1 deck, 21 cards, 4 fields, 3 deck configurations and 8 practices. This can't be undone.", and its count of decks includes the deck being deleted.
+- While a not-found subject's query retries, for a few seconds its page shows "0 decks · 0 cards", "Add deck" and "No decks yet." under no heading, before "Subject not found.".
+- New configuration's Cancel with fields assigned, and leaving Edit deck through the top bar's Practice link with an unsaved name, both leave without a discard confirm.
+
+Nothing in the code needs reading beyond `cardTitle` in `RunBreakdown.tsx`.
