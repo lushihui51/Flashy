@@ -4,9 +4,9 @@
 
 Outcome: `docs/vocabulary.md` holds every word and sentence the app shows beside the code's names, and every screen shows only what it gives, the sentences a failed save answers with included, each chosen by its refusal code.
 
-Scope: The file in its two-table shape; the words for starting, making and saving a thing on every button, heading, picker row and shortcut; each list's toolbar label and count, with the lines under the subject and deck headings gone; New practice's address order; the browser tab's title on every page; the two code names and the one misspelling still on screens; refusal codes on every refusal a user can reach, the health endpoint's message in developer terms, and one frontend function that turns a failed request into the sentence the user reads, with every call site rendering through it; and the tests that assert the old words. Not covered: the structure of the breadcrumb row and the mechanics of the icon picker, whose words the file only lists; the ESLint rule and the guard tests; any refusal no screen reaches; and the mapping of a database outage to 503 on endpoints other than health, which stays deferred.
+Scope: The file in its two-table shape; the words for starting, making and saving a thing on every button, heading, picker row and shortcut; each list's toolbar label and count, with the lines under the subject and deck headings gone; New practice's address order; the browser tab's title on every page; a deck's row in the library's Decks tab and on a subject's page as one two-line row carrying its counts; a card's row in a practice's summary named by its first field's value alone; New practice's count of selected configurations and the rating control's spoken names as words of the file; the two code names and the one misspelling still on screens; refusal codes on every refusal a user can reach, the health endpoint's message in developer terms, and one frontend function that turns a failed request into the sentence the user reads, with every call site rendering through it; and the tests that assert the old words. Not covered: the structure of the breadcrumb row and the mechanics of the icon picker, whose words the file only lists; the ESLint rule and the guard tests; any refusal no screen reaches; the order of `submit_rating`'s checks and the payload fields no screen renders any longer, `BreakdownCard.primary_field`'s name and `DeckSummary.field_names`, which all stay as built; and the mapping of a database outage to 503 on endpoints other than health, which stays deferred.
 
-Judgement: On a live server, walk every screen and read each heading, button, tab, label, empty state, picker row and browser tab against the file; make a subject with a taken name, save a configuration with a taken name, and rate a card from a second tab after the first has moved on, and read the three sentences; then read `docs/vocabulary.md` for its preamble and two tables, and grep the frontend for a rendered `.message` and find none.
+Judgement: On a live server, walk every screen and read each heading, button, tab, label, empty state, picker row, spoken name and browser tab against the file, a deck's row in both lists and a summary's card rows included; make a subject with a taken name, save a configuration with a taken name, and rate a card from a second tab after the first has moved on, and read the three sentences; then read `docs/vocabulary.md` for its preamble and two tables, and grep the frontend for a rendered `.message` and find none.
 
 ## Records
 
@@ -524,7 +524,7 @@ Read `onError` of `createMutation` in `PracticeCreatePage.tsx`: it is the one pl
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -561,7 +561,7 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 
 **Out of scope**
 
-- Any other word on these pages: T4 to T6.
+- Any other word on these pages: T4 to T6, and T9 for a deck's row.
 - A title for a state no page owns, such as a not-found body: never; the tab reads "Flashy".
 - `<title>` rendered from a component: never; the reason is above.
 
@@ -570,28 +570,165 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 - In `frontend/`, `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` passes, with `pageTitle.test.ts` covering "sets the title to the name then Flashy", "follows a changed name", "leaves the title alone while the name is undefined" and "restores Flashy on unmount", and `placeholderPages.test.tsx` asserting `document.title` reads "Home · Flashy" and "Notifications · Flashy".
 - `grep -n "<title>" frontend/index.html` prints a line containing `<title>Flashy</title>`, `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files, and `grep -rn "<title" frontend/src` prints nothing.
 - At `localhost:5173` with the backend running, reading the tab's title on each route: "Home · Flashy" at `/`, "Your library · Flashy" at `/library`, "Notifications · Flashy" at `/notifications`, "Practice · Flashy" at `/practice`, "New practice · Flashy" at `/practice/new`, a subject's and a deck's name on their pages, a practice's name on its page and its run page, "New subject · Flashy", "New deck · Flashy", "New card · Flashy" and "New configuration · Flashy" on the four create forms and "Edit subject · Flashy", "Edit deck · Flashy", "Edit card · Flashy" and "Edit configuration · Flashy" on the edit forms; with the deck form's New subject overlay open, still "New deck · Flashy".
-- The cycle's judgement, at `localhost:5173`: every heading, button, tab, label, empty state, picker row and browser tab on every screen is a row of `docs/vocabulary.md`, the Debrief listing each screen walked; creating a subject with a taken name shows "A subject with this name already exists.", saving a configuration with a taken name "A configuration with this name already exists.", and rating a card from a second tab after the first has moved on "This is not the current card."; `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing; and `grep -c '^| ' docs/vocabulary.md` prints a number between 150 and 220.
 
 **Debrief**
 
-Attempted: the whole task, as Files and Details give it. `usePageTitle` in `src/lib/pageTitle.ts` sets the title in one effect keyed on `name` and restores "Flashy" in a second effect's unmount cleanup, so a name that turns undefined leaves the title as it is. Each of the thirteen routed components calls it before any early return. An edit form passes its heading only once its record has loaded, so a not-found form reads "Flashy". `index.html` reads `<title>Flashy</title>`. The first three Done-when lines hold:
+None.
 
-- `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` prints `8 passed`: the four named hook cases, and the two pages' `document.title` reading "Home · Flashy" and "Notifications · Flashy".
-- `grep -n "<title>" frontend/index.html` prints `7:    <title>Flashy</title>`. `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files, and `grep -rn "<title" frontend/src` prints nothing.
-- In headless Chromium at 390×844, every route reads as Details gives it: "Home · Flashy", "Your library · Flashy", "Notifications · Flashy", "Practice · Flashy", "New practice · Flashy", "CompTIA A+ · Flashy", "Ports · Flashy", "Sep 29, 2026 at 8:41 AM · Flashy" on a practice's page, "T7 two-tab check · Flashy" on a run page, the four "New …" forms and the four "Edit …" forms. A subject that is not found reads "Flashy". With New deck's New subject overlay open, the tab reads "New deck · Flashy".
-- Over the whole frontend, `npx vitest run` prints `544 passed`, and `npm run lint` and `npm run build` exit 0.
+### T8 — The four words in the vocabulary file
 
-The fourth line, the cycle's judgement, does not hold, for two reasons.
+**Status**
 
-Found, first: no screen can reach "This is not the current card." from a second tab. `submit_rating` in `app/services/practice_run.py` refuses a card that is not pending, with `card_already_rated`, before it checks that the card is current, with `not_current_card`. A tab only rates the card that was current when it loaded. Rating changes the current card only by taking that card out of pending, and a retry is always queued behind it. So a stale tab's card has always been rated, and it answers `card_already_rated`. The check was run: a practice "T7 two-tab check" was made through the API, and its run page opened in two tabs. In the first, rating Good and tapping Next card showed the next card. The same in the second showed "This card has already been rated.". T6's line allowed either sentence; this line names only the one that cannot be reached.
+- [ ]
 
-Found, second: the screens show four words that `docs/vocabulary.md` has no row for. Each screen's visible text, accessible names, placeholders and tab title were checked against the file's quoted words. The screens walked: Home, with the menu open and with the New sheet open; Notifications; the library's two tabs; a subject's page; a deck's Cards and Configurations tabs and its delete-configuration confirm; an empty deck's two tabs; New subject and its Icon sheet; Edit subject and its delete confirm; New deck, its subject picker and its New subject overlay; Edit deck and its delete confirm; New card and its deck picker; Edit card; New configuration and its move sheet; Edit configuration; the Practice page, its Completed tab and its delete confirm; New practice, with and without a selection; a completed practice's page and its Re-run confirm; an active practice's page; the run page, before and after Show answer; and a completed practice's run page. Every string was a row, a templated row or user data, except these:
+**Goal**
 
-- "N selected" in New practice's header, which T6's Debrief already raised.
-- A deck row's field names on a subject's page, as "Command, Command purpose +10", from `formatFieldNames` in `SubjectDetailPage.tsx`. The "A deck counted" row gives "N cards" and "N fields", not the names.
-- A card's label in the summary, "<field>: <value>", as "Command: netstat", from `RunBreakdown.tsx`. Only "Untitled card", for a blank first field, has a row.
-- The rating chip's spoken name "Rate <field>", as "Rate Command purpose", from `RatingChip.tsx`. The file gives "Rate" bare. It gives the spoken "Re-run <name>" and "Remove <name>" as their own words.
+`docs/vocabulary.md` gives New practice's count of selected configurations, the rating control's two spoken names, a deck's row in the library and on a subject's page, and a card's name in a practice's summary.
 
-The logo's "F" is a letter drawn inside its SVG, which is `aria-hidden`; the logo is spoken as "Flashy home". The rest of the line holds. "A subject with this name already exists." and "A configuration with this name already exists." read as given, the second on the name field's alert with `aria-invalid="true"`. `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing. `grep -c '^| ' docs/vocabulary.md` prints `191`.
+**Dependencies**
 
-Why the file cannot settle it: the first reason needs the line itself changed, or the order of `submit_rating`'s two checks, and `app/services/practice_run.py` is outside Files. The second needs a word for each of the four in `docs/vocabulary.md`, or each screen changed to a word the file has. Out of scope keeps every word but the tab's title out of this task, and the file is the engineer's to change. No row was written for the check, besides the practice "T7 two-tab check" and its one rating, which stay in the dev database.
+None.
+
+**Files**
+
+- `docs/vocabulary.md`
+
+**Details**
+
+Four edits to the first table. Each must keep the file's row grammar: a spoken word marked ", spoken", and a template followed by an example, as "as …".
+
+- The "The chosen configurations" row's User reads must read `"Selected"; "N selected", beside Create; "Remove <name>", spoken`, and its Code column gains `selectedCount`.
+- The "Rating an answer" row's User reads must read `"Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy"`, and its Code column gains `RatingChip`.
+- A new row must follow "A deck counted": `| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page | `DeckRow` |`.
+- A new row must precede "A card whose first field is blank": `| Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |`.
+
+The "A deck counted" row must stay as it is, `field_names` in its Code column included. Never change any other row or the preamble.
+
+**Out of scope**
+
+- A deck's row on a screen: T9.
+- A summary's card name on a screen: T10.
+- "N selected" and the rating control's spoken names on a screen: never; the screens already show them.
+- Rewording any other row: never.
+
+**Done when**
+
+- `grep -c '^| ' docs/vocabulary.md` prints `193`.
+- `grep -cF '"N selected", beside Create' docs/vocabulary.md`, `grep -cF '"Rate <field>", spoken' docs/vocabulary.md`, `grep -cF '"<field>: <rating>", spoken' docs/vocabulary.md`, `grep -cF "| A deck's row |" docs/vocabulary.md` and `grep -cF '| A card named in a list |' docs/vocabulary.md` each print `1`.
+
+**Debrief**
+
+None.
+
+### T9 — One row for a deck in both lists
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+A deck's row reads its name over "N cards · N fields" on a subject's page, and over "<subject> · N cards · N fields" in the library's Decks tab.
+
+**Dependencies**
+
+- T7: `frontend/src/pages/LibraryPage.tsx` and `frontend/src/pages/SubjectDetailPage.tsx`, which this task edits after it.
+- T8: the "A deck's row" row of `docs/vocabulary.md`.
+
+**Files**
+
+- `frontend/src/components/library/DeckRow.tsx` (new)
+- `frontend/src/components/library/DeckRow.test.tsx` (new)
+- `frontend/src/pages/LibraryPage.tsx`
+- `frontend/src/pages/LibraryPage.test.tsx`
+- `frontend/src/pages/SubjectDetailPage.tsx`
+- `frontend/src/pages/SubjectDetailPage.test.tsx`
+
+**Details**
+
+The interface:
+
+```tsx
+// frontend/src/components/library/DeckRow.tsx
+type DeckSummary = components['schemas']['DeckSummary'];
+
+type DeckRowProps = {
+  deck: DeckSummary;
+  /** The deck's subject's name, given where the list spans subjects; the row's second
+   * line then opens with it. */
+  subjectName?: string;
+};
+
+export default function DeckRow({ deck, subjectName }: DeckRowProps): JSX.Element;
+```
+
+- `DeckRow` must render a `ListRow` from `frontend/src/components/ui/ListRow.tsx` with the deck's name as `title`, "N cards · N fields" as `subtitle` preceded by "<subjectName> · " when `subjectName` is given, no `meta`, and `to` set to `/decks/<deck.id>`.
+- The field count must be `deck.field_names.length`. `DeckSummary`, every file under `app/` and `frontend/src/api/types.ts` never change.
+- Both counts must go through `pluralize` in `frontend/src/lib/pluralize.ts`, so a deck with one card and one field reads "1 card · 1 field".
+- `LibraryPage`'s Decks tab must render each deck through `DeckRow`, passing `subjectNameById.get(deck.subject_id)`, and its own `Link` row must go. `SubjectDetailPage` must render each deck through `DeckRow` with no `subjectName`, and `formatFieldNames` must be deleted. No list shows a deck's field names.
+- Never add a loading state for a subject's name: until the library's subjects load, `subjectNameById` has no entry and the row shows the counts alone.
+- In `SubjectDetailPage.test.tsx`, the describe "deck row subtitle (field names) and meta (card count)" asserts the old row. Replace it with assertions on the new subtitle, among them that "Front, Back" no longer appears. In `LibraryPage.test.tsx`, the Decks tab test asserts the subject-prefixed subtitle.
+- Guidance: the canvases show both rows, https://claude.ai/artifact/E4toNfxF25X3g62G3YRKFc and https://claude.ai/artifact/NC8oEnN6UujtwAnxbq1erc.
+
+**Out of scope**
+
+- A deck's mastery on its row: a later cycle, from backlog B16.
+- A `field_count` on `DeckSummary`, or any change to `field_names`: never.
+- `ListRow` itself, the library's Subjects tab, or either list's toolbar label: never.
+
+**Done when**
+
+- In `frontend/`, `npx vitest run src/components/library/DeckRow.test.tsx src/pages/LibraryPage.test.tsx src/pages/SubjectDetailPage.test.tsx` passes, with `DeckRow.test.tsx` covering "shows the name over its counts", "opens its second line with the subject's name when given", "counts one card and one field in the singular", "never shows a field's name" and "links to the deck's page".
+- `grep -rn "formatFieldNames" frontend/src` prints nothing, and `grep -rln "DeckRow" frontend/src/pages` prints exactly `frontend/src/pages/LibraryPage.tsx` and `frontend/src/pages/SubjectDetailPage.tsx`.
+- At `localhost:5173`, a subject's page shows each deck as its name over "N cards · N fields", with nothing at the row's right end but the chevron. The library's Decks tab shows the same row for each deck with "<subject> · " opening its second line, at the same height as on a subject's page. Clicking a row in either list opens that deck's page.
+
+**Debrief**
+
+None.
+
+### T10 — A summary's card by its value alone, and the cycle's judgement
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+A card's row in a practice's summary reads its deck's first field's value alone, and the cycle's judgement holds.
+
+**Dependencies**
+
+- T7: `usePageTitle`, whose browser-tab titles the judgement's walk reads.
+- T8: the "A card named in a list" row of `docs/vocabulary.md`.
+- T9: `DeckRow`, whose rows the judgement's walk reads.
+
+**Files**
+
+- `frontend/src/components/practice/RunBreakdown.tsx`
+- `frontend/src/components/practice/RunBreakdown.test.tsx`
+
+**Details**
+
+- `cardTitle` in `RunBreakdown.tsx` must return `card.primary_field.value` when it is not blank, and "Untitled card" otherwise, and its comment must say so.
+- `BreakdownCard.primary_field` must keep its `name`. Every file under `app/` and `frontend/src/api/types.ts` never change.
+- In `RunBreakdown.test.tsx`, every assertion that matches "Front: …" must match the value alone, `rowTitles` included. The test "a row shows only the primary field's name and value, not prompt/answer content" must become "a row shows its first field's value alone, never the field's name".
+- A rating sent from a second tab after the first has moved on answers "This card has already been rated." The order of `submit_rating`'s checks in `app/services/practice_run.py` must stay as ADR 059 decides it. The `not_current_card` code, its entry in `failureSentence` in `frontend/src/lib/failureSentence.ts` and its row in `docs/vocabulary.md` must stay as built.
+- A word the walk finds with no row in `docs/vocabulary.md` must never be fixed in this task: set the task blocked and list each word in the Debrief.
+
+**Out of scope**
+
+- Narrowing `primary_field` to its value: never.
+- Reordering `submit_rating`'s checks, or removing `not_current_card`: never.
+- Writing a row in `docs/vocabulary.md`: never; a word without a row blocks the task, as Details says.
+- Changing a word on any screen besides a summary's card name: never.
+
+**Done when**
+
+- In `frontend/`, `npx vitest run src/components/practice/RunBreakdown.test.tsx` passes. "a row shows its first field's value alone, never the field's name" asserts "Bonjour" is shown and "Front: Bonjour" is not, and "shows "Untitled card" for a card whose primary field is blank" passes unchanged.
+- `grep -rn "primary_field.name" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing.
+- At `localhost:5173`, a completed practice's summary, on its page and on its run page, lists each card by its first field's value alone, and that card's detail sheet is headed by the same value.
+- The cycle's judgement, at `localhost:5173`: every heading, button, tab, label, empty state, picker row, spoken name and browser tab on every screen is a row of `docs/vocabulary.md`, the Debrief listing each screen walked, New practice's "N selected", a deck's row in the library's Decks tab and on a subject's page, a summary's card rows, and the rating control's accessible name, "Rate <field>" before rating and "<field>: <rating>" after, included; creating a subject with a taken name shows "A subject with this name already exists.", saving a configuration with a taken name "A configuration with this name already exists.", and rating a card from a second tab after the first has moved on "This card has already been rated."; `grep -rn "\.message\b" frontend/src --include=*.tsx | grep -v "\.test\."` prints nothing; and `grep -c '^| ' docs/vocabulary.md` prints a number between 150 and 220.
+
+**Debrief**
+
+None.
