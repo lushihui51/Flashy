@@ -4,9 +4,9 @@
 
 **Who reads a docket.** Each of the five skills read this in full before it can work. The human (the engineer or the product owner) reads it to see where an initiative stands. No one else should read it, so do not cite it anywhere, ever.
 
-**Lifetime.** A docket can only be created by the human, who also passes its path as an argument each time one of the five skills is invoked. A docket lives on a branch opened from main for it; every skill on the docket runs on that branch, and the branch reaches main by one PR. When the docket is empty, it is finished: delete it in the commit that emptied it, and never reuse its number.
+**Lifetime.** A docket can only be created by the human, who also passes its path as an argument each time one of the five skills is invoked. A docket lives on a branch opened from main for it, or, when it is opened for a blocked task, on that task's cycle branch; every skill on the docket runs on that branch, and the branch reaches main by one PR. When the docket is empty, it is finished: delete it in the commit that emptied it.
 
-**Name.** docs/roundtable-dockets/NNN-YYYY-MM-DD.md, the number by AGENTS.md's rule for numbered files, then the date. Title line: "# Roundtable docket NNN: YYYY-MM-DD".
+**Name.** docs/roundtable-dockets/NNN-YYYY-MM-DD.md, a number no docket in the folder holds on any branch, then the date. Title line: "# Roundtable docket NNN: YYYY-MM-DD".
 
 **Maintenance.** The docket is a working set, never a log. Every item has one skill that puts it in and one that takes it out, by absorbing it into a record or a cycle file or by deciding it; the table says which. Take an item out in the session that absorbs or decides it, never later. Only leave a line in when a skill yet to run for this docket needs it.
 

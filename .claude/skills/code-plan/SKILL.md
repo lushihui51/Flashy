@@ -35,6 +35,7 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 
 - The only legitimate decisions to act on are the records the docket lists and its lesser decisions. If something you propose depends on an unsettled decision, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
 - If a task would be written differently by the answer to an open question, its cycle waits for the question's owner: raise it to me, and plan the other outcomes.
+- A docket opened for a blocked task amends that task's cycle file and plans no other; every done task stays as it stands, and the blocked task's Status goes back to "- [ ]".
 
 ## What you do
 
@@ -84,7 +85,7 @@ For each task, read the files in its Files first for context.
 
 Once every task in a cycle has been approved by me, draft the cycle file in full. Use everything we've decided for this cycle.
 
-Before showing me a draft, take the builder's seat and ask yourself: with only the draft, AGENTS.md and the code, and nothing from this conversation, where would I have to guess? Either fix it or raise it to me. 
+Before showing me a draft, take the builder's seat and ask yourself: with only the draft, AGENTS.md and the code, and nothing from this conversation, where would I have to guess? Either fix it or raise it to me.
 
 Once I've approved of the draft, it is final: write it to `docs/cycles/`, commit it, and move to the next outcome.
 
