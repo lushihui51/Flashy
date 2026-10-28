@@ -25,7 +25,10 @@ Facts about how the app is used and what the user needs come from me. Never inve
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - The Type test in `docs/rules/record-rules.md`.
 - Every PDR whose Status is Active, so you can tell me when a new decision contradicts or extends one. A Superseded or Deprecated PDR no longer holds; skip it.
-- From `docs/cycles/`: each file's Goal, and each task's Status, Goal and Debrief lines. Pull them with grep rather than reading the files; the rest describes how the app is built, not what it does.
+- From `docs/cycles/`: each file's Outcome, and each task's Status and Goal. Pull them with this command rather than reading the files; the rest describes how the app is built, not what it does.
+  ````
+  awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($0,5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$0; next} part=="**Status**"{s=$0; sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $0; part=""}' docs/cycles/*.md
+  ````
 - The user-facing vocabulary AGENTS.md points at. Those are the words the user sees, so they are the words of every decision here.
 - Nothing else without my explicit permission.
 
