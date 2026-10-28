@@ -28,6 +28,7 @@ import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -303,6 +304,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
     queryFn: () => readSubject(subjectId!),
     enabled: mode === 'edit' && !!subjectId,
   });
+  usePageTitle(
+    mode === 'create' ? 'New deck' : deckQuery.data && subjectQuery.data ? 'Edit deck' : undefined,
+  );
 
   if (mode === 'edit') {
     if (deckQuery.isError) {

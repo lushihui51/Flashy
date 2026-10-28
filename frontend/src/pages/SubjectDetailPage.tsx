@@ -8,6 +8,7 @@ import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
 import { isNotFound } from 'src/api/unwrap';
 
 /** First two field names, `+N` for the rest — computed by count, not measured text,
@@ -32,6 +33,7 @@ export default function SubjectDetailPage() {
     queryFn: () => readDecks(subjectId),
     enabled: !!subjectId,
   });
+  usePageTitle(subjectQuery.data?.name);
 
   if (subjectQuery.isError) {
     return (

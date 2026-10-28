@@ -28,6 +28,7 @@ import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -80,6 +81,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     queryFn: () => readDeckPracticeConfig(configId!),
     enabled: mode === 'edit' && !!configId,
   });
+  usePageTitle(
+    mode === 'create' ? 'New configuration' : configQuery.data ? 'Edit configuration' : undefined,
+  );
 
   if (mode === 'edit' && configQuery.isError) {
     return (

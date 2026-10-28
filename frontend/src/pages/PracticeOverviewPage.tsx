@@ -8,6 +8,7 @@ import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import PracticeRunRow from 'src/components/practice/PracticeRunRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -30,6 +31,7 @@ function isStatusTab(value: string | null): value is StatusTab {
  * page's, a shared link — is just a URL with the right params, and so going back
  * returns to the list the user was actually looking at. */
 export default function PracticeOverviewPage() {
+  usePageTitle('Practice');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

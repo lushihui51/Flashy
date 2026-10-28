@@ -14,6 +14,7 @@ import Breadcrumb from 'src/components/ui/Breadcrumb';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
@@ -30,6 +31,7 @@ export default function PracticeRunPage() {
     queryFn: () => readPracticeRunState(practiceSessionId!),
     enabled: !!practiceSessionId,
   });
+  usePageTitle(runQuery.data?.session_name);
 
   return (
     <div className="flex flex-col p-4">

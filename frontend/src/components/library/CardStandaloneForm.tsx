@@ -9,6 +9,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -27,6 +28,7 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
     queryFn: () => readCard(cardId!),
     enabled: mode === 'edit' && !!cardId,
   });
+  usePageTitle(mode === 'create' ? 'New card' : cardQuery.data ? 'Edit card' : undefined);
 
   if (mode === 'edit') {
     if (cardQuery.isError) {

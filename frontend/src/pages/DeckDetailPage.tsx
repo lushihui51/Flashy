@@ -12,6 +12,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
 import { failureSentence } from 'src/lib/failureSentence';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
@@ -43,6 +44,7 @@ export default function DeckDetailPage() {
     enabled: !!deckId,
   });
   const deck = deckQuery.data;
+  usePageTitle(deck?.name);
 
   const subjectQuery = useQuery({
     queryKey: ['subject', deck?.subject_id],

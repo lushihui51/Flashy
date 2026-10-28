@@ -16,6 +16,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { isNotFound } from 'src/api/unwrap';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -39,6 +40,7 @@ export default function PracticeDetailsPage() {
     queryFn: () => readPracticeRun(practiceSessionId!),
     enabled: !!practiceSessionId,
   });
+  usePageTitle(sessionQuery.data?.name);
 
   if (sessionQuery.isError) {
     return (

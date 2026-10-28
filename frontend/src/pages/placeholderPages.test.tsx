@@ -12,4 +12,12 @@ describe('placeholder pages', () => {
     render(<Page />);
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
   });
+
+  it.each([
+    ['HomePage', HomePage, 'Home · Flashy'],
+    ['NotificationsPage', NotificationsPage, 'Notifications · Flashy'],
+  ] as const)('%s titles the browser tab', (_name, Page, title) => {
+    render(<Page />);
+    expect(document.title).toBe(title);
+  });
 });

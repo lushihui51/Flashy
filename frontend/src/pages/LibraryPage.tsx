@@ -6,6 +6,7 @@ import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
@@ -23,6 +24,7 @@ function EmptyState({ copy }: { copy: string }) {
 }
 
 export default function LibraryPage() {
+  usePageTitle('Your library');
   const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.

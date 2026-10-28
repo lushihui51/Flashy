@@ -11,6 +11,7 @@ import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type SubjectFormProps = {
   mode: 'create' | 'edit';
@@ -28,6 +29,7 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
     queryFn: () => readSubject(subjectId!),
     enabled: mode === 'edit' && !!subjectId,
   });
+  usePageTitle(mode === 'create' ? 'New subject' : subjectQuery.data ? 'Edit subject' : undefined);
 
   if (mode === 'edit') {
     if (subjectQuery.isError) {

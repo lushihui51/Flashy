@@ -12,6 +12,7 @@ import SelectedConfigurationList from 'src/components/practice/SelectedConfigura
 import AddButton from 'src/components/ui/AddButton';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 import { MISSING_CONFIGURATION_MESSAGE } from 'src/lib/practiceCopy';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
@@ -34,6 +35,7 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  * straight on the new session's own page.
  */
 export default function PracticeCreatePage() {
+  usePageTitle('New practice');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();

@@ -524,7 +524,7 @@ Read `onError` of `createMutation` in `PracticeCreatePage.tsx`: it is the one pl
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -573,7 +573,20 @@ Set `document.title` in an effect keyed on `name`; never render a `<title>` elem
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/lib/pageTitle.test.ts src/pages/placeholderPages.test.tsx` prints `Test Files  2 passed (2)` and `Tests  8 passed (8)`: the four named cases in `pageTitle.test.ts`, and a new `it.each` in `placeholderPages.test.tsx`, "%s titles the browser tab", asserting `document.title` reads "Home · Flashy" and "Notifications · Flashy".
+- `grep -n "<title>" frontend/index.html` prints `7:    <title>Flashy</title>`. `grep -rln "usePageTitle" frontend/src/pages frontend/src/components/library` prints thirteen files: the nine pages and the four forms. `grep -rn "<title" frontend/src` prints nothing.
+- In headless Chromium at 390×844, each route loaded directly reads: "Home · Flashy" at `/`, "Your library · Flashy", "Notifications · Flashy", "Practice · Flashy", "New practice · Flashy", "T6 check · Flashy" on that subject's page, "T6 Rerun · Flashy" on that deck's page, "T6 rerun check · Flashy" on a completed practice's page and its run page, "T7 two-tab check · Flashy" on an active practice's page and its run page, "New subject · Flashy", "New deck · Flashy", "New card · Flashy", "New configuration · Flashy", "Edit subject · Flashy", "Edit deck · Flashy", "Edit card · Flashy" and "Edit configuration · Flashy". With New deck's New subject overlay open, the tab reads "New deck · Flashy". A subject that is not found reads "Flashy". Navigating inside the app reads the same: the subject page's "Your library" crumb, then a deck's row, then Edit deck, then browser back twice, read "Your library · Flashy", "T6 Rerun · Flashy", "Edit deck · Flashy", "T6 Rerun · Flashy" and "Your library · Flashy". Every word in these titles is a row of `docs/vocabulary.md`: "The browser tab's title", "The main places", and the "New …" and "Edit …" rows of each form.
+
+Over the whole frontend, `npx vitest run` prints `544 passed`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- The browser check ran against this worktree's own Vite server on port 5174, not `localhost:5173`. The server on 5173 runs from the main checkout, which is on `main` and does not have this task's code. The 5174 server used the same backend on port 8000, also the main checkout's, whose read payloads match this branch's `types.ts` except for doc comments. The server was stopped after the check. Nothing was written to the dev database.
+- An edit form passes its heading to `usePageTitle` only once its record has loaded, matching the condition on which it renders its form, so an edit form whose record is not found reads "Flashy". `DeckEditor` waits for both the deck and its subject, as its render does.
+
+Code worth reading: `usePageTitle` in `frontend/src/lib/pageTitle.ts`. It uses two effects. The first, keyed on `name`, sets the title. The second, with no keys, restores "Flashy" only on unmount, so a name that turns undefined keeps the title it had.
 
 ### T8 — The four words in the vocabulary file
 
