@@ -49,7 +49,7 @@
 - Raise a finding that must outlive the session to the engineer for /code-decide; never fix it in passing.
   - Reason: a lasting finding is a decision for the docket
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
-- Number a new file under docs/. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
+- Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
 - Never mark deferred work in code; raise it to the engineer as a question for docs/backlog.md.
   - Reason: the backlog is a kept question's one home
