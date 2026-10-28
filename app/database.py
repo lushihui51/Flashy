@@ -13,20 +13,21 @@ SQLModel.metadata.naming_convention = {
     "pk": "pk_%(table_name)s",
 }
 
-# ADR 019: pin every connection's session TimeZone to UTC. Postgres returns a
+# Pin every connection's session TimeZone to UTC. Postgres returns a
 # `timestamptz` in whatever zone the session is set to — by default the server's own
 # local zone — so without this the same instant is emitted as `...-04:00` on one deploy
 # host and `...+00:00` on another. The instant is identical either way, but pinning it
 # keeps the API's representation deterministic and stops a host's local zone from
 # leaking into responses. The user's zone is applied at render time, never here.
-# Task 020 MD-1: a database host that stops answering fails a new connection in
-# seconds instead of the OS's ~2 minutes. Must stay below the frontend health probe's
-# timeout (ADR 063; test_db_connect_timeout_is_shorter_than_the_probe_timeout).
+# A database host that stops answering fails a new connection in seconds instead of
+# the OS's ~2 minutes. Must stay below the frontend health probe's timeout, so a silent
+# host answers 503 and reads as server trouble rather than as a lost connection
+# (test_db_connect_timeout_is_shorter_than_the_probe_timeout).
 DB_CONNECT_TIMEOUT_SECONDS = 3
 
 _CONNECT_ARGS = {"options": "-c timezone=utc", "connect_timeout": DB_CONNECT_TIMEOUT_SECONDS}
 
-# pool_pre_ping replaces pooled connections a database restart left dead (MD-1).
+# pool_pre_ping replaces pooled connections a database restart left dead.
 engine = create_engine(
     settings.database_url, echo=False, pool_pre_ping=True, connect_args=_CONNECT_ARGS
 )

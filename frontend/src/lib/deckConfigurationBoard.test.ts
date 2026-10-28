@@ -9,6 +9,7 @@ import {
   hasAnyAssignment,
   moveField,
   pruneCounts,
+  SLOT_LABELS,
   toggleCount,
 } from 'src/lib/deckConfigurationBoard';
 
@@ -128,7 +129,7 @@ describe('boardFromConfig', () => {
 
   it('drops ids the deck no longer has live, and prunes counts to what survived', () => {
     // 'archived' was archived after the config was saved: it must not appear anywhere in
-    // the builder (invariant 5), and the count of 2 it made possible goes with it.
+    // the builder, and the count of 2 it made possible goes with it.
     const board = boardFromConfig(fieldDefs, {
       ...emptyConfigArrays,
       answer_field_ids: ['f1'],
@@ -279,5 +280,17 @@ describe('defaultConfigurationName', () => {
     board = moveField(board, 'f5', 'answer_fields');
 
     expect(defaultConfigurationName(board, defs)).toBe('Term, Meaning +2 → Note');
+  });
+});
+
+describe('SLOT_LABELS', () => {
+  it("names each slot by the move sheet's row words", () => {
+    expect(SLOT_LABELS).toEqual({
+      unassigned: 'Not used',
+      prompt_fields: 'Prompt · always shown',
+      prompt_pool: 'Prompt · random draw',
+      answer_fields: 'Answer · always shown',
+      answer_pool: 'Answer · random draw',
+    });
   });
 });

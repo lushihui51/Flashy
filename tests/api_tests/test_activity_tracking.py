@@ -1,7 +1,10 @@
-"""D13 — last_activity_at, the recency sort key for subject/deck. Bumps on own-column
-edits and on bubbled child activity (e.g. a deck's card/field writes, a deck created/
-deleted/moved under a subject). See docs/plans/003-frontend-rebuild-creation-flows.md
-Phase 5.4 for the full bubbling table this file verifies."""
+"""last_activity_at is the server-side recency sort key for every subject and deck
+list; the frontend never re-sorts. It equals created_at on insert and is bumped by a
+row's own-column edits and by child activity: a card create, edit, or delete and a
+field create, rename, reorder, archive, or hard delete bump the deck; a deck created,
+deleted, or moved under a subject bumps the subject (a move bumps both the source and
+the target). A card write stops at the deck and never reaches the subject, and a PATCH
+carrying no fields bumps nothing."""
 
 import uuid
 from datetime import datetime
@@ -214,7 +217,7 @@ class TestCardWritesTouchDeck:
 
     def test_card_edit_does_not_touch_subject(self, client, existing_subject):
         """Editing a card is two levels below the subject — it must not bubble that
-        far (§0: "Editing a card does not touch the subject — that's two levels up")."""
+        far."""
         deck, front_id, back_id = self._deck_and_field(client, existing_subject)
         card = client.post(
             "/api/cards",

@@ -6,7 +6,7 @@ from app.models.subject import Subject
 
 
 def touch(db: Session, *rows: Subject | Deck) -> None:
-    """Bumps `last_activity_at` to now on the given rows (D13's sort key), in the
+    """Bumps `last_activity_at` to now on the given rows (the recency sort key), in the
     current transaction — never a separate commit. The one place this column is ever
     written. Every row must be one this session already loaded: assigning the attribute
     is what marks it dirty, so a detached row would be silently ignored."""

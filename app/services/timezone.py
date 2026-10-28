@@ -1,4 +1,4 @@
-"""IANA timezone validation for ADR 019.
+"""IANA timezone validation.
 
 The user's zone arrives from the client on every request and is stored on `app_user`
 purely so that read paths can format and bucket dates in it. It is never consulted when

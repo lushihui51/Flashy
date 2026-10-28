@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -57,7 +57,7 @@ describe('SubjectForm — create mode', () => {
     const user = userEvent.setup();
     renderForm('/subjects/new');
 
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
     expect(createCalled).toBe(false);
@@ -75,16 +75,60 @@ describe('SubjectForm — create mode', () => {
     renderForm('/subjects/new');
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
+  });
+
+  it('has no text box for the icon', () => {
+    renderForm('/subjects/new');
+
+    expect(screen.queryByRole('textbox', { name: /Icon/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('textbox').map((box) => box.getAttribute('type'))).toEqual([
+      'text',
+      null,
+    ]);
+    expect(screen.getByRole('button', { name: 'Icon: Open book' })).toBeInTheDocument();
+  });
+
+  it('choosing a picture sends it with the create', async () => {
+    let body: unknown;
+    server.use(
+      http.post(`${BASE}/api/subjects`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          { ...subject, id: 's2', name: 'Chemistry', icon: 'atom' },
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+    await user.click(screen.getByRole('button', { name: 'Icon: Open book' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Icon' })).getByRole('button', { name: 'Atom' }),
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Icon' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Icon: Atom' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s2'));
+    expect(body).toEqual({ name: 'Chemistry', icon: 'atom' });
   });
 
   it('shows the API error and does not navigate on a failed create', async () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
-          { detail: 'Subject with this name already exists for this user' },
+          {
+            detail: {
+              code: 'subject_name_taken',
+              message: 'subject (user_id, name) already exists',
+            },
+          },
           { status: 400 },
         ),
       ),
@@ -93,11 +137,9 @@ describe('SubjectForm — create mode', () => {
     renderForm('/subjects/new');
 
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Math');
-    await user.click(screen.getByRole('button', { name: 'Create subject' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(
-      await screen.findByText('Subject with this name already exists for this user'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('A subject with this name already exists.')).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
   });
 
@@ -134,7 +176,29 @@ describe('SubjectForm — edit mode', () => {
 
     expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveValue('Math');
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('Numbers and shapes');
-    expect(screen.getByRole('textbox', { name: 'Icon' })).toHaveValue('brain');
+    expect(screen.getByRole('button', { name: 'Icon: Brain' })).toBeInTheDocument();
+  });
+
+  it('changing the picture sends only the icon on save', async () => {
+    mockEdit();
+    let body: unknown;
+    server.use(
+      http.patch(`${BASE}/api/subjects/:id`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ ...subject, icon: 'atom' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/s1/edit');
+
+    await user.click(await screen.findByRole('button', { name: 'Icon: Brain' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Icon' })).getByRole('button', { name: 'Atom' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    expect(body).toEqual({ icon: 'atom' });
   });
 
   it('sends only the changed field on submit and stays on the subject page', async () => {
@@ -152,7 +216,7 @@ describe('SubjectForm — edit mode', () => {
     const descriptionInput = await screen.findByRole('textbox', { name: 'Description' });
     await user.clear(descriptionInput);
     await user.type(descriptionInput, 'Updated description');
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
   });
@@ -164,7 +228,7 @@ describe('SubjectForm — edit mode', () => {
 
     const nameInput = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(nameInput);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Name is required.')).toBeInTheDocument();
   });
@@ -196,7 +260,7 @@ describe('SubjectForm — edit mode', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
 
-    // Verbatim against the copy contract's own subject example (task 013).
+    // The whole sentence, verbatim: its clause order and wording are fixed copy.
     expect(
       await screen.findByText(
         "This also deletes 3 decks, 120 cards, 8 fields, 5 deck configurations and 4 practices. This can't be undone.",
@@ -254,7 +318,7 @@ describe('SubjectForm — edit mode', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Delete subject' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('subject 1 not found');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Subject not found.');
     expect(screen.queryByText('Delete subject?')).not.toBeInTheDocument();
   });
 

@@ -31,7 +31,7 @@ def validate_deck_practice_config(
     answer_pool_counts: list[int],
 ) -> None:
     """Raises ValueError (message describes the first rule violated) unless the config
-    is valid. Run on both template save and session start (Phase 4.2) — a config can go
+    is valid. Run on both template save and session start — a config can go
     stale between the two if a field gets archived after the config was saved, so both
     call sites need this, not just creation."""
     groups = [
@@ -89,7 +89,7 @@ def update_deck_practice_config(
     db: Session, config: DeckPracticeConfig, data: dict
 ) -> DeckPracticeConfig:
     """Applies an already-validated PATCH, severing config lineage first if the update
-    is material (ADR 040): any of the six prompt/answer field or pool arrays actually
+    is material: any of the six prompt/answer field or pool arrays actually
     present in `data` differs — compared as ordered lists, since a reordering is a
     different config even with the same members — from what's currently stored. A
     rename-only update (no array field in `data`) is therefore never material. The
@@ -99,7 +99,7 @@ def update_deck_practice_config(
     reaches this function at all) leaves every snapshot's source_config_id untouched.
 
     A non-material update that carries a name writes it onto every snapshot still linked
-    to this configuration (ADR 066), even when the name is unchanged; no comparison is
+    to this configuration, even when the name is unchanged; no comparison is
     made. A material update takes precedence: it severs and propagates nothing, even
     when it also carries a name, so a practice keeps the name that described the layout
     it ran. Either UPDATE commits with the config update in

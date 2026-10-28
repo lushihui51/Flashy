@@ -20,6 +20,7 @@ from app.models.deck_payloads import (
     DeckDetail,
     DeckFieldDefRead,
 )
+from app.refusals import Refusal
 from app.services.deck_batch_edit import DeckBatchEditValidationError, apply_deck_batch_edit
 from app.services.deck_create import DeckCreateValidationError, create_deck_atomic
 from app.services.deletion import delete_deck as delete_deck_service
@@ -68,6 +69,8 @@ def create_deck(db: SessionDep, current_user: CurrentUserDep, payload: DeckCreat
             payload.subject_id,
             payload.field_defs,
         )
+    except Refusal as e:
+        raise HTTPException(status_code=422, detail=e.detail) from e
     except DeckCreateValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _deck_detail(db, deck, current_user.id)
@@ -97,6 +100,8 @@ def update_deck(
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
         deck = apply_deck_batch_edit(db, current_user.id, deck, payload, get_mastery_strategy())
+    except Refusal as e:
+        raise HTTPException(status_code=422, detail=e.detail) from e
     except DeckBatchEditValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _deck_detail(db, deck, current_user.id)

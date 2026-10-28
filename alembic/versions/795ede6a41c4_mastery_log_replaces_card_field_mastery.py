@@ -4,12 +4,10 @@ Revision ID: 795ede6a41c4
 Revises: 4c84ec429933
 Create Date: 2026-09-14 15:29:07.960929
 
-ADR 042: replaces the disposable card_field_mastery cache with an append-only ledger.
+Replaces the disposable card_field_mastery cache with an append-only ledger.
 Upgrade creates mastery_log, then backfills and retroactively attributes the whole
-history by importing and calling app.services.mastery.rebuild_mastery (task 010 T1)
-against this migration's own connection — the same replay every live rating goes
-through, run globally (every user) via review_log, the true source of truth (ADR 011)
-— before dropping card_field_mastery. Accepted coupling: this upgrade imports app code
+history by importing and calling app.services.mastery.rebuild_mastery against this migration's own connection — the same replay every live rating goes
+through, run globally (every user) via review_log, the true source of truth — before dropping card_field_mastery. Accepted coupling: this upgrade imports app code
 as of this revision, so it will replay through whatever MasteryStrategy
 app.mastery.config.get_mastery_strategy() resolves to at the time this migration runs,
 not necessarily the strategy in force when review_log's rows were first written (the
@@ -55,9 +53,9 @@ def upgrade() -> None:
     op.create_index('ix_mastery_log_card_field', 'mastery_log', ['card_id', 'field_def_id', 'id'], unique=False)
     op.create_index('ix_mastery_log_run', 'mastery_log', ['practice_run_id', 'id'], unique=False)
 
-    # Data-only: replay review_log (ADR 011's source of truth) through the app's write
+    # Data-only: replay review_log (the source of truth) through the app's write
     # path to backfill mastery_log for every pre-existing appearance, with attribution
-    # reconstructed the same way rebuild_mastery always does it (task 010 T1). Imports
+    # reconstructed the same way rebuild_mastery always does it. Imports
     # app code as of this revision — see the module docstring.
     from sqlmodel import Session
 
@@ -88,8 +86,8 @@ def downgrade() -> None:
 
     # Data-only: current state = latest row per (card, field), taken straight off
     # mastery_log with a DISTINCT ON — no MasteryStrategy, no app import. updated_at
-    # takes reviewed_at, the value the old write path always supplied for it anyway
-    # (its server_default of now() never actually fired on the live write path).
+    # takes reviewed_at, the value card_field_mastery's write path supplied for it
+    # (its server_default of now() never fired on a live write).
     op.execute(
         """
         INSERT INTO card_field_mastery

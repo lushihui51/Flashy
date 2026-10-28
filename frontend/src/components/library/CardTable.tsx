@@ -4,17 +4,17 @@ import type { components } from 'src/api/types';
 
 type CardTableProps = {
   deckName: string;
-  /** Sorted by position — already active-only, per the backend's D11 (archived
-   * fields never appear in DeckDetail.field_defs at all). */
+  /** Sorted by position — already active-only: archived fields never appear in
+   * DeckDetail.field_defs at all. */
   fieldDefs: components['schemas']['DeckFieldDefRead'][];
   cards: components['schemas']['CardRead'][];
-  /** Where tapping a row goes — a card-edit route, currently a placeholder. */
+  /** Where tapping a row goes: the card's edit route. */
   cardHref: (cardId: string) => string;
 };
 
-/** Deck detail's card table (Phase 2.5): rows are cards, columns are fields — the
- * first column frozen while the rest scrolls horizontally. Doesn't fetch, takes
- * everything as props. */
+/** Deck detail's card table: rows are cards, columns are fields — the first column
+ * frozen while the rest scrolls horizontally. Doesn't fetch, takes everything as
+ * props. */
 export default function CardTable({ deckName, fieldDefs, cards, cardHref }: CardTableProps) {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);

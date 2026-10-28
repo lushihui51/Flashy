@@ -2,7 +2,7 @@
   "overrides": [
     {
       "files": "docs/**/*.md",
-      "options": { "proseWrap": "never" }
+      "options": { "proseWrap": "never", "embeddedLanguageFormatting": "off" }
     }
   ]
 }

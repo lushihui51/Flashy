@@ -1,8 +1,7 @@
-"""PATCH /api/decks/{id} per plan §2.3 — the batch changeset endpoint Phase 6 adds:
-field_defs and cards applied together in one transaction, in the stated order (field
-create -> field update -> field delete -> reorder -> card delete -> card update ->
-card create). Task 013 T5: the field and card delete phases run through
-compute_deletion_impact + apply_deletion (ADR 049, ADR 051), the same closure a
+"""PATCH /api/decks/{id} — the batch changeset endpoint: field_defs and cards applied
+together in one transaction, in a fixed order (field create -> field update -> field
+delete -> reorder -> card delete -> card update -> card create). The field and card
+delete phases run through compute_deletion_impact + apply_deletion, the same closure a
 direct subject/deck/card delete uses."""
 
 import uuid
@@ -98,9 +97,9 @@ class TestFieldDefsUpdateAlone:
         assert renamed["name"] == "Renamed"
 
     def test_field_type_change_rejected(self, client, existing_deck, existing_field_defs):
-        """MD-1: a type change is refused with the same message PATCH /fields/{id}
-        uses, keeping ADR 009 intact — an entry whose type is present and differs
-        from the field's current type raises before anything is written."""
+        """A type change is refused with the same message PATCH /fields/{id} uses — an
+        entry whose type is present and differs from the field's current type raises
+        before anything is written."""
         field_id = existing_field_defs[0]["id"]
         response = client.patch(
             f"/api/decks/{existing_deck['id']}",
@@ -182,7 +181,7 @@ class TestFieldDeleteGoesThroughTheClosure:
     def test_field_delete_drops_prompt_influence_scopes_scrub_updates_configs_and_runs(
         self, client, db, existing_user, existing_subject
     ):
-        """The field-B scenario from T3's service test (test_deletion.py), asserted
+        """The field-B scenario from the service test in test_deletion.py, asserted
         end to end through PATCH /api/decks/{id} instead of calling
         compute_deletion_impact/apply_deletion directly: prompt P shown with answers
         A (rated 3) and B (rated 1) in one appearance, B also shown as a prompt in a
@@ -378,8 +377,8 @@ class TestFieldDeleteGoesThroughTheClosure:
         assert db.exec(select(MasteryLog).where(MasteryLog.field_def_id == b_id)).first() is None
         assert db.exec(select(ReviewLog).where(ReviewLog.field_def_id == b_id)).first() is None
 
-        # The scrub: deck1's own row no longer names B, deck2's identical array
-        # still does.
+        # The scrub: B is gone from deck1's own row, while deck2's identical array
+        # still names it.
         d1_row = db.exec(
             select(ReviewLog).where(
                 ReviewLog.card_id == card1_id,
@@ -412,7 +411,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=[field_id])},
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
     def test_delete_all_active_fields_at_once_rejected(self, client, existing_deck, existing_field_defs):
         extra = client.post(
@@ -424,7 +423,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=field_ids)},
         )
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
         # rejected before commit — nothing persisted, all three still active.
         get_response = client.get(f"/api/decks/{existing_deck['id']}")
@@ -443,7 +442,7 @@ class TestMinimumTwoActiveFields:
             json={"field_defs": _field_defs(delete=[field_id])},
         )
         assert response.status_code == 422, response.text
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
         assert mastery_log_statement_counter.count == 0
 
 
@@ -562,7 +561,7 @@ class TestCardsUpdateAlone:
     def test_card_update_same_card_twice_rejected(
         self, client, existing_deck, existing_field_defs
     ):
-        """MD-1: a card named twice in cards.update is refused before any entry applies."""
+        """A card named twice in cards.update is refused before any entry applies."""
         front_id, back_id = (fd["id"] for fd in existing_field_defs)
         card_id = client.post(
             "/api/cards",
@@ -641,9 +640,9 @@ class TestCardsDeleteAlone:
         existing_field_defs,
         mastery_log_statement_counter,
     ):
-        """A card delete's review rows go with it (ADR 047, ADR 051), same as a
-        direct DELETE /api/cards/{id}; unlike a field delete, no deck rebuild ever
-        follows one, since deleting a card touches no other card's mastery."""
+        """A card delete's review rows go with it, same as a direct
+        DELETE /api/cards/{id}; unlike a field delete, no deck rebuild ever follows
+        one, since deleting a card touches no other card's mastery."""
         front_id, back_id = (fd["id"] for fd in existing_field_defs)
         card = client.post(
             "/api/cards",
@@ -704,10 +703,9 @@ class TestCombinedFieldCreateAndCardCreate:
     def test_field_create_and_existing_card_update_via_client_key(
         self, client, existing_deck, existing_field_defs
     ):
-        """Phase 7's widened contract: an *existing* card's value for a
-        same-request client_key field, set via cards.update rather than
-        cards.create — the deck editor's edit-mode diff needs this when a field is
-        added and immediately filled in on an already-saved card."""
+        """An *existing* card's value for a same-request client_key field can be set
+        via cards.update rather than cards.create: a field added and immediately
+        filled in on an already-saved card, in one request."""
         front_id, back_id = (fd["id"] for fd in existing_field_defs)
         card = client.post(
             "/api/cards",
@@ -828,6 +826,49 @@ class TestForeignAndUnknownIdsRejected:
         assert response.status_code == 422
 
 
+class TestNameClashes:
+    def test_batch_edit_deck_name_clash_answers_deck_name_taken(
+        self, client, existing_subject, existing_deck, existing_field_defs
+    ):
+        other = client.post(
+            "/api/decks",
+            json={
+                "name": "Other Deck",
+                "subject_id": existing_subject["id"],
+                "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
+            },
+        )
+        assert other.status_code == 201, other.text
+
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={
+                "name": "Other Deck",
+                "field_defs": _field_defs(create=[{"client_key": "c1", "name": "Notes", "type": "text"}]),
+            },
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"]["code"] == "deck_name_taken"
+
+        check = client.get(f"/api/decks/{existing_deck['id']}").json()
+        assert check["name"] == "Test Deck"
+        assert {fd["name"] for fd in check["field_defs"]} == {"front", "back"}
+
+    def test_batch_edit_field_name_clash_answers_field_name_taken(
+        self, client, existing_deck, existing_field_defs
+    ):
+        front, back = existing_field_defs
+        response = client.patch(
+            f"/api/decks/{existing_deck['id']}",
+            json={"field_defs": _field_defs(update=[{"id": front["id"], "name": back["name"]}])},
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"]["code"] == "field_name_taken"
+
+        check = client.get(f"/api/decks/{existing_deck['id']}").json()
+        assert {fd["name"] for fd in check["field_defs"]} == {"front", "back"}
+
+
 class TestRollback:
     def test_mid_request_failure_rolls_back_everything(
         self, client, existing_deck, existing_field_defs
@@ -849,8 +890,8 @@ class TestRollback:
     def test_duplicated_card_update_rolls_back_staged_card_delete(
         self, client, existing_deck, existing_field_defs
     ):
-        """MD-1's pre-scan runs after cards.delete is staged and flushed, so the 422 has
-        to roll the delete back with everything else."""
+        """The duplicate-card pre-scan runs after cards.delete is staged and flushed, so
+        the 422 has to roll the delete back with everything else."""
         front_id, back_id = (fd["id"] for fd in existing_field_defs)
         doomed_id, kept_id = (
             client.post(

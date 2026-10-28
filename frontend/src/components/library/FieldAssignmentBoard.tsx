@@ -13,22 +13,22 @@ type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
 
 type FieldAssignmentBoardProps = {
   /** The deck's **live** fields, already fetched by the page — archived fields never
-   * reach here (invariant 5). */
+   * reach here. */
   fieldDefs: DeckFieldDef[];
   state: BoardState;
   onMove: (fieldId: string, to: BoardSlot) => void;
   onToggleCount: (slot: PoolSlot, count: number) => void;
 };
 
-/** The sheet's five possible destinations, in the fixed order the ADR 020 contract
- * specifies. A field's own current slot is filtered out at render time, so the sheet
- * always offers exactly the other four. */
-const DESTINATIONS: { slot: BoardSlot; label: string }[] = [
-  { slot: 'prompt_fields', label: 'Prompt · always shown' },
-  { slot: 'prompt_pool', label: 'Prompt · random draw' },
-  { slot: 'answer_fields', label: 'Answer · always shown' },
-  { slot: 'answer_pool', label: 'Answer · random draw' },
-  { slot: 'unassigned', label: 'Not used' },
+/** The sheet's five possible destinations, in this fixed order. A field's own current
+ * slot is filtered out at render time, so the sheet always offers exactly the other
+ * four. */
+const DESTINATIONS: BoardSlot[] = [
+  'prompt_fields',
+  'prompt_pool',
+  'answer_fields',
+  'answer_pool',
+  'unassigned',
 ];
 
 const RANDOM_DRAW_LEGEND: Record<PoolSlot, string> = {
@@ -37,15 +37,14 @@ const RANDOM_DRAW_LEGEND: Record<PoolSlot, string> = {
 };
 
 /**
- * The assignment board (ADR 020): a "Not used" area on top, then a Prompt side card
- * and an Answer side card, each holding an Always shown area and a Random draw area
- * whose frequency checkboxes sit directly beneath the chips they govern.
+ * The assignment board: a "Not used" area on top, then a Prompt side card and an
+ * Answer side card, each holding an Always shown area and a Random draw area whose
+ * frequency checkboxes sit directly beneath the chips they govern.
  *
  * Every chip is a single button; tapping it opens a `BottomSheet` listing the other
  * four destinations, and choosing one calls `onMove`. This is the board's only
  * interaction path — HTML5 drag never fires on touch and there is no device here to
- * verify a hand-rolled gesture, so tap-to-assign is what ships (ADR 020's rejected
- * alternatives cover why the other shapes lost).
+ * verify a hand-rolled gesture, so tap-to-assign is what ships.
  */
 export default function FieldAssignmentBoard({
   fieldDefs,
@@ -56,7 +55,7 @@ export default function FieldAssignmentBoard({
   const nameById = new Map(fieldDefs.map((field) => [field.id, field.name]));
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   // One shared trigger ref, reassigned to whichever chip was tapped most recently, so
-  // BottomSheet's onCloseAutoFocus returns focus to that exact chip (ADR 020's Costs).
+  // BottomSheet's onCloseAutoFocus returns focus to that exact chip.
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const titleId = useId();
 
@@ -159,22 +158,20 @@ export default function FieldAssignmentBoard({
           Move "{activeName}" to…
         </h2>
         <ul className="flex flex-col">
-          {DESTINATIONS.filter((destination) => destination.slot !== activeSlot).map(
-            (destination) => (
-              <li key={destination.slot}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeFieldId) onMove(activeFieldId, destination.slot);
-                    closeSheet();
-                  }}
-                  className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
-                >
-                  {destination.label}
-                </button>
-              </li>
-            ),
-          )}
+          {DESTINATIONS.filter((destination) => destination !== activeSlot).map((destination) => (
+            <li key={destination}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeFieldId) onMove(activeFieldId, destination);
+                  closeSheet();
+                }}
+                className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
+              >
+                {SLOT_LABELS[destination]}
+              </button>
+            </li>
+          ))}
         </ul>
       </BottomSheet>
     </div>

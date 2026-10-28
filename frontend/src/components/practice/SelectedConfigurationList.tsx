@@ -12,8 +12,8 @@ type SelectedConfigurationListProps = {
 
 /**
  * New practice's selection as a list, including configurations a filter hides from the
- * pick list (task 019 MD-5). Purely presentational: the page resolves the selected ids
- * and owns the heading and the empty state (AGENTS.md — reusable components don't fetch).
+ * pick list. Purely presentational: the page resolves the selected ids and owns the
+ * heading and the empty state (AGENTS.md — reusable components don't fetch).
  */
 export default function SelectedConfigurationList({
   configs,
@@ -26,7 +26,7 @@ export default function SelectedConfigurationList({
           <div className="flex min-w-0 flex-1 flex-col py-2">
             <span className="truncate text-[15px] text-(--color-text)">{config.name}</span>
             <span className="truncate text-[11px] text-(--color-text-muted)">
-              {config.deck_name} · {config.subject_name}
+              {config.subject_name} · {config.deck_name}
             </span>
           </div>
           <button

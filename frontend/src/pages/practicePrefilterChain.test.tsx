@@ -16,7 +16,7 @@ import DeckEditor from 'src/components/library/DeckEditor';
 const BASE = 'http://localhost:8000';
 
 /**
- * T6: the pre-filter chains walked end to end through the REAL pages — every hop is the
+ * The pre-filter chains walked end to end through the REAL pages — every hop is the
  * production component, so a step that drops context fails here even when each page's
  * own tests pass. The per-page behavior is already covered by each page's test file;
  * these tests only assert the context that travels between pages.
@@ -260,7 +260,7 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-/** Decoded via URLSearchParams, never compared as an encoded string literal (ADR 024). */
+/** Decoded via URLSearchParams, never compared as an encoded string literal. */
 function currentLocation() {
   const full = screen.getByTestId('location').textContent ?? '';
   const [pathname, search = ''] = full.split('?');
@@ -285,7 +285,7 @@ function renderChain(initialPath: string) {
           element={<DeckConfigurationEditor mode="edit" />}
         />
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
-        {/* T5 owns the real details page; the chains never land there. */}
+        {/* The chains never land on the real details page, so a stub stands in for it. */}
         <Route path="/practice/:practiceSessionId" element={<span>practice detail</span>} />
       </Routes>
     </>,
@@ -293,7 +293,7 @@ function renderChain(initialPath: string) {
   );
 }
 
-// The board's one interaction path (ADR 020): tap the chip, then tap a destination row.
+// The board's one interaction path: tap the chip, then tap a destination row.
 async function assign(user: ReturnType<typeof userEvent.setup>, fieldName: string, label: string) {
   await user.click(screen.getByRole('button', { name: fieldName }));
   const sheet = await screen.findByRole('dialog');
@@ -322,20 +322,20 @@ describe('practice pre-filter chains', () => {
     await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Beta'));
 
     // Overview → New practice, still carrying the subject.
-    await user.click(screen.getByRole('button', { name: 'New practice' }));
+    await user.click(screen.getByRole('button', { name: 'Add practice' }));
     expect(currentLocation().pathname).toBe('/practice/new');
     expect(currentLocation().params.get('subject')).toBe('s2');
 
     // The filter reached the server and the list: only Beta's group renders. Some
     // request, not the last — New practice also asks for every configuration,
-    // unfiltered, for its Selected section (task 019 MD-3).
-    await screen.findByRole('group', { name: 'Beta Deck · Beta' });
+    // unfiltered, for its Selected section.
+    await screen.findByRole('group', { name: 'Beta · Beta Deck' });
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
     expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
 
     // New practice → the builder: subject param and returnTo both ride along, and the
     // context subject's decks sort first in the picker.
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s2');
@@ -362,14 +362,14 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
 
     // Overview → New practice with both filters intact.
-    await user.click(screen.getByRole('button', { name: 'New practice' }));
+    await user.click(screen.getByRole('button', { name: 'Add practice' }));
     expect(currentLocation().pathname).toBe('/practice/new');
     expect(currentLocation().params.get('subject')).toBe('s1');
     expect(currentLocation().params.get('deck')).toBe('d1');
 
-    await screen.findByRole('group', { name: 'Alpha Deck · Alpha' });
+    await screen.findByRole('group', { name: 'Alpha · Alpha Deck' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
-    // Some request, not the last (task 019 MD-3, as above).
+    // Some request, not the last, as above.
     expect(
       configRequests.some(
         (query) => query.get('subject_id') === 's1' && query.get('deck_id') === 'd1',
@@ -377,7 +377,7 @@ describe('practice pre-filter chains', () => {
     ).toBe(true);
 
     // New practice → the builder: the deck arrives pre-selected, straight to its board.
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s1');
@@ -395,7 +395,7 @@ describe('practice pre-filter chains', () => {
     renderChain('/practice/new?subject=s1&deck=d1');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     await screen.findByRole('region', { name: 'Not used' });
     const builderLocation = currentLocation().full;
 
@@ -426,18 +426,18 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
   });
 
-  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5, ADR 061)', async () => {
+  it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');
 
-    // Two selections before leaving — per ADR 061 the draft rides the URL, so both
-    // come back on the return leg alongside the returned configuration's auto-select.
+    // Two selections before leaving — the draft rides the URL, so both come back on the
+    // return leg alongside the returned configuration's auto-select.
     await user.click(await screen.findByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
     expect(screen.getByText('2 selected')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     expect(currentLocation().pathname).toBe('/deck-configurations/new');
     const builderLocation = currentLocation().full;
 
@@ -449,7 +449,7 @@ describe('practice pre-filter chains', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Deck name' }), 'Fresh Deck');
     await user.click(screen.getByPlaceholderText('Subject'));
     await user.click(await screen.findByRole('option', { name: 'Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Back on the builder, resumed on the freshly created deck.
     await waitFor(() => expect(currentLocation().full).toBe(builderLocation));
@@ -462,10 +462,10 @@ describe('practice pre-filter chains', () => {
     await assign(user, 'Definition', 'Answer · always shown');
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'Fresh Config');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Back on New practice: the new configuration is auto-selected and the two
-    // selections made before leaving are still there (ADR 061), in tick order.
+    // selections made before leaving are still there, in tick order.
     await waitFor(() => expect(currentLocation().pathname).toBe('/practice/new'));
     await waitFor(() =>
       expect(screen.getByRole('checkbox', { name: 'Fresh Config' })).toBeChecked(),
@@ -476,7 +476,7 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByText('3 selected')).toBeInTheDocument();
   });
 
-  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6, ADR 061)', async () => {
+  it('New practice → Edit configuration and back, by Cancel then by Save, keeps the draft (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderChain('/practice/new');
@@ -500,7 +500,7 @@ describe('practice pre-filter chains', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Exam cram');
 
     // Edit → Save with no change: the same draft, and the edited configuration is not
-    // ticked — an edit hands nothing back (ADR 061).
+    // ticked — an edit hands nothing back.
     await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
     await screen.findByRole('region', { name: 'Not used' });
     await user.click(screen.getByRole('button', { name: 'Save' }));

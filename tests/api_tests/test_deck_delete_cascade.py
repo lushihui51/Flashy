@@ -16,12 +16,12 @@ from app.services.mastery import rebuild_mastery
 
 
 class TestDeckDeleteCascade:
-    """Deleting a deck cascades through everything that references its id (ADR 047):
-    field_def, card, deck_practice_config, practice_card (a practice_card without a
-    card is meaningless), practice_deck (an immutable snapshot, but one that no
-    longer outlives its deck), and review_log itself (ADR 048 amends the SET NULL
-    this table used to have — its own history is not exempt from the rule either). A
-    run left owning no practice_deck at all is deleted alongside its last one."""
+    """Deleting a deck cascades through everything that references its id: field_def,
+    card, deck_practice_config, practice_card (a practice_card without a card is
+    meaningless), practice_deck (an immutable snapshot, but one that never outlives
+    its deck), and review_log itself — the deck's own history is not exempt from the
+    rule either. A run left owning no practice_deck at all is deleted alongside its
+    last one."""
 
     def _setup(self, db, client, existing_deck, rate=True, extra_cards=0):
         prompt = client.post(
@@ -128,8 +128,8 @@ class TestDeckDeleteCascade:
         )
         assert db.get(PracticeCard, ids["practice_card_id"]) is None
 
-        # review_log no longer survives its card/field with nulled references (ADR
-        # 048) — it cascades away with them entirely, same as everything else here.
+        # review_log cascades away with its card/field entirely, same as everything
+        # else here — a review row never survives with a nulled reference.
         surviving_logs = db.exec(
             select(ReviewLog).where(col(ReviewLog.id).in_(review_log_ids))
         ).all()
@@ -143,15 +143,15 @@ class TestDeckDeleteCascade:
             is None
         )
         # ...and since this run had only this one deck, the run itself is gone with
-        # it (ADR 048's "a run with no decks is deleted").
+        # it: a run with no decks is deleted.
         assert db.exec(select(PracticeRun).where(PracticeRun.id == ids["session_id"])).first() is None
 
     def test_delete_leaves_a_two_deck_runs_other_snapshot_and_run_intact(
         self, db, client, existing_subject, existing_deck
     ):
-        """A run spanning two decks survives a delete of just one of them (ADR 048):
-        the deleted deck's own snapshot cascades away, but the run is not "left with
-        no decks" — its other snapshot is untouched and the run still lists it."""
+        """A run spanning two decks survives a delete of just one of them: the deleted
+        deck's own snapshot cascades away, but the run is not "left with no decks" —
+        its other snapshot is untouched and the run still lists it."""
         front = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "front", "type": "text"}
         ).json()["id"]
@@ -234,9 +234,9 @@ class TestDeckDeleteCascade:
         self, db, client, existing_deck
     ):
         """DELETE /api/cards/{id} follows the same rule as a deck delete, just scoped
-        to one card (ADR 047, ADR 048): mastery_log for it is gone, and review_log
-        rows about it cascade away entirely too, rather than surviving with a nulled
-        card_id. Unlike a deck delete, the field_def itself isn't touched here."""
+        to one card: mastery_log for it is gone, and review_log rows about it cascade
+        away entirely too, rather than surviving with a nulled card_id. Unlike a deck
+        delete, the field_def itself isn't touched here."""
         ids = self._setup(db, client, existing_deck)
 
         review_log_ids = list(
@@ -265,8 +265,8 @@ class TestDeckDeleteCascade:
         self, db, client, existing_subject, existing_deck
     ):
         """A user-wide rebuild after a deck delete must not disturb another deck's
-        mastery — invariant 3: replaying reproduces the live rows for every group the
-        deletion didn't touch, value for value."""
+        mastery: replaying review_log through the strategy reproduces the live rows
+        for every group the deletion didn't touch, value for value."""
         ids = self._setup(db, client, existing_deck)
 
         other_deck = client.post(

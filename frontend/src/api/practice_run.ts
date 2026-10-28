@@ -3,7 +3,7 @@ import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
 /** Subject and deck narrow the run list through `practice_deck → deck → subject`;
- * `source_config_id` is attribution only and never a filter (ADR 040). */
+ * `source_config_id` is attribution only and never a filter. */
 export type PracticeRunFilters = { subjectId?: string; deckId?: string };
 
 export const createPracticeRun = async (payload: components['schemas']['PracticeRunCreate']) =>

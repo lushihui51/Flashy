@@ -5,29 +5,28 @@ import type { ReactNode } from 'react';
 type ListRowBaseProps = {
   leading?: ReactNode;
   /** Usually a plain string; accepts ReactNode so a caller can style a placeholder
-   * value in place (e.g. DeckEditor's italic, muted "empty" for a blank card, §4.7) —
-   * the wrapping span still owns truncation/line-height, an inner element only
-   * overrides its own color/style. */
+   * value in place (e.g. an italic, muted "empty" for a blank value) — the wrapping
+   * span still owns truncation/line-height, an inner element only overrides its own
+   * color/style. */
   title: ReactNode;
   /** Omitted entirely when absent — no placeholder element, no extra text node. Row
    * height still stays consistent across rows via the row's own min-height (sized to
    * fit the two-line case with explicit, not browser-default, line-heights so the
-   * number is exact), not by reserving subtitle-specific space in the text column
-   * (see Phase 2.7 §2's "two-line row" note). */
+   * number is exact), not by reserving subtitle-specific space in the text column. */
   subtitle?: string;
   /** Right-aligned, never truncated — the subtitle absorbs width pressure instead. */
   meta?: string;
 };
 
-/** Exactly one of `to` (navigates, renders a Link) or `onClick` (renders a button —
- * for rows that open in-page state, like DeckEditor's card list, §4.7) is required. */
+/** Exactly one of `to` (navigates, renders a Link) or `onClick` (renders a button — for
+ * rows that open in-page state) is required. */
 type ListRowProps = ListRowBaseProps &
   ({ to: string; onClick?: never } | { to?: never; onClick: () => void });
 
-/** The one row grammar for both /library and /subjects/:subjectId's children lists
- * (Phase 2.7): identity and shape on the left, size on the right, chevron last.
- * Whichever element it renders as is a single natively keyboard-reachable, Enter-
- * activated target, so the chevron never needs its own focus stop. */
+/** The one row grammar for both /library and /subjects/:subjectId's children lists:
+ * identity and shape on the left, size on the right, chevron last. Whichever element
+ * it renders as is a single natively keyboard-reachable, Enter-activated target, so
+ * the chevron never needs its own focus stop. */
 export default function ListRow({ leading, title, subtitle, meta, to, onClick }: ListRowProps) {
   const content = (
     <>

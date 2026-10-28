@@ -14,14 +14,14 @@ type PracticeFilterBarProps = {
   onChange: (next: { subjectId: string | null; deckId: string | null }) => void;
 };
 
-/** The subject + deck filter pair, shared by the practice overview and (Phase 3) the
- * session creation surface so both narrow by the same rules.
+/** The subject + deck filter pair, shared by the practice overview and the session
+ * creation surface so both narrow by the same rules.
  *
  * Two decks in different subjects may share a name, so the deck filter is always by
  * **id** and the subject is what disambiguates it in the list. Selecting a subject
- * narrows the deck options to that subject and drops a deck selection that no longer
- * belongs to it; selecting a deck fills in its subject, since a deck outside the
- * chosen subject would make the two filters contradict each other and match nothing. */
+ * narrows the deck options to that subject and drops a deck selection outside it;
+ * selecting a deck fills in its subject, since a deck outside the chosen subject would
+ * make the two filters contradict each other and match nothing. */
 export default function PracticeFilterBar({
   subjects,
   decks,

@@ -12,15 +12,14 @@ type ConfirmDialogProps = {
   destructive?: boolean;
   /** Renders below the description — for a caller that wants the failed mutation's
    * error inline in the dialog instead of closing it and showing the error elsewhere
-   * on the page (Phase 4's practice detail delete). Omitted by every existing caller,
-   * so this changes nothing for them. */
+   * on the page (the practice detail page's delete). */
   children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
 /** Centered confirm prompt, shared by any destructive or dirty-state confirmation
- * (subject delete, deck-editor cancel-with-changes, and later field/card delete). A
+ * (subject delete, deck-editor cancel-with-changes, field and card delete). A
  * separate shape from BottomSheet, which is specifically for the bottom-anchored
  * sheets (Account, Create) — a confirm reads better centered, not slid up from an
  * edge meant for navigation-style content.

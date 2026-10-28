@@ -11,9 +11,9 @@ type PracticeRunRowProps = {
   onDelete: () => void;
 };
 
-/** Not a ListRow: this row carries capped "Deck · Configuration" entries (MD-2) and a
+/** Not a ListRow: this row carries capped "Deck · Configuration" entries and a
  * destructive action of its own, neither of which fits that row's identity-shape-size
- * grammar. No date: the name already is one unless typed (MD-4). */
+ * grammar. No date: the name already is one unless typed. */
 export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProps) {
   return (
     <div className="flex items-center gap-2">

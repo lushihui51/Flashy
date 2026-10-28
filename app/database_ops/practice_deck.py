@@ -14,11 +14,11 @@ def db_stage_create_practice_deck(db: Session, data: dict) -> PracticeDeck:
 
 
 def db_stage_unlink_practice_decks_from_config(db: Session, config_id: uuid.UUID) -> None:
-    """Severs attribution (ADR 040): every snapshot that names this configuration as its
+    """Severs attribution: every snapshot that names this configuration as its
     source stops naming it. Called before a material configuration edit, so the unlink
     and the edit commit together in the caller's transaction. Otherwise a configuration
-    reaches its snapshots only to rename them (ADR 066,
-    db_stage_set_practice_deck_source_config_name)."""
+    reaches its snapshots only to rename them
+    (db_stage_set_practice_deck_source_config_name)."""
     db.exec(
         update(PracticeDeck)
         .where(col(PracticeDeck.source_config_id) == config_id)
@@ -29,7 +29,7 @@ def db_stage_unlink_practice_decks_from_config(db: Session, config_id: uuid.UUID
 def db_stage_set_practice_deck_source_config_name(
     db: Session, config_id: uuid.UUID, name: str
 ) -> None:
-    """ADR 066: every snapshot still linked to this configuration takes its new name. No
+    """Every snapshot still linked to this configuration takes its new name. No
     commit — the caller's update commits both."""
     db.exec(
         update(PracticeDeck)
@@ -52,9 +52,9 @@ def db_read_practice_deck_for_deck(
 def db_read_practice_decks_for_run(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeDeck]:
-    """Every snapshot a session took at start (ADR 013) — the re-run path's only
-    source material (ADR 030); `source_config_id` is attribution only and is never
-    read here (ADR 040). Unscoped by user, like
+    """Every snapshot a session took at start — the re-run path's only source
+    material; `source_config_id` is attribution only and is never read here.
+    Unscoped by user, like
     db_read_practice_cards_for_run — the caller reaches this session through an
     ownership-checked lookup first."""
     return list(

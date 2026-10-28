@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,16 +10,19 @@ import FieldValue from 'src/components/practice/FieldValue';
 import RatingChip from 'src/components/practice/RatingChip';
 import RunProgressBar from 'src/components/practice/RunProgressBar';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
 
-/** The active-session run surface (ADR 027, ADR 028, ADR 031): the current card as a
- * static two-zone reveal with rating (MD-1, MD-2, MD-4, MD-5), live progress, and a
- * retry marker (MD-3). Once `current_card` is null, nothing is pending and this page
- * shows the same completion breakdown (ADR 029, T8) the details page shows later. */
+/** The active-session run surface: the current card as a static two-zone reveal with
+ * rating, live progress, and a retry marker. Once `current_card` is null, nothing is
+ * pending and this page shows the same completion breakdown the details page shows
+ * later. */
 export default function PracticeRunPage() {
   const { practiceSessionId } = useParams<{ practiceSessionId: string }>();
 
@@ -29,17 +31,18 @@ export default function PracticeRunPage() {
     queryFn: () => readPracticeRunState(practiceSessionId!),
     enabled: !!practiceSessionId,
   });
+  usePageTitle(runQuery.data?.session_name);
 
   return (
     <div className="flex flex-col p-4">
-      <Link
-        to={`/practice/${practiceSessionId}`}
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        {/* 005 MD-2: static until the session's real name is fetched, then upgraded. */}
-        {runQuery.data?.session_name ?? 'Practice'}
-      </Link>
+      <Breadcrumb
+        places={[
+          { label: 'Practice', to: '/practice' },
+          ...(runQuery.data
+            ? [{ label: runQuery.data.session_name, to: `/practice/${practiceSessionId}` }]
+            : []),
+        ]}
+      />
 
       {runQuery.isError &&
         (isNotFound(runQuery.error) ? (
@@ -97,7 +100,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
       {breakdownQuery.isError && (
         <p role="alert" className="text-sm text-(--color-danger)">
-          {breakdownQuery.error.message}
+          {failureSentence(breakdownQuery.error, 'Practice not found.')}
         </p>
       )}
       {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
@@ -190,7 +193,7 @@ function PracticeCardView({
           </button>
           {rateMutation.isError && (
             <p role="alert" className="text-sm text-(--color-danger)">
-              {rateMutation.error.message}
+              {failureSentence(rateMutation.error, 'Practice not found.')}
             </p>
           )}
         </>

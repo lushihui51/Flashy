@@ -10,9 +10,10 @@ from app.models.practice_run import PracticeRun
 from app.models.review_log import ReviewLog
 
 
-# The practice_card position UNIQUE constraint, by its ADR 054 derived name. It is
-# DEFERRABLE INITIALLY DEFERRED so a bulk renumber can pass through intermediate
-# collisions; db_try_stage_create_practice_card switches it to IMMEDIATE for one insert.
+# The practice_card position UNIQUE constraint, by the name app/database.py's naming
+# convention derives for it. It is DEFERRABLE INITIALLY DEFERRED so a bulk renumber
+# can pass through intermediate collisions; db_try_stage_create_practice_card switches
+# it to IMMEDIATE for one insert.
 POSITION_CONSTRAINT = "uq_practice_card_practice_run_id"
 
 
@@ -26,7 +27,7 @@ def db_stage_create_practice_card(db: Session, data: dict) -> PracticeCard:
 
 def db_try_stage_create_practice_card(db: Session, data: dict) -> PracticeCard | None:
     """Inserts at `data["position"]`, or reports that the position is taken by returning
-    None — the requeue's one operation, owning its savepoint (ADR 055).
+    None — the requeue's one operation, owning its savepoint.
 
     The position constraint is deferred, so a colliding insert would otherwise surface
     only at COMMIT, too late to retry without losing the rating already written earlier
@@ -34,8 +35,7 @@ def db_try_stage_create_practice_card(db: Session, data: dict) -> PracticeCard |
     collision raise at the flush, where rolling back the savepoint discards only this
     insert. On a collision the constraint is set back to DEFERRED so the caller's
     renumber can pass through intermediate states. On success it is deliberately left
-    IMMEDIATE, exactly as the inline code this replaced behaved: ADR 055 records that
-    asymmetry rather than changing it."""
+    IMMEDIATE."""
     try:
         with db.begin_nested():
             db.execute(text(f"SET CONSTRAINTS {POSITION_CONSTRAINT} IMMEDIATE"))
@@ -92,9 +92,9 @@ def db_read_practice_cards_for_run(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Every row a session has ever produced, in every status, oldest first — the raw
-    material for the ADR 028/029 chain fold: grouping consecutive same-card_id rows in
-    this order reconstructs each card's chain, and a chain's last item is its current
-    bucket. Unscoped by user, like db_read_cards_with_values_for_deck — every call site
+    material for the chain fold (run_progress, _breakdown_bucket): grouping
+    consecutive same-card_id rows in this order reconstructs each card's chain, and a
+    chain's last item is its current bucket. Unscoped by user, like db_read_cards_with_values_for_deck — every call site
     reaches this session through an ownership-checked lookup first."""
     return list(
         db.exec(
@@ -122,7 +122,7 @@ def db_read_pending_practice_cards(
 
 def db_read_max_practice_card_position(db: Session, practice_run_id: uuid.UUID) -> int | None:
     """Highest position among every row of the run, in every status, or None for a run
-    with no rows. The end of the queue for a retry (ADR 058) and the base of a renumber
+    with no rows. The end of the queue for a retry and the base of a renumber
     both start above it."""
     return db.exec(
         select(func.max(PracticeCard.position)).where(
@@ -154,11 +154,10 @@ def db_read_ratings_by_review_group(
 ) -> dict[uuid.UUID, dict[uuid.UUID, int]]:
     """Ratings for a batch of practice_cards at once, keyed `review_group_id ->
     {field_def_id: rating}` — a practice_card's id *is* its review_group_id
-    (submit_rating), so this is the completion breakdown's per-answer rating join
-    (ADR 029/031). A field deleted after the run has no review rows left (they
-    cascaded with it, ADR 048), so its id is simply absent from the result; the
-    breakdown renders that id as a removed-field placeholder with `rating: None`
-    (ADR 052)."""
+    (submit_rating), so this is the completion breakdown's per-answer rating join. A
+    field deleted after the run has no review rows left (they cascaded with it), so
+    its id is simply absent from the result; the breakdown renders that id as a
+    removed-field placeholder with `rating: None`."""
     if not review_group_ids:
         return {}
     rows = db.exec(

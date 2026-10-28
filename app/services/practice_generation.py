@@ -64,7 +64,7 @@ def resolve_prompts_or_answers(
     """One side (prompts or answers) of pool resolution for one card. Fixed ids are
     always included if they survive filtering (still live, not blank on this card).
     Any `forced_pool_ids` that survive the same filtering are included next, ahead of
-    sampling (ADR 036 — the requeue's guarantee that a field rated "Again" is re-asked);
+    sampling (the requeue's guarantee that a field rated "Again" is re-asked);
     the remaining pool ids are weighted-sampled from the rest, with the drawn count —
     chosen from the config's allowed pool_counts — reduced by however many were forced
     and floored at zero, so a card with more forced fields than the drawn count simply
@@ -100,7 +100,7 @@ def generate_practice_card_fields(
 ) -> tuple[list[uuid.UUID], list[uuid.UUID]] | None:
     """Resolves (prompts, answers) for one card under one config snapshot. Returns None
     — meaning skip this card — if zero prompts or zero answers survive, rather than
-    generating an unrenderable practice_card. `forced_answer_pool_ids` (ADR 036) only
+    generating an unrenderable practice_card. `forced_answer_pool_ids` only
     ever applies to the answer side — session-start and rerun generation pass nothing,
     leaving prompt-side and today's answer-side behavior byte-for-byte unchanged."""
     prompts = resolve_prompts_or_answers(

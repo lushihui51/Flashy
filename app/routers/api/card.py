@@ -26,7 +26,7 @@ def _is_blank(value: str) -> bool:
 
 
 def _card_read(card, active_field_ids: set[uuid.UUID]) -> CardRead:
-    """Dense over active_field_ids (D10) regardless of what rows actually exist —
+    """Dense over active_field_ids regardless of what rows actually exist —
     every active field gets a key, "" if there's no row for it. An archived field's
     row is kept in the database as inert history (AGENTS.md) but never surfaced on a
     read."""
@@ -58,14 +58,14 @@ def create_card(db: SessionDep, current_user: CurrentUserDep, card: CardCreate):
     active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id, current_user.id)}
     _reject_unknown_keys(card.values, active_field_ids)
 
-    # Dense write (§2.6): any active field the client omitted is written as "" rather
+    # Dense write: any active field the client omitted is written as "" rather
     # than rejected — the persisted row set never depends on what the client happened
     # to send.
     dense_values = {field_id: card.values.get(field_id, "") for field_id in active_field_ids}
     if all(_is_blank(v) for v in dense_values.values()):
         raise HTTPException(status_code=422, detail="card has no values")
 
-    touch(db, deck)  # D13: card create bubbles to the deck.
+    touch(db, deck)  # A card create bubbles to the deck's recency.
     new_card = db_create_card(db, card.deck_id, dense_values)
     return _card_read(new_card, active_field_ids)
 
@@ -101,7 +101,7 @@ def update_card(
     active_field_ids = {fd.id for fd in db_read_field_defs(db, card.deck_id, current_user.id)}
     _reject_unknown_keys(payload.values, active_field_ids)
 
-    # Merge semantics: only the keys present in the payload change (§2.6). Computed
+    # Merge semantics: only the keys present in the payload change. Computed
     # here, before writing, so an update that would leave the card all-blank can be
     # rejected instead of applied — delete it instead.
     existing = {v.field_def_id: v.value for v in card.values if v.field_def_id in active_field_ids}
@@ -111,7 +111,7 @@ def update_card(
 
     deck = db_read_deck(db, card.deck_id, current_user.id)
     if deck:
-        touch(db, deck)  # D13: card edit bubbles to the deck (not the subject).
+        touch(db, deck)  # A card edit bubbles to the deck's recency, not the subject's.
     updated_card = db_update_card_values(db, card, payload.values)
     return _card_read(updated_card, active_field_ids)
 

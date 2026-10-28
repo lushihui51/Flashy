@@ -54,6 +54,7 @@ from app.models.practice_run_payloads import (
     ResolvedFieldValue,
     RunProgress,
 )
+from app.refusals import Refusal
 from app.services.deck_practice_config import validate_deck_practice_config
 from app.services.mastery import card_mastery, record_review_group
 from app.services.practice_generation import generate_practice_card_fields
@@ -68,10 +69,10 @@ _ARRAY_FIELDS = (
 )
 
 _POSITION_GAP = 1000
-# ADR 037: a retry may not surface until this many other pending cards have had their
-# turn, clamping the mastery-ordered insertion point rather than replacing it — a card
-# whose mastery already puts it deeper than the floor stays at its deeper slot.
-# Must stay >= 1: _insertion_position always reads a predecessor (ADR 058).
+# A retry may not surface until this many other pending cards have had their turn,
+# clamping the mastery-ordered insertion point rather than replacing it — a card whose
+# mastery already puts it deeper than the floor stays at its deeper slot (ADR 037).
+# Must stay >= 1: _insertion_position always reads a predecessor.
 RETRY_SPACING_FLOOR = 3
 
 
@@ -84,7 +85,7 @@ class RunStartError(Exception):
     plain message string can't carry that, so the id travels on the exception and is
     serialized into the error body by the router. Codes: `config_not_found`,
     `duplicate_deck`, `stale_config`, and `no_cards` when generation wrote no practice
-    card across every selected deck (ADR 056) — that one names no config, since
+    card across every selected deck — that one names no config, since
     emptiness is a property of the whole practice."""
 
     def __init__(self, code: str, message: str, config_id: uuid.UUID | None = None):
@@ -104,9 +105,9 @@ class RunStartError(Exception):
 
 class RunActiveError(Exception):
     """Raised by get_practice_run_breakdown for a session that hasn't completed
-    yet (ADR 029/031's 409 `run_active`): the breakdown's bucket refinement and
+    yet (the router answers 409 `run_active`): the breakdown's bucket refinement and
     terminal-only attempts only make sense once nothing is pending — mid-run, there is
-    no in-app history view at all (ADR 029)."""
+    no in-app history view at all."""
 
     code = "run_active"
 
@@ -121,14 +122,14 @@ class RunActiveError(Exception):
 
 
 class RerunError(Exception):
-    """A re-run failure (ADR 039), detail = `{code, message}`: `run_active` when
+    """A re-run failure, detail = `{code, message}`: `run_active` when
     the session hasn't completed yet; `nothing_to_rerun` when every one of its
     practice_deck snapshots has field ids that no longer validate against its deck's
     live fields, and nothing survived to rebuild a session from. A snapshot naming a
     deleted deck never reaches this check at all — its row cascaded away with the
-    deck (ADR 047), and a run left owning no snapshot is deleted alongside its last
-    one (ADR 048), so there is no rerun call left to make against it. `no_cards` when
-    the surviving snapshots generated no practice card at all (ADR 056) — a completed
+    deck, and a run left owning no snapshot is deleted alongside its last one, so
+    there is no rerun call left to make against it. `no_cards` when
+    the surviving snapshots generated no practice card at all — a completed
     practice whose cards were deleted since would otherwise rerun into an empty one."""
 
     def __init__(self, code: str, message: str):
@@ -164,14 +165,14 @@ def _snapshot_and_generate_deck(
     """One deck's worth of session-start work: cut an immutable practice_deck snapshot
     from `array_values` (already validated by the caller), then generate its
     practice_cards ordered unseen-first-then-ascending-mastery with sparse positions
-    starting at `next_position` (ADR-008). Returns the position to continue from for
+    starting at `next_position`. Returns the position to continue from for
     the next deck. Shared by start_practice_run (fed from a live
-    deck_practice_config) and the re-run path (ADR 039, fed from a completed session's
+    deck_practice_config) and the re-run path (fed from a completed session's
     own frozen practice_deck arrays) — both need exactly this step, just from different
-    sources. `source_config_id` (ADR 040) rides along into the snapshot purely for
+    sources. `source_config_id` rides along into the snapshot purely for
     attribution — start_practice_run passes the live config's id, rerun_practice_run
-    the old snapshot's value verbatim — and is never read back by anything below this
-    function. `source_config_name` (ADR 066) rides into the snapshot next to it, the
+    the original snapshot's value verbatim — and is never read back by anything below this
+    function. `source_config_name` rides into the snapshot next to it, the
     same way, and is likewise read by nothing below."""
     practice_deck = db_stage_create_practice_deck(
         db,
@@ -232,13 +233,13 @@ def start_practice_run(
     rng: random.Random | None = None,
 ) -> PracticeRun:
     """One explicit transaction: the session, one practice_deck per config (a
-    revalidated, immutable snapshot — invariant 5), and the generated practice_cards,
-    ordered unseen-first-then-ascending-mastery per deck with sparse positions
-    (ADR-008). `name` is stored verbatim; the client formats it. Raises
+    revalidated, immutable snapshot), and the generated practice_cards, ordered
+    unseen-first-then-ascending-mastery per deck with sparse positions. `name` is
+    stored verbatim; the client formats it. Raises
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
     validates against its deck's live fields, `no_cards` when generation produced
-    nothing across all of them (ADR 056)."""
+    nothing across all of them."""
     rng = rng or random.Random()
 
     configs = []
@@ -296,10 +297,10 @@ def start_practice_run(
             next_position,
         )
 
-    # ADR 056: emptiness is a property of the whole practice, not of one deck, and it
-    # is only knowable once generation has run — a card can be legal yet blank in every
-    # field one side shows. Raised before the commit, so the refused run and its
-    # snapshots are discarded with the session, exactly as `stale_config` above.
+    # Emptiness is a property of the whole practice, not of one deck, and it is only
+    # knowable once generation has run — a card can be legal yet blank in every field
+    # one side shows. Raised before the commit, so the refused run and its snapshots
+    # are discarded with the session, exactly as `stale_config` above.
     if next_position == 0:
         raise RunStartError(
             "no_cards", "generation produced no practice cards across the selected decks"
@@ -318,18 +319,18 @@ def rerun_practice_run(
     name: str,
     rng: random.Random | None = None,
 ) -> PracticeRun:
-    """ADR 039: creates a new run from the completed run's own frozen practice_deck
+    """Creates a new run from the completed run's own frozen practice_deck
     snapshots — never a deck_practice_config lookup (practice_deck has no behavioral
-    coupling to its source config, ADR 013). Per snapshot: dropped if its field ids no
+    coupling to its source config). Per snapshot: dropped if its field ids no
     longer validate against the deck's live fields; the rest are re-snapshotted and
     regenerated exactly like session start, via the same _snapshot_and_generate_deck
-    helper, each carrying its old snapshot's `source_config_id` forward verbatim (ADR
-    040 — attribution only, possibly already null; never looked up fresh), and its
-    `source_config_name` likewise (ADR 066). `name` is stored verbatim on the new run —
+    helper, each carrying its old snapshot's `source_config_id` forward verbatim
+    (attribution only, possibly already null; never looked up fresh), and its
+    `source_config_name` likewise. `name` is stored verbatim on the new run —
     the client formats it, same as start_practice_run. Raises LookupError for an
     unknown/foreign session (the router 404s); RerunError('run_active') if the session
     hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
-    RerunError('no_cards') if the survivors generated nothing (ADR 056). A plain
+    RerunError('no_cards') if the survivors generated nothing. A plain
     create: the original run is never touched, so there is nothing to order against a
     delete — one explicit commit at the end, same shape as start_practice_run."""
     rng = rng or random.Random()
@@ -380,8 +381,8 @@ def rerun_practice_run(
             next_position,
         )
 
-    # ADR 056, same check as start: a snapshot can survive validation and still have
-    # nothing left to generate from, once its deck's cards are gone.
+    # Same check as start: a snapshot can survive validation and still have nothing
+    # left to generate from, once its deck's cards are gone.
     if next_position == 0:
         raise RerunError(
             "no_cards", "generation produced no practice cards across the surviving decks"
@@ -401,8 +402,8 @@ def get_current_practice_card(
     This doesn't distinguish *why* nothing remains: a run rated to genuine completion
     looks the same here as one stranded because its cards were deleted, or because one
     deck of a multi-deck run was deleted and took that deck's cards' practice_card rows
-    with it (ADR 047's cascade). ADR 015 as amended accepts that blur rather than
-    tracking a third status nothing could set reliably."""
+    with it. The blur is accepted rather than tracking a third status nothing could
+    set reliably."""
     card = db_read_current_practice_card(db, practice_run_id, user_id)
     if card is None:
         session = db_read_practice_run(db, practice_run_id, user_id)
@@ -424,11 +425,12 @@ def _chains_by_card_id(cards: list[PracticeCard]) -> dict[uuid.UUID, list[Practi
 
 
 def run_progress(cards: list[PracticeCard]) -> RunProgress:
-    """The ADR 028 chain-bucket fold, pure and shared by the run state and the
-    breakdown's counts: `cards` — every practice_card row a session has produced,
-    created_at ascending (db_read_practice_cards_for_run) — is grouped into chains
-    by card_id, and each chain's *last* row decides its bucket (docs/tasks/006-
-    practice-run.md's Contracts). `total_cards` is the chain count, fixed for the
+    """The chain-bucket fold, pure and shared by the run state and the breakdown's
+    counts: `cards` — every practice_card row a session has produced, created_at
+    ascending (db_read_practice_cards_for_run) — is grouped into chains by card_id,
+    and each chain's *last* row decides its bucket: pending with one row is unseen,
+    pending with more is a retry, passed is passed, failed is failed. `total_cards` is
+    the chain count, fixed for the
     session's lifetime by construction: it can only equal however many distinct
     card_ids ever got a row, which is set once at session start and never grows."""
     counts = {"unseen": 0, "retry_pending": 0, "passed": 0, "still_failed": 0}
@@ -455,9 +457,9 @@ def _resolve_field_values(
     against this deck's field_defs (archived included — a field only drops out here if
     its row no longer exists at all) and this card's current values, then reordered to
     field_def.position ascending regardless of what order the ids were stored in. An id
-    with no field_def row is dropped, unless keep_removed is True (the breakdown only,
-    ADR 052), in which case it trails the live entries as a placeholder — empty name and
-    value, type text, removed=True — in the order those ids appear in field_ids."""
+    with no field_def row is dropped, unless keep_removed is True (the breakdown only),
+    in which case it trails the live entries as a placeholder — empty name and value,
+    type text, removed=True — in the order those ids appear in field_ids."""
     live = (fd for fid in field_ids if (fd := field_defs_by_id.get(fid)) is not None)
     resolved = [
         ResolvedFieldValue(
@@ -482,7 +484,7 @@ def _resolve_current_run_card(
     """Builds the run payload's one live card: attempt is read off the chain fold
     (run_progress's same grouping) rather than stored anywhere, and field
     resolution goes through the card's own deck so archived prompt/answer fields still
-    resolve (ADR 031's resolution rule)."""
+    resolve."""
     chain = _chains_by_card_id(cards)[current.card_id]
     attempt = chain.index(current) + 1
 
@@ -505,8 +507,8 @@ def _resolve_current_run_card(
 def get_practice_run_state(
     db: Session, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunState | None:
-    """The whole `GET .../state` payload (ADR 031): session name/status, the ADR 028
-    progress fold, and the resolved current card, if any. None for an unknown or
+    """The whole `GET .../state` payload: session name/status, the progress fold, and
+    the resolved current card, if any. None for an unknown or
     foreign session (the router 404s). Delegates to get_current_practice_card for the
     active->completed transition and reads `session.status` only afterward, so a
     session that just ran out of pending cards reports "completed" in this same
@@ -531,7 +533,7 @@ def get_practice_run_state(
 
 
 def _breakdown_bucket(chain: list[PracticeCard]) -> BreakdownBucket:
-    """The ADR 029 completion-time refinement of the chain fold — only ever applied to
+    """The completion-time refinement of the chain fold — only ever applied to
     a completed session's chains, where the last row is always `passed` or `failed`
     (never `pending`: a session can't be completed while anything is still queued, per
     get_current_practice_card's transition)."""
@@ -555,8 +557,8 @@ def _resolve_rated_field_values(
     _resolve_field_values, with each entry's rating attached from the review_log join
     (db_read_ratings_by_review_group). keep_removed=True so a deleted answer field
     still resolves, as a placeholder; ratings_by_field.get(...) returns None for it,
-    since its review rows cascaded away with the field (ADR 048, ADR 052) — the one
-    case RatedFieldValue.rating's None now carries."""
+    since its review rows cascaded away with the field — the one case
+    RatedFieldValue.rating's None carries."""
     resolved = _resolve_field_values(
         field_defs_by_id, values_by_field, field_ids, keep_removed=True
     )
@@ -588,18 +590,37 @@ def _compute_field_mastery_deltas(
     domain: list[tuple[uuid.UUID, uuid.UUID]],
 ) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]]:
     """{(card_id, field_def_id): (before_score, after_score, delta)} for every pair in
-    `domain`, per the delta-semantics contract (ADR 042, ADR 043, task 010 T3). Reads
-    only this run's own mastery_log rows plus one bounded before-lookup covering every
-    pair at once — never a history replay, and the statement count against
-    mastery_log is fixed at 2 regardless of len(domain) (010 MD-4)."""
+    `domain`, under the breakdown's delta semantics for a run R:
+
+    - The domain is every card in R's breakdown × every active field of that card's
+      deck, whether or not R touched the pair.
+    - attributed(c, f) is R's own mastery_log rows for the pair; first(R) is the
+      earliest reviewed_at over all of R's rows.
+    - bound(c, f) is the earliest reviewed_at of attributed(c, f) when it is
+      non-empty, else first(R).
+    - before(c, f) is the pair's latest row with reviewed_at < bound(c, f); absent
+      means never reviewed, score None.
+    - after(c, f) is the latest row of attributed(c, f) when it is non-empty, else
+      before(c, f).
+    - A score is `strategy.field_score`. A pair first reviewed inside R has delta =
+      after score − prior score, matching what the card fold sees; otherwise delta =
+      after score − before score. Exact floats, never rounded here.
+    - If R has no rows at all, before = after = the pair's overall latest row and
+      every delta is 0.
+
+    The caller's card-level mastery and delta are `strategy.card_score` over the
+    domain's before scores and after scores respectively. Reads only R's own rows
+    plus one bounded before-lookup covering every pair at once — never a history
+    replay — so the statement count against mastery_log is fixed at 2 regardless of
+    len(domain)."""
     prior_score = strategy.field_score(strategy.prior())
     run_rows = db_fetch_run_mastery_log_rows(db, practice_run_id)
 
     if not run_rows:
-        # 010 MD-4's degenerate case: this run's own attribution is empty (only
-        # reachable via an all-retry submission history — every rating a client
-        # resubmit of an already-logged group). before = after = the overall latest
-        # row per pair; every delta is 0.
+        # The degenerate case: this run's own attribution is empty (only reachable via
+        # an all-retry submission history — every rating a client resubmit of an
+        # already-logged group). before = after = the overall latest row per pair;
+        # every delta is 0.
         card_ids = list({card_id for card_id, _ in domain})
         read_rows = db_fetch_mastery_read_rows(db, card_ids)
         score_by_pair = {
@@ -652,10 +673,9 @@ def _compute_field_mastery_deltas(
 def get_practice_run_breakdown(
     db: Session, strategy: MasteryStrategy, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunBreakdown | None:
-    """The whole `GET .../breakdown` payload (ADR 029, ADR 031, ADR 042, ADR 043, ADR
-    044): every card's full resolved, rated attempt history, grouped into the
-    completion-time buckets, plus each card's mastery/delta and its per-field detail
-    (task 010 T3). None for an unknown or foreign session (the router 404s). Raises
+    """The whole `GET .../breakdown` payload: every card's full resolved, rated attempt
+    history, grouped into the completion-time buckets, plus each card's mastery/delta
+    and its per-field detail. None for an unknown or foreign session (the router 404s). Raises
     RunActiveError if the session hasn't completed yet (the router 409s) — the bucket
     refinement and terminal-only attempts below only make sense once nothing is
     pending."""
@@ -680,8 +700,8 @@ def get_practice_run_breakdown(
     counts = dict.fromkeys(BreakdownBucket, 0)
     # Built in two passes: this one resolves everything but the mastery/delta fields
     # (which need every card's active-field domain gathered first, so the delta
-    # computation below can read mastery_log in one fixed-size batch — 010 MD-4 —
-    # instead of once per card).
+    # computation below can read mastery_log in one fixed-size batch instead of once
+    # per card).
     raw_cards = []
     for card_id, chain in chains.items():
         bucket = _breakdown_bucket(chain)
@@ -696,9 +716,8 @@ def get_practice_run_breakdown(
                 fd.id: fd
                 for fd in db_read_field_defs(db, deck_id, user_id, include_archived=True)
             }
-            # ADR 032/043: db_read_field_defs is already active-only and
-            # position-sorted; the primary field is index 0, the mastery domain is
-            # every entry.
+            # db_read_field_defs is already active-only and position-sorted; the
+            # primary field is index 0, the mastery domain is every entry.
             active_field_defs_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)
             primary_field_by_deck[deck_id] = active_field_defs_by_deck[deck_id][0]
         field_defs_by_id = field_defs_by_deck[deck_id]
@@ -784,27 +803,26 @@ def get_practice_run_breakdown(
 
 
 def _end_of_queue_position(run_max_position: int) -> int:
-    """Fewer than RETRY_SPACING_FLOOR cards pending (ADR 058): the retry goes above
-    every row the run has placed, at the same +500 ADR 008's no-successor note uses, so
-    it cannot collide."""
+    """Fewer than RETRY_SPACING_FLOOR cards pending: the retry goes above every row the
+    run has placed, at the same +500 the no-successor case uses, so it cannot
+    collide."""
     return run_max_position + _POSITION_GAP // 2
 
 
 def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:
     """pending: a run's pending cards in position order, each paired with its current
     mastery score; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
-    `_end_of_queue_position` instead, ADR 058). Four steps:
+    `_end_of_queue_position` instead). Four steps:
 
     1. `mastery_index`, the count of pending cards whose score is strictly below
-       `new_score`, is where the ascending-mastery invariant (ADR 008) alone would
-       insert.
-    2. ADR 037 clamps that index up to at least RETRY_SPACING_FLOOR: a clamp, not a
+       `new_score`, is where the ascending-mastery order alone would insert.
+    2. The index is clamped up to at least RETRY_SPACING_FLOOR: a clamp, not a
        fixed placement, so a card whose mastery already puts it deeper stays at that
        deeper slot.
     3. With no successor at the resulting index, the retry goes 500 above the last
        pending card.
     4. Otherwise it takes the midpoint between its predecessor and successor. A
-       predecessor always exists because RETRY_SPACING_FLOOR >= 1 (ADR 058)."""
+       predecessor always exists because RETRY_SPACING_FLOOR >= 1."""
     assert len(pending) >= RETRY_SPACING_FLOOR
     mastery_index = sum(1 for _, score in pending if score < new_score)
     final_index = max(mastery_index, RETRY_SPACING_FLOOR)
@@ -826,9 +844,9 @@ def _requeue_failed_card(
     old_card, which stays 'failed'. Position reflects the card's mastery *after* this
     submission's blend, so a badly-missed card resurfaces sooner, when at least
     RETRY_SPACING_FLOOR cards are pending; with fewer, the retry goes to the end of the
-    queue (ADR 058). `failed_field_ids`
-    (the answer fields rated "Again", ADR 036) are forced into the new row's answer
-    set ahead of pool sampling, so the retry always re-asks what was missed — a failed
+    queue. `failed_field_ids` (the answer fields rated "Again") are forced into the new
+    row's answer set ahead of pool sampling, so the retry always re-asks what was
+    missed — a failed
     field archived or blanked since drops out of the generation filters like any other.
     Returns None if the card can no longer be generated at all (e.g. every remaining
     field archived since the snapshot was cut) — nothing to requeue with, same as at
@@ -906,22 +924,22 @@ def submit_rating(
     ratings: dict[uuid.UUID, int],
     rng: random.Random | None = None,
 ) -> tuple[PracticeCard, PracticeCard | None]:
-    """One explicit transaction, in the order the plan specifies: record_review_group,
-    then update practice_card.status, then — if failed — requeue a new row. Raises
+    """One explicit transaction, in this order: record_review_group, then update
+    practice_card.status, then — if failed — requeue a new row. Raises
     LookupError if the practice_card doesn't exist (including: exists but belongs to
-    another user — a foreign id 404s, it doesn't 403), ValueError if it's already been
-    rated, if it is not its run's current card (ADR 059), or if the ratings don't cover
-    exactly its answer fields."""
+    another user — a foreign id 404s, it doesn't 403), a `card_already_rated` or
+    `not_current_card` Refusal if it's already been rated or is not its run's current
+    card, and ValueError if the ratings don't cover exactly its answer fields."""
     rng = rng or random.Random()
 
     practice_card = db_read_practice_card(db, practice_card_id, user_id)
     if not practice_card:
         raise LookupError(f"practice_card {practice_card_id} not found")
     if practice_card.status != PracticeCardStatus.pending:
-        raise ValueError("practice_card has already been rated")
+        raise Refusal("card_already_rated", "practice_card is no longer pending")
     current = db_read_current_practice_card(db, practice_card.practice_run_id, user_id)
     if current is None or current.id != practice_card.id:
-        raise ValueError("practice_card is not the current card")
+        raise Refusal("not_current_card", "practice_card is not its run's current card")
     if set(ratings.keys()) != set(practice_card.answers):
         raise ValueError("ratings must cover exactly this practice_card's answer fields")
 

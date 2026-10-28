@@ -33,18 +33,16 @@ class PracticeCard(AppModel, TimestampMixin, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # ON DELETE CASCADE — a practice_card belongs to its session outright (ADR 015 as amended).
-    # ADR 015 made the *card* side cascade; this is the session side, which deleting a
-    # session needs. review_log is unaffected either way: it no longer references
-    # practice_card at all (ADR 048 drops that column), so a run's or a card's
-    # practice_card rows cascade away without touching review_log or the mastery
-    # replayed from it.
+    # ON DELETE CASCADE — a practice_card belongs to its session outright, so deleting
+    # a session takes its rows. review_log does not reference practice_card, so a
+    # run's or a card's practice_card rows cascade away without touching review_log or
+    # the mastery replayed from it.
     practice_run_id: uuid.UUID = Field(
         foreign_key="practice_run.id", ondelete="CASCADE"
     )
     # NOT NULL, ON DELETE CASCADE — a practice_card without a card is meaningless, so
     # it can't exist. Nothing outlives a deleted card: its review_log and mastery_log
-    # rows cascade with it too (ADR 048); this row is operational run state, not history.
+    # rows cascade with it too; this row is operational run state, not history.
     card_id: uuid.UUID = Field(foreign_key="card.id", ondelete="CASCADE")
     position: int = Field(sa_column=Column(BigInteger, nullable=False))
     prompts: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))

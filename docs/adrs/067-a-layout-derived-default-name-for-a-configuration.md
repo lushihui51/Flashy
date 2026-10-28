@@ -1,0 +1,52 @@
+# ADR 067: A layout-derived default name for a configuration
+
+## Status
+
+Deprecated by the record rules' Type test
+
+## Context
+
+The configuration builder prefilled its Name with the current date-time, chosen because a name only has to be unique per deck and a timestamp is unique and better than "Untitled". In use, every configuration kept it. New practice's picker then listed nothing but dates, and once practice rows name their configurations (ADR 068), a date-named configuration would only put a second date on the row. A practice's name stays a date: a practice is an event, a configuration is a layout.
+
+## Decision
+
+We will derive a new configuration's default name from its prompt-side field names, an arrow, then its answer-side field names: "Word → Definition". Within a side, always-shown fields come first, then random-draw fields, each group in the deck's field order, comma-joined; random draw is not marked. Each side shows at most two names and renders the rest as "+N": "Word, Example +1 → Definition". The name is empty while either side has no field.
+
+In create mode the Name input follows the board until the user types in it, after which the text is theirs, through further assignments and a deck change. In edit mode the stored name is kept and never re-derived. The derivation lives with the board logic in `frontend/src/lib/deckConfigurationBoard.ts`; the server still derives nothing.
+
+Derived names are not unique the way timestamps were. Two configurations of one deck with the same layout, or with layouts that differ only in draw mode, get the same default, and the save fails with the existing inline "already exists" error for the user to fix in place. There is no automatic numbering.
+
+## Alternatives considered
+
+### Keep the timestamp
+
+Rejected: it names when the configuration was built, not what it contains, and nobody renamed.
+
+### No default, name required
+
+Rejected: friction on every configuration for a value the layout already implies.
+
+### A character cap
+
+Rejected: it cuts a field name mid-word and stores the ellipsis; a count cap never does, and the row's CSS truncation covers unusually long field names.
+
+### Mark random-draw fields
+
+Rejected: a longer default for a distinction the user can type in; the draw-mode collision is covered by the duplicate error.
+
+### Number duplicates automatically
+
+Rejected: a same-layout duplicate is more likely a mistake than a second configuration, and the existing error says so in place.
+
+## Consequences
+
+**Positive**
+
+- The user reads the picker, the Selected list, and practice rows as layouts without naming anything.
+
+**Negative**
+
+- The user cannot identify a deck from a default name alone, since field names repeat across decks; the practice row pairs it with the deck.
+- The user who renames a field does not see the change reach a saved configuration's name, which is a string once saved.
+
+**Neutral**

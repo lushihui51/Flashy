@@ -7,8 +7,8 @@ import type { components } from 'src/api/types';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 
-// Deltas are distinct across every card, and cover all three MD-2 sign cases
-// (+5, −10, ±0, +20) so a single fixture can drive every ordering/formatting test.
+// Deltas are distinct across every card, and cover all three sign cases (+5, −10, ±0,
+// +20) so a single fixture can drive every ordering/formatting test.
 function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBreakdown {
   return {
     total_cards: 4,
@@ -138,7 +138,7 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
  * title substring rather than the exact name. */
 function rowTitles() {
   return screen
-    .getAllByRole('button', { name: /Front:|Untitled card/ })
+    .getAllByRole('button', { name: /Bonjour|Bonsoir|Adieu|Untitled card/ })
     .map((el) => el.textContent);
 }
 
@@ -190,10 +190,12 @@ describe('RunBreakdown', () => {
     expect(titles[3]).toContain('Bonjour');
   });
 
-  it("a row shows only the primary field's name and value, not prompt/answer content", () => {
+  it("a row shows its first field's value alone, never the field's name", () => {
     render(<RunBreakdown breakdown={breakdown()} />);
 
-    expect(screen.getByText('Front: Bonjour')).toBeInTheDocument();
+    expect(screen.getByText('Bonjour')).toBeInTheDocument();
+    expect(screen.queryByText('Front: Bonjour')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
     expect(screen.queryByText('Hello')).not.toBeInTheDocument();
   });
 
@@ -227,11 +229,13 @@ describe('RunBreakdown', () => {
     await user.click(screen.getByRole('button', { name: /Bonsoir/ }));
 
     const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { level: 2, name: 'Bonsoir' })).toBeInTheDocument();
     expect(within(dialog).getByText('Attempt 1 of 2 · Failed')).toBeInTheDocument();
     expect(within(dialog).getByText('Attempt 2 of 2 · Passed')).toBeInTheDocument();
-    // The prompt/answer field names and values are labeled once per attempt.
+    // The prompt/answer field names and values are labeled once per attempt; the
+    // prompt's value also heads the sheet.
     expect(within(dialog).getAllByText('Front')).toHaveLength(2);
-    expect(within(dialog).getAllByText('Bonsoir')).toHaveLength(2);
+    expect(within(dialog).getAllByText('Bonsoir')).toHaveLength(3);
     expect(within(dialog).getAllByText('Back')).toHaveLength(2);
     expect(within(dialog).getAllByText('Good evening')).toHaveLength(2);
     // The first attempt's answer was rated 1 ("Again"), the second 3 ("Good").
@@ -252,15 +256,16 @@ describe('RunBreakdown', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByText(/Attempt 1/)).not.toBeInTheDocument();
-    expect(within(dialog).getByText('Bonjour')).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { level: 2, name: 'Bonjour' })).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Bonjour')).toHaveLength(2);
     expect(within(dialog).getByText('Easy')).toBeInTheDocument();
   });
 
   it('shows a removed field as "Removed field" with no value and no rating', async () => {
     const user = userEvent.setup();
-    // ADR 052: a field deleted after this practice completed arrives as a placeholder
-    // on each side (empty name/value, `removed: true`, `rating: null` on the answer
-    // side); the Fields section only ever lists the deck's live fields.
+    // A field deleted after this practice completed arrives as a placeholder on each
+    // side (empty name/value, `removed: true`, `rating: null` on the answer side); the
+    // Fields section only ever lists the deck's live fields.
     render(
       <RunBreakdown
         breakdown={breakdown({

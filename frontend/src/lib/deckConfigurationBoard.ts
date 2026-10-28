@@ -23,23 +23,22 @@ export function isPoolSlot(slot: BoardSlot): slot is PoolSlot {
   return slot === 'prompt_pool' || slot === 'answer_pool';
 }
 
-// ADR 021: user-facing vocabulary is a contract — these are the exact words from the
-// governing task file's "Board slot ↔ UI mapping" table. Never "pool", never a raw
-// slot name.
+// The one name of each of the five slots, wherever a slot is named: the move sheet's
+// rows and the board areas' spoken names. Never "pool", never a raw slot name.
 export const SLOT_LABELS: Record<BoardSlot, string> = {
   unassigned: 'Not used',
-  prompt_fields: 'Prompt side · Always shown',
-  answer_fields: 'Answer side · Always shown',
-  prompt_pool: 'Prompt side · Random draw',
-  answer_pool: 'Answer side · Random draw',
+  prompt_fields: 'Prompt · always shown',
+  answer_fields: 'Answer · always shown',
+  prompt_pool: 'Prompt · random draw',
+  answer_pool: 'Answer · random draw',
 };
 
 /**
  * Where every field currently sits, plus the pool draw counts.
  *
  * `slots` is keyed by field id and holds exactly one slot per field, which is what makes
- * the four arrays pairwise disjoint *by construction* (invariant 6) — assigning a field
- * moves it, and there is no representable state where it is in two places at once.
+ * the four arrays pairwise disjoint *by construction* — assigning a field moves it, and
+ * there is no representable state where it is in two places at once.
  *
  * Field order inside a row is not modelled: the four arrays are sets to the backend, so
  * rows always render in the deck's own field order (`order`) instead of carrying a
@@ -67,9 +66,9 @@ export function emptyBoard(fieldDefs: DeckFieldDef[]): BoardState {
 /**
  * An existing config re-hydrated onto the board.
  *
- * Ids the config references but the deck no longer has live are dropped rather than
- * rendered: archived fields never appear in the builder (invariant 5), and a config
- * saved before a field was archived still names it. Saving from this board therefore
+ * Ids the config references but the deck has no live field for are dropped rather than
+ * rendered: archived fields never appear in the builder, and a config saved before a
+ * field was archived still names it. Saving from this board therefore
  * also repairs the config — which is the same thing session start would otherwise
  * reject it for.
  */
@@ -97,7 +96,7 @@ export function boardFromConfig(
   assign(config.answer_pool_ids, 'answer_pool');
 
   // Counts are pruned against what actually survived, so a config whose pool lost a
-  // field to archival doesn't load with a count it can no longer reach.
+  // field to archival doesn't load with a count it cannot reach.
   return {
     ...board,
     counts: {
@@ -108,7 +107,7 @@ export function boardFromConfig(
 }
 
 /** Checked draw counts are only meaningful up to the number of fields in the row, so a
- * row that shrinks drops the counts it can no longer satisfy. Always sorted ascending —
+ * row that shrinks drops the counts above its new size. Always sorted ascending —
  * the payload's order, so nothing downstream has to re-sort. */
 export function pruneCounts(counts: number[], size: number): number[] {
   return [...new Set(counts.filter((n) => n >= 1 && n <= size))].sort((a, b) => a - b);
@@ -149,7 +148,7 @@ export type ConfigPayloadArrays = Pick<
   | 'answer_pool_counts'
 >;
 
-/** Uuids only — names are display strings and never travel (invariant 4). */
+/** Uuids only — names are display strings and never travel. */
 export function boardToPayload(state: BoardState): ConfigPayloadArrays {
   return {
     prompt_field_ids: fieldsIn(state, 'prompt_fields'),
@@ -162,12 +161,13 @@ export function boardToPayload(state: BoardState): ConfigPayloadArrays {
 }
 
 /**
- * The backend's rules, restated for the Save button (`app/services/deck_practice_config.py`
- * stays authoritative — this only decides whether it is worth asking).
+ * The backend's rules, restated for the form's Create or Save button
+ * (`app/services/deck_practice_config.py` stays authoritative — this only decides whether
+ * it is worth asking).
  *
  * Disjointness is absent on purpose: the board cannot express an overlap, so there is
- * nothing to check. Returns the first unmet rule as a sentence to show under Save, or
- * null when the config is saveable.
+ * nothing to check. Returns the first unmet rule as a sentence to show under the button,
+ * or null when the config is saveable.
  */
 export function boardValidationError(state: BoardState): string | null {
   const promptFields = fieldsIn(state, 'prompt_fields');
@@ -190,8 +190,9 @@ export function boardValidationError(state: BoardState): string | null {
   return null;
 }
 
-/** The ADR 067 default: "<prompt names> → <answer names>", each side `formatCappedNames` over
- * always-shown then random-draw fields in deck order (ADR 067). "" while either side is empty. */
+/** The default name: "<prompt names> → <answer names>", each side `formatCappedNames`
+ * over always-shown then random-draw fields in deck order. "" while either side is
+ * empty. */
 export function defaultConfigurationName(state: BoardState, fieldDefs: DeckFieldDef[]): string {
   const names = new Map(fieldDefs.map((f) => [f.id, f.name]));
   const side = (always: BoardSlot, draw: BoardSlot) =>

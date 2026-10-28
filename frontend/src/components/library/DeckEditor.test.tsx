@@ -105,13 +105,13 @@ afterEach(() => {
 });
 
 describe('DeckEditor — create mode', () => {
-  it('starts with Term and Definition fields and a disabled Save', async () => {
+  it('starts with Term and Definition fields and a disabled Create', async () => {
     mockSubjects();
     renderEditor();
 
     expect(await screen.findByDisplayValue('Term')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Definition')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
   it('the field type select offers only Text', async () => {
@@ -178,19 +178,30 @@ describe('DeckEditor — create mode', () => {
     expect(await screen.findAllByText('Duplicate name')).toHaveLength(2);
   });
 
+  it('a blank field name shows an inline error', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    const [first] = await screen.findAllByRole('textbox', { name: 'Field name' });
+    await user.clear(first!);
+
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
+  });
+
   it('removing a brand-new field (no confirm — create mode never has a saved field to stage)', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderEditor();
 
     await screen.findByDisplayValue('Term');
-    // A third field so Remove is enabled (D3: disabled at exactly two).
+    // A third field so Remove is enabled (it is disabled at two, a deck's minimum).
     await user.click(screen.getByRole('button', { name: 'Add field' }));
 
     await user.click(screen.getByRole('button', { name: 'Remove Term' }));
 
-    // Gone outright — no confirm, no struck-through row (Phase 7.5 §1: only a
-    // *saved* field stages; create mode never has one).
+    // Gone outright — no confirm, no struck-through row (only a *saved* field stages;
+    // create mode never has one).
     expect(screen.queryByText(/Remove "Term"\?/)).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('Term')).not.toBeInTheDocument();
   });
@@ -214,8 +225,6 @@ describe('DeckEditor — create mode', () => {
     expect(await screen.findByPlaceholderText('Subject')).toBeInTheDocument();
   });
 
-  // The subject combobox's create row used to live in a picker wrapper with its own test
-  // file; the overlay is wired here now, so its coverage moved here with it.
   it('"New subject…" opens the create overlay; cancel leaves the selection unchanged', async () => {
     mockSubjects();
     const user = userEvent.setup();
@@ -262,13 +271,36 @@ describe('DeckEditor — create mode', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'New subject' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'History');
-    await user.click(within(dialog).getByRole('button', { name: 'Create subject' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByPlaceholderText('Subject')).toHaveValue('History'));
     expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
   });
 
-  it('opened via a "New deck…" round-trip: Save navigates back to returnTo with the new deck id', async () => {
+  it('the Icon control inside the New subject overlay opens the picker', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const overlay = await screen.findByRole('dialog', { name: 'New subject' });
+    await user.click(within(overlay).getByRole('button', { name: 'Icon: Open book' }));
+
+    // From screen: the overlay is aria-hidden while the picker is open over it.
+    const picker = await screen.findByRole('dialog', { name: 'Icon' });
+    await user.click(within(picker).getByRole('button', { name: 'Atom' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Icon' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('dialog', { name: 'New subject' })).getByRole('button', {
+        name: 'Icon: Atom',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('opened via a "New deck…" round-trip: Create navigates back to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(
       http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
@@ -279,14 +311,14 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      // ADR 024: returnTo rides the URL, not state.
+      // returnTo rides the URL, not state.
       ['/decks/new?returnTo=%2Fcards%2Fnew'],
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
     await user.click(screen.getByPlaceholderText('Subject'));
     await user.click(await screen.findByRole('option', { name: 'Math' }));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
     expect(screen.getByTestId('location')).toHaveAttribute(
@@ -346,8 +378,7 @@ describe('DeckEditor — create mode', () => {
           { name: 'Definition', type: 'text' },
         ]);
         // A deck is born with a schema and no content — the first card is added from
-        // the new deck's own card list (ADR 023). The create contract has no `cards`
-        // field at all (task 008 T2).
+        // the new deck's own card list. The create contract has no `cards` field at all.
         expect(body).not.toHaveProperty('cards');
         return HttpResponse.json({ id: 'd1' }, { status: 201 });
       }),
@@ -363,7 +394,7 @@ describe('DeckEditor — create mode', () => {
     await user.clear(termInput!);
     await user.type(termInput!, 'Word');
 
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
@@ -576,7 +607,7 @@ describe('DeckEditor — edit mode', () => {
     await user.clear(nameInput);
     await user.type(nameInput, 'Vocab Renamed');
 
-    // Add a field, so the D3 floor allows staging one for removal.
+    // Add a field, so the two-field floor allows staging one for removal.
     await user.click(screen.getByRole('button', { name: 'Add field' }));
     const [, , newFieldInput] = screen.getAllByRole('textbox', { name: 'Field name' });
     await user.type(newFieldInput!, 'Notes');
@@ -599,7 +630,7 @@ describe('DeckEditor — edit mode', () => {
       ),
     ).toBeInTheDocument();
     expect(patchCallCount).toBe(0);
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(patchCallCount).toBe(1));
     // Stays on the editor — no navigation.
@@ -668,15 +699,6 @@ describe('DeckEditor — edit mode', () => {
     ).toBeInTheDocument();
   });
 
-  // No "a card-only deletion opens the confirm with no impact request made" test
-  // here (task 013 T7's Details asks for one): buildDeckBatchEditPayload never
-  // produces a `cards` key (asserted above, "Card entry left this form entirely —
-  // a deck edit never carries card ops"), so there is no way to drive this editor
-  // into a state where cards.delete is non-empty. handleSaveClick still checks for
-  // it, matching the Contracts wording symmetrically with field_defs.delete, in
-  // case a later phase gives this editor card operations of its own — see the
-  // task's Notes line for the full record of this gap.
-
   it('a failed impact request for the save confirm renders inline and opens nothing', async () => {
     mockEditDeck();
     server.use(
@@ -701,7 +723,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('at least one id is required');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
     expect(screen.queryByText('Save changes?')).not.toBeInTheDocument();
     expect(patchCallCount).toBe(0);
   });
@@ -758,8 +780,8 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
     expect(await screen.findByText('Delete deck?')).toBeInTheDocument();
-    // ADR 048: everything the closure counts cascades with the deck, review history
-    // included — the sentence names each type the impact query reported.
+    // Everything the closure counts cascades with the deck, review history included —
+    // the sentence names each type the impact query reported.
     expect(
       screen.getByText(
         "This also deletes 1 deck, 1 card, 2 fields, 3 deck configurations and 1 practice. This can't be undone.",
@@ -809,7 +831,7 @@ describe('DeckEditor — edit mode', () => {
     await screen.findByDisplayValue('French Vocab');
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('deck 1 not found');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Deck not found.');
     expect(screen.queryByText('Delete deck?')).not.toBeInTheDocument();
   });
 
@@ -855,7 +877,7 @@ describe('DeckEditor — edit mode', () => {
   });
 });
 
-describe('DeckEditor — primary field marker (ADR 032)', () => {
+describe('DeckEditor — primary field marker', () => {
   it('the first field carries the Primary marker, and no other field does', async () => {
     mockSubjects();
     renderEditor();

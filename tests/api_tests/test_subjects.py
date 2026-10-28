@@ -6,8 +6,8 @@ from app.models.subject import Subject
 
 class TestSubjectSummaryQueryBounds:
     def test_query_count_does_not_scale_with_subject_count(self, db, existing_user):
-        """Phase 2.6: db_read_subjects_with_summary must use a grouped aggregate
-        query, never one query per subject — proven directly by counting statements."""
+        """db_read_subjects_with_summary must use a grouped aggregate query, never one
+        query per subject — proven directly by counting statements."""
         user_id = existing_user.id  # read before commit expires the ORM object below
         for i in range(5):
             db.add(Subject(user_id=user_id, name=f"Subject {i}"))
@@ -54,8 +54,7 @@ class TestSubjectsCRUD:
         assert [s["id"] for s in response.json()] == [existing_subject["id"]]
 
     def test_read_subjects_includes_deck_count(self, client, existing_subject):
-        """SubjectSummary (Phase 2.6): deck_count, computed without one query per
-        subject."""
+        """SubjectSummary: deck_count, computed without one query per subject."""
         list_response = client.get("/api/subjects")
         [summary] = list_response.json()
         assert summary["deck_count"] == 0
@@ -92,6 +91,19 @@ class TestSubjectsCRUD:
         assert data["id"] == existing_subject["id"]
         assert data["name"] == "Updated Subject Name"
 
+    def test_rename_to_taken_name_answers_subject_name_taken(self, client, existing_subject):
+        other = client.post("/api/subjects", json={"name": "Other Subject"})
+        assert other.status_code == 201, other.text
+
+        response = client.patch(
+            f"/api/subjects/{other.json()['id']}", json={"name": existing_subject["name"]}
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"]["code"] == "subject_name_taken"
+
+        check = client.get(f"/api/subjects/{other.json()['id']}").json()
+        assert check["name"] == "Other Subject"
+
     def test_delete_subject(self, client, existing_subject):
         response = client.delete(f"/api/subjects/{existing_subject['id']}")
         assert response.status_code == 204
@@ -100,10 +112,8 @@ class TestSubjectsCRUD:
         assert get_response.status_code == 404
 
     def test_delete_subject_cascades_its_decks(self, client, existing_subject):
-        """D12 cascades everything a deck owns from a deck delete, but deck.subject_id
-        itself had no ondelete — deleting a subject with any deck 500'd
-        (ForeignKeyViolation) instead of cascading, contradicting what SubjectForm's
-        delete confirm tells the user will happen (§4.2)."""
+        """Deleting a subject cascades to its decks and on to everything each deck
+        owns, which is what SubjectForm's delete confirm tells the user will happen."""
         deck_response = client.post(
             "/api/decks",
             json={
@@ -134,6 +144,7 @@ class TestSubjectsCRUD:
             json={"user_id": str(existing_user.id), "name": existing_subject["name"]},
         )
         assert response.status_code == 400
+        assert response.json()["detail"]["code"] == "subject_name_taken"
 
     def test_create_subject_defaults_description_and_icon(self, client):
         response = client.post("/api/subjects", json={"name": "Defaults Test Subject"})

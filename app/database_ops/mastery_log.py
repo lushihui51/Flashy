@@ -11,15 +11,15 @@ from app.models.field_def import FieldDef
 from app.models.mastery_log import MasteryLog
 from app.models.subject import Subject
 
-# Invariant 8: this module fetches and writes state; it never computes it. Every value
+# This module fetches and writes state; it never computes it. Every value
 # written below is already-computed Python data handed in by a MasteryStrategy — no
 # blending, scoring, or aggregation expression appears in any statement here.
 
 
 def db_lock_card(db: Session, card_id: uuid.UUID) -> None:
     """Takes the per-card transaction-scoped advisory lock that serializes every
-    read-modify-append of a card's ledger (ADR 042, ADR 050): released at commit or
-    rollback, never explicitly. Carries no prefix because it writes nothing (ADR 055)."""
+    read-modify-append of a card's ledger: released at commit or rollback, never
+    explicitly. Carries no prefix because it writes nothing."""
     db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": str(card_id)})
 
 
@@ -27,10 +27,10 @@ def db_fetch_latest_mastery_states(
     db: Session, card_id: uuid.UUID, field_def_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, FieldMasteryState]:
     """Latest row per (card, field) among this card's affected fields — DISTINCT ON,
-    ordered by reviewed_at descending (the ledger's order, ADR 050). No FOR UPDATE:
+    ordered by reviewed_at descending (the ledger's order). No FOR UPDATE:
     apply_rating takes the per-card advisory lock (db_lock_card) instead, since
     append-only rows have nothing for a row lock to serialize against. Missing rows are
-    simply absent from the returned dict — invariant 4, lazy creation."""
+    simply absent from the returned dict: a missing row means never reviewed."""
     if not field_def_ids:
         return {}
     rows = db.exec(
@@ -64,7 +64,7 @@ def db_stage_append_mastery_log(
     """Writes computed values only. No `SET x = <expression>` — the incoming states are
     already the strategy's output; this just appends them. Plain bulk INSERT — the
     ledger is append-only, so there's nothing to upsert. `id` is supplied here
-    (ADR 050: a uuid that identifies the row and orders nothing) since the column has
+    (a uuid that identifies the row and orders nothing) since the column has
     no server default; `review_group_id` is provenance only, carried on every row of
     the appearance that produced it."""
     if not states:
@@ -90,14 +90,14 @@ def db_stage_append_mastery_log(
 def db_fetch_mastery_read_rows(
     db: Session, card_ids: list[uuid.UUID], field_def_ids: list[uuid.UUID] | None = None
 ) -> list[Row]:
-    """Raw material for card_mastery/deck_mastery. Drives from field_def (invariant 4):
+    """Raw material for card_mastery/deck_mastery. Drives from field_def:
     one row per (card, active field def), mastery columns NULL when never reviewed.
     Purely a fetch — no scoring or aggregation happens here; the caller folds scores in
     Python via the strategy.
 
-    The old single-row-per-pair cache table's outerjoin becomes an outerjoin to a
-    DISTINCT ON subquery of mastery_log's latest row per (card, field), bounded to
-    the requested card_ids — one statement, never a history replay."""
+    field_def is outer-joined to a DISTINCT ON subquery of mastery_log's latest row
+    per (card, field), bounded to the requested card_ids — one statement, never a
+    history replay."""
     if not card_ids:
         return []
     latest_query = select(
@@ -145,10 +145,10 @@ def db_fetch_mastery_read_rows(
 
 def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
-    used by the breakdown's delta computation (task 010 T3, ADR 042/043, 010 MD-4) to
-    find each (card, field) pair this run itself touched and, among those, its own
-    first and last row. `reviewed_at` ascending (the ledger's order, ADR 050) so
-    callers reading min/max per pair don't need to re-sort."""
+    used by the breakdown's delta computation to find each (card, field) pair this
+    run itself touched and, among those, its own first and last row. `reviewed_at`
+    ascending (the ledger's order) so callers reading min/max per pair don't need to
+    re-sort."""
     return list(
         db.exec(
             select(MasteryLog)
@@ -161,8 +161,7 @@ def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> li
 def db_fetch_mastery_before_bound(
     db: Session, bounds: list[tuple[uuid.UUID, uuid.UUID, datetime]]
 ) -> dict[tuple[uuid.UUID, uuid.UUID], FieldMasteryState]:
-    """The breakdown's per-pair 'before' lookup (task 010 T3, ADR 042/043, 010 MD-4;
-    bound type per ADR 050): one statement for every (card_id, field_def_id,
+    """The breakdown's per-pair 'before' lookup: one statement for every (card_id, field_def_id,
     bound_reviewed_at) triple in `bounds`, regardless of how many there are — a
     VALUES relation of each pair's own bound timestamp, inner-joined to mastery_log on
     (card_id, field_def_id, reviewed_at < bound_reviewed_at) and reduced to one row
@@ -231,7 +230,7 @@ def db_stage_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> Non
 
 
 def db_stage_clear_mastery_for_deck(db: Session, deck_id: uuid.UUID) -> None:
-    """Delete-scoped clear for rebuild_deck_mastery (ADR 049): only rows for cards
+    """Delete-scoped clear for rebuild_deck_mastery: only rows for cards
     belonging to this one deck — every other deck's rows, and their ids, are
     untouched."""
     deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)

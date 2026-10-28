@@ -10,12 +10,12 @@ from app.models.base import AppModel
 class ReviewLog(AppModel, table=True):
     """The append-only ledger of every rated field review (AGENTS.md's mastery
     model) — the source of truth mastery_log is rebuilt from. `card_id` and
-    `field_def_id` are `NOT NULL ON DELETE CASCADE` (ADR 047, ADR 048): a persistent
+    `field_def_id` are `NOT NULL ON DELETE CASCADE`: a persistent
     entity's deletion deletes every record that references its id, and a review of a
     card or field that no longer exists answers no question about anything, so there
     is nothing here for history to preserve past the delete. `review_group_id` is the
-    durable appearance identifier `practice_card_id` used to be (that column is
-    dropped) — grouping never depended on it even before."""
+    durable appearance identifier: every row of one appearance shares it, and it
+    carries no foreign key."""
 
     __table_args__ = (
         CheckConstraint("rating BETWEEN 1 AND 4", name="rating_range"),

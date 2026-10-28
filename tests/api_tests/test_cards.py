@@ -40,9 +40,9 @@ class TestCardCRUD:
     def test_card_create_writes_dense_rows_for_omitted_fields(
         self, client, existing_deck, existing_field_defs
     ):
-        """§2.6: an active field the client omits is written as "", not rejected —
-        the persisted row set is dense over the deck's active fields regardless of
-        what the client actually sent."""
+        """An active field the client omits is written as "", not rejected — the
+        persisted row set is dense over the deck's active fields regardless of what
+        the client actually sent."""
         values = {existing_field_defs[0]["id"]: "only one value"}
         response = client.post(
             "/api/cards", json={"deck_id": existing_deck["id"], "values": values}
@@ -70,7 +70,7 @@ class TestCardCRUD:
         assert "no values" in response.json()["detail"]
 
     def test_card_create_all_omitted_rejected_as_all_blank(self, client, existing_deck, existing_field_defs):
-        """Omitting every field is equivalent to sending them all blank (§2.6's dense
+        """Omitting every field is equivalent to sending them all blank (the dense
         write fills omissions with "") — still rejected, just via the same all-blank
         rule rather than a separate "nothing sent" rule."""
         response = client.post(
@@ -87,15 +87,16 @@ class TestCardCRUD:
         assert response.status_code == 404
 
     def test_card_create_rejects_archived_field_key(self, client, existing_deck, existing_field_defs):
-        # D3: a third field keeps two active after archiving one below.
+        # A third field keeps two active after archiving one below: a deck always
+        # has at least two active fields.
         extra_field = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"}
         ).json()
         archived_field = existing_field_defs[0]
         client.delete(f"/api/fields/{archived_field['id']}")
 
-        # The dense write fills the omitted active field automatically now — no need
-        # to pass every active id, just proving a non-archived subset still works.
+        # The dense write fills the omitted active field — no need to pass every active
+        # id, just proving a non-archived subset still works.
         remaining = {fd["id"]: "v" for fd in existing_field_defs if fd["id"] != archived_field["id"]}
         response = client.post(
             "/api/cards", json={"deck_id": existing_deck["id"], "values": remaining}

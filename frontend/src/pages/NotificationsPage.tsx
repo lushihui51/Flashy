@@ -1,5 +1,7 @@
-// TODO(defer:nav-targets) replace with the real notifications page.
+import { usePageTitle } from 'src/lib/pageTitle';
+
 export default function NotificationsPage() {
+  usePageTitle('Notifications');
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold text-(--color-text)">Notifications</h1>

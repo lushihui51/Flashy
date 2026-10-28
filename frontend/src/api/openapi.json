@@ -2177,7 +2177,7 @@
           "Deletion"
         ],
         "summary": "Get Deletion Impact",
-        "description": "The advisory preview behind every delete confirm (ADR 051, task 013 MD-2,\nMD-3): the same closure a deletion transaction computes for itself, reported as\ncounts. 404 for the first id that's foreign or doesn't exist; 422 when all four\nlists are empty \u2014 there's nothing to preview.",
+        "description": "The advisory preview behind every delete confirm: the same closure a deletion\ntransaction computes for itself, reported as counts. 404 for the first id that's\nforeign or doesn't exist; 422 when all four lists are empty \u2014 there's nothing to\npreview.",
         "operationId": "get_deletion_impact_api_deletion_impact_get",
         "parameters": [
           {
@@ -2373,7 +2373,7 @@
           "Practice"
         ],
         "summary": "Read Practice Runs",
-        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (`source_config_id`\nis attribution only, never a filter \u2014 ADR 040).",
+        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (`source_config_id`\nis attribution only, never a filter).",
         "operationId": "read_practice_runs_api_practice_runs_get",
         "parameters": [
           {
@@ -2477,7 +2477,7 @@
           "Practice"
         ],
         "summary": "Read Practice Run",
-        "description": "MD-3: the detail page needs the same deck chips the list already renders, so this\nanswers with PracticeRunSummary rather than the bare PracticeRunRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
+        "description": "The detail page needs the same deck chips the list already renders, so this\nanswers with PracticeRunSummary rather than the bare PracticeRunRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
         "operationId": "read_practice_run_api_practice_runs__practice_run_id__get",
         "parameters": [
           {
@@ -2551,7 +2551,7 @@
           "Practice"
         ],
         "summary": "Delete Practice Run",
-        "description": "User delete is the only way a session leaves the list \u2014 there is no `abandoned`\nstatus for one to fall out of view into (ADR 015 as amended).",
+        "description": "User delete is the only way a session leaves the list \u2014 there is no `abandoned`\nstatus for one to fall out of view into.",
         "operationId": "delete_practice_run_api_practice_runs__practice_run_id__delete",
         "parameters": [
           {
@@ -2620,7 +2620,7 @@
           "Practice"
         ],
         "summary": "Read Practice Run State",
-        "description": "ADR 031: one server-composed payload, replacing the old bare-id `current_card`\nendpoint. 404 for an unknown or foreign session; `current_card: null` once nothing\nis pending, at which point `session_status` already reads \"completed\".",
+        "description": "One server-composed payload. 404 for an unknown or foreign session;\n`current_card: null` once nothing is pending, at which point `session_status`\nalready reads \"completed\".",
         "operationId": "read_practice_run_state_api_practice_runs__practice_run_id__state_get",
         "parameters": [
           {
@@ -2696,7 +2696,7 @@
           "Practice"
         ],
         "summary": "Read Practice Run Breakdown",
-        "description": "ADR 029/031/042/043/044: the completion dataset behind the retrospective view,\nincluding each card's mastery/delta and per-field detail (task 010 T3). 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
+        "description": "The completion dataset behind the retrospective view, including each card's\nmastery/delta and per-field detail. 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
         "operationId": "read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get",
         "parameters": [
           {
@@ -2772,7 +2772,7 @@
           "Practice"
         ],
         "summary": "Rerun Run",
-        "description": "ADR 039: creates a new run from the completed run's own frozen practice_deck\nsnapshots, named verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400\n`no_cards` if the surviving snapshots generate no practice card (ADR 056).",
+        "description": "Creates a new run from the completed run's own frozen practice_deck snapshots,\nnamed verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400\n`no_cards` if the surviving snapshots generate no practice card.",
         "operationId": "rerun_run_api_practice_runs__practice_run_id__rerun_post",
         "parameters": [
           {
@@ -2943,7 +2943,7 @@
           "Health"
         ],
         "summary": "Read Health",
-        "description": "The one route without `CurrentUserDep`: the frontend's health probe must answer\nsigned-out visitors and must not depend on Clerk (ADR 064). 503\n`database_unavailable` when the database does not answer.",
+        "description": "The one route without `CurrentUserDep`: the frontend's health probe must answer\nsigned-out visitors and must not depend on Clerk. 503\n`database_unavailable` when the database does not answer.",
         "operationId": "read_health_api_health_get",
         "responses": {
           "200": {
@@ -2957,22 +2957,6 @@
                   "type": "object",
                   "title": "Response Read Health Api Health Get"
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/": {
-      "get": {
-        "summary": "Read Root",
-        "operationId": "read_root__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           }
@@ -3031,7 +3015,7 @@
           "still_failed"
         ],
         "title": "BreakdownBucket",
-        "description": "The completion-time refinement of the ADR 028 chain fold (ADR 029): `passed`\nsplits by chain length so the breakdown can distinguish a card that took retries\nfrom one that didn't; `still_failed` \u2014 a chain whose last row is `failed` with no\nsuccessor, the ADR 013 stale-snapshot case \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Failed\"."
+        "description": "The completion-time refinement of the chain fold: `passed` splits by chain\nlength so the breakdown can distinguish a card that took retries from one that\ndidn't; `still_failed` \u2014 a chain whose last row is `failed` with no successor,\nbecause nothing was left to generate a retry from \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Failed\"."
       },
       "BreakdownCard": {
         "properties": {
@@ -3085,7 +3069,7 @@
           "fields"
         ],
         "title": "BreakdownCard",
-        "description": "One card's whole outcome chain for the completion breakdown (ADR 029):\n`attempts` is chronological, so `attempts[-1]` is the determining attempt that\ndecided `bucket`. `mastery`/`delta`/`fields` are the session-delta addition (ADR\n042, ADR 043, ADR 044, task 010 T3): `mastery` is ADR 043's card fold over every\nactive field's after-state score; `delta` is that same fold's after-state minus\nits before-state, exact (the client rounds per 010 MD-2); `fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
+        "description": "One card's whole outcome chain for the completion breakdown: `attempts` is\nchronological, so `attempts[-1]` is the determining attempt that decided `bucket`.\n`mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold\n(`strategy.card_score`) over every active field's after-state score; `delta` is\nthat same fold's after-state minus its before-state, exact (the client rounds);\n`fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
       },
       "CardBatchCreate": {
         "properties": {
@@ -3106,7 +3090,7 @@
         },
         "type": "object",
         "title": "CardBatchCreate",
-        "description": "`values` is keyed by a real field_def id or a same-request `client_key`\n(\u00a72.3, widened in Phase 7 \u2014 see `CardBatchUpdate`)."
+        "description": "`values` is keyed by a real field_def id or a same-request `client_key`\n(see `CardBatchUpdate`)."
       },
       "CardBatchOps": {
         "properties": {
@@ -3163,7 +3147,7 @@
           "id"
         ],
         "title": "CardBatchUpdate",
-        "description": "`values` is partial (only changed fields), keyed by a real field_def id or a\nsame-request `client_key` \u2014 the deck editor's edit-mode diff (Phase 7) can set an\nexisting card's value for a field created in the very same request (field\ncreates are always applied before card updates, per the stated operation order,\nso the field already has a real row by the time this runs)."
+        "description": "`values` is partial (only changed fields), keyed by a real field_def id or a\nsame-request `client_key` \u2014 the deck editor's edit-mode diff can set an\nexisting card's value for a field created in the very same request (field\ncreates are always applied before card updates, per the stated operation order,\nso the field already has a real row by the time this runs)."
       },
       "CardCreate": {
         "properties": {
@@ -3207,7 +3191,7 @@
           "reviewed_field_count"
         ],
         "title": "CardMasteryRead",
-        "description": "Display-only aggregate \u2014 never stored, computed fresh from mastery_log\nvia the active MasteryStrategy on every request (invariant 8)."
+        "description": "Display-only aggregate \u2014 never stored, computed fresh from mastery_log\nvia the active MasteryStrategy on every request."
       },
       "CardRead": {
         "properties": {
@@ -3354,7 +3338,7 @@
         },
         "type": "object",
         "title": "DeckBatchEdit",
-        "description": "`PATCH /api/decks/{id}` body (\u00a72.3, Phase 6). Every top-level key is optional \u2014\na request can touch just `name`, just `field_defs`, or any combination \u2014 but the\nwhole thing is applied as one transaction: a failure anywhere rolls back\neverything, including an already-changed `name`."
+        "description": "`PATCH /api/decks/{id}` body. Every top-level key is optional \u2014\na request can touch just `name`, just `field_defs`, or any combination \u2014 but the\nwhole thing is applied as one transaction: a failure anywhere rolls back\neverything, including an already-changed `name`."
       },
       "DeckCreate": {
         "properties": {
@@ -3872,7 +3856,7 @@
           "field_names"
         ],
         "title": "DeckSummary",
-        "description": "DeckRead plus preview data for a list row (Phase 2.6) \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
+        "description": "DeckRead plus preview data for a list row \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
       },
       "DeletionImpactRead": {
         "properties": {
@@ -3916,7 +3900,7 @@
           "runs_deleted"
         ],
         "title": "DeletionImpactRead",
-        "description": "The `GET /api/deletion-impact` response (ADR 051): the deletion closure's size,\nby type, for a delete confirm to word its warning (task 013 MD-2, MD-3). Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
+        "description": "The `GET /api/deletion-impact` response: the deletion closure's size, by type,\nfor a delete confirm to word its warning. Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
       },
       "FieldDefBatchCreate": {
         "properties": {
@@ -3974,7 +3958,7 @@
         },
         "type": "object",
         "title": "FieldDefBatchOps",
-        "description": "\u00a72.3's `field_defs` changeset. Applied in the stated order (create \u2192 update \u2192\ndelete \u2192 reorder) inside the batch-edit transaction \u2014 this model just carries the\nfour lists; the service resolves ids/client_keys and enforces D3."
+        "description": "The `field_defs` changeset. Applied in the stated order (create \u2192 update \u2192\ndelete \u2192 reorder) inside the batch-edit transaction \u2014 this model just carries the\nfour lists; the service resolves ids/client_keys and enforces the two-field floor."
       },
       "FieldDefBatchUpdate": {
         "properties": {
@@ -4147,7 +4131,7 @@
           "delta"
         ],
         "title": "FieldMasteryDelta",
-        "description": "One active field's session-delta entry (ADR 042, ADR 044, task 010 T3):\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
+        "description": "One active field's session-delta entry:\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
       },
       "FieldType": {
         "type": "string",
@@ -4279,7 +4263,7 @@
           "cards"
         ],
         "title": "PracticeRunBreakdown",
-        "description": "The whole `GET .../breakdown` payload (ADR 031): bucket counts for the tabs, and\nevery card's full resolved history, so the completion screen's row-tap detail needs\nno second request. Only ever built for a completed session (ADR 029) \u2014 the router\n409s an active one before this is composed."
+        "description": "The whole `GET .../breakdown` payload: bucket counts, and\nevery card's full resolved history, so the completion screen's row-tap detail needs\nno second request. Only ever built for a completed session \u2014 the router\n409s an active one before this is composed."
       },
       "PracticeRunCreate": {
         "properties": {
@@ -4344,7 +4328,7 @@
           "configuration_name"
         ],
         "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` (ADR 040) is read here for the\nlabel only (ADR 066): `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` is read here for the label\nonly: `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
       },
       "PracticeRunRead": {
         "properties": {
@@ -4393,7 +4377,7 @@
           "name"
         ],
         "title": "PracticeRunRerun",
-        "description": "Body of POST .../rerun (ADR 039): the client-formatted name for the new run,\nthe same way PracticeRunCreate.name is \u2014 the server derives nothing."
+        "description": "Body of POST .../rerun: the client-formatted name for the new run,\nthe same way PracticeRunCreate.name is \u2014 the server derives nothing."
       },
       "PracticeRunState": {
         "properties": {
@@ -4426,7 +4410,7 @@
           "current_card"
         ],
         "title": "PracticeRunState",
-        "description": "The whole `GET .../state` payload (ADR 031) \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
+        "description": "The whole `GET .../state` payload \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
       },
       "PracticeRunSummary": {
         "properties": {
@@ -4470,7 +4454,7 @@
           "decks"
         ],
         "title": "PracticeRunSummary",
-        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` no longer outlives its\ndeck (ADR 047, ADR 048): deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state left for a summary to represent."
+        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` never outlives its\ndeck: deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state for a summary to represent."
       },
       "RatedFieldValue": {
         "properties": {
@@ -4516,7 +4500,7 @@
           "rating"
         ],
         "title": "RatedFieldValue",
-        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`\nexactly for a removed field's placeholder, because its review rows cascaded with\nthe field (ADR 048)."
+        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`\nexactly for a removed field's placeholder, because its review rows cascaded with\nthe field."
       },
       "RatingSubmission": {
         "properties": {
@@ -4592,7 +4576,7 @@
           "value"
         ],
         "title": "ResolvedFieldValue",
-        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution ADR 031 replaces bare-id responses with. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (ADR 026 only governs generation-time candidacy, not later edits).\n`removed` is True only for a placeholder the breakdown emits for a stored id whose\nfield_def row no longer exists (ADR 052); every other resolution, including the\nlive run's current card, leaves it False."
+        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution every run payload uses instead of bare ids. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (the blank filter governs generation-time candidacy, not later edits).\n`removed` is True only for a placeholder the breakdown emits for a stored id whose\nfield_def row no longer exists; every other resolution, including the\nlive run's current card, leaves it False."
       },
       "RunProgress": {
         "properties": {
@@ -4626,7 +4610,7 @@
           "still_failed"
         ],
         "title": "RunProgress",
-        "description": "The ADR 028 live-progress counts: `total_cards` is fixed at session start\n(distinct card_ids that received a practice_card row then) and never changes, so\nthe other four counts \u2014 a partition of it by chain-fold bucket \u2014 only ever\nredistribute, never grow the denominator mid-session."
+        "description": "The live-progress counts: `total_cards` is fixed at session start\n(distinct card_ids that received a practice_card row then) and never changes, so\nthe other four counts \u2014 a partition of it by chain-fold bucket \u2014 only ever\nredistribute, never grow the denominator mid-session."
       },
       "RunStatus": {
         "type": "string",
@@ -4635,7 +4619,7 @@
           "completed"
         ],
         "title": "RunStatus",
-        "description": "Two states, not three. `abandoned` was dropped: nothing could distinguish it from\n`completed` without tracking why a session ran out of pending cards, which ADR 015\nhad already declined to invent state for. A session is either still practisable or it\nisn't (ADR 015, amended)."
+        "description": "Two states, not three: nothing could distinguish an \"abandoned\" session from a\n`completed` one without tracking why it ran out of pending cards, and no state is\nkept for that. A session is either still practisable or it isn't."
       },
       "SubjectCreate": {
         "properties": {
@@ -4758,7 +4742,7 @@
           "deck_count"
         ],
         "title": "SubjectSummary",
-        "description": "SubjectRead plus a deck count for a library list row (Phase 2.6). Only\n`GET /api/subjects` returns this \u2014 the subject detail page derives its own deck/\ncard counts from the (separately-fetched, already-enriched) deck list instead of\nneeding this here too."
+        "description": "SubjectRead plus a deck count for a library list row. Only\n`GET /api/subjects` returns this \u2014 the subject detail page derives its own deck/\ncard counts from the (separately-fetched, already-enriched) deck list instead of\nneeding this here too."
       },
       "SubjectUpdate": {
         "properties": {

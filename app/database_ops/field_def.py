@@ -10,6 +10,7 @@ from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
 from app.models.subject import Subject
+from app.refusals import Refusal
 
 
 def db_read_field_def(
@@ -78,7 +79,9 @@ def db_rename_field_def(db: Session, field_def: FieldDef, name: str) -> FieldDef
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("An active field with this name already exists") from None
+        raise Refusal(
+            "field_name_taken", "an active field_def (deck_id, name) already exists"
+        ) from None
     db.refresh(field_def)
     return field_def
 
@@ -109,7 +112,7 @@ def db_read_owned_field_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """The subset of `ids` that exist and belong to user_id (via the subject chain) —
-    compute_deletion_impact's ownership check (ADR 051 step 1). Archived fields count
+    compute_deletion_impact's ownership check. Archived fields count
     as owned here — a field id is a field id regardless of archived_at; nothing about
     ownership depends on it."""
     if not ids:
@@ -127,8 +130,9 @@ def db_read_owned_field_ids(
 def db_read_deck_id_by_field(
     db: Session, field_ids: Collection[uuid.UUID]
 ) -> dict[uuid.UUID, uuid.UUID]:
-    """field_def_id -> deck_id for these fields — ADR 051 step 3 needs each explicit
-    field's own deck to decide whether it's already covered by a deck-level delete."""
+    """field_def_id -> deck_id for these fields — the deletion closure needs each
+    explicit field's own deck to decide whether it's already covered by a deck-level
+    delete."""
     if not field_ids:
         return {}
     return dict(
@@ -141,8 +145,8 @@ def db_read_deck_id_by_field(
 def db_read_active_field_ids_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """Active (non-archived) fields of these decks — ADR 051 step 4. Archived fields
-    cascade with the deck too but are never counted: the user never sees them."""
+    """Active (non-archived) fields of these decks, for the deletion closure. Archived
+    fields cascade with the deck too but are never counted: the user never sees them."""
     if not deck_ids:
         return set()
     return set(
@@ -155,7 +159,7 @@ def db_read_active_field_ids_for_decks(
 
 
 def db_stage_delete_field_defs(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    """Bulk delete by id, no commit — apply_deletion owns the transaction."""
     if not ids:
         return
     db.execute(delete(FieldDef).where(col(FieldDef.id).in_(ids)))

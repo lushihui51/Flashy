@@ -110,8 +110,9 @@ describe('PracticeDetailsPage', () => {
     const user = userEvent.setup();
     renderDetails();
 
-    const crumb = await screen.findByRole('link', { name: 'Practice' });
-    await user.click(crumb);
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getAllByRole('link')).toHaveLength(1);
+    await user.click(within(row).getByRole('link', { name: 'Practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice');
   });
@@ -123,8 +124,8 @@ describe('PracticeDetailsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     // Date only, not the clock time — formatDateTime renders in whatever zone the
-    // machine running this test happens to sit in (ADR 019), so a fixed instant can
-    // land on a different hour, though never a different calendar day for this one.
+    // machine running this test happens to sit in, so a fixed instant can land on a
+    // different hour, though never a different calendar day for this one.
     expect(screen.getByText(/Aug 24, 2026/)).toBeInTheDocument();
     expect(screen.getByText('Alpha · Shared Deck Name · Config A')).toBeInTheDocument();
   });
@@ -188,7 +189,7 @@ describe('PracticeDetailsPage', () => {
     expect(
       screen.queryByText('A summary of this practice is coming later.'),
     ).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
     expect(screen.getByText('First try')).toBeInTheDocument();
   });
 
@@ -247,7 +248,9 @@ describe('PracticeDetailsPage', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
     // Still open — nothing navigated away.
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
@@ -258,7 +261,7 @@ describe('PracticeDetailsPage', () => {
     renderDetails('nope');
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });
 
   it('a load failure other than 404 says it could not load, not that it was not found', async () => {
@@ -328,8 +331,8 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
     await waitFor(() => expect(rerunRequestedId).toBe('ps1'));
-    // The client formats the new run's name itself (ADR 039), the same way the
-    // creation page pre-fills its own name field — never left blank or server-derived.
+    // The client formats the new run's name itself, the same way the creation page
+    // pre-fills its own name field — never left blank or server-derived.
     expect(rerunRequestedBodies[0]?.name).toBeTruthy();
     // Navigated to the new session's own detail route — its distinct name proves it.
     expect(await screen.findByRole('heading', { name: 'Alpha run (new)' })).toBeInTheDocument();
@@ -357,7 +360,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
   });
 
-  it('a nothing_to_rerun failure closes the dialog, shows the message, and leaves the old session on screen', async () => {
+  it('a nothing_to_rerun failure closes the dialog, shows its sentence, and leaves the old session on screen', async () => {
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
@@ -381,10 +384,10 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'no deck from this session still has a live, valid snapshot to rerun',
+      "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    // Still on ps1 — nothing navigated away, the old session is unchanged.
+    // Still on ps1 — nothing navigated away, the original session is unchanged.
     expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
   });
@@ -412,7 +415,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
-    // The frontend's sentence in full, not the backend's message (ADR 056).
+    // The frontend's sentence in full, not the backend's message.
     expect((await screen.findByRole('alert')).textContent).toBe(NO_CARDS_MESSAGE);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });

@@ -1,12 +1,12 @@
 /**
- * New practice's selection as it rides the URL (ADR 061): one `config=<id>` param per
- * selected deck configuration, in the order they were ticked. Pure helpers over
+ * New practice's selection as it rides the URL: one `config=<id>` param per selected
+ * deck configuration, in the order they were ticked. Pure helpers over
  * `URLSearchParams` — the page owns the `setSearchParams(…, { replace: true })`.
  */
 
 const PARAM = 'config';
 
-/** The `config` params, de-duplicated, first occurrence first (MD-8). */
+/** The `config` params, de-duplicated, first occurrence first. */
 export function readSelectedConfigIds(searchParams: URLSearchParams): string[] {
   return [...new Set(searchParams.getAll(PARAM))];
 }
@@ -23,8 +23,8 @@ export function withSelectedConfigIds(
   return params;
 }
 
-/** Makes `configId` its deck's one selection (MD-1): drops every id in `deckConfigIds`,
- * then appends `configId`. */
+/** Makes `configId` its deck's one selection: drops every id in `deckConfigIds`, then
+ * appends `configId`. */
 export function selectConfig(
   selectedIds: readonly string[],
   deckConfigIds: readonly string[],
@@ -35,7 +35,7 @@ export function selectConfig(
   return [...selectedIds.filter((id) => !dropped.has(id)), configId];
 }
 
-/** One tap on a checkbox (MD-1): removes `configId` if selected, otherwise `selectConfig`. */
+/** One tap on a checkbox: removes `configId` if selected, otherwise `selectConfig`. */
 export function toggleConfig(
   selectedIds: readonly string[],
   deckConfigIds: readonly string[],

@@ -11,18 +11,17 @@ type FieldValueProps = {
   hidden?: boolean;
 };
 
-/** Renders one resolved prompt/answer field (ADR 031's `ResolvedFieldValue`). Text
- * renders as text; image/audio never render inline (ADR 027) — a small tappable chip
- * opens the value in a Radix Dialog overlay (ADR 016) instead, keeping every card's
- * zone height predictable regardless of what media it holds. `hidden` (MD-6) swaps
- * the value or media chip for the literal word "Hidden" in plain italic muted text —
- * the field's name label still renders per `labeled`, but the real value and any
- * chip/button are never in the DOM at all, so nothing leaks through a screen reader,
- * find-in-page, or a stray tap before the run page's single "Show answer" tap.
- * Shared by the run page's prompt/answer zones and, later, the completion
- * breakdown's detail view (which never passes `hidden`). A `removed` placeholder (ADR
- * 052 — a field deleted after a completed practice used it) renders only the muted
- * label "Removed field", never a value or chip, whatever `labeled` and `hidden` say. */
+/** Renders one resolved prompt/answer field. Text renders as text; image/audio never
+ * render inline — a small tappable chip opens the value in a Radix Dialog overlay
+ * instead, keeping every card's zone height predictable regardless of what media it
+ * holds. `hidden` swaps the value or media chip for the literal word "Hidden" in plain
+ * italic muted text — the field's name label still renders per `labeled`, but the real
+ * value and any chip/button are never in the DOM at all, so nothing leaks through a
+ * screen reader, find-in-page, or a stray tap before the run page's single "Show
+ * answer" tap. Shared by the run page's prompt/answer zones and the completion
+ * breakdown's detail view (which never passes `hidden`). A `removed` placeholder (a
+ * field deleted after a completed practice used it) renders only the muted label
+ * "Removed field", never a value or chip, whatever `labeled` and `hidden` say. */
 export default function FieldValue({ field, labeled, hidden }: FieldValueProps) {
   if (field.removed === true) {
     return (

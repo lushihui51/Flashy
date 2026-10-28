@@ -12,6 +12,7 @@ from app.database_ops.subject import (
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.subject import SubjectCreate, SubjectRead, SubjectSummary, SubjectUpdate
+from app.refusals import Refusal
 from app.services.activity import touch
 from app.services.deletion import delete_subject as delete_subject_service
 
@@ -22,6 +23,8 @@ router = APIRouter(prefix="/subjects", tags=["Subjects"])
 def create_subject(db: SessionDep, current_user: CurrentUserDep, subject: SubjectCreate):
     try:
         return db_create_subject(db, {**subject.model_dump(), "user_id": current_user.id})
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -48,10 +51,12 @@ def update_subject(
         raise HTTPException(status_code=404, detail="Subject not found")
     data = payload.model_dump(exclude_unset=True)
     if data:
-        # D13: an own-column edit bumps the recency sort key; an empty PATCH does not.
+        # An own-column edit bumps the recency sort key; an empty PATCH does not.
         touch(db, subject)
     try:
         return db_update_subject(db, subject, data)
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

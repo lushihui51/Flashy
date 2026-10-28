@@ -26,7 +26,9 @@ import {
 } from 'src/lib/deckConfigurationBoard';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -79,6 +81,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     queryFn: () => readDeckPracticeConfig(configId!),
     enabled: mode === 'edit' && !!configId,
   });
+  usePageTitle(
+    mode === 'create' ? 'New configuration' : configQuery.data ? 'Edit configuration' : undefined,
+  );
 
   if (mode === 'edit' && configQuery.isError) {
     return (
@@ -98,9 +103,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
   if (mode === 'edit' && !configQuery.data) return null;
 
   // `deckId` in router state is a deck just created through the "New deck…" round-trip
-  // (DeckEditor navigates back with it) — a one-shot result, so it stays in state
-  // (ADR 024). `?deck=` is the pre-filter chain's context. Both mean "start on this
-  // deck", so the fresher one wins.
+  // (DeckEditor navigates back with it) — a one-shot result, so it stays in state.
+  // `?deck=` is the pre-filter chain's context. Both mean "start on this deck", so the
+  // fresher one wins.
   const state = location.state as { deckId?: string } | null;
 
   return (
@@ -119,7 +124,7 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  /** Where Cancel and a successful Save land. Null means "the deck's own page", which
+  /** Where Cancel and a successful Create or Save land. Null means "the deck's own page", which
    * is only knowable once a deck is chosen. */
   returnTo: string | null;
 };
@@ -139,8 +144,8 @@ function DeckConfigurationEditorBody({
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
   const [deckId, setDeckId] = useState<string | null>(config?.deck_id ?? contextDeckId);
-  // ADR 067: in create mode the name follows the board — derived from its layout — until
-  // the user types, after which it is theirs through further assignments and a deck
+  // In create mode the name follows the board — derived from its layout — until the
+  // user types, after which it is theirs through further assignments and a deck
   // change. Edit mode starts with the stored name, so it is never re-derived.
   // null until the user types (create mode); the stored name from the start (edit mode).
   const [typedName, setTypedName] = useState<string | null>(config?.name ?? null);
@@ -194,19 +199,23 @@ function DeckConfigurationEditorBody({
         queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] }),
         queryClient.invalidateQueries({ queryKey: ['deck_practice_config', saved.id] }),
       ]);
-      // `{configurationId}` is a create-only hand-back (ADR 061): building a
-      // configuration from New practice means wanting to use it, so New practice
-      // auto-selects it; an edit says nothing about wanting it and returns with no result.
+      // `{configurationId}` is a create-only hand-back: building a configuration from
+      // New practice means wanting to use it, so New practice auto-selects it; an edit
+      // says nothing about wanting it and returns with no result.
       navigate(
         returnTo ?? `/decks/${saved.deck_id}?tab=configurations`,
         mode === 'create' ? { state: { configurationId: saved.id } } : undefined,
       );
     },
-    onError: (error: Error) => {
+    onError: (error) => {
+      const sentence = failureSentence(error, 'Deck configuration not found.');
       // A duplicate name is the one failure the user fixes in place, so it belongs on
       // the input rather than in a banner that costs them the rest of the form.
-      if (/already exists/i.test(error.message)) setNameError(error.message);
-      else setSaveError(error.message);
+      if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
+        setNameError(sentence);
+      } else {
+        setSaveError(sentence);
+      }
     },
   });
 
@@ -252,7 +261,7 @@ function DeckConfigurationEditorBody({
           }}
           className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
         >
-          Save
+          {mode === 'edit' ? 'Save' : 'Create'}
         </button>
       </div>
 
@@ -274,9 +283,9 @@ function DeckConfigurationEditorBody({
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              // returnTo itself rides the URL (ADR 024), not state: this page's own
-              // full location already contains whatever returnTo it was opened with,
-              // so a nested round trip survives with nothing extra to forward by hand.
+              // returnTo itself rides the URL, not state: this page's own full
+              // location already contains whatever returnTo it was opened with, so a
+              // nested round trip survives with nothing extra to forward by hand.
               onSelectCreate={() => {
                 const params = new URLSearchParams();
                 params.set('returnTo', `${location.pathname}${location.search}`);
@@ -342,7 +351,10 @@ function DeckConfigurationEditorBody({
 
       {deck && board && (validationError || nameMissing) && (
         <p className="mt-3 text-sm text-(--color-text-muted)">
-          {validationError ?? 'Give this config a name to save it.'}
+          {validationError ??
+            (mode === 'edit'
+              ? 'Give this configuration a name to save it.'
+              : 'Give this configuration a name to create it.')}
         </p>
       )}
 
@@ -356,7 +368,7 @@ function DeckConfigurationEditorBody({
         open={pendingDeck !== null}
         title="Change deck?"
         description="Fields belong to their own deck, so switching clears everything assigned here."
-        confirmLabel="Change deck"
+        confirmLabel="Continue"
         destructive
         onConfirm={() => pendingDeck && applyDeck(pendingDeck)}
         onCancel={() => setPendingDeck(null)}

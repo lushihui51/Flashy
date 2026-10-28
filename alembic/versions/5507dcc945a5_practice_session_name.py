@@ -27,7 +27,7 @@ def upgrade() -> None:
     # straight NOT NULL add would fail against any pre-existing session. Rows written
     # before names existed get a placeholder rather than a date string: rendering a
     # date here would have to pick a timezone, and the server has no business doing
-    # that (ADR 019).
+    # that.
     op.add_column('practice_session', sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
     op.execute("UPDATE practice_session SET name = 'Untitled practice' WHERE name IS NULL")
     op.alter_column('practice_session', 'name', nullable=False)

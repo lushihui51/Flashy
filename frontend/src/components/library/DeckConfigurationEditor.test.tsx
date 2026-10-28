@@ -105,7 +105,7 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
-/** The landing route's router state: what a Save handed back, if anything (ADR 061). */
+/** The landing route's router state: what a Save handed back, if anything. */
 function StateProbe() {
   const location = useLocation();
   return (
@@ -116,8 +116,8 @@ function StateProbe() {
   );
 }
 
-// ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams.get(),
-// never compared as an encoded string literal.
+// returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
+// compared as an encoded string literal.
 function ReturnToProbe() {
   const [searchParams] = useSearchParams();
   return <span data-testid="return-to">{searchParams.get('returnTo') ?? ''}</span>;
@@ -146,9 +146,9 @@ function renderEdit(configId = 'c1') {
   );
 }
 
-// The board's one interaction path (ADR 020): tap the chip, then tap a destination row
-// in the sheet it opens. Sheet rows only ever offer the field's *other* four slots, so
-// every call below must target a slot the field isn't already in.
+// The board's one interaction path: tap the chip, then tap a destination row in the
+// sheet it opens. Sheet rows only ever offer the field's *other* four slots, so every
+// call below must target a slot the field isn't already in.
 const DESTINATION_LABELS: Record<string, string> = {
   prompt_fields: 'Prompt · always shown',
   prompt_pool: 'Prompt · random draw',
@@ -271,8 +271,8 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // Decoded via URLSearchParams.get() (ADR 024): the deck editor's own returnTo is
-    // the builder's exact location, nested returnTo and all — nothing was dropped, and
+    // Decoded via URLSearchParams.get(): the deck editor's own returnTo is the
+    // builder's exact location, nested returnTo and all — nothing was dropped, and
     // nothing had to be hand-encoded or forwarded explicitly to make that true.
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
@@ -284,7 +284,7 @@ describe('DeckConfigurationEditor — create', () => {
     await screen.findByRole('region', { name: 'Not used' });
     const input = screen.getByLabelText('Name');
 
-    // ADR 067: empty while either side has no field.
+    // Empty while either side has no field.
     expect(input).toHaveValue('');
     await assign(user, 'Term', 'prompt_fields');
     expect(input).toHaveValue('');
@@ -311,7 +311,7 @@ describe('DeckConfigurationEditor — create', () => {
     // Cleared is still the user's: it does not snap back to the derived name.
     await user.clear(input);
     expect(input).toHaveValue('');
-    expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
+    expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
   });
 
   it('a typed name survives a deck change', async () => {
@@ -326,7 +326,7 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /Beta Deck/ }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Change deck' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Beta Deck'));
     await screen.findByRole('region', { name: 'Not used' });
@@ -359,7 +359,7 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Prompt · always shown' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    const promptAlways = screen.getByRole('region', { name: 'Prompt side · Always shown' });
+    const promptAlways = screen.getByRole('region', { name: 'Prompt · always shown' });
     expect(within(promptAlways).getByRole('button', { name: 'Term' })).toBeInTheDocument();
   });
 
@@ -369,7 +369,7 @@ describe('DeckConfigurationEditor — create', () => {
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
 
-    const promptRandom = screen.getByRole('region', { name: 'Prompt side · Random draw' });
+    const promptRandom = screen.getByRole('region', { name: 'Prompt · random draw' });
     expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();
     expect(within(promptRandom).queryByText('Each card shows')).not.toBeInTheDocument();
 
@@ -398,14 +398,14 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByRole('checkbox', { name: '1' })).not.toBeChecked();
   });
 
-  it('Save stays disabled with the reason shown, for each rule the backend enforces', async () => {
+  it('Create stays disabled with the reason shown, for each rule the backend enforces', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
-    const save = screen.getByRole('button', { name: 'Save' });
+    const create = screen.getByRole('button', { name: 'Create' });
 
-    expect(save).toBeDisabled();
+    expect(create).toBeDisabled();
     expect(screen.getByText(/prompt side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_fields');
@@ -413,18 +413,18 @@ describe('DeckConfigurationEditor — create', () => {
 
     await assign(user, 'Meaning', 'answer_pool');
     expect(screen.getByText(/how many random answer fields/)).toBeInTheDocument();
-    expect(save).toBeDisabled();
+    expect(create).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    // The name is derived once both sides have a field (ADR 067), so nothing is left to do.
-    expect(save).toBeEnabled();
+    // The name is derived once both sides have a field, so nothing is left to do.
+    expect(create).toBeEnabled();
 
     await user.clear(screen.getByLabelText('Name'));
-    expect(screen.getByText(/Give this config a name/)).toBeInTheDocument();
-    expect(save).toBeDisabled();
+    expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
+    expect(create).toBeDisabled();
 
     await user.type(screen.getByLabelText('Name'), 'Recall');
-    expect(save).toBeEnabled();
+    expect(create).toBeEnabled();
   });
 
   it('saves the board as the six arrays, uuids only, and returns to the configs list', async () => {
@@ -447,7 +447,7 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(screen.getByRole('checkbox', { name: '1' }));
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'Recall');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({
@@ -463,7 +463,7 @@ describe('DeckConfigurationEditor — create', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
-  it('a create’s Save returns to returnTo handing back the saved configuration (ADR 061)', async () => {
+  it('a create returns to returnTo handing back the saved configuration', async () => {
     mockLibrary();
     server.use(
       http.post(`${BASE}/api/deck_practice_configs`, () =>
@@ -486,7 +486,7 @@ describe('DeckConfigurationEditor — create', () => {
 
     await assign(user, 'Term', 'prompt_fields');
     await assign(user, 'Meaning', 'answer_fields');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByTestId('landed-path')).toHaveTextContent('/practice/new');
     expect(JSON.parse(screen.getByTestId('landed-state').textContent ?? 'null')).toEqual({
@@ -499,7 +499,12 @@ describe('DeckConfigurationEditor — create', () => {
     server.use(
       http.post(`${BASE}/api/deck_practice_configs`, () =>
         HttpResponse.json(
-          { detail: 'A configuration with this name already exists for this deck' },
+          {
+            detail: {
+              code: 'configuration_name_taken',
+              message: 'deck_practice_config (deck_id, name) already exists',
+            },
+          },
           { status: 400 },
         ),
       ),
@@ -512,10 +517,10 @@ describe('DeckConfigurationEditor — create', () => {
     await assign(user, 'Meaning', 'answer_fields');
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'Recall');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const error = await screen.findByRole('alert');
-    expect(error).toHaveTextContent('already exists');
+    expect(error).toHaveTextContent('A configuration with this name already exists.');
     expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
     // Still on the form, board intact.
     expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
@@ -533,7 +538,7 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByRole('option', { name: /Beta Deck/ }));
 
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Change deck' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => {
       const unused = screen.getByRole('region', { name: 'Not used' });
@@ -572,20 +577,31 @@ describe('DeckConfigurationEditor — edit', () => {
     await screen.findByRole('region', { name: 'Not used' });
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
     expect(
-      within(screen.getByRole('region', { name: 'Prompt side · Always shown' })).getByText('Term'),
+      within(screen.getByRole('region', { name: 'Prompt · always shown' })).getByText('Term'),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'Answer side · Always shown' })).getByText(
-        'Meaning',
-      ),
+      within(screen.getByRole('region', { name: 'Answer · always shown' })).getByText('Meaning'),
     ).toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Not used' })).getByText('Reading'),
     ).toBeInTheDocument();
 
-    // Edit mode keeps the stored name; the board never re-derives it (ADR 067).
+    // Edit mode keeps the stored name; the board never re-derives it.
     await assign(user, 'Reading', 'answer_fields');
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
+  });
+
+  it('a cleared name keeps Save disabled with the reason shown', async () => {
+    mockLibrary();
+    mockConfig();
+    const user = userEvent.setup();
+    renderEdit();
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.clear(screen.getByLabelText('Name'));
+
+    expect(screen.getByText('Give this configuration a name to save it.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
   it('never shows a field the config references but the deck has since archived', async () => {
@@ -596,7 +612,7 @@ describe('DeckConfigurationEditor — edit', () => {
     await screen.findByRole('region', { name: 'Not used' });
     expect(screen.queryByText('archived-field')).not.toBeInTheDocument();
     // The pool area is empty, so its frequency row has nothing to offer either.
-    const promptRandom = screen.getByRole('region', { name: 'Prompt side · Random draw' });
+    const promptRandom = screen.getByRole('region', { name: 'Prompt · random draw' });
     expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();
     expect(within(promptRandom).queryByText('Each card shows')).not.toBeInTheDocument();
   });
@@ -637,7 +653,7 @@ describe('DeckConfigurationEditor — edit', () => {
     });
   });
 
-  it('an edit’s Save returns to returnTo with no configuration handed back (ADR 061)', async () => {
+  it('an edit’s Save returns to returnTo with no configuration handed back', async () => {
     mockLibrary();
     mockConfig();
     server.use(

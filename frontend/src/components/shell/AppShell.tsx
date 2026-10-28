@@ -21,8 +21,9 @@ export default function AppShell() {
   const { isSignedIn } = useUser();
   const connectionStatus = useConnectionStatus();
 
-  // Only the Create sheet's Card row needs this (D4's "create a deck first" empty
-  // state) — gated so opening the sheet is the only thing that triggers the fetch.
+  // Only the Create sheet's Card row needs this (its "create a deck first" empty state,
+  // since creating a card never creates a deck) — gated so opening the sheet is the
+  // only thing that triggers the fetch.
   const { data: decks } = useQuery({
     queryKey: ['decks'],
     queryFn: () => readDecks(),

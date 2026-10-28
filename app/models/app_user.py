@@ -11,7 +11,7 @@ DEFAULT_TIMEZONE = "UTC"
 class AppUser(AppModel, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     clerk_user_id: str = Field(unique=True)
-    # ADR 019: the user's IANA zone name (e.g. "America/Los_Angeles"), supplied by the
+    # The user's IANA zone name (e.g. "America/Los_Angeles"), supplied by the
     # client on every request via the X-Timezone header. This is a *rendering* input and
     # nothing else — every stored timestamp is a server-stamped UTC instant, so changing
     # this value changes what the user sees and never what is stored or how it orders.

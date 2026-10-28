@@ -1,26 +1,15 @@
-import { ChevronLeft, Pencil, Play } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Pencil, Play } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
+import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
-import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
+import { usePageTitle } from 'src/lib/pageTitle';
 import { isNotFound } from 'src/api/unwrap';
-
-/** First two field names, `+N` for the rest — computed by count, not measured text,
- * so it's deterministic regardless of how the names actually render. The row no
- * longer states the total field count (Phase 2.7's accepted tradeoff) — that lives
- * on the deck detail page's own meta line. */
-function formatFieldNames(names: string[]): string {
-  if (names.length <= 2) return names.join(', ');
-  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
-}
-
-function deckMeta(cardCount: number): string {
-  return cardCount === 0 ? 'No cards' : pluralize(cardCount, 'card');
-}
 
 export default function SubjectDetailPage() {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -36,6 +25,7 @@ export default function SubjectDetailPage() {
     queryFn: () => readDecks(subjectId),
     enabled: !!subjectId,
   });
+  usePageTitle(subjectQuery.data?.name);
 
   if (subjectQuery.isError) {
     return (
@@ -59,13 +49,7 @@ export default function SubjectDetailPage() {
 
   return (
     <div className="p-4">
-      <Link
-        to="/library"
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        Your library
-      </Link>
+      <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
       {subject && (
         <div className="mt-2 flex items-start gap-3">
@@ -79,12 +63,6 @@ export default function SubjectDetailPage() {
             )}
           </div>
         </div>
-      )}
-
-      {decks && (
-        <p className="mt-2 text-[13px] text-(--color-text-muted)">
-          {pluralize(decks.length, 'deck')} · {pluralize(totalCards, 'card')}
-        </p>
       )}
 
       <div className="mt-3 flex items-center gap-2">
@@ -114,24 +92,19 @@ export default function SubjectDetailPage() {
         {/* The add control sits with the collection it adds to, carrying this
             subject so the deck form opens with it preselected. */}
         <div className="flex items-center justify-between">
-          <h2 className="text-[12px] font-medium text-(--color-text-muted)">Decks</h2>
+          <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+            {decks ? `${pluralize(decks.length, 'deck')} · ${pluralize(totalCards, 'card')}` : 'Decks'}
+          </h2>
           <AddButton label="Add deck" onClick={addDeck} />
         </div>
         {decks && decks.length === 0 ? (
-          // No button here — the row's above is the one add control (ADR 066).
-          <p className="py-8 text-(--color-text-muted)">No decks in this subject yet.</p>
+          // No button here — the row's above is the one add control.
+          <p className="py-8 text-(--color-text-muted)">No decks yet.</p>
         ) : (
           <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
             {(decks ?? []).map((deck) => (
               <li key={deck.id}>
-                <ListRow
-                  title={deck.name}
-                  subtitle={
-                    deck.field_names.length > 0 ? formatFieldNames(deck.field_names) : undefined
-                  }
-                  meta={deckMeta(deck.card_count)}
-                  to={`/decks/${deck.id}`}
-                />
+                <DeckRow deck={deck} />
               </li>
             ))}
           </ul>

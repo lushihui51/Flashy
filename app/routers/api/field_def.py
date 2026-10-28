@@ -15,6 +15,7 @@ from app.database_ops.field_def import (
 )
 from app.dependencies import CurrentUserDep
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
+from app.refusals import Refusal
 from app.services.activity import touch
 from app.services.field_def_create import create_field_def as create_field_def_service
 
@@ -30,6 +31,8 @@ def create_field_def(
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
         return create_field_def_service(db, deck, payload.name, payload.type)
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -98,6 +101,8 @@ def update_field_def(
         touch(db, deck)
     try:
         return db_rename_field_def(db, field_def, payload.name)
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -108,11 +113,16 @@ def archive_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uu
     if not field_def:
         raise HTTPException(status_code=404, detail="Field not found")
     if field_def.archived_at is None:
-        # D3: archiving counts as removing — a deck can't archive down to fewer than
-        # two active fields, same floor as create and the batch-edit endpoint.
+        # Archiving counts as removing — a deck can't archive down to fewer than two
+        # active fields, same floor as create and the batch-edit endpoint.
         active_count = len(db_read_field_defs(db, field_def.deck_id, current_user.id))
         if active_count <= 2:
-            raise HTTPException(status_code=422, detail="a deck needs at least two fields")
+            raise HTTPException(
+                status_code=422,
+                detail=Refusal(
+                    "too_few_fields", "the deck would keep fewer than two active field_defs"
+                ).detail,
+            )
         deck = db_read_deck(db, field_def.deck_id, current_user.id)
         if deck:
             touch(db, deck)

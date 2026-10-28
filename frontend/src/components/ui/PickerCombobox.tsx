@@ -12,8 +12,8 @@ export type PickerItem = { id: string; name: string };
 type PurposeProps =
   | {
       purpose?: 'create';
-      /** The always-present, always-last create row (Phase 5.5 §2) — this component
-       * doesn't know or care what selecting it does (open an overlay, navigate away). */
+      /** The always-present, always-last create row — this component doesn't know or
+       * care what selecting it does (open an overlay, navigate away). */
       onSelectCreate: () => void;
       createLabel: string;
       clearLabel?: never;
@@ -31,7 +31,7 @@ type PurposeProps =
     };
 
 type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
-  /** Already in server order (D13: recency) — this component never sorts. */
+  /** Already in the server's recency order — this component never sorts. */
   items: T[];
   selected: T | null;
   onSelect: (item: T) => void;
@@ -46,11 +46,11 @@ type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   inputRef?: RefObject<HTMLInputElement | null>;
 };
 
-/** The one combobox in the app (Phase 5.5 §2), used directly by every caller:
- * open-on-focus-or-click, filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y"
- * footer when there's more, and one always-present action row — "New X…" when picking a
- * value, "All X" when narrowing by one (see PurposeProps). What that row *does*, and how
- * the items were fetched, belong to the caller: nothing here reaches for data. */
+/** The one combobox in the app, used directly by every caller: open-on-focus-or-click,
+ * filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y" footer when there's more, and
+ * one always-present action row — "New X…" when picking a value, "All X" when narrowing
+ * by one (see PurposeProps). What that row *does*, and how the items were fetched,
+ * belong to the caller: nothing here reaches for data. */
 export default function PickerCombobox<T extends PickerItem>({
   items,
   selected,
@@ -82,8 +82,8 @@ export default function PickerCombobox<T extends PickerItem>({
 
   const trimmed = query.trim();
   // Reopening (click/focus) shows the full capped list, not last time's filtered-down
-  // result — the query text still reads as the previously selected name until the
-  // user actually types something different, at which point real filtering kicks in.
+  // result — the query text still reads as the selected item's name until the user
+  // actually types something different, at which point real filtering kicks in.
   const hasEditedSinceSelection = query !== (selected?.name ?? '');
   const matches = hasEditedSinceSelection
     ? items.filter((i) => i.name.toLowerCase().includes(trimmed.toLowerCase()))

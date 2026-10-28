@@ -3,25 +3,24 @@ import type { ConfigurationGroup } from 'src/lib/practiceConfigurationGroups';
 
 type ConfigurationPickListProps = {
   groups: ConfigurationGroup[];
-  /** Every selected configuration id, across all decks — the page reads them from the
-   * URL (ADR 061). */
+  /** Every selected configuration id, across all decks. */
   selectedIds: ReadonlySet<string>;
   /** The one failure that names a specific row (`stale_config`) — every other error
    * renders elsewhere on the page. */
-  rowError: { configId: string; message: string } | null;
+  rowError: { configId: string; sentence: string } | null;
   /** One tap on a row's checkbox. `group` is the row's deck group, so the page can
-   * untick that deck's other configuration (MD-1). */
+   * untick that deck's other configuration. */
   onToggle: (group: ConfigurationGroup, configId: string) => void;
-  /** The row's pencil: open this configuration for editing (task 019 MD-6). */
+  /** The row's pencil: open this configuration for editing. */
   onEdit: (configId: string) => void;
 };
 
 /**
- * A checkbox per configuration, at most one ticked per deck group (task 019 MD-1):
- * ticking a second configuration in a deck unticks the first, and tapping a ticked one
- * clears it. Nothing here enforces that natively — `toggleConfig` does, in the page's
- * handler — so the inputs carry no `name`, and a hand-edited URL can show two ticks in
- * one deck until the next tap there (MD-8).
+ * A checkbox per configuration, at most one ticked per deck group: ticking a second
+ * configuration in a deck unticks the first, and tapping a ticked one clears it.
+ * Nothing here enforces that natively — `toggleConfig` does, in the page's handler —
+ * so the inputs carry no `name`, and a hand-edited URL can show two ticks in one deck
+ * until the next tap there.
  *
  * Purely presentational: the page fetches, groups (`groupConfigurationsByDeck`), and
  * owns the selection; this only renders what it's given (AGENTS.md — reusable
@@ -39,7 +38,7 @@ export default function ConfigurationPickList({
       {groups.map((group) => (
         <fieldset key={group.deckId} className="flex flex-col gap-1">
           <legend className="pb-1 text-sm font-medium text-(--color-text)">
-            {group.deckName} · {group.subjectName}
+            {group.subjectName} · {group.deckName}
           </legend>
           <div className="flex flex-col divide-y divide-(--color-surface-elevated)">
             {group.configs.map((config) => {
@@ -70,7 +69,7 @@ export default function ConfigurationPickList({
                   </div>
                   {rowError?.configId === config.id && (
                     <p role="alert" className="pl-7 text-sm text-(--color-danger)">
-                      {rowError.message}
+                      {rowError.sentence}
                     </p>
                   )}
                 </div>

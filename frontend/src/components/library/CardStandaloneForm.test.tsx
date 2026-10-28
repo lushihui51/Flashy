@@ -111,8 +111,8 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // ADR 024: returnTo rides the URL, not state — decoded via URLSearchParams, not
-    // compared as an encoded string literal.
+    // returnTo rides the URL, not state — decoded via URLSearchParams, not compared as
+    // an encoded string literal.
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
     const locationEl = screen.getByTestId('location');
@@ -128,12 +128,12 @@ describe('CardStandaloneForm — create mode', () => {
     expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
   });
 
-  it('Save is disabled until a deck is chosen', async () => {
+  it('Create is disabled until a deck is chosen', async () => {
     mockAll();
     renderForm('/cards/new');
 
     await screen.findByPlaceholderText('Deck');
-    expect(screen.getByRole('button', { name: 'Add card' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
   it('picking a deck loads its fields; typing values and saving creates the card and navigates to the deck', async () => {
@@ -157,7 +157,7 @@ describe('CardStandaloneForm — create mode', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
     await user.type(screen.getByRole('textbox', { name: 'Back' }), 'Hello');
-    await user.click(screen.getByRole('button', { name: 'Add card' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
@@ -175,7 +175,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(await screen.findByRole('option', { name: 'Spanish Vocab' }));
 
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Change deck' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(await screen.findByRole('textbox', { name: 'Word' })).toHaveValue('');
   });

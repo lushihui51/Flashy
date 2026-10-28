@@ -8,12 +8,12 @@ type RatingChipProps = {
   onSelect: (rating: number) => void;
 };
 
-/** One answer field's rating control (MD-1, MD-2, MD-5): an outlined "Rate" chip
- * until rated, then filled with its tier's color and label — tapping either opens a
- * non-blocking Popover of the four options so rating several fields in a row never
- * blocks on a modal. Each chip owns its own open state; Radix dismisses a Popover on
- * an outside interaction by default, so tapping a different chip closes this one
- * without any shared coordination. */
+/** One answer field's rating control: an outlined "Rate" chip until rated, then filled
+ * with its tier's color and label — tapping either opens a non-blocking Popover of the
+ * four options so rating several fields in a row never blocks on a modal. Each chip
+ * owns its own open state; Radix dismisses a Popover on an outside interaction by
+ * default, so tapping a different chip closes this one without any shared
+ * coordination. */
 export default function RatingChip({ fieldName, rating, onSelect }: RatingChipProps) {
   const [open, setOpen] = useState(false);
   const tier = RATING_TIERS.find((t) => t.rating === rating);

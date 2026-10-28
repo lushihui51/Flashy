@@ -19,7 +19,7 @@ function stateWithFields(names: string[]): DeckEditorState {
 }
 
 // A "saved" field carries an `id` — the only thing that distinguishes staged removal
-// (Phase 7.5) from an outright delete of a brand-new one.
+// from an outright delete of a brand-new one.
 function stateWithSavedFields(names: string[]): DeckEditorState {
   let state = initialDeckEditorState('subject-1');
   state = {

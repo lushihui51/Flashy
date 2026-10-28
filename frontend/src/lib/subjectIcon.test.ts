@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Atom, Brain, BookOpen } from 'lucide-react';
-import { subjectIcon } from 'src/lib/subjectIcon';
+import { SUBJECT_ICONS, subjectIcon, subjectIconName } from 'src/lib/subjectIcon';
 
 describe('subjectIcon', () => {
   it('resolves a known identifier to its icon component', () => {
@@ -26,5 +26,22 @@ describe('subjectIcon', () => {
 
   it('falls back to BookOpen for the pre-rewrite emoji default', () => {
     expect(subjectIcon('📚')).toBe(BookOpen);
+  });
+
+  it('lists every picture of the set once, each resolving to its own icon', () => {
+    const keys = SUBJECT_ICONS.map((entry) => entry.key);
+    expect(keys).toHaveLength(26);
+    expect(new Set(keys).size).toBe(26);
+    expect(new Set(keys.map((key) => subjectIcon(key))).size).toBe(26);
+  });
+
+  it('names the current picture, and the default for a blank or unknown key', () => {
+    expect(subjectIconName('dna')).toBe('DNA');
+    expect(subjectIconName('Flask-Conical')).toBe('Flask');
+    expect(subjectIconName('book-open')).toBe('Open book');
+    expect(subjectIconName('')).toBe('Open book');
+    expect(subjectIconName(null)).toBe('Open book');
+    expect(subjectIconName(undefined)).toBe('Open book');
+    expect(subjectIconName('not-a-real-icon')).toBe('Open book');
   });
 });

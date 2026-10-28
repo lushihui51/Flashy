@@ -17,6 +17,7 @@ from app.models.deck_practice_config import (
     DeckPracticeConfigSummary,
     DeckPracticeConfigUpdate,
 )
+from app.refusals import Refusal
 from app.services.deck_practice_config import (
     update_deck_practice_config,
     validate_deck_practice_config,
@@ -52,6 +53,8 @@ def create_deck_practice_config(
             payload.answer_pool_counts,
         )
         return db_create_deck_practice_config(db, payload.model_dump())
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -101,6 +104,8 @@ def patch_deck_practice_config(
     try:
         validate_deck_practice_config(db, config.deck_id, **merged)
         return update_deck_practice_config(db, config, data)
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

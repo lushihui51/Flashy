@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig, DeckPracticeConfigSummary
 from app.models.subject import Subject
+from app.refusals import Refusal
 
 
 def db_stage_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
@@ -27,8 +28,9 @@ def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfi
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError(
-            "A configuration with this name already exists for this deck"
+        raise Refusal(
+            "configuration_name_taken",
+            "deck_practice_config (deck_id, name) already exists",
         ) from None
     db.refresh(config)
     return config
@@ -113,8 +115,9 @@ def db_update_deck_practice_config(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError(
-            "A configuration with this name already exists for this deck"
+        raise Refusal(
+            "configuration_name_taken",
+            "deck_practice_config (deck_id, name) already exists",
         ) from None
     db.refresh(config)
     return config
@@ -128,7 +131,7 @@ def db_delete_deck_practice_config(db: Session, config: DeckPracticeConfig) -> N
 def db_read_config_ids_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """Every configuration of these decks — ADR 051 step 6's first half."""
+    """Every configuration of these decks, for the deletion closure."""
     if not deck_ids:
         return set()
     return set(
@@ -141,8 +144,8 @@ def db_read_config_ids_for_decks(
 def db_read_config_ids_naming_fields(
     db: Session, field_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """Every configuration whose prompt/answer/pool field arrays overlap field_ids —
-    ADR 051 step 6's second half. A config naming a field in two of its four arrays
+    """Every configuration whose prompt/answer/pool field arrays overlap field_ids, for
+    the deletion closure. A config naming a field in two of its four arrays
     (rare, but not disallowed) is still counted once, since this is a set of ids, not
     a count of matches."""
     if not field_ids:
@@ -160,7 +163,7 @@ def db_read_config_ids_naming_fields(
 
 
 def db_stage_delete_deck_practice_configs(db: Session, ids: Collection[uuid.UUID]) -> None:
-    """Bulk delete by id, no commit — apply_deletion (ADR 051) owns the transaction."""
+    """Bulk delete by id, no commit — apply_deletion owns the transaction."""
     if not ids:
         return
     db.execute(delete(DeckPracticeConfig).where(col(DeckPracticeConfig.id).in_(ids)))
