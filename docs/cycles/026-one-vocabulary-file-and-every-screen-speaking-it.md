@@ -592,7 +592,7 @@ Code worth reading: `usePageTitle` in `frontend/src/lib/pageTitle.ts`. It uses t
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -631,7 +631,18 @@ The "A deck counted" row must stay as it is, `field_names` in its Code column in
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `grep -c '^| '` prints `193`.
+- Each of the five `grep -cF` prints `1`.
+
+`git diff` on `docs/vocabulary.md` shows two changed rows and two added rows, and nothing else. "A deck counted" is unchanged. The new deck row sits directly below it, and the new card row sits directly above "A card whose first field is blank". The four rows read exactly as Details gives them.
+
+The new code names were checked against the code. `selectedCount` is a local in `PracticeCreatePage`. `RatingChip`'s `aria-label` reads `` `${fieldName}: ${tier.label}` `` once rated and `` `Rate ${fieldName}` `` before. `cardTitle` is a function in `RunBreakdown.tsx`. `DeckRow` does not exist yet: T9 creates it.
+
+Departures: none.
+
+To judge this task, read the four rows in `docs/vocabulary.md`. No code changed, so no frontend check ran.
 
 ### T9 — One row for a deck in both lists
 

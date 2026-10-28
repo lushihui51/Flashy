@@ -57,6 +57,7 @@ This file gives the word for every concept Flashy shows and every act on it, the
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
 | Deck | Choosing a deck | "Deck"; "New deck…" as the last row | New card; Edit card; New configuration | `PickerCombobox`; `createLabel`; `deck_id` |
 | Deck | A deck counted | "N cards"; "N fields" | Library rows; subject page rows | `card_count`; `field_names` |
+| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |
 | Deck | The Cards tab's toolbar label | "N cards · N fields" | Deck page | `cards`; `field_defs` |
 | Deck | The Configurations tab's toolbar label | "N configurations"; "Configurations" while the list loads | Deck page | `readDeckPracticeConfigs` |
@@ -79,6 +80,7 @@ This file gives the word for every concept Flashy shows and every act on it, the
 | Card | The page where a card is made | "New card" | Its heading | `/cards/new`; `CardStandaloneForm` |
 | Card | The page where a card is changed | "Edit card" | Its heading | `/cards/:cardId/edit`; `CardStandaloneForm` |
 | Card | A blank value | "empty" | Deck page's Cards tab | `CardTable` |
+| Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
 | Card | Deleting a card | "Delete card" | Edit card | `deleteCard`; `/api/cards/{card_id}` |
 | Configuration | A deck's prompt and answer layout | "deck configuration"; "configuration" in deck context | Deck page; New practice; a practice's row and page | `deck_practice_config`; `DeckPracticeConfig`; `DeckPracticeConfigSummary`; `/api/deck_practice_configs`; `configId`; `config` |
@@ -100,7 +102,7 @@ This file gives the word for every concept Flashy shows and every act on it, the
 | Practice | Adding a practice to the list in view | "Add practice" | Practice page's header | `PracticeOverviewPage` |
 | Practice | The page where a practice is made | "New practice" | Its heading | `/practice/new`; `PracticeCreatePage`; `PracticeRunCreate` |
 | Practice | A new practice's name | the moment the page opened, as "Aug 24, 2026, 9:00 AM" | New practice | `name`; `formatDateTime` |
-| Practice | The chosen configurations | "Selected"; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids` |
+| Practice | The chosen configurations | "Selected"; "N selected", beside Create; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids`; `selectedCount` |
 | Practice | A practice's own page | its name, its date and time beneath | A practice's page | `/practice/:practiceSessionId`; `PracticeDetailsPage` |
 | Practice | A practice's state | "Practice status", spoken; "All"; "Active"; "Completed" | Practice page | `RunStatus`; `status`; `StatusTab` |
 | Practice | A practice that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page | `active` |
@@ -112,7 +114,7 @@ This file gives the word for every concept Flashy shows and every act on it, the
 | Run | The current card's two zones | "Prompt"; "Answer" | Run page | `CurrentRunCard`; `prompts`; `answers` |
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving on and ending | "Next card"; "Done" | Run page | `current_card` |
-| Run | Rating an answer | "Rate"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log` |
+| Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
 | Run | A missing rating | "Unrated" | Summary | `rating` |
 | Run | One go at a card | "attempt"; "Attempt N of M · Passed" | Summary | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page; summary | `passed` |
