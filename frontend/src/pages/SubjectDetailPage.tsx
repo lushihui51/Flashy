@@ -3,21 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
+import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
-import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { isNotFound } from 'src/api/unwrap';
-
-/** First two field names, `+N` for the rest — computed by count, not measured text,
- * so it's deterministic regardless of how the names actually render. The row carries
- * no total field count — that lives in the deck page's Cards tab toolbar. */
-function formatFieldNames(names: string[]): string {
-  if (names.length <= 2) return names.join(', ');
-  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
-}
 
 export default function SubjectDetailPage() {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -112,14 +104,7 @@ export default function SubjectDetailPage() {
           <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
             {(decks ?? []).map((deck) => (
               <li key={deck.id}>
-                <ListRow
-                  title={deck.name}
-                  subtitle={
-                    deck.field_names.length > 0 ? formatFieldNames(deck.field_names) : undefined
-                  }
-                  meta={pluralize(deck.card_count, 'card')}
-                  to={`/decks/${deck.id}`}
-                />
+                <DeckRow deck={deck} />
               </li>
             ))}
           </ul>

@@ -1,7 +1,8 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
+import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
@@ -126,17 +127,7 @@ export default function LibraryPage() {
             <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
-                  <Link
-                    to={`/decks/${deck.id}`}
-                    className="flex min-h-14 flex-col justify-center py-2"
-                  >
-                    <span className="font-medium text-(--color-text)">{deck.name}</span>
-                    {subjectNameById.get(deck.subject_id) && (
-                      <span className="text-sm text-(--color-text-muted)">
-                        {subjectNameById.get(deck.subject_id)}
-                      </span>
-                    )}
-                  </Link>
+                  <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />
                 </li>
               ))}
             </ul>

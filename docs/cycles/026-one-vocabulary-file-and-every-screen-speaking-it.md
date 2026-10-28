@@ -648,7 +648,7 @@ To judge this task, read the four rows in `docs/vocabulary.md`. No code changed,
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -674,7 +674,7 @@ The interface:
 
 ```tsx
 // frontend/src/components/library/DeckRow.tsx
-type DeckSummary = components['schemas']['DeckSummary'];
+type DeckSummary = components["schemas"]["DeckSummary"];
 
 type DeckRowProps = {
   deck: DeckSummary;
@@ -683,7 +683,10 @@ type DeckRowProps = {
   subjectName?: string;
 };
 
-export default function DeckRow({ deck, subjectName }: DeckRowProps): JSX.Element;
+export default function DeckRow({
+  deck,
+  subjectName,
+}: DeckRowProps): JSX.Element;
 ```
 
 - `DeckRow` must render a `ListRow` from `frontend/src/components/ui/ListRow.tsx` with the deck's name as `title`, "N cards · N fields" as `subtitle` preceded by "<subjectName> · " when `subjectName` is given, no `meta`, and `to` set to `/decks/<deck.id>`.
@@ -708,7 +711,28 @@ export default function DeckRow({ deck, subjectName }: DeckRowProps): JSX.Elemen
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named run prints `Test Files  3 passed (3)` and `Tests  39 passed (39)`. `DeckRow.test.tsx` passes its five named cases: "shows the name over its counts", "opens its second line with the subject's name when given", "counts one card and one field in the singular", "never shows a field's name" and "links to the deck's page". In `SubjectDetailPage.test.tsx`, the old describe is now "deck row subtitle (card and field counts)". It holds four cases: "0 cards · 1 field"; "1 card · 2 fields"; "2 cards · 4 fields", with neither "Front, Back" nor any "Front" shown; and a row whose whole text is "Algebra6 cards · 2 fields", with no "6 cards" at its right end. In `LibraryPage.test.tsx`, the Decks tab test finds "Math · 3 cards · 2 fields" and "Bio · 0 cards · 1 field".
+- `grep -rn "formatFieldNames" frontend/src` prints nothing (exit 1). `grep -rln "DeckRow" frontend/src/pages` prints `frontend/src/pages/SubjectDetailPage.tsx` and `frontend/src/pages/LibraryPage.tsx`.
+- Headless Chromium at 390×844 read each row's two lines, what follows its text, and its height:
+  - The library's Decks tab: "T6 Rerun" over "T6 check · 2 cards · 2 fields"; "Commands" over "CompTIA A+ · 54 cards · 12 fields"; "Ports" over "CompTIA A+ · 21 cards · 4 fields"; "Reformer Repertoire" over "Stott Pilates · 0 cards · 5 fields".
+  - Each subject's page: "T6 Rerun" over "2 cards · 2 fields" on T6 check; "Commands" over "54 cards · 12 fields" and "Ports" over "21 cards · 4 fields" on CompTIA A+; "Reformer Repertoire" over "0 cards · 5 fields" on Stott Pilates. The other seven subjects have no decks.
+  - In both lists, the only element after a row's text is the chevron's `svg`, and every row is 64px tall.
+  - Clicking the first row of the library's Decks tab opened `/decks/201021c5-…`, headed "T6 Rerun". Clicking the first row on T6 check's page opened the same deck.
+
+Over the whole frontend, `npx vitest run` prints `550 passed`, and `npm run lint` and `npm run build` exit 0.
+
+Departures:
+
+- The browser check ran against this worktree's own Vite server on port 5174, as T7's did, since the server on 5173 runs from the main checkout on `main`. It used the backend on port 8000. The server was stopped after the check. Nothing was written to the dev database.
+- `LibraryPage.test.tsx` gains one case beyond the Done when: "a deck row shows its counts alone while its subject's name is unknown". The subjects request never answers, and the Decks tab's rows read "3 cards · 2 fields" and "0 cards · 1 field". The file's two deck fixtures now carry field names, so the counts are not all zero.
+- `DeckRow.test.tsx`'s fixture carries `last_activity_at`, which `DeckSummary` requires, so `npm run build` type-checks the test.
+- `DeckRow` has an interface comment: "A deck in a list of decks: its name over its card and field counts, linking to the deck's page." The `subjectName` member comment is the one Details gives.
+- Prettier was run over the lines this task wrote. `SubjectDetailPage.tsx` and `SubjectDetailPage.test.tsx` already had unformatted lines at HEAD. They are left as they were.
+- The cycle file already held an uncommitted hunk when this task began, not written by this task. It is a Prettier reflow of the interface block in this task's Details, to double quotes and an 80-column width. `.claude/settings.json`'s PostToolUse hook runs Prettier on every file an agent edits, under the root `.prettierrc`, so any edit of this file brings the reflow back. On the engineer's explicit order, which overrides the cycle rule "Until the cycle's merge, the builder writes only a task's Status and Debrief" for this one act, the hunk is in this task's commit. It changes no word. The rule stays as written.
+
+Nothing in the code needs reading beyond `DeckRow.tsx`.
 
 ### T10 — A summary's card by its value alone, and the cycle's judgement
 

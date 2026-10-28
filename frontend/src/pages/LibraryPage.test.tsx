@@ -40,8 +40,22 @@ const subjects = [
   },
 ];
 const decks = [
-  { id: 'd1', subject_id: 's1', name: 'Algebra', created_at: '', card_count: 3, field_names: [] },
-  { id: 'd2', subject_id: 's2', name: 'Cells', created_at: '', card_count: 0, field_names: [] },
+  {
+    id: 'd1',
+    subject_id: 's1',
+    name: 'Algebra',
+    created_at: '',
+    card_count: 3,
+    field_names: ['Term', 'Definition'],
+  },
+  {
+    id: 'd2',
+    subject_id: 's2',
+    name: 'Cells',
+    created_at: '',
+    card_count: 0,
+    field_names: ['Front'],
+  },
 ];
 
 function mockLibrary({
@@ -81,6 +95,19 @@ describe('LibraryPage', () => {
 
     expect(await screen.findByText('Algebra')).toBeInTheDocument();
     expect(screen.getByText('Cells')).toBeInTheDocument();
+    expect(screen.getByText('Math · 3 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
+  });
+
+  it("a deck row shows its counts alone while its subject's name is unknown", async () => {
+    server.use(
+      http.get(`${BASE}/api/subjects`, () => new Promise(() => {})),
+      http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
+    );
+    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+
+    expect(await screen.findByText('3 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.getByText('0 cards · 1 field')).toBeInTheDocument();
   });
 
   it('opens straight onto the Decks tab when ?tab=decks is in the URL', async () => {

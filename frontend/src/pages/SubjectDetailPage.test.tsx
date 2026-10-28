@@ -159,8 +159,8 @@ describe('SubjectDetailPage', () => {
     });
   });
 
-  describe('deck row subtitle (field names) and meta (card count)', () => {
-    it('meta reads "0 cards" for a deck with zero cards; subtitle is just the field names', async () => {
+  describe('deck row subtitle (card and field counts)', () => {
+    it('reads "0 cards · 1 field" for a deck with zero cards and one field', async () => {
       mockSubject({
         decksData: [
           { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, field_names: ['Front'] },
@@ -168,41 +168,28 @@ describe('SubjectDetailPage', () => {
       });
       renderAtSubjectRoute();
 
-      expect(await screen.findByText('0 cards')).toBeInTheDocument();
-      expect(screen.getByText('Front')).toBeInTheDocument();
+      expect(await screen.findByText('0 cards · 1 field')).toBeInTheDocument();
     });
 
-    it('meta reads "1 card" (singular) for a deck with one card', async () => {
-      mockSubject({
-        decksData: [
-          { id: 'd1', subject_id: 's1', name: 'Solo', created_at: '', card_count: 1, field_names: [] },
-        ],
-      });
-      renderAtSubjectRoute();
-
-      expect(await screen.findByText('1 card')).toBeInTheDocument();
-    });
-
-    it('subtitle shows all field names with no +N when there are two or fewer', async () => {
+    it('reads "1 card · 2 fields" (singular card) for a deck with one card', async () => {
       mockSubject({
         decksData: [
           {
             id: 'd1',
             subject_id: 's1',
-            name: 'Algebra',
+            name: 'Solo',
             created_at: '',
-            card_count: 2,
+            card_count: 1,
             field_names: ['Front', 'Back'],
           },
         ],
       });
       renderAtSubjectRoute();
 
-      expect(await screen.findByText('Front, Back')).toBeInTheDocument();
-      expect(await screen.findByText('2 cards')).toBeInTheDocument();
+      expect(await screen.findByText('1 card · 2 fields')).toBeInTheDocument();
     });
 
-    it('subtitle truncates field names to two plus a correct +N', async () => {
+    it('counts the fields and never shows their names', async () => {
       mockSubject({
         decksData: [
           {
@@ -217,7 +204,18 @@ describe('SubjectDetailPage', () => {
       });
       renderAtSubjectRoute();
 
-      expect(await screen.findByText('Front, Back +2')).toBeInTheDocument();
+      expect(await screen.findByText('2 cards · 4 fields')).toBeInTheDocument();
+      expect(screen.queryByText('Front, Back')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
+    });
+
+    it("carries neither the subject's name nor a count at its right end", async () => {
+      mockSubject();
+      renderAtSubjectRoute();
+
+      const row = await screen.findByRole('link', { name: /Algebra/ });
+      expect(row).toHaveTextContent(/^Algebra6 cards · 2 fields$/);
+      expect(screen.queryByText('6 cards')).not.toBeInTheDocument();
     });
   });
 
