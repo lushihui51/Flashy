@@ -7,7 +7,7 @@ type ConfigurationPickListProps = {
   selectedIds: ReadonlySet<string>;
   /** The one failure that names a specific row (`stale_config`) — every other error
    * renders elsewhere on the page. */
-  rowError: { configId: string; message: string } | null;
+  rowError: { configId: string; sentence: string } | null;
   /** One tap on a row's checkbox. `group` is the row's deck group, so the page can
    * untick that deck's other configuration. */
   onToggle: (group: ConfigurationGroup, configId: string) => void;
@@ -38,7 +38,7 @@ export default function ConfigurationPickList({
       {groups.map((group) => (
         <fieldset key={group.deckId} className="flex flex-col gap-1">
           <legend className="pb-1 text-sm font-medium text-(--color-text)">
-            {group.deckName} · {group.subjectName}
+            {group.subjectName} · {group.deckName}
           </legend>
           <div className="flex flex-col divide-y divide-(--color-surface-elevated)">
             {group.configs.map((config) => {
@@ -69,7 +69,7 @@ export default function ConfigurationPickList({
                   </div>
                   {rowError?.configId === config.id && (
                     <p role="alert" className="pl-7 text-sm text-(--color-danger)">
-                      {rowError.message}
+                      {rowError.sentence}
                     </p>
                   )}
                 </div>

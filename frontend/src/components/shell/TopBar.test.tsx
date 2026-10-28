@@ -24,7 +24,7 @@ function renderTopBar(overrides: Partial<Parameters<typeof TopBar>[0]> = {}) {
 }
 
 describe('TopBar', () => {
-  it('renders the hamburger, logo, Create, and a signed-out Log in button', () => {
+  it('renders the hamburger, logo, New, and a signed-out Log in button', () => {
     renderTopBar();
 
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveAttribute(
@@ -32,7 +32,7 @@ describe('TopBar', () => {
       'false',
     );
     expect(screen.getByRole('link', { name: /flashy home/i })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
@@ -69,7 +69,7 @@ describe('TopBar', () => {
     );
   });
 
-  it('calls onCreateClick, and does not itself navigate, when Create is clicked', async () => {
+  it('calls onCreateClick, and does not itself navigate, when New is clicked', async () => {
     const user = userEvent.setup();
     const onCreateClick = vi.fn();
     renderWithRouter(
@@ -82,9 +82,9 @@ describe('TopBar', () => {
       ['/practice'],
     );
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await user.click(screen.getByRole('button', { name: 'New' }));
 
     expect(onCreateClick).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
   });
 });

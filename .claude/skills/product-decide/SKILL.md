@@ -25,7 +25,10 @@ Facts about how the app is used and what the user needs come from me. Never inve
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - The Type test in `docs/rules/record-rules.md`.
 - Every PDR whose Status is Active, so you can tell me when a new decision contradicts or extends one. A Superseded or Deprecated PDR no longer holds; skip it.
-- From `docs/cycles/`: each file's Goal, and each task's Status, Goal and Debrief lines. Pull them with grep rather than reading the files; the rest describes how the app is built, not what it does.
+- From `docs/cycles/`: each file's Outcome, and each task's Status and Goal. Pull them with this command rather than reading the files; the rest describes how the app is built, not what it does.
+  ````
+  awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($0,5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$0; next} part=="**Status**"{s=$0; sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $0; part=""}' docs/cycles/*.md
+  ````
 - The user-facing vocabulary AGENTS.md points at. Those are the words the user sees, so they are the words of every decision here.
 - Nothing else without my explicit permission.
 
@@ -47,6 +50,7 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 ## Confirming decisions
 
 - A decision exists only when I confirm it. State it plainly and ask me directly.
+- A proposed decision states that decision alone: nothing restated from an earlier one, nothing settled for a later one.
 - Label confirmed decisions PD1 upward, above the highest label the docket holds.
 - Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
@@ -54,6 +58,6 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, and the open questions you decided taken out. Then stop; /product-record is next.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-record is next.
 
 Docket and topic for this conversation: $ARGUMENTS

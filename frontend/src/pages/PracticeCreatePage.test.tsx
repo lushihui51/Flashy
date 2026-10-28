@@ -193,8 +193,8 @@ describe('PracticeCreatePage', () => {
     mockLibrary();
     renderCreate();
 
-    const alphaGroup = await screen.findByRole('group', { name: 'Shared Deck Name · Alpha' });
-    const betaGroup = screen.getByRole('group', { name: 'Shared Deck Name · Beta' });
+    const alphaGroup = await screen.findByRole('group', { name: 'Alpha · Shared Deck Name' });
+    const betaGroup = screen.getByRole('group', { name: 'Beta · Shared Deck Name' });
 
     expect(within(alphaGroup).getByText('Recall')).toBeInTheDocument();
     expect(within(alphaGroup).getByText('Recognition')).toBeInTheDocument();
@@ -221,7 +221,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
-  it('the selection rides the URL as repeated config params, in tick order (ADR 061)', async () => {
+  it('the selection rides the URL as repeated config params, in tick order', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -234,7 +234,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c1', 'c3']);
   });
 
-  it('mounting with config params shows them ticked and counted (ADR 061)', async () => {
+  it('mounting with config params shows them ticked and counted', async () => {
     mockLibrary();
     renderCreate('/practice/new?config=c1&config=c3');
 
@@ -250,7 +250,7 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
     const create = screen.getByRole('button', { name: 'Create' });
-    const selectHint = 'Select at least one configuration to practise.';
+    const selectHint = 'Select at least one configuration to practice.';
     const nameHint = 'Give this practice a name to create it.';
 
     expect(create).toBeDisabled();
@@ -283,7 +283,7 @@ describe('PracticeCreatePage', () => {
     );
   });
 
-  it('the name is prefilled with no name param, and an edit writes the name param (ADR 061)', async () => {
+  it('the name is prefilled with no name param, and an edit writes the name param', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -300,7 +300,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.get('name')).toBe('Exam cram');
   });
 
-  it('the typed name survives the New configuration round trip (ADR 061)', async () => {
+  it('the typed name survives the New configuration… round trip', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -309,7 +309,7 @@ describe('PracticeCreatePage', () => {
     const nameInput = screen.getByLabelText('Name');
     await user.clear(nameInput);
     await user.type(nameInput, 'Exam cram');
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     await user.click(screen.getByRole('button', { name: 'Finish new config' }));
 
     expect(await screen.findByLabelText('Name')).toHaveValue('Exam cram');
@@ -477,7 +477,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
     expect(
       within(screen.getByRole('region', { name: 'Selected' })).getByText(
-        'Select at least one configuration to practise.',
+        'Select at least one configuration to practice.',
       ),
     ).toBeInTheDocument();
   });
@@ -538,7 +538,7 @@ describe('PracticeCreatePage', () => {
     mockLibrary();
     server.use(
       http.post(`${BASE}/api/practice_runs`, () =>
-        HttpResponse.json({ detail: 'Something went wrong' }, { status: 400 }),
+        HttpResponse.json({ detail: 'boom' }, { status: 400 }),
       ),
     );
     const user = userEvent.setup();
@@ -549,18 +549,18 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Something went wrong');
+    expect(alert).toHaveTextContent('Something went wrong.');
     expect(precedes(alert, screen.getByRole('checkbox', { name: 'Recall' }))).toBe(true);
   });
 
-  it('no configurations at all shows the true-empty state with a New configuration button', async () => {
+  it('no configurations at all shows the true-empty state with a New configuration… button', async () => {
     mockLibrary(() => []);
     renderCreate();
 
-    expect(await screen.findByText('No deck configurations yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No configurations yet.')).toBeInTheDocument();
     // The always-visible add control above the list is the only one; the empty
     // state is its text alone. getByRole throws on a second match.
-    expect(screen.getByRole('button', { name: 'New configuration' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New configuration…' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
   });
 
@@ -572,7 +572,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
-  it('Clear filters drops only the filters, keeping the selection (ADR 061)', async () => {
+  it('Clear filters drops only the filters, keeping the selection', async () => {
     mockLibrary((query) => (query.get('subject_id') === 's1' ? [] : ALL_CONFIGS));
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&config=c3');
@@ -624,9 +624,9 @@ describe('PracticeCreatePage', () => {
     );
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent('Recall');
-    expect(items[0]).toHaveTextContent('Shared Deck Name · Alpha');
+    expect(items[0]).toHaveTextContent('Alpha · Shared Deck Name');
     expect(items[1]).toHaveTextContent('Basics');
-    expect(items[1]).toHaveTextContent('Shared Deck Name · Beta');
+    expect(items[1]).toHaveTextContent('Beta · Shared Deck Name');
   });
 
   it('Remove unticks the configuration, drops its row, and drops it from the URL', async () => {
@@ -696,7 +696,7 @@ describe('PracticeCreatePage', () => {
 
     expect(
       within(screen.getByRole('region', { name: 'Selected' })).getByText(
-        'Select at least one configuration to practise.',
+        'Select at least one configuration to practice.',
       ),
     ).toBeInTheDocument();
   });
@@ -713,13 +713,13 @@ describe('PracticeCreatePage', () => {
     );
   });
 
-  it('New configuration carries the current filters, and auto-selects the config it returns', async () => {
+  it('New configuration… carries the current filters, and auto-selects the config it returns', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&deck=d1');
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
 
     // Decoded via URLSearchParams, not compared as an encoded string literal.
     const [path, search] = (screen.getByTestId('new-config-location').textContent ?? '').split('?');
@@ -737,7 +737,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c2']);
   });
 
-  it('the New configuration round trip keeps the draft, and the returned config replaces its deck’s tick (ADR 061)', async () => {
+  it('the New configuration… round trip keeps the draft, and the returned config replaces its deck’s tick', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -745,7 +745,7 @@ describe('PracticeCreatePage', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1
     await user.click(screen.getByRole('checkbox', { name: 'Basics' })); // deck d2
-    await user.click(screen.getByRole('button', { name: 'New configuration' }));
+    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
 
     // The draft left with the returnTo, so it comes back with it.
     const params = new URLSearchParams(
@@ -765,7 +765,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
   });
 
-  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6, ADR 061)', async () => {
+  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&config=c1&name=Exam');
@@ -790,7 +790,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().pathname).toBe('/practice/new');
   });
 
-  it('Cancel returns to the practice list with the overview’s own params and none of the draft (ADR 061)', async () => {
+  it('Cancel returns to the practice list with the overview’s own params and none of the draft', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&status=completed&config=c1');

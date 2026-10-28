@@ -27,6 +27,8 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -202,7 +204,8 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                 other.key !== field.key &&
                 other.name.trim().toLowerCase() === trimmed.toLowerCase(),
             );
-          const error = trimmed === '' ? 'Name is required' : isDuplicate ? 'Duplicate name' : null;
+          const error =
+            trimmed === '' ? 'Name is required.' : isDuplicate ? 'Duplicate name' : null;
 
           return (
             <li key={field.key}>
@@ -301,6 +304,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
     queryFn: () => readSubject(subjectId!),
     enabled: mode === 'edit' && !!subjectId,
   });
+  usePageTitle(
+    mode === 'create' ? 'New deck' : deckQuery.data && subjectQuery.data ? 'Edit deck' : undefined,
+  );
 
   if (mode === 'edit') {
     if (deckQuery.isError) {
@@ -431,7 +437,7 @@ function DeckEditorBody({
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
-  // Create mode opened via the card form's "New deck…" round-trip → both Save and
+  // Create mode opened via the card form's "New deck…" round-trip → both Create and
   // Cancel go back to wherever that picker lives. Edit mode always returns to the
   // deck's own detail page — there's no round-trip to return to.
   const goBack = () => navigate(mode === 'edit' ? `/decks/${deckId}` : (returnTo ?? '/library'));
@@ -492,7 +498,7 @@ function DeckEditorBody({
     try {
       await (mode === 'edit' ? handleSaveEdit() : handleSaveCreate());
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSaveError(failureSentence(err, 'Deck not found.'));
     } finally {
       setSaving(false);
     }
@@ -520,7 +526,7 @@ function DeckEditorBody({
       ]);
       navigate(`/subjects/${original.subjectId}`);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSaveError(failureSentence(err, 'Deck not found.'));
       setDeleting(false);
       setConfirmDeleteOpen(false);
     }
@@ -538,7 +544,7 @@ function DeckEditorBody({
       setDeletionImpact(impact);
       setConfirmDeleteOpen(true);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+      setSaveError(failureSentence(err, 'Deck not found.'));
     } finally {
       setCheckingDeletionImpact(false);
     }
@@ -584,7 +590,7 @@ function DeckEditorBody({
             runsDeleted: impact.runs_deleted,
           });
         } catch (err) {
-          setSaveError(err instanceof Error ? err.message : 'Something went wrong.');
+          setSaveError(failureSentence(err, 'Deck not found.'));
         } finally {
           setCheckingSaveImpact(false);
         }
@@ -652,7 +658,7 @@ function DeckEditorBody({
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
                 2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
-            {savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
+            {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
           </button>
         </div>
       </div>
@@ -744,7 +750,7 @@ function DeckEditorBody({
         open={saveConfirm !== null}
         title="Save changes?"
         description={saveConfirm ? impactSummaryText(saveConfirm) : ''}
-        confirmLabel="Save changes"
+        confirmLabel="Save"
         destructive
         onConfirm={() => {
           setSaveConfirm(null);

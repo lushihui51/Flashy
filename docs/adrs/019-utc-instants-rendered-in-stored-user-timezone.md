@@ -18,14 +18,14 @@ The obvious first instinct is to make the client set the timestamps, so that wha
 
 ## Decision
 
-Timestamps are **server-stamped UTC instants**. User-facing dates are **computed in the user's stored IANA timezone at read time**. Client clocks are never trusted for anything that orders or persists.
+We will stamp every timestamp on the server as a UTC instant and compute every user-facing date in the user's stored IANA timezone at read time; client clocks are never trusted for anything that orders or persists.
 
 Concretely:
 
 - Every timestamp column stays `timestamptz`, written by the server — either `server_default=func.now()` or `utcnow()` (`app/models/base.py`). No write endpoint accepts a caller-supplied timestamp.
-- Every database connection pins its session `TimeZone` to UTC (`app/database.py`). Postgres returns a `timestamptz` in whatever zone the session is set to, which defaults to the _server's_ local zone — so without this the same instant is emitted as `...-04:00` on one deploy host and `...+00:00` on another. The instant is identical either way; pinning it keeps the API's representation deterministic and stops a host's local zone from leaking into responses.
-- `app_user.timezone` holds the user's IANA zone name (e.g. `America/Los_Angeles`), supplied by the client, which resolves it with `Intl.DateTimeFormat().resolvedOptions().timeZone`. It rides **every** request as the `X-Timezone` header, set once in the API client's `onRequest` middleware (`frontend/src/api/client.ts`) so no call site can forget it, and is reconciled in `get_current_app_user` (`app/dependencies.py`). Sending it per-request rather than once at sign-in means a user who travels starts rendering in their new zone without any manual step. A missing or unresolvable header leaves the stored zone alone — it is never a reason to downgrade a known-good value back to UTC. Values are validated against the tz database before being stored (`app/services/timezone.py`).
-- Every user-facing date — display strings, "today", day-bucketing, streaks, any calendar-day boundary — is computed in that stored zone. Formatting an instant without an explicit zone is a bug, because it silently picks up whichever zone the formatting process happens to sit in. On the frontend this is enforced, not merely documented: `frontend/src/lib/datetime.ts` is the only module allowed to touch `Intl.DateTimeFormat` or a `toLocale*String` method, and an ESLint `no-restricted-syntax` rule turns every other use into an error.
+- Every database connection pins its session `TimeZone` to UTC (`app/database.py`). Postgres returns a `timestamptz` in whatever zone the session is set to, which defaults to the _server's_ local zone — so without this the same instant is emitted with a different offset on each deploy host. The instant is identical either way; pinning it keeps the API's representation deterministic and stops a host's local zone from leaking into responses.
+- `app_user.timezone` holds the user's IANA zone name, supplied by the client, which resolves it with `Intl.DateTimeFormat().resolvedOptions().timeZone`. It rides **every** request as the `X-Timezone` header, set once in the API client's `onRequest` middleware (`frontend/src/api/client.ts`) so no call site can forget it, and is reconciled in `get_current_app_user` (`app/dependencies.py`). Sending it per-request rather than once at sign-in means a user who travels starts rendering in their new zone without any manual step. A missing or unresolvable header leaves the stored zone alone — it is never a reason to downgrade a known-good value back to UTC. Values are validated against the tz database before being stored (`app/services/timezone.py`).
+- Every user-facing date, any calendar-day boundary included, is computed in that stored zone. Formatting an instant without an explicit zone is a bug, because it silently picks up whichever zone the formatting process happens to sit in. On the frontend this is enforced, not merely documented: `frontend/src/lib/datetime.ts` is the only module allowed to touch `Intl.DateTimeFormat` or a `toLocale*String` method, and an ESLint `no-restricted-syntax` rule turns every other use into an error.
 - Because the zone is a _rendering_ input, it is never consulted when writing, ordering, or comparing instants. Changing a user's zone changes what they see, never what is stored.
 
 The sanctioned escape hatch is **offline capture**, and only that. If practice is ever done offline and synced later, the client's timestamp is the truth and the server's sync time is a lie — at which point a client-supplied `reviewed_at` on the rating endpoint alone becomes correct, sanity-clamped server-side (not in the future beyond a small skew tolerance, not before the owning session's `created_at`). That is additive and confined to the one table where it pays for itself; it is deliberately not built until offline practice is actually on the roadmap.
@@ -34,7 +34,7 @@ The sanctioned escape hatch is **offline capture**, and only that. If practice i
 
 ### Naive `timestamp` columns holding the client's local wall clock
 
-Rejected flatly. This is the only shape that literally stores a date "in the user's timezone", and it costs the ordering guarantee the mastery design leans on. During a DST fall-back the local wall clock repeats an hour: two reviews an hour apart both store `01:30`, and `ORDER BY reviewed_at` is no longer chronological. Replaying an append-only `review_log` through `MasteryStrategy` in the wrong order yields a different, silently wrong mastery value, with no way to repair it. It would also mean migrating every timestamp column, deleting every `server_default=now()`, and adding a client timestamp to every create/update endpoint — a large, irreversible change to buy a property that read-time rendering already provides.
+Rejected flatly. This is the only shape that literally stores a date "in the user's timezone", and it costs the ordering guarantee the mastery design leans on. During a DST fall-back the local wall clock repeats an hour, so two reviews an hour apart can store the same time, and `ORDER BY reviewed_at` is no longer chronological. Replaying an append-only `review_log` through `MasteryStrategy` in the wrong order yields a different, silently wrong mastery value, with no way to repair it. It would also mean migrating every timestamp column, deleting every `server_default=now()`, and adding a client timestamp to every create/update endpoint — a large, irreversible change to buy a property that read-time rendering already provides.
 
 ### Keep `timestamptz`, but have the client supply the instant
 
@@ -42,20 +42,22 @@ Rejected. Relative to this decision, it adds exactly one thing: the recorded ins
 
 ### Derive the zone per request from a header or IP, rather than storing it
 
-Rejected. A zone that is re-derived per request makes historical rendering unreproducible — the same review renders on different calendar days depending on where the request came from — and it is unavailable entirely to anything that is not an inbound browser request (a scheduled job, an export, a server-rendered digest). Storing it on `app_user` gives one stable answer per user that every read path can reach.
+Rejected. A zone that is re-derived per request makes historical rendering unreproducible — the same review renders on different calendar days depending on where the request came from — and it is unavailable entirely to anything that is not an inbound browser request. Storing it on `app_user` gives one stable answer per user that every read path can reach.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Instants stay strictly ordered under DST transitions, travel, and clock skew, so `rebuild_mastery`'s replay of the append-only `review_log` is reproducible.
-- The zone is a single stored value per user, reachable by every read path — including ones with no browser attached — so display, day-bucketing, and streaks agree with each other by construction.
-- Changing a user's zone is a pure rendering change, requiring no data migration and rewriting no history.
-- The rule is being written before any date-rendering code exists, so no existing display has to be corrected.
+- The developer gets instants strictly ordered under DST transitions, travel, and clock skew, so the replay of the review log is reproducible.
+- The developer reaches one stored zone per user from every read path, browser attached or not, so every rendering of a day agrees by construction.
+- The user changes their zone as a pure rendering change; no data migrates and no history is rewritten.
+- The developer corrects no existing display, since the rule predates any date-rendering code.
 
-Costs:
+**Negative**
 
-- Every date-formatting site has to pass the zone explicitly; a bare `toLocaleDateString()` is wrong, and being wrong is invisible for any developer whose own machine sits in the user's zone. The ESLint rule above covers the frontend; the equivalent care on the backend (never formatting or bucketing without `app_user.timezone` in hand) rests on review, since there is no analogous lint for it.
-- Every request now carries an extra header, and one that changes triggers a write. The write only fires on an actual change, so the steady state is a comparison and nothing more.
-- Cross-user aggregate reporting (e.g. "reviews per day across all users") has no single correct day boundary. This is inherent to per-user local days rather than a consequence of this choice, and no such report exists today.
-- Offline practice, if built, needs the narrow client-supplied `reviewed_at` exception and its clamping logic rather than getting it for free.
+- The developer passes the zone explicitly at every date-formatting site; the ESLint rule enforces it on the frontend, and the backend's equivalent care rests on review.
+- The server reads an extra header on every request, and a changed one triggers a write; the steady state is a comparison.
+- The developer has no single correct day boundary for cross-user aggregate reporting; inherent to per-user local days, and no such report exists.
+- The developer building offline practice adds the narrow client-supplied `reviewed_at` exception and its clamping.
+
+**Neutral**

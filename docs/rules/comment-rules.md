@@ -2,7 +2,7 @@
 
 **Reader.** The reader knows the language, the libraries, and AGENTS.md. The reader has not read any ADR, PDR, or cycle file.
 
-**Scope.** The rules apply to every hand-written comment in every file of the repository. A comment's kind is set by where it sits; a comment directly above a declaration belongs to that declaration.
+**Scope.** The rules apply to every hand-written comment in every file of the repository. A comment's kind is set by where it sits; a comment directly above a declaration belongs to that declaration. A test's docstring, the comment directly above a test or a group of tests, an assertion message, and a lint rule's message are implementation comments. The name of a test or of a group of tests is not a comment.
 
 ## Interface comment
 
@@ -34,7 +34,7 @@ Written as prose, never as fixed sections to fill in.
 
 **Needed when.** The statements cannot answer "what is this for, and why is it here" on a first read, without ambiguity.
 
-**States.** What the code there does and why, in its own words. An ADR or PDR number may follow the reason, in parentheses, only when a reader about to change that code must read the record first, because the full reasoning is longer than a comment can hold.
+**States.** What the code there does and why, in its own words. An ADR or PDR number may follow the reason, in the form `(ADR NNN)` or `(PDR NNN)` and nothing more, only where a reader about to change that code must read the record first.
 
 **Never.** How the code works.
 
@@ -65,6 +65,6 @@ A fact about one member is stated at that member, not repeated in the comment of
 
 **Only what is needed.** A comment is written when, and only when, the reader needs it: without it they would have to guess, or read code they should not have to read. A comment that is needed says only what the reader needs; what the reader already has is left out.
 
-**Present state.** A comment describes the code as it is now. It never says what the code used to be, what it replaced, when it was added, or what will be done later. The test: a sentence that only makes sense to a reader who saw an earlier version does not belong. A `TODO(defer:<tag>)` marker is the one exception: it says what is deferred.
+**Present state.** A comment describes the code as it is now. It never says what the code used to be, what it replaced, when it was added, or what will be done later. The test: a sentence that only makes sense to a reader who saw an earlier version does not belong.
 
 **References.** A comment gives its reason in its own words and is complete without any reference.

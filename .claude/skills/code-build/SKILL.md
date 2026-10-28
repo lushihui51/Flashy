@@ -11,6 +11,7 @@ Files you may write in this conversation:
 
 - Code and tests at the paths the task's Files lists, comments included
 - In the cycle file, the task's Status and Debrief, and, for a path I approved outside Files, the Files and Dependencies lines that path changes
+- A design canvas, when I ask to see how something would look
 
 Give me one thing to answer per turn: one question, one path outside Files with its side effects, one Debrief to judge, or one block to confirm.
 

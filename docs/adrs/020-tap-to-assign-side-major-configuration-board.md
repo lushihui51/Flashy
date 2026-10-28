@@ -2,7 +2,7 @@
 
 ## Status
 
-Active. `@radix-ui/react-popover` is installed, for the rating chip; the rejection of a popover *picker* below stands.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -12,42 +12,46 @@ A first revision (written outside the codebase context) replaced drag with tap-t
 
 ## Decision
 
-Rebuild `FieldAssignmentBoard` as a side-major, tap-to-assign board with one layout at every viewport: a "Not used" area on top, then a Prompt side card and an Answer side card, each containing an _Always shown_ area and a _Random draw_ area whose frequency checkboxes render directly beneath the chips they govern.
+We will rebuild `FieldAssignmentBoard` as a side-major, tap-to-assign board with one layout at every viewport: a "Not used" area on top, then a Prompt side card and an Answer side card, each containing an _Always shown_ area and a _Random draw_ area whose frequency checkboxes render directly beneath the chips they govern.
 
-Every field chip is a single `<button>`; tapping it opens the existing `BottomSheet` primitive (ADR 016) listing the other four destinations, and choosing one moves the chip (`moveField` — a field lives in exactly one slot, so the four payload arrays stay pairwise disjoint by construction). All HTML5 drag-and-drop code is deleted.
+Every field chip is a single `<button>`; tapping it opens the existing `BottomSheet` primitive listing the other four destinations, and choosing one moves the chip (`moveField` — a field lives in exactly one slot, so the four payload arrays stay pairwise disjoint by construction). All HTML5 drag-and-drop code is deleted.
 
 Tap-to-assign is the board's **primary and universal** interaction. Pointer-based drag (dnd-kit) may return only as a wide-viewport enhancement layered on the same `BoardState`, never as the only path for any assignment.
 
-### Alternative considered: keep the shipped hybrid (drag + embedded select)
+## Alternatives considered
+
+### The shipped hybrid (drag plus embedded select)
 
 Rejected: it is the version that failed review — mouse-only drag APIs, an interactive control nested inside the drag target fighting it for the press, and a table layout with no narrow-viewport answer.
 
-### Alternative considered: bottom sheet on narrow viewports, popover on wide
+### A bottom sheet on narrow viewports, a popover on wide
 
 Rejected: reintroduces the responsive fork the redesign exists to remove, doubles the picker's code and test surface, and requires a new dependency plus a new `ui/` primitive for a single call site, while `BottomSheet` already exists with two precedent users.
 
-### Alternative considered: no overlay — tap a chip, then tap the destination section
+### No overlay: tap a chip, then tap the destination
 
 Rejected: zero new UI and the natural substrate for a later drag layer, but a novel pattern needing an armed state, a cancel affordance, a discoverability hint, and careful a11y design — too much interaction-design risk for a surface that already shipped broken once.
 
-### Alternative considered: per-field rows with assignment badges
+### Per-field rows with assignment badges
 
 Rejected: the resulting configuration is readable only by scanning badges row by row, and the frequency controls are again physically separated from the fields they govern.
 
-### Alternative considered: five flat sections (the outside revision's layout)
+### Five flat sections
 
 Rejected: the section taxonomy must be decoded up front, and frequency appears as a footer side-effect of moving a field instead of a property of a side's random draw.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- Every assignment is reachable by tap/click alone — touch, keyboard, and screen reader all travel one path: a real button opening a Radix dialog.
-- The layout teaches the data model: two sides, always vs. random, counts attached to what they count. The confusion that triggered the redesign is answered structurally.
-- The state layer (`deckConfigurationBoard.ts`) is reused unchanged; the rebuild is confined to the render layer.
+- The user reaches every assignment by tap or click alone; touch, keyboard, and screen reader all travel one path, a real button opening a dialog.
+- The user learns the data model from the layout: two sides, always versus random, counts attached to what they count.
+- The developer reuses the state layer unchanged; the rebuild is confined to the render layer.
 
-Costs:
+**Negative**
 
-- Moving a chip is two taps (open sheet, choose destination) where a working drag would be one gesture; a future dnd-kit layer can buy that back on wide viewports only.
-- A bottom-anchored sheet on desktop is slightly unconventional.
-- Focus restoration uses one shared trigger ref assigned at tap time (the `BottomSheet` contract from ADR 016) — subtle wiring a contributor could regress.
+- The user moves a chip in two taps where a working drag would be one gesture; a later drag layer can buy that back on wide viewports only.
+- The user on a desktop meets a bottom-anchored sheet, slightly unconventional.
+- The developer maintains focus restoration through one shared trigger ref assigned at tap time, subtle wiring a contributor could regress.
+
+**Neutral**

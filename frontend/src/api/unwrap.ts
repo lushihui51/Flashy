@@ -1,14 +1,14 @@
 export const CONNECTION_FAILED_MESSAGE =
   "Couldn't reach Flashy. Check your connection and try again.";
-export const SERVER_TROUBLE_MESSAGE =
-  'Flashy is having trouble right now. Try again in a moment.';
+export const SERVER_TROUBLE_MESSAGE = 'Flashy is having trouble right now. Try again in a moment.';
 
 const UNKNOWN_ERROR_MESSAGE = 'An unknown error occurred (Inspect console for details)';
 
 type ApiResult<T> = { data?: T; error?: unknown; response: Response };
 
-/** Thrown for every non-ok response: `status` is the HTTP status, so callers can tell
- * a 404 from an outage without matching message text. */
+/** Thrown for every non-ok response. `status` is the HTTP status; `message` describes
+ * the failure for a developer and is never shown, since `failureSentence` in
+ * `src/lib/failureSentence.ts` chooses the sentence the user reads. */
 export class ApiError extends Error {
   status: number;
 
@@ -18,12 +18,11 @@ export class ApiError extends Error {
   }
 }
 
-/** Thrown instead of a bare ApiError when `detail` is a structured object — a few
- * endpoints answer with `{code, message, config_id}` because the message alone isn't
- * enough to act on (session start names the config that failed, so the caller can
- * render against that row). It extends `ApiError`, so it carries `status` too;
- * `.message` is `detail.message`. Shape-aware callers `instanceof`-check and read
- * `.detail`, everyone else reads the message. */
+/** Thrown instead of a bare ApiError when `detail` is a `{code, message, config_id?}`
+ * object. `detail.code` names the refusal; `detail.config_id`, when present, names the
+ * configuration a session start refused, so the caller can place the sentence against
+ * that row. It extends `ApiError`, so it carries `status` too; `.message` is
+ * `detail.message`, for a developer. */
 export class ApiDetailError extends ApiError {
   detail: { code: string; message: string; config_id?: string };
 

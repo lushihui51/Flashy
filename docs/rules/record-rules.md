@@ -30,17 +30,19 @@
 
 **Name.** `NNN-<slug>.md` in the type's folder, numbered from 001 in the type's own sequence; the slug is taken from the title.
 
-**Status.** Status holds a state and record pointers, nothing else. The states are "Active"; "Superseded by" followed by the replacing record or records; and "Deprecated by" followed by the record that records the change of context that dropped the decision, or a few words on the cause when no record holds it. A replacing record may add "Supersedes" with the records it replaces. "Proposed" is not used.
+**Status.** Status holds a state and record pointers, nothing else. The states are "Active"; "Superseded by" followed by the replacing record or records; and "Deprecated by" followed by the record that records the change of context that dropped the decision, or a few words on the cause when no record holds it.
 
-**Context.** Context states the forces the decision answers and the tension between them, as facts in value-neutral language. It says why a decision is needed and describes the situation in detail: the constraints and the clearances that make the decision and its alternatives possible. It cites another record only as a force. The test for a sentence is that a reader who would have chosen a rejected alternative must still agree it is true.
+**Context.** Context states the forces the decision answers and the tension between them, as facts in value-neutral language. It says why a decision is needed and describes the situation in detail: the constraints and the clearances that make the decision and its alternatives possible. It cites another record only as a force. For a decision built before its record is written, Context holds only facts that held then and still hold, and cites no record younger than the decision. State only what is; what an alternative would make true is written with "would", or left to Alternatives considered. The test for a sentence is that a reader who would have chosen a rejected alternative must still agree it is true.
 
 **Decision.** The Decision is written in full sentences, active voice, "We will". It states what was decided at the level the record stands or falls by. The test for a sentence is that changing what it says would be worth superseding the record. A sentence that fails it lives at the code.
 
 **Alternatives considered.** One subsection per rejected alternative, as concise as possible: the alternative and why it was rejected.
 
-**Consequences.** Consequences lists what becomes true because of the decision and what a later decision or a reader of the code must reckon with, in three labelled groups, "Positive", "Negative" and "Neutral", one full sentence per line. The test for a line is that something must reckon with it. A line that restates the decision does not belong.
+**Consequences.** List what becomes true because of this decision and would not be true under any rejected alternative. Use three labelled groups: "Positive", "Negative" and "Neutral". Write one full sentence per line, and name who is affected. A line belongs in Positive if someone gains, in Negative if someone pays (in cost, effort or risk), and in Neutral if someone does something differently without a clear gain or cost. A group with no qualifying lines keeps its heading and stands empty.
 
-**Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments.
+**Examples.** Outside Context, state the decision in general words and give as few examples of it as possible.
+
+**Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments. Write one fact per paragraph: a paragraph holds one fact, force, or point and everything that belongs to it, at whatever length that takes, and a second fact starts a second paragraph. Name code by file and symbol, never by line number.
 
 **No date line.**
 

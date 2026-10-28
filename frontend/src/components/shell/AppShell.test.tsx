@@ -111,7 +111,7 @@ describe('AppShell', () => {
   });
 });
 
-describe('AppShell connection banner (ADR 062)', () => {
+describe('AppShell connection banner', () => {
   afterEach(() => {
     onlineManager.setOnline(true);
   });

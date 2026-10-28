@@ -10,6 +10,7 @@ from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
 from app.models.subject import Subject
+from app.refusals import Refusal
 
 
 def db_read_field_def(
@@ -78,7 +79,9 @@ def db_rename_field_def(db: Session, field_def: FieldDef, name: str) -> FieldDef
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("An active field with this name already exists") from None
+        raise Refusal(
+            "field_name_taken", "an active field_def (deck_id, name) already exists"
+        ) from None
     db.refresh(field_def)
     return field_def
 

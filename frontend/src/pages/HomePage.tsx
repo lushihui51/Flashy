@@ -1,5 +1,7 @@
-// TODO(defer:nav-targets) replace with the real home page.
+import { usePageTitle } from 'src/lib/pageTitle';
+
 export default function HomePage() {
+  usePageTitle('Home');
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold text-(--color-text)">Home</h1>

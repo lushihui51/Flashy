@@ -19,13 +19,7 @@ That fix shipped and worked. But nothing was ever built that read `updated_at`: 
 
 ## Decision
 
-Drop `updated_at` from `subject` and `deck` entirely. `last_activity_at` is the only recency column either table carries.
-
-- Migration `d99d2883e31f` drops the column from both tables (down-revision of `053542e7d50b`, the migration that originally added both columns — a new migration, not an amendment, per this repo's convention of never editing an already-applied one).
-- Every explicit `row.updated_at = utcnow()` call site removed (`db_update_subject`, `apply_deck_batch_edit`); `touch()` is now the only writer of any timestamp on these two tables besides `created_at`.
-- The two tests that existed solely to prove `updated_at`'s audit-only isolation (`test_field_write_does_not_change_deck_updated_at`, `test_card_edit_does_not_change_deck_updated_at`) were deleted outright rather than adapted — the invariant they enforced no longer has a column to enforce it on.
-
-If a genuine audit-trail need shows up later — an actual UI or export that wants "when was this row's own data last edited," as distinct from "when did anything under it last happen" — the column can be reintroduced then, built against a real consumer instead of speculatively ahead of one.
+We will drop `updated_at` from `subject` and `deck`; `last_activity_at` is the only recency column either table carries, written only by `touch()`. At adoption, one migration drops the column from both tables, the explicit `updated_at` writes go, and the two tests that proved its isolation are deleted.
 
 ## Alternatives considered
 
@@ -35,15 +29,17 @@ Considered and rejected. Unused columns don't get easier to justify by aging in 
 
 ### Collapse to one column, let `last_activity_at` serve as the audit field too
 
-Rejected — this is what the original two-column split was avoiding. `last_activity_at` bubbles from child activity (a card added to a deck bumps the deck) and would give a misleading answer to "when did this row's own fields last change." Since nothing actually needs that answer today, the honest fix is to not carry a column for it, not to overload the one column that remains with two meanings.
+Rejected — this is what the original two-column split was avoiding. `last_activity_at` bubbles from child activity and would give a misleading answer to "when did this row's own fields last change." Since nothing actually needs that answer today, the honest fix is to not carry a column for it, not to overload the one column that remains with two meanings.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- One fewer column to keep correct on every future own-column-edit path — `touch()` is the single write path for timestamp bookkeeping on `subject`/`deck`, with no parallel hand-set column to forget.
-- Removes the historical `onupdate` foot-gun from the schema entirely — there's nothing left that a future contributor could plausibly try to wire up with `onupdate` and rediscover the same bug.
+- The developer keeps one fewer column correct on every own-column edit; `touch()` is the single write path for recency on these tables.
+- The developer cannot rediscover the `onupdate` foot-gun, since nothing is left to wire it to.
 
-Costs:
+**Negative**
 
-- If an audit-trail need does show up later, this is a schema migration and a new write-path change rather than something already sitting there unused. Judged acceptable: the column sat unused since it shipped, so there was no evidence a real need was imminent.
+- The developer who later needs an audit trail writes a migration and a new write path, instead of finding a column already there.
+
+**Neutral**

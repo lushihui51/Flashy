@@ -110,8 +110,9 @@ describe('PracticeDetailsPage', () => {
     const user = userEvent.setup();
     renderDetails();
 
-    const crumb = await screen.findByRole('link', { name: 'Practice' });
-    await user.click(crumb);
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getAllByRole('link')).toHaveLength(1);
+    await user.click(within(row).getByRole('link', { name: 'Practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice');
   });
@@ -188,7 +189,7 @@ describe('PracticeDetailsPage', () => {
     expect(
       screen.queryByText('A summary of this practice is coming later.'),
     ).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
     expect(screen.getByText('First try')).toBeInTheDocument();
   });
 
@@ -247,7 +248,9 @@ describe('PracticeDetailsPage', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
     // Still open — nothing navigated away.
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
@@ -258,7 +261,7 @@ describe('PracticeDetailsPage', () => {
     renderDetails('nope');
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
   });
 
   it('a load failure other than 404 says it could not load, not that it was not found', async () => {
@@ -357,7 +360,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
   });
 
-  it('a nothing_to_rerun failure closes the dialog, shows the message, and leaves the old session on screen', async () => {
+  it('a nothing_to_rerun failure closes the dialog, shows its sentence, and leaves the old session on screen', async () => {
     mockSession(session({ status: 'completed' }));
     mockBreakdown();
     server.use(
@@ -381,7 +384,7 @@ describe('PracticeDetailsPage re-run (T9)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'no deck from this session still has a live, valid snapshot to rerun',
+      "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // Still on ps1 — nothing navigated away, the original session is unchanged.

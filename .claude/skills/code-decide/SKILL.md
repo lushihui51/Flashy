@@ -53,6 +53,7 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 ## Confirming decisions
 
 - A decision is confirmed only when I say so. State it plainly and ask me directly.
+- A proposed decision states that decision alone: nothing restated from an earlier one, nothing settled for a later one.
 - Label confirmed decisions CD1 upward, above the highest label the docket holds.
 - Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
@@ -68,6 +69,6 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, and the changed PDRs you checked taken out. Then stop; /product-decide is next if you put a question to it, otherwise /code-record.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, the changed PDRs you checked taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything rests on a question you put for it, otherwise /code-record.
 
 Docket and topic for this conversation: $ARGUMENTS

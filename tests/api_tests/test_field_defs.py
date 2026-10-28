@@ -24,7 +24,7 @@ class TestFieldDefLifecycle:
         field_id = existing_field_defs[0]["id"]
         response = client.delete(f"/api/fields/{field_id}")
         assert response.status_code == 422
-        assert "at least two fields" in response.json()["detail"]
+        assert response.json()["detail"]["code"] == "too_few_fields"
 
         get_response = client.get(f"/api/fields/{field_id}")
         assert get_response.json()["archived_at"] is None
@@ -57,6 +57,15 @@ class TestFieldDefLifecycle:
         response = client.patch(f"/api/fields/{field_id}", json={"name": "renamed"})
         assert response.status_code == 200, response.text
         assert response.json()["name"] == "renamed"
+
+    def test_rename_to_taken_name_answers_field_name_taken(self, client, existing_field_defs):
+        front, back = existing_field_defs
+        response = client.patch(f"/api/fields/{front['id']}", json={"name": back["name"]})
+        assert response.status_code == 400
+        assert response.json()["detail"]["code"] == "field_name_taken"
+
+        check = client.get(f"/api/fields/{front['id']}").json()
+        assert check["name"] == front["name"]
 
     def test_reorder_unrestricted(self, client, existing_deck, existing_field_defs):
         ids = [fd["id"] for fd in existing_field_defs]
@@ -134,7 +143,7 @@ class TestFieldDefLifecycle:
             json={"name": field["name"], "type": field["type"]},
         )
         assert response.status_code == 400
-        assert response.json()["detail"] == "An active field with this name already exists"
+        assert response.json()["detail"]["code"] == "field_name_taken"
 
         card_id = uuid.UUID(existing_card["id"])
         rows = db.exec(select(CardFieldValue).where(CardFieldValue.card_id == card_id)).all()

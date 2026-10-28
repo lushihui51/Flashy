@@ -12,11 +12,11 @@
 
 ## The cycle
 
-**Sections.** Title; Goal, the cycle's single outcome, its scope, and how the engineer will judge it; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
+**Sections.** Title; Goal, the cycle's outcome, scope and judgement; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
 
 **Title.** A unique number in ascending order and a short noun phrase naming the cycle's outcome. The file is docs/cycles/NNN-<slug>.md, the slug taken from the phrase.
 
-**Goal.** Three things, in prose: the outcome in one sentence; the scope, what the cycle covers and what it leaves out; and the judgement, what the engineer will check, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
+**Goal.** Three labelled paragraphs, in prose, in this order. Outcome: the cycle's approved outcome, stated in one sentence. Scope: what the cycle covers and what it leaves out. Judgement: what the engineer checks, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
 
 **Records.** One line per active record, ADR or PDR: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
 
@@ -36,7 +36,7 @@
 
 **Files.** Every path the task may create or change, exact, from the repository root, marked new where it does not exist yet; a generated file counts. A path not listed is not touched.
 
-**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is a constraint. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
+**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is a constraint. A canvas link is guidance. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
 
 **Out of scope.** What a builder would be tempted to add here and must not, one line each, with where it belongs: another task by number, a later cycle, or never.
 
@@ -44,4 +44,4 @@
 
 **Debrief.** Written by the builder, in the file, when the task is done or blocked. Done: the evidence for each Done-when criterion, in order; every departure from Details or Files; and what in the code the engineer should read, if anything, and why. Blocked: what was attempted, what was found, and why the file cannot settle it. Never restate the task.
 
-**Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision, one that no record and no docket item settles, and is never written around.
+**Writing.** Every sentence is a statement or an imperative. Never "appropriate", "as needed", "etc.", "handle edge cases", "robust", "clean up", or any wording that leaves the builder to guess what was meant; what the planner cannot state exactly is an unsettled decision, one that no record and no docket item settles, and is never written around. Name code by file and symbol, never by line number.

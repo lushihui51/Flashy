@@ -2,7 +2,7 @@
 
 ## Status
 
-Active. The vestigial `cards` array the Consequences keep no longer exists. Rule 2's "repeated in the collection's empty state" is superseded by ADR 066: the add control renders once, in the collection's toolbar row, and the empty state carries none; the Consequences line "empty states own their add affordances" goes with it. Rules 1 and 3 remain in force.
+Deprecated by the record rules' Type test
 
 ## Context
 
@@ -10,27 +10,31 @@ The shipped deck details page put an icon-only "+" in the page header whose mean
 
 ## Decision
 
-Three placement rules, binding for every surface:
+We will bind every surface to three placement rules:
 
 1. **Actions on the entity itself** (edit, delete, practice) live in the page header.
 2. **Actions on a collection the page shows** (add card, add deck, new configuration) live inside that collection's content area — labeled buttons, repeated in the collection's empty state — never an icon-only "+" whose meaning depends on invisible state.
 3. **Creation = identity + schema at birth; editing = identity + schema over time.** Routine content (cards) belongs to neither form: it is managed from its own list, and a freshly created parent lands on its detail page, where the empty collection invites adding content.
 
-### Alternative considered: a header "+" that switches meaning with the active tab
+## Alternatives considered
+
+### A header "+" that switches meaning with the active tab
 
 Rejected: it is what shipped — the button's target was invisible state, and the header mixed entity scope with collection scope.
 
-### Alternative considered: keep card entry inside deck create/edit
+### Card entry kept inside deck create and edit
 
 Rejected: it couples routine content entry to schema editing, bloats the form, and left the API with a `cards` array on deck-create that the client now always sends empty.
 
 ## Consequences
 
-Benefits:
+**Positive**
 
 - A button's scope is self-evident from where it sits; forms stay small and single- purpose; empty states own their add affordances.
 
-Costs:
+**Negative**
 
 - One more placement rule to check in review.
 - The deck-create contract keeps a vestigial empty `cards` array until the deferred cleanup lands.
+
+**Neutral**

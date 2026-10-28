@@ -7,6 +7,8 @@ import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import PracticeRunRow from 'src/components/practice/PracticeRunRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -29,6 +31,7 @@ function isStatusTab(value: string | null): value is StatusTab {
  * page's, a shared link — is just a URL with the right params, and so going back
  * returns to the list the user was actually looking at. */
 export default function PracticeOverviewPage() {
+  usePageTitle('Practice');
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -60,7 +63,7 @@ export default function PracticeOverviewPage() {
       setDeleteError(null);
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
     },
-    onError: (error: Error) => setDeleteError(error.message),
+    onError: (error: Error) => setDeleteError(failureSentence(error, 'Practice not found.')),
   });
 
   const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
@@ -96,7 +99,7 @@ export default function PracticeOverviewPage() {
           onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
           className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
         >
-          New practice
+          Add practice
         </button>
       </div>
 
@@ -112,7 +115,7 @@ export default function PracticeOverviewPage() {
 
       <div
         role="tablist"
-        aria-label="Session status"
+        aria-label="Practice status"
         className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
       >
         {STATUS_TABS.map((tab) => (
@@ -144,7 +147,7 @@ export default function PracticeOverviewPage() {
           <p className="text-(--color-text-muted)">
             {filtered ? 'No practices match these filters.' : 'No practices yet.'}
           </p>
-          {/* No New practice button here — the header's is always on screen. */}
+          {/* No Add practice button here — the header's is always on screen. */}
           {filtered && (
             <button
               type="button"
@@ -165,29 +168,30 @@ export default function PracticeOverviewPage() {
         </ul>
       )}
 
-      {deleteError && (
-        <p role="alert" className="mt-2 text-sm text-(--color-danger)">
-          {deleteError}
-        </p>
-      )}
-
       <ConfirmDialog
         open={pendingDelete !== null}
         title="Delete this practice?"
         // Deliberately says nothing about decks or configs: deleting a session takes its
         // own cards and snapshots and nothing else, and reviews already logged stay on
         // record.
-        description="Its progress will be gone. The decks it practised are not affected."
+        description="Its progress will be gone. The decks it practiced are not affected."
         confirmLabel="Delete"
         destructive
         onConfirm={() => {
+          setDeleteError(null);
           if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
         }}
         onCancel={() => {
           setPendingDelete(null);
           setDeleteError(null);
         }}
-      />
+      >
+        {deleteError && (
+          <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            {deleteError}
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

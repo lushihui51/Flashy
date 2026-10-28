@@ -22,7 +22,6 @@ app.include_router(api_deletion_impact_router, prefix="/api")
 app.include_router(api_practice_run_router, prefix="/api")
 app.include_router(api_health_router, prefix="/api")
 
-# TODO(defer:db-unavailable-503) map database-connection errors on every endpoint to 503 database_unavailable once the frontend and API are cross-origin (hosting): an unhandled error's 500 carries no CORS headers, so a cross-origin browser reads it as a network failure.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.permitted_origins,
@@ -30,8 +29,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type", "X-Timezone"],
 )
-
-
-@app.get("/")
-async def read_root(db: SessionDep):
-    return {"Working": "As Expected."}

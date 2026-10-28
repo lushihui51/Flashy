@@ -4,7 +4,6 @@ type LogoProps = {
   className?: string;
 };
 
-// TODO(defer:logo) placeholder mark; swap the SVG below for the final logo.
 export default function Logo({ className }: LogoProps) {
   return (
     <Link to="/" className={className} aria-label="Flashy home">

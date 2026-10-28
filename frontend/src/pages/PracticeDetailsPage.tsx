@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import {
   deletePracticeRun,
   readPracticeRun,
@@ -11,10 +11,12 @@ import {
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import { ApiDetailError, isNotFound } from 'src/api/unwrap';
+import { isNotFound } from 'src/api/unwrap';
 import { formatDateTime } from 'src/lib/datetime';
-import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { failureSentence } from 'src/lib/failureSentence';
+import { usePageTitle } from 'src/lib/pageTitle';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -38,6 +40,7 @@ export default function PracticeDetailsPage() {
     queryFn: () => readPracticeRun(practiceSessionId!),
     enabled: !!practiceSessionId,
   });
+  usePageTitle(sessionQuery.data?.name);
 
   if (sessionQuery.isError) {
     return (
@@ -79,7 +82,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
       navigate('/practice');
     },
-    onError: (error: Error) => setDeleteError(error.message),
+    onError: (error: Error) => setDeleteError(failureSentence(error, 'Practice not found.')),
   });
 
   const rerunMutation = useMutation({
@@ -92,25 +95,13 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
     },
     onError: (error: Error) => {
       setConfirmRerunOpen(false);
-      // `no_cards` is the one rerun failure whose sentence the frontend owns — the
-      // backend's message names the mechanism, not the two causes a user can fix.
-      setRerunError(
-        error instanceof ApiDetailError && error.detail.code === 'no_cards'
-          ? NO_CARDS_MESSAGE
-          : error.message,
-      );
+      setRerunError(failureSentence(error, 'Practice not found.'));
     },
   });
 
   return (
     <div className="p-4">
-      <Link
-        to="/practice"
-        className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
-      >
-        <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
-        Practice
-      </Link>
+      <Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />
 
       <div className="mt-1 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -166,7 +157,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         <div className="mt-6">
           {breakdownQuery.isError && (
             <p role="alert" className="text-sm text-(--color-danger)">
-              {breakdownQuery.error.message}
+              {failureSentence(breakdownQuery.error, 'Practice not found.')}
             </p>
           )}
           {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
@@ -179,7 +170,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         // Same copy the overview uses — deliberately says nothing about decks or
         // configs: deleting a session takes its own cards and snapshots and nothing
         // else, and reviews already logged stay on record.
-        description="Its progress will be gone. The decks it practised are not affected."
+        description="Its progress will be gone. The decks it practiced are not affected."
         confirmLabel="Delete"
         destructive
         onConfirm={() => {

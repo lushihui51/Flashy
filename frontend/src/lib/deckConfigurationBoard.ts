@@ -23,14 +23,14 @@ export function isPoolSlot(slot: BoardSlot): slot is PoolSlot {
   return slot === 'prompt_pool' || slot === 'answer_pool';
 }
 
-// User-facing vocabulary is a contract: these are the exact words every surface uses
-// for the five slots. Never "pool", never a raw slot name.
+// The one name of each of the five slots, wherever a slot is named: the move sheet's
+// rows and the board areas' spoken names. Never "pool", never a raw slot name.
 export const SLOT_LABELS: Record<BoardSlot, string> = {
   unassigned: 'Not used',
-  prompt_fields: 'Prompt side · Always shown',
-  answer_fields: 'Answer side · Always shown',
-  prompt_pool: 'Prompt side · Random draw',
-  answer_pool: 'Answer side · Random draw',
+  prompt_fields: 'Prompt · always shown',
+  answer_fields: 'Answer · always shown',
+  prompt_pool: 'Prompt · random draw',
+  answer_pool: 'Answer · random draw',
 };
 
 /**
@@ -161,12 +161,13 @@ export function boardToPayload(state: BoardState): ConfigPayloadArrays {
 }
 
 /**
- * The backend's rules, restated for the Save button (`app/services/deck_practice_config.py`
- * stays authoritative — this only decides whether it is worth asking).
+ * The backend's rules, restated for the form's Create or Save button
+ * (`app/services/deck_practice_config.py` stays authoritative — this only decides whether
+ * it is worth asking).
  *
  * Disjointness is absent on purpose: the board cannot express an overlap, so there is
- * nothing to check. Returns the first unmet rule as a sentence to show under Save, or
- * null when the config is saveable.
+ * nothing to check. Returns the first unmet rule as a sentence to show under the button,
+ * or null when the config is saveable.
  */
 export function boardValidationError(state: BoardState): string | null {
   const promptFields = fieldsIn(state, 'prompt_fields');

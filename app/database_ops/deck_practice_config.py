@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig, DeckPracticeConfigSummary
 from app.models.subject import Subject
+from app.refusals import Refusal
 
 
 def db_stage_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
@@ -27,8 +28,9 @@ def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfi
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError(
-            "A configuration with this name already exists for this deck"
+        raise Refusal(
+            "configuration_name_taken",
+            "deck_practice_config (deck_id, name) already exists",
         ) from None
     db.refresh(config)
     return config
@@ -113,8 +115,9 @@ def db_update_deck_practice_config(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError(
-            "A configuration with this name already exists for this deck"
+        raise Refusal(
+            "configuration_name_taken",
+            "deck_practice_config (deck_id, name) already exists",
         ) from None
     db.refresh(config)
     return config

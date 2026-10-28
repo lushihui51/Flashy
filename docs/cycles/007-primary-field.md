@@ -1,34 +1,66 @@
 # 007 — Primary field
 
-Formalizes and surfaces a convention the frontend already relies on implicitly: a card is identified, wherever showing every field would be too dense, by its deck's first field. This task makes that fact visible in the one place a user actually controls field order. Surfaced while decomposing 006 (its T3/T8 consume this definition — see ADR 032) but independently shippable and not a dependency of 006 in either direction. Branch: `rewrite/primary-field`, independent of 004/005/006 — touches only `DeckEditor.tsx` and its test, no files shared with those.
+## Goal
 
-## Superseded since (sync 2026-09-19)
+Outcome: A card is identified, wherever showing every field would be too dense, by its deck's first field, and the deck editor, the one place a user controls field order, makes that visible.
 
-- **`CardSummaryRow.tsx` no longer exists**: removed as dead code on 2026-09-18 (commit `09c7004`) once the deck editor's Cards section went (cycle 003, ADR 023). The read-only consumers of the primary-field convention that MD-1 and the ADR bullet name are now `CardTable` and the breakdown row only, matching ADR 032's status note. MD-1's scoping — the visible marker lives in `DeckEditor` alone — is unchanged.
+Scope: The "Primary" marker in `DeckEditor`'s field list and its test. Not covered: the read-only displays `CardSummaryRow` and `CardTable`, which already rely on the convention.
 
-## ADRs
+Judgement: None.
 
-Decisions this file implements; full context and rejected alternatives live in the ADR.
+## Records
 
-- **ADR 032 — Primary field: a deck's first active field identifies its cards**: a deck's primary field is its active `field_def` at position 0 — derived, never stored. Formalizes a convention `CardSummaryRow.tsx`/`CardTable.tsx` already lean on silently; 006's completion breakdown is the first new consumer.
-
-## Minor decisions
-
-- **MD-1**: The visible "Primary" marker is scoped to `DeckEditor`'s field list only, not the read-only `CardSummaryRow`/`CardTable` displays that already consume the convention — those are read-only, not surfaces where a user sets or changes field position.
-
-## Contracts
-
-### Primary-field row (ADR 032, MD-1)
-
-In `FieldsSection` (`DeckEditor.tsx`), the primary field is the first entry of `fields` with `pendingRemoval` not `true` — array order, not a stored `position` value (there isn't one on `EditorField`; array index _is_ position, exactly what the Move up/down handlers already reorder). A field staged for removal is never marked primary even if it sits at index 0, since it's about to stop being an active field. Marker placement: a small pill reading `Primary` immediately after that field's name input, same row, `text-[11px]` in `--color-text-muted` on `--color-surface-elevated` (matches the existing badge weight used elsewhere, e.g. `PracticeStatusBadge`). One line of static copy directly under the "Fields" `<h2>`, above the list: `text-[13px] text-(--color-text-muted)`, text: "The first field identifies this card in lists and summaries." The marker re-derives on every render — no new state, no confirmation on reorder.
+None.
 
 ## Tasks
 
-### T1 — Primary field marker in the deck editor (ADR 032, MD-1)
+### T1 — Primary field marker in the deck editor
 
-- [x] **Goal:** the field currently at position 0 is visibly labeled "Primary" in `DeckEditor`'s field list, and stays correctly labeled as the user reorders or removes fields.
-- **Files:** `frontend/src/components/library/DeckEditor.tsx`, `frontend/src/components/library/DeckEditor.test.tsx`.
-- **Details:** Implement the Primary-field row contract above, inside `FieldsSection`. The primary index is computed once per render as `fields.findIndex(f => !f.pendingRemoval)`; only that row (when not itself the pending-removal branch) renders the pill. No change to `onMove`, `onRename`, `onRemove`, or the reducer — this is presentational only, derived from existing state.
-- **Out of scope:** any change to `CardSummaryRow.tsx` or `CardTable.tsx` (MD-1); a confirmation step when a reorder would change which field is primary; touching `CardFieldsForm.tsx`/`CardStandaloneForm.tsx` (card-content entry, not field ordering); persisting "primary" anywhere — it is never stored, only derived.
-- **Done when:** tests cover — the first non-pending-removal field renders the "Primary" pill and no other field does; moving a different field to the top (via the Move up/down menu) moves the pill to match, verified by simulating the move and re-querying; a field staged pending-removal at index 0 does not carry the pill, and the pill instead lands on the next non-removed field; the static explanatory line renders under the "Fields" heading; `npx vitest run`, `npm run lint`, `npm run build` clean.
-- Notes: none — built exactly to spec. 4 new tests added to `DeckEditor.test.tsx` under a new `describe('DeckEditor — primary field marker (ADR 032)')` block, reusing the existing `renderEditor`/`renderEditDeck`/`mockSubjects`/`mockEditDeck` helpers rather than adding new ones. Full suite: `npx vitest run` 378/378 passed, `npm run lint` clean, `npm run build` clean.
+**Status**
+
+- [x]
+
+**Goal**
+
+The field currently at position 0 is visibly labeled "Primary" in `DeckEditor`'s field list, and stays correctly labeled as the user reorders or removes fields.
+
+**Dependencies**
+
+None.
+
+**Files**
+
+- `frontend/src/components/library/DeckEditor.tsx`
+- `frontend/src/components/library/DeckEditor.test.tsx`
+
+**Details**
+
+The visible "Primary" marker must be scoped to `DeckEditor`'s field list only, never the read-only `CardSummaryRow` or `CardTable` displays.
+
+In `FieldsSection` (`DeckEditor.tsx`), the primary field is the first entry of `fields` with `pendingRemoval` not `true`. A field staged for removal is never marked primary even if it sits at index 0.
+
+The primary index is computed once per render as `fields.findIndex(f => !f.pendingRemoval)`; only that row, when not itself the pending-removal branch, renders the pill.
+
+Marker placement: a small pill reading `Primary` immediately after that field's name input, same row, `text-[11px]` in `--color-text-muted` on `--color-surface-elevated`.
+
+One line of static copy directly under the "Fields" `<h2>`, above the list: `text-[13px] text-(--color-text-muted)`, text: "The first field identifies this card in lists and summaries."
+
+The marker re-derives on every render, with no new state and no confirmation on reorder. No change to `onMove`, `onRename`, `onRemove`, or the reducer.
+
+**Out of scope**
+
+- Any change to `CardSummaryRow.tsx` or `CardTable.tsx`.
+- A confirmation step when a reorder would change which field is primary.
+- Touching `CardFieldsForm.tsx` or `CardStandaloneForm.tsx`.
+- Persisting "primary" anywhere: never.
+
+**Done when**
+
+- The first non-pending-removal field renders the "Primary" pill and no other field does.
+- Moving a different field to the top through the Move up/down menu moves the pill to match, verified by simulating the move and re-querying.
+- A field staged pending-removal at index 0 does not carry the pill, and the pill lands on the next non-removed field.
+- The static line renders under the "Fields" heading.
+
+**Debrief**
+
+No departures from Details. 4 new tests in `DeckEditor.test.tsx` under a new describe block, reusing the existing `renderEditor`, `renderEditDeck`, `mockSubjects` and `mockEditDeck` helpers. Full suite: `npx vitest run` 378/378 passed, `npm run lint` clean, `npm run build` clean.

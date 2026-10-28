@@ -28,7 +28,7 @@ def test_health_reports_database_unavailable(client, monkeypatch):
     assert response.json() == {
         "detail": {
             "code": "database_unavailable",
-            "message": "Flashy is temporarily unavailable.",
+            "message": "SELECT 1 raised SQLAlchemyError; the database did not answer",
         }
     }
 

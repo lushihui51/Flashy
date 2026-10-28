@@ -9,6 +9,7 @@ import {
   hasAnyAssignment,
   moveField,
   pruneCounts,
+  SLOT_LABELS,
   toggleCount,
 } from 'src/lib/deckConfigurationBoard';
 
@@ -279,5 +280,17 @@ describe('defaultConfigurationName', () => {
     board = moveField(board, 'f5', 'answer_fields');
 
     expect(defaultConfigurationName(board, defs)).toBe('Term, Meaning +2 → Note');
+  });
+});
+
+describe('SLOT_LABELS', () => {
+  it("names each slot by the move sheet's row words", () => {
+    expect(SLOT_LABELS).toEqual({
+      unassigned: 'Not used',
+      prompt_fields: 'Prompt · always shown',
+      prompt_pool: 'Prompt · random draw',
+      answer_fields: 'Answer · always shown',
+      answer_pool: 'Answer · random draw',
+    });
   });
 });

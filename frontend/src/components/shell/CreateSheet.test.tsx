@@ -26,17 +26,17 @@ describe('CreateSheet', () => {
   it('renders a drag handle and the four things a user makes, in nesting order', () => {
     renderSheet();
 
-    expect(screen.getByRole('dialog', { name: 'Create' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Subject' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Deck' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'New' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New subject' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New practice' })).toBeInTheDocument();
     // Top to bottom, and no deck configuration: that one belongs to a deck, not here.
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'Subject',
-      'Deck',
-      'Card',
-      'Practice',
+      'New subject',
+      'New deck',
+      'New card',
+      'New practice',
     ]);
   });
 
@@ -51,7 +51,7 @@ describe('CreateSheet', () => {
     const onClose = vi.fn();
     renderSheet({ onClose });
 
-    await user.click(screen.getByRole('button', { name: 'Subject' }));
+    await user.click(screen.getByRole('button', { name: 'New subject' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/subjects/new');
@@ -62,7 +62,7 @@ describe('CreateSheet', () => {
     const onClose = vi.fn();
     renderSheet({ onClose });
 
-    await user.click(screen.getByRole('button', { name: 'Deck' }));
+    await user.click(screen.getByRole('button', { name: 'New deck' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
@@ -72,7 +72,7 @@ describe('CreateSheet', () => {
     const user = userEvent.setup();
     renderSheet({ hasDecks: true });
 
-    await user.click(screen.getByRole('button', { name: /^Card/ }));
+    await user.click(screen.getByRole('button', { name: /^New card/ }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/cards/new');
   });
@@ -83,7 +83,7 @@ describe('CreateSheet', () => {
 
     expect(screen.getByText('Create a deck first')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /^Card/ }));
+    await user.click(screen.getByRole('button', { name: /^New card/ }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
   });
@@ -99,7 +99,7 @@ describe('CreateSheet', () => {
     const onClose = vi.fn();
     renderSheet({ onClose });
 
-    await user.click(screen.getByRole('button', { name: 'Practice' }));
+    await user.click(screen.getByRole('button', { name: 'New practice' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/new');

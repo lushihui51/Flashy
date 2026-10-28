@@ -17,6 +17,7 @@ Files you may write in this conversation:
 - New ADRs in `docs/adrs/`
 - The Status line of an existing ADR that this conversation superseded or deprecated
 - The docket, following `docs/rules/roundtable-docket-rules.md`
+- A design canvas, when I ask to see how something would look
 
 Give me one thing to answer per turn: one question, the triage table, one ADR's relations, one ADR's fate, or one draft, for me to approve or change.
 
@@ -45,7 +46,7 @@ The final decision on the triage is mine.
 
 ### 2. The pass
 
-Once I approve the triage, take the rows one at a time, in the table's order, and settle each with me before the next.
+Once I approve the triage, take the rows one at a time, in the table's order, and settle each with me before the next. Open each row with a one-line summary of the decision, then why it is record level or a lesser decision, in a sentence or two.
 
 #### For a proposed ADR:
 
@@ -58,6 +59,7 @@ Once I have approved of the sections, go through the ADRs under "What ADRs it co
 
 The ADR in question can be:
 
+- Untouched, when no new decision changes its Decision
 - Superseded by the proposed ADR
 - Superseded by a new ADR
 - Deprecated and dropped altogether
@@ -67,7 +69,7 @@ Or, the proposed ADR needs rethinking: with my approval, put the question on the
 
 For every ADR to be superseded or deprecated, list the active ADRs and the live sites citing it. For each ADR citing, add the ADR to "What ADRs it contradicts or extends". Each live site citing goes on the docket.
 
-Once the fate of all affected ADRs has been settled, draft the proposed ADR and any new ADR we've decided on adding, one by one. Nothing is written until I've approved. Never draft an ADR on a decision that rests on an open question.
+Once the fate of all affected ADRs has been settled, draft the proposed ADR and any new ADR we've decided on adding, one by one. For a decision built before its record, date it and each candidate citation from git history, and keep only the citations older than the decision. Nothing is written until I've approved. Never draft an ADR on a decision that rests on an open question.
 
 Once all new ADRs are written, with my go-ahead mark any existing ADR superseded or deprecated as concluded; a decision moved below ADR level becomes a lesser decision.
 
@@ -87,6 +89,6 @@ Once the fate of all affected ADRs has been settled, draft any new ADR we've dec
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every ADR written, every live site that cites a superseded or deprecated ADR, every lesser decision, and the Code decisions taken out. Then stop; /code-decide is next if you put a question back to it, otherwise /code-plan.
+When every row is settled, show me the docket edit, then make it: every ADR written, every live site that cites a superseded or deprecated ADR, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything rests on a question you put for it, otherwise /code-plan.
 
 Docket for this conversation: $ARGUMENTS

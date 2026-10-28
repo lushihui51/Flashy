@@ -2,7 +2,7 @@
 
 ## Status
 
-Active. `card_field_mastery` is the append-only `mastery_log` since ADR 042; the decision here — `review_log` as the sole source of truth, mastery as a rebuildable projection of it — is unchanged. Amended by ADR 048 and ADR 049: a review row is owned by its card and field and cascades with them, and a field delete rebuilds its deck; the ledger is append-only in every other respect and remains the sole source mastery is rebuilt from.
+Active
 
 ## Context
 
@@ -10,17 +10,15 @@ Mastery (how well a user knows a given field of a given card) could be stored as
 
 Separately, a naive eager design would create a `card_field_mastery` row for every `(card, field_def)` pair the moment a card is created, regardless of whether that pairing is ever actually reviewed — multiplying row count by (cards × fields) up front for pairs nobody may ever touch.
 
+One appearance of a card rates several answer fields at once and shows prompt fields beside them. How many answers a prompt was shown with changes the weight of that prompt's own update, so the update for one appearance cannot be decided one row at a time; it needs the whole group.
+
 ## Decision
 
-`review_log` is the source of truth: append-only, no `UPDATE`, no `DELETE`, ever — not in application code, not in tests, not in fixtures. `card_field_mastery` is a disposable cache, fully rebuildable from `review_log`, with rows created lazily — only on first review of a given `(card_id, field_def_id)` pair.
+We will make `review_log` the source of truth for mastery. One row is appended for every rated field review, with the group it belongs to and the prompt fields shown with it. The rating path only ever appends; no code updates or deletes a review except as part of deleting the card or field it belongs to.
 
-**Why the log is authoritative, not the cache:** `rebuild_mastery` (`app/services/mastery.py`) clears `card_field_mastery` and replays every `review_log` row, oldest first, through **the exact same `apply_rating` primitive** the live incremental write path uses (`app/services/mastery.py`) — not a separately-implemented parallel formula. This is what makes "changing strategies is not a migration, it's a rebuild" (`app/services/mastery.py`) literally true, and it's what a property test verifies directly: generate a random review sequence, apply it incrementally, snapshot `card_field_mastery`, run `rebuild_mastery`, assert the two states are identical within float tolerance. That test is the reason the log exists as a design — if arithmetic could live anywhere else, incremental writes and a later rebuild could silently diverge.
+Mastery state is a disposable projection of the log. It is rebuilt whole by replaying every row, oldest first, through the same primitive the live write path uses, so a change of scoring strategy is a rebuild, not a migration. A pair of card and field that has never been reviewed has no mastery row, and every read that needs all of a card's fields drives from `field_def` and joins mastery, because an absent row means "never reviewed", not zero.
 
-**Why lazy creation is safe:** a missing `card_field_mastery` row means `None` all the way up the stack, not zero and not a stored prior — `field_score` (the `MasteryStrategy` protocol, `app/mastery/strategy.py`) returns `None` for a missing state, and `card_score` decides how to fold that into a card-level aggregate. Every query that needs "all fields of this card" must drive from `field_def` and `LEFT JOIN` mastery — driving a query _from_ `card_field_mastery` is treated as a bug, because an absent row is a meaningful fact ("never reviewed"), not a gap to be backfilled. Eagerly creating a row at some default value before any review exists would assert a mastery value not derived from any log row, which is exactly what "disposable cache" rules out.
-
-**Why a `review_group_id`'s rows must be logged atomically:** one `review_group_id` is one appearance — a bundle of every rated answer field plus the prompt fields shown alongside them. Breadth (how many answer fields a prompt was shown alongside in that one appearance) is a property of the _whole group_, and it changes the weight of the prompt-side mastery update, not its target — it can't be decided one log row at a time. If a group's rows could be written across more than one transaction, a live incremental write (computed against however many rows existed at that instant) could permanently disagree with what a later `rebuild_mastery` computes once the group is complete.
-
-Mechanism enforcing this (`app/database_ops/review_log.py`, `db_log_review_group`): a Postgres advisory lock scoped to the group (`pg_advisory_xact_lock(hashtext(...))` — chosen over `SELECT ... FOR UPDATE` because there's no row to lock yet for a brand-new group), comparing the full set of `field_def_id`s already on record against what's submitted (not a row-count delta, which a subset submission could satisfy without actually matching), yielding one of three outcomes: `NEW` (writes the rows), `RETRY` (the exact same field set is already logged — writes nothing, and does **not** re-blend mastery, because the mastery write that happened when the group was first logged already reflects it), or a raised `ReviewGroupInconsistent` for anything else. A `UNIQUE(review_group_id, field_def_id)` constraint plus `ON CONFLICT DO NOTHING` on insert is the database-level idempotency backstop.
+One `review_group_id` is one appearance, and its rows are logged atomically, in one transaction, and never appended to afterward. A resubmission of the same group writes nothing and does not re-blend; a submission that differs from what is on record is an error.
 
 ## Alternatives considered
 
@@ -34,13 +32,15 @@ Rejected. Would multiply row count by cards × fields regardless of actual revie
 
 ## Consequences
 
-Benefits:
+**Positive**
 
-- A client-side retry (e.g. a double-submitted rating after a flaky network) is trivially safe — mastery's correctness is defined entirely in terms of what's in the log, not in terms of how many times an update function happened to run.
-- Swapping the scoring algorithm is a rebuild, not a migration.
-- An absent mastery row is informative ("never reviewed"), not ambiguous.
+- The user's double-submitted rating after a flaky network is safe, because mastery's correctness is defined by what is in the log, not by how many times an update ran.
+- The developer swaps the scoring algorithm with a rebuild, not a migration.
+- The developer reads an absent mastery row as "never reviewed", never as an ambiguous gap.
+- The developer can prove the live path and a rebuild agree: a property test applies a random review sequence incrementally, rebuilds, and asserts the two states match.
 
-Costs:
+**Negative**
 
-- `rebuild_mastery` is explicitly accepted as slow — replaying a full log in Python is strictly slower than any SQL-side recomputation could be, and that cost is accepted in exchange for provable correctness.
-- The read side pays a fan-out cost the write side avoids: `card_mastery` fans out N×F rows (cards × fields) to Python on every read that needs it, which the rewrite's own deferred-work notes flag as the first place a whole-library dashboard would need a materialized view.
+- The operator accepts that a rebuild is slow, since replaying a full log in Python is slower than any SQL-side recomputation, in exchange for provable correctness.
+
+**Neutral**

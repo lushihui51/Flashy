@@ -26,7 +26,7 @@ export default function SelectedConfigurationList({
           <div className="flex min-w-0 flex-1 flex-col py-2">
             <span className="truncate text-[15px] text-(--color-text)">{config.name}</span>
             <span className="truncate text-[11px] text-(--color-text-muted)">
-              {config.deck_name} · {config.subject_name}
+              {config.subject_name} · {config.deck_name}
             </span>
           </div>
           <button

@@ -150,12 +150,12 @@ describe('DeckDetailPage', () => {
     mockDeck();
     renderAtDeckRoute();
 
-    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
-    const subjectLink = await screen.findByRole('link', { name: /French/ });
-    expect(libraryLink).toHaveAttribute('href', '/library');
-    expect(subjectLink).toHaveAttribute('href', '/subjects/s1');
-    // Same row: a shared ancestor no further out than the crumb container itself.
-    expect(libraryLink.parentElement).toBe(subjectLink.parentElement);
+    await screen.findByRole('link', { name: /French/ });
+    const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    const links = within(row).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/library', '/subjects/s1']);
+    expect(links[0]).toHaveTextContent('Your library');
+    expect(links[1]).toHaveTextContent('French');
   });
 
   it('the library crumb link carries no ?tab — a structural link goes to the place, not a remembered view', async () => {
@@ -195,7 +195,7 @@ describe('DeckDetailPage', () => {
     expect(crumb.querySelector('svg')).toBeInTheDocument();
   });
 
-  describe('meta line pluralization', () => {
+  describe('Cards toolbar label pluralization', () => {
     it('reads "1 card · 1 field" for singular counts', async () => {
       mockDeck({
         deckData: {
@@ -397,11 +397,11 @@ describe('DeckDetailPage', () => {
       await screen.findByRole('heading', { name: 'Vocab Deck' });
 
       expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'New configuration' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add configuration' })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('tab', { name: 'Configurations' }));
       expect(screen.queryByRole('button', { name: 'Add card' })).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'New configuration' }));
+      await user.click(screen.getByRole('button', { name: 'Add configuration' }));
 
       expect(screen.getByTestId('location')).toHaveTextContent('/deck-configurations/new');
       expect(screen.getByTestId('location')).toHaveAttribute(
@@ -420,14 +420,15 @@ describe('DeckDetailPage', () => {
       await user.click(row);
     });
 
-    it('says what a configuration is when the deck has none', async () => {
+    it('says No configurations yet. under a 0 configurations label when the deck has none', async () => {
       mockDeck({ configurations: [] });
       renderAtDeckRoute(null, '/decks/d1?tab=configurations');
 
-      expect(await screen.findByText(/No configurations yet/)).toBeInTheDocument();
+      expect(await screen.findByText('No configurations yet.')).toBeInTheDocument();
+      expect(screen.getByText('0 configurations')).toBeInTheDocument();
       // The tab's toolbar button is the only add control; the empty state is its text
       // alone. getByRole throws on a second match.
-      expect(screen.getByRole('button', { name: 'New configuration' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add configuration' })).toBeInTheDocument();
     });
 
     it('deleting confirms, promises practices are unaffected, then drops the row', async () => {
@@ -451,6 +452,26 @@ describe('DeckDetailPage', () => {
       await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
       await waitFor(() => expect(deleted).toBe('cfg1'));
+    });
+
+    it('a delete of a configuration already gone says Deck configuration not found.', async () => {
+      mockDeck({ configurations: [configuration()] });
+      server.use(
+        http.delete(`${BASE}/api/deck_practice_configs/:id`, () =>
+          HttpResponse.json({ detail: 'Deck configuration not found' }, { status: 404 }),
+        ),
+      );
+      const user = userEvent.setup();
+      renderAtDeckRoute(null, '/decks/d1?tab=configurations');
+      await screen.findByText('Front to Back');
+
+      await user.click(screen.getByRole('button', { name: 'Delete Front to Back' }));
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        'Deck configuration not found.',
+      );
     });
   });
 });

@@ -19,7 +19,7 @@ def read_health(db: SessionDep) -> dict[str, str]:
             status_code=503,
             detail={
                 "code": "database_unavailable",
-                "message": "Flashy is temporarily unavailable.",
+                "message": "SELECT 1 raised SQLAlchemyError; the database did not answer",
             },
         ) from exc
     return {"status": "ok"}

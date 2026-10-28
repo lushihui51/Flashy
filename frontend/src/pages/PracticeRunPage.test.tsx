@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -101,6 +101,7 @@ function renderRun(practiceSessionId = 'ps1') {
     <Routes>
       <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
       <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
+      <Route path="/practice" element={<LocationProbe />} />
     </Routes>,
     [`/practice/${practiceSessionId}/run`],
   );
@@ -171,7 +172,24 @@ describe('PracticeRunPage', () => {
     mockRun(runState({ session_name: 'Kanji drills' }));
     renderRun();
 
-    expect(await screen.findByRole('link', { name: 'Kanji drills' })).toBeInTheDocument();
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(await within(row).findByRole('link', { name: 'Kanji drills' })).toBeInTheDocument();
+  });
+
+  it("shows Practice above the practice's name, linking to the list of practices", async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun('ps1');
+
+    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    await within(row).findByRole('link', { name: 'Evening run' });
+    const links = within(row).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Practice', 'Evening run']);
+    expect(row).toHaveTextContent(/^Practice›Evening run$/);
+
+    await user.click(within(row).getByRole('link', { name: 'Practice' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/practice$/);
   });
 
   it('shows a breadcrumb back to its own session, for whichever id is in the URL', async () => {
@@ -205,7 +223,7 @@ describe('PracticeRunPage', () => {
     renderRun('ps1');
 
     expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Front: Bonjour/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
   });
 
   it('shows "not found" for an unknown or foreign session, without crashing', async () => {
@@ -213,6 +231,11 @@ describe('PracticeRunPage', () => {
     renderRun('nope');
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
+    const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getByRole('link', { name: 'Practice' })).toHaveAttribute(
+      'href',
+      '/practice',
+    );
   });
 
   it('a load failure other than 404 says it could not load, not that it was not found', async () => {
@@ -385,11 +408,19 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     expect(await screen.findByText('Bonsoir')).toBeInTheDocument();
   });
 
-  it('shows the error and keeps the chosen ratings when the submit fails', async () => {
+  it('shows the sentence and keeps the chosen ratings when the submit fails', async () => {
     mockRun();
     server.use(
       http.post(`${BASE}/api/practice_cards/:id/rate`, () =>
-        HttpResponse.json({ detail: 'practice_card has already been rated' }, { status: 400 }),
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'card_already_rated',
+              message: 'practice_card has already been rated',
+            },
+          },
+          { status: 400 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -400,14 +431,12 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     await user.click(screen.getByRole('button', { name: 'Good' }));
     await user.click(screen.getByRole('button', { name: 'Next card' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'practice_card has already been rated',
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('This card has already been rated.');
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
   });
 });
 
-describe('PracticeRunPage progress bar and retry badge (ADR 028, MD-3)', () => {
+describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
   it('reflects the given counts as proportional segment widths, omitting zero-count segments', async () => {
     mockRun(
       runState({

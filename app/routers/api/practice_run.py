@@ -23,6 +23,7 @@ from app.models.practice_run_payloads import (
     RatingSubmission,
     RatingSubmissionResult,
 )
+from app.refusals import Refusal
 from app.services.practice_run import (
     RerunError,
     RunActiveError,
@@ -184,6 +185,8 @@ def rate_practice_card(
         )
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return RatingSubmissionResult(rated_practice_card=rated, requeued_practice_card=requeued)

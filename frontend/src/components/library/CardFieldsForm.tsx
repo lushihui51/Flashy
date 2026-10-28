@@ -36,7 +36,6 @@ export default function CardFieldsForm({ fieldDefs, values, onChange }: CardFiel
             />
             {!supported && (
               <span className="text-sm text-(--color-text-muted)">
-                {/* TODO(defer:field-types) no editable widget exists yet for this type. */}
                 Unsupported field type
               </span>
             )}
