@@ -41,4 +41,3 @@ Rejected because the user who opened the form to change a configuration would me
 
 **Neutral**
 
-- Whoever designs the next thing that is listed but has no page of its own puts its acts in the list, not in its form.

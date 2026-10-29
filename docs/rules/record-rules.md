@@ -38,7 +38,7 @@
 
 **Alternatives considered.** One subsection per rejected alternative, as concise as possible: the alternative and why it was rejected.
 
-**Consequences.** List what becomes true because of this decision and would not be true under any rejected alternative. Use three labelled groups: "Positive", "Negative" and "Neutral". Write one full sentence per line, and name who is affected. A line belongs in Positive if someone gains, in Negative if someone pays (in cost, effort or risk), and in Neutral if someone does something differently without a clear gain or cost. A group with no qualifying lines keeps its heading and stands empty.
+**Consequences.** List what becomes true because of this decision and would not be true under any rejected alternative. Use three labelled groups: "Positive", "Negative" and "Neutral". Write one full sentence per line, and name who is affected; in a PDR, who is affected is always the user. A line belongs in Positive if someone gains, in Negative if someone pays (in cost, effort or risk), and in Neutral if someone does something differently without a clear gain or cost. A group with no qualifying lines keeps its heading and stands empty.
 
 **Examples.** Outside Context, state the decision in general words and give as few examples of it as possible.
 
