@@ -3,7 +3,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCAN_DIRS = ("app", "tests", "alembic", "frontend/src")
-SCAN_FILES = ("frontend/eslint.config.js", "AGENTS.md")
+SCAN_FILES = ("frontend/eslint.config.js", "AGENTS.md", "docs/backlog.md")
 RECORD_DIRS = {"ADR": "docs/adrs", "PDR": "docs/pdrs"}
 CITATION = re.compile(r"\b(ADR|PDR) (\d{3})\b")
 
@@ -57,8 +57,9 @@ def _offenders(root: Path, files: list[Path]) -> list[str]:
 def test_every_cited_record_is_active():
     """A record number in code sends a reader to the decision behind that code, so it
     must name a record that still holds; a superseded or deprecated record would send
-    them to a decision the code no longer follows. docs/ is not scanned, since a record
-    cites the records it supersedes and a merged cycle file is never edited."""
+    them to a decision the code no longer follows. Under docs/, only the backlog is
+    scanned: a record cites the records it supersedes, and a merged cycle file is
+    never edited."""
     offenders = _offenders(REPO_ROOT, _scanned_files(REPO_ROOT))
     assert not offenders, (
         "these lines cite a record that is not Active; repoint each to the record that "

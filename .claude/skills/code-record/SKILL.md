@@ -67,7 +67,7 @@ The ADR in question can be:
 
 Or, the proposed ADR needs rethinking: with my approval, put the question on the docket as an open question owned by /code-decide, with the decision resting on it, and leave the decision under Code decisions.
 
-For every ADR to be superseded or deprecated, list the active ADRs and the live sites citing it. For each ADR citing, add the ADR to "What ADRs it contradicts or extends". Each live site citing goes on the docket.
+For every ADR to be superseded or deprecated, list the active ADRs citing it. For each ADR citing, add the ADR to "What ADRs it contradicts or extends".
 
 Once the fate of all affected ADRs has been settled, draft the proposed ADR and any new ADR we've decided on adding, one by one. For a decision built before its record, date it and each candidate citation from git history, and keep only the citations older than the decision. Nothing is written until I've approved. Never draft an ADR on a decision that rests on an open question.
 
@@ -89,6 +89,6 @@ Once the fate of all affected ADRs has been settled, draft any new ADR we've dec
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every ADR written, every live site that cites a superseded or deprecated ADR, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything rests on a question you put for it, otherwise /cycle-plan.
+When every row is settled, show me the docket edit, then make it: every ADR written, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything rests on a question you put for it, otherwise /records-sync.
 
 Docket for this conversation: $ARGUMENTS

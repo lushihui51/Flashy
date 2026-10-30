@@ -6,7 +6,7 @@
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
 - docs/rules/ holds the rules for every file an agent writes under docs/, for comments in code, and for this file.
-- README.md is for a human reader and self-contained; it never points at AGENTS.md.
+- README.md is for a human reader and self-contained; it never points at AGENTS.md or a record.
 
 # Commands
 

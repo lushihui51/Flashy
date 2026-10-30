@@ -78,7 +78,7 @@ For each task, read the files in its Files first for context.
 
 - Status: "- [ ]"; Debrief: "None."
 - Dependencies: name each interface with the exact spelling of the task that creates it.
-- Details: every lesser decision the outline placed here. Guidance only where you have read the code and know the best way.
+- Details: every lesser decision the outline placed here, and, for every live site placed here, the constraint that the task changes the code at its symbol to follow what replaced the record it cites and removes the old reference; whether the changed code carries a comment, and whether that comment cites a record, stays the builder's verdict by `docs/rules/comment-rules.md`. Guidance only where you have read the code and know the best way.
 - Done when: a behaviour a builder cannot observe can't be a criterion; write the nearest evidence it can produce, and tell me.
 
 #### Cycle file

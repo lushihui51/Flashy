@@ -20,7 +20,7 @@
 
 **The replacing record.** When a record's decision changes, what replaces it is triaged as a new decision. It becomes one record, several records, or no record. Significance is judged on the decision as it now stands, never on the size of the change. A superseding record is complete on its own: a reader who has read no superseded record gets the whole decision, the reason for every part of it, every alternative still rejected, and what was replaced and why.
 
-**The old record.** The old record is marked Superseded by the record or records that replace it, or Deprecated when none does. A superseded or deprecated record stays in its folder with its Status pointer. No live site (a line in code or AGENTS.md that cites a record by number) cites it, and a repointed site shows no history.
+**The old record.** The old record is marked Superseded by the record or records that replace it, or Deprecated when none does. A superseded or deprecated record stays in its folder with its Status pointer. No live site (a line in code, AGENTS.md or docs/backlog.md that cites a record by number) cites it, and a repointed site shows no history.
 
 ## The record
 
