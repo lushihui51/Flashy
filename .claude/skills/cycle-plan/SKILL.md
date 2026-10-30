@@ -28,6 +28,7 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 - `docs/rules/backlog-rules.md`, then `docs/backlog.md` in full.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
 - The records the docket lists, in full.
+- `docs/vocabulary.md`, for the rows the docket changes.
 - Whatever code you need.
 - Nothing else without my explicit permission.
 
@@ -65,6 +66,7 @@ The outline as a whole should ensure:
 
 - Every record, lesser decision and live site carried by the outcome is delivered or addressed by at least one task.
 - Every task contributes to the cycle's Goal.
+- Every change to `docs/vocabulary.md` the docket decides, a row added, changed or removed, goes in the first task that meets it, or in a task of its own if none does, through that task's Files and Details.
 
 Talk about each decomposition you considered and did not propose, and your reasonings.
 

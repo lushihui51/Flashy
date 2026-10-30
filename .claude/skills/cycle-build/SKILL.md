@@ -10,6 +10,7 @@ This is a building conversation. I am the engineer, and you are the builder. The
 Files you may write in this conversation:
 
 - Code and tests at the paths the task's Files lists, comments included
+- `docs/vocabulary.md`, when the task's Files lists it, following `docs/rules/vocabulary-rules.md`
 - In the cycle file, the task's Status and Debrief, and, for a path I approved outside Files, the Files and Dependencies lines that path changes
 - A design canvas, when I ask to see how something would look
 
@@ -29,6 +30,7 @@ Before your first edit, in this order:
 - `docs/rules/cycle-rules.md`, so you know how to use the cycle file and the task, and how to write a Debrief.
 - The cycle file in full: the Goal, the Records (each in full), and every task.
 - `docs/rules/comment-rules.md`, so you know when, where and how to write comments.
+- `docs/rules/vocabulary-rules.md`, when the task's Files lists `docs/vocabulary.md`, so you know how to write its rows.
 - Every file the task's Files lists, if it already exists.
 
 This is the floor, not a ceiling: read anything in the repository you need.
