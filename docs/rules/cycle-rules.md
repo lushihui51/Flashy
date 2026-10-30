@@ -4,7 +4,7 @@
 
 **Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
 
-**Edits before the merge.** Until the cycle's merge, the builder writes a task's Status and Debrief and, for a path outside the task's Files that the engineer approves, the Files and Dependencies lines that path changes; every other edit is the planner's, made by /code-plan.
+**Edits before the merge.** Until the cycle's merge, the builder writes a task's Status and Debrief and, for a path outside the task's Files that the engineer approves, the Files and Dependencies lines that path changes; every other edit is the planner's, made by /cycle-plan.
 
 **Commits.** A task's commit holds its code, tests and cycle-file edit; its message is the repository's `type:` prefix, the task's Goal as the statement, and `(cycle NNN Tn)`. The cycle file's own commit, by the planner, has the message `docs: plan cycle NNN, <title>`.
 

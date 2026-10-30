@@ -1,5 +1,5 @@
 ---
-name: code-build
+name: cycle-build
 description: Building conversation — build one task of a cycle file, verify it, and debrief
 disable-model-invocation: true
 argument-hint: path of the cycle file, and the task number
@@ -19,7 +19,7 @@ Give me one thing to answer per turn: one question, one path outside Files with 
 
 - "The cycle file" is the file in `docs/cycles/` I name
 - "The task" is the task in it I name.
-- "The planner" is the agent of the /code-plan conversation that wrote the cycle file.
+- "The planner" is the agent of the /cycle-plan conversation that wrote the cycle file.
 - A "peer" is another session working in this checkout.
 
 ## What you read

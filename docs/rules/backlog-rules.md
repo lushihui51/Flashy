@@ -2,7 +2,7 @@
 
 **What the backlog is.** The backlog is the one file holding every question kept for later: a question a docket left undecided and nothing needed, which would otherwise be dropped. It holds questions and nothing else.
 
-**Who reads it.** The human, to pick a question up. /code-plan, to enter a question and to take one out. Nothing reads it to pick a question up on the human's behalf.
+**Who reads it.** The human, to pick a question up. /cycle-plan, to enter a question and to take one out. Nothing reads it to pick a question up on the human's behalf.
 
 **Lifetime.** One file, `docs/backlog.md`, titled "# Backlog", created once by the human, never numbered, never deleted. With nothing to hold it reads "None."
 

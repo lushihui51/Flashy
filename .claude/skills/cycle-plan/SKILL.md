@@ -1,5 +1,5 @@
 ---
-name: code-plan
+name: cycle-plan
 description: Planning conversation — write cycle files for the builders
 disable-model-invocation: true
 argument-hint: path of the docket

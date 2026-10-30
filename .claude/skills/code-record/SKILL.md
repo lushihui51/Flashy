@@ -5,7 +5,7 @@ disable-model-invocation: true
 argument-hint: path of the docket
 ---
 
-This runs after /code-decide, and its input is the docket's Code decisions. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and leave everything else on the docket for /code-plan.
+This runs after /code-decide, and its input is the docket's Code decisions. I am the engineer. Your job is to absorb the confirmed decisions into the ADRs: write the ones that earn an ADR, supersede or deprecate the ADRs they break, and leave everything else on the docket for /cycle-plan.
 
 You may assume every Code decision on the docket:
 
@@ -89,6 +89,6 @@ Once the fate of all affected ADRs has been settled, draft any new ADR we've dec
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every ADR written, every live site that cites a superseded or deprecated ADR, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything rests on a question you put for it, otherwise /code-plan.
+When every row is settled, show me the docket edit, then make it: every ADR written, every live site that cites a superseded or deprecated ADR, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything rests on a question you put for it, otherwise /cycle-plan.
 
 Docket for this conversation: $ARGUMENTS
