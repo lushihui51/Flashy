@@ -46,8 +46,8 @@
 - Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
 - Never write under docs/ beyond what the running skill lists or the engineer orders.
   - Reason: every docs/ file records the human's decision
-- Raise a finding that must outlive the session to the engineer for /code-decide; never fix it in passing.
-  - Reason: a lasting finding is a decision for the docket
+- Raise a finding that must outlive the session to the engineer; never fix it in passing.
+  - Reason: a lasting decision needs the engineer's approval
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
