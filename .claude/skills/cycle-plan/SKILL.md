@@ -28,6 +28,7 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 - `docs/rules/backlog-rules.md`, then `docs/backlog.md` in full.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
 - The records the docket lists, in full.
+- For each deferred outcome taken up, the cycle file of every outcome it waits for, its Debriefs above all.
 - `docs/vocabulary.md`, for the rows the docket changes.
 - Whatever code you need.
 - Nothing else without my explicit permission.
@@ -42,9 +43,9 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 
 ### 1. Outcomes
 
-Extract the implied outcomes from the docket's records, lesser decisions and live sites. A deferred outcome already on the docket is approved; take it up when the outcome it waited for has merged to main. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
+Extract the implied outcomes from the docket's records, lesser decisions and live sites. A deferred outcome already on the docket is approved; take it up when every outcome it waits for has merged to main. Before showing it to me, check on main that what it relies on from each of them was delivered as its Waits for says, and read the Debriefs of each one's cycle file for departures. If anything is changed or missing, show me, and plan the outcome only once I have decided what follows. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
 
-When all outcomes are approved, filter out ones that depends on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, they are deferred: they go on the docket with what they carry, and are no longer part of this conversation.
+When all outcomes are approved, filter out ones that depends on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, they are deferred: they go on the docket with what they carry, written so the session that takes one up needs nothing from this conversation, and are no longer part of this conversation.
 
 ### 2. Cycle files
 
