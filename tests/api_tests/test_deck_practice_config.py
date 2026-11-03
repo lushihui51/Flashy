@@ -154,7 +154,7 @@ class TestDeckPracticeConfigValidation:
 
     def test_pool_ids_without_counts_rejected(self, client, valid_config_payload):
         """A pool with no counts draws zero fields per card, so the pool is inert and a
-        config resting on it alone generates a session with no cards at all."""
+        config relying on it alone generates a session with no cards at all."""
         valid_config_payload["prompt_pool_counts"] = []
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400

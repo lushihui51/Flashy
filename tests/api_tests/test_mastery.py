@@ -200,7 +200,7 @@ class TestBreadthNotIndependentUpdates:
         assert high_result.prompt_mastery > low_result.prompt_mastery
 
     def test_beta_one_matches_n_sequential_plain_alpha_blends(self):
-        """The closed-form identity the breadth formula rests on: at beta=1, one blend
+        """The closed-form identity the breadth formula relies on: at beta=1, one blend
         with alpha_eff = 1-(1-alpha)^n equals n sequential plain-alpha blends toward
         the same target — so grouping loses nothing when all ratings agree."""
         strategy = EmaStrategy(beta=1.0)

@@ -28,13 +28,13 @@
 - Change a database's schema only through an alembic migration, never from code under app/.
   - Reason: ADR 045
   - Guard: tests/api_tests/test_schema_guard.py
-- Keep mastery arithmetic only in a MasteryStrategy under app/mastery/, never in SQL, a SQLModel expression or a trigger.
-  - Reason: ADR 012
+- Keep mastery arithmetic only under app/mastery/, never in SQL, a SQLModel expression or a trigger.
+  - Reason: ADR 083
   - Guard: tests/api_tests/test_mastery.py
 - Append to review_log only through record_review_group in app/services/mastery.py, and never update or delete its rows outside the deletion closure.
   - Reason: ADR 011
 - Delete a subject, deck, field or card only through compute_deletion_impact then apply_deletion in app/services/deletion.py, inside the deleting transaction.
-  - Reason: ADR 051
+  - Reason: ADR 093
 - Take every instant from the server's clock in UTC, never from a caller, and use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
   - Reason: ADR 019
   - Guard: tests/api_tests/test_user_timezone.py
@@ -62,9 +62,7 @@
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070
 - Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
-  - Reason: ADR 012
-- Never expose the field archive endpoints or build on archived_at; the archive code stays dormant.
-  - Reason: ADR 049
+  - Reason: ADR 083
 - Write a "" card_field_value row for every existing card in the same transaction as any path that adds a field to a deck.
   - Reason: ADR 057
 - Scope every read and write to the requesting user, so another user's resource returns 404.
@@ -87,12 +85,12 @@
 
 - Scope ownership inside the query rather than in Python after the fetch.
   - Reason: ADR 034
-- Return a whole collection from a list read and derive its per-row figures in a bounded number of statements rather than one per row.
-  - Reason: ADR 082
+- Return a whole collection from every read that returns one, and derive its per-row figures in a bounded number of statements rather than one per row.
+  - Reason: ADR 091
 - Fetch server data through TanStack Query in the page, hand it to reusable components, src/components/ui/ included, as props, and keep it in the query cache rather than long-lived component state.
-  - Reason: ADR 033
+  - Reason: ADR 088
 - Keep page-view state, tabs and filters, in the URL rather than useState.
-  - Reason: PDR 005
+  - Reason: PDR 017
 - Size a routed page to its content rather than the viewport height.
   - Reason: the page renders below AppShell's sticky header
 - Declare a typing.Protocol attribute as a read-only property rather than a plain annotated field.

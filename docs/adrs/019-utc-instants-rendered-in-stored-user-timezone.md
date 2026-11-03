@@ -55,7 +55,7 @@ Rejected. A zone that is re-derived per request makes historical rendering unrep
 
 **Negative**
 
-- The developer passes the zone explicitly at every date-formatting site; the ESLint rule enforces it on the frontend, and the backend's equivalent care rests on review.
+- The developer passes the zone explicitly at every date-formatting site; the ESLint rule enforces it on the frontend, and the backend's equivalent care is left to review.
 - The server reads an extra header on every request, and a changed one triggers a write; the steady state is a comparison.
 - The developer has no single correct day boundary for cross-user aggregate reporting; inherent to per-user local days, and no such report exists.
 - The developer building offline practice adds the narrow client-supplied `reviewed_at` exception and its clamping.
