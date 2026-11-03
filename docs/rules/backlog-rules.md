@@ -6,7 +6,7 @@
 
 **Lifetime.** One file, `docs/backlog.md`, titled "# Backlog", created once by the human, never numbered, never deleted. With nothing to hold it reads "None."
 
-**Entry.** One bullet per question. Its line opens with a label, B1 upward, one above the highest the file has ever held on any branch or in the history, never reused; then the question. Two sub-bullets, Reason and Owner, as the docket rules give them for an open question. No Rests on: a question reaches the backlog only when nothing rests on it.
+**Entry.** One bullet per question. Its line opens with a label, B1 upward, one above the highest the file has ever held on any branch or in the history, never reused; then the question. Two sub-bullets, Reason and Owner, as the docket rules give them for an open question. No Needed by: a question reaches the backlog only when nothing needs its answer.
 
 **Entering.** A question enters when a docket leaves it undecided, nothing needs its answer, and the human keeps it rather than drops it. The human may enter a question that never went through a docket.
 

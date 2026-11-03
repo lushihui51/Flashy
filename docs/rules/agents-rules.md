@@ -17,7 +17,7 @@
 
 **Statement.** The facts or rules about one topic, in one sentence that states them unambiguously in about 200 characters; split a longer one into its facts, or cut it. A rule is an imperative. Present tense. Name a thing by the stablest handle that still identifies it: a command, a directory, a file, a symbol. Never a line number, a count, a date, a version, or any value the next commit can change. Give no mechanism or example; they live in the record the Reason names. Add no emphasis marker: a rule agents keep breaking gets a guard, not capitals.
 
-**Reason.** Names the records the line rests on, as `ADR NNN` or `PDR NNN`. With no record, gives the reason in about 50 characters. With neither, exclude this sub-line.
+**Reason.** Names the records behind the line, as `ADR NNN` or `PDR NNN`. With no record, gives the reason in about 50 characters. With neither, exclude this sub-line.
 
 **Guard.** Names the test file that enforces the line and nothing else. With no test, exclude this sub-line.
 

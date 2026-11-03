@@ -16,7 +16,7 @@
 
 ## Supersession
 
-**All or nothing.** A record is only ever fully active, fully superseded or fully deprecated. A later record that changes any part of its Decision restates the whole decision and supersedes it. A later record that changes none of it leaves it untouched.
+**All or nothing.** A record is only ever fully active, fully superseded or fully deprecated. A later record that changes any part of its Decision restates the whole decision and supersedes it. A later record that changes none of it leaves it untouched. A record that has not reached main is edited in place instead of superseded.
 
 **The replacing record.** When a record's decision changes, what replaces it is triaged as a new decision. It becomes one record, several records, or no record. Significance is judged on the decision as it now stands, never on the size of the change. A superseding record is complete on its own: a reader who has read no superseded record gets the whole decision, the reason for every part of it, every alternative still rejected, and what was replaced and why.
 
@@ -34,13 +34,13 @@
 
 **Context.** Context states the forces the decision answers and the tension between them, as facts in value-neutral language. It says why a decision is needed and describes the situation in detail: the constraints and the clearances that make the decision and its alternatives possible. It cites another record only as a force. For a decision built before its record is written, Context holds only facts that held then and still hold, and cites no record younger than the decision. State only what is; what an alternative would make true is written with "would", or left to Alternatives considered. The test for a sentence is that a reader who would have chosen a rejected alternative must still agree it is true.
 
-**Decision.** The Decision is written in full sentences, active voice, "We will". It states what was decided at the level the record stands or falls by. The test for a sentence is that changing what it says would be worth superseding the record. A sentence that fails it lives at the code.
+**Decision.** The Decision is written in full sentences, active voice, "We will". It states what was decided at the level the record stands or falls by. The test for a sentence is that changing what it says would be worth superseding the record. A sentence that fails it lives below the record, never in it.
 
-**Alternatives considered.** One subsection per rejected alternative, as concise as possible: the alternative and why it was rejected.
+**Alternatives considered.** One subsection per rejected alternative to a sentence of the Decision, as concise as possible: the alternative and why it was rejected.
 
 **Consequences.** List what becomes true because of this decision and would not be true under any rejected alternative. Use three labelled groups: "Positive", "Negative" and "Neutral". Write one full sentence per line, and name who is affected; in a PDR, who is affected is always the user. A line belongs in Positive if someone gains, in Negative if someone pays (in cost, effort or risk), and in Neutral if someone does something differently without a clear gain or cost. A group with no qualifying lines keeps its heading and stands empty.
 
-**Examples.** Outside Context, state the decision in general words and give as few examples of it as possible.
+**Examples.** Outside Context, state the decision in general words and give no examples of it.
 
 **Writing.** A record is one or two pages, written as a conversation with its future reader, in full sentences organised into paragraphs, with bullets as visual style only and never as fragments. Write one fact per paragraph: a paragraph holds one fact, force, or point and everything that belongs to it, at whatever length that takes, and a second fact starts a second paragraph. Name code by file and symbol, never by line number.
 

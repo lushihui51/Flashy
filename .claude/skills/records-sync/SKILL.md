@@ -42,7 +42,7 @@ Take the sites one at a time, in the guard's order. Read what the site cites, wh
 - A proposal. The line alone settles it, but how is not obvious: the cited record is superseded by several records, or deprecated, or the replacing record changes what the line says. Propose the edit, old text and new text with the reason, and make it once I confirm. A pointer with no record to point at goes, and the line keeps its reason in its own words, as the rules for its file require.
 - A hand-off. The code at the site must change, because the replacing record decides it differently or because the decision it followed no longer holds. Propose it; once I confirm, put the site on the docket's Live sites, with Cites and Replaced by, and leave its line as it is for the builder.
 
-If a site's fate rests on a decision no record and no docket item settles, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
+If a site's fate depends on a decision no record and no docket item settles, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
 
 ### 3. The check
 

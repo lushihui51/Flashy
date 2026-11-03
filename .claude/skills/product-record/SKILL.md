@@ -19,7 +19,7 @@ Files you may write in this conversation:
 - The docket, following `docs/rules/roundtable-docket-rules.md`
 - A design canvas, when I ask to see how something would look
 
-Give me one thing to answer per turn: one question, the triage table, one PDR's relations, one PDR's fate, or one draft, for me to approve or change.
+Give me one thing to answer per turn: one question, the triage table, one PDR's relations, one touched PDR's fate, the list of untouched PDRs, or one draft, for me to approve or change.
 
 ## Terms
 
@@ -48,6 +48,10 @@ The final decision on the triage is mine.
 
 Once I approve the triage, take the rows one at a time, in the table's order, and settle each with me before the next. Open each row with a one-line summary of the decision, then why it is record level or a lesser decision, in a sentence or two.
 
+When you propose the fates of the PDRs a row affects, take one turn for each PDR you propose to touch, then one turn listing every PDR you propose to leave untouched. For every PDR, touched or untouched, show a table with one row per sentence of its Decision and three columns: "Line, as written", the sentence quoted word for word, or "(new)" and the sentence for a line the replacement would add; "Fate", one of kept, changed, dropped or added, with the new wording for a changed line; and "Cause", the docket decision that forces the fate, by label, with one sentence on how, or for a kept line why nothing on the docket changes it.
+
+Before you show me a PDR draft, check the draft against the whole of `docs/rules/record-rules.md`, line by line, and fix every rule the draft breaks; I see only the checked draft.
+
 #### For a proposed PDR:
 
 Propose its relation to the active PDRs in 2 sections for my review:
@@ -55,7 +59,7 @@ Propose its relation to the active PDRs in 2 sections for my review:
 1. What PDRs it should reference in its Context
 2. What PDRs it contradicts or extends
 
-Once I have approved of the sections, go through the PDRs under "What PDRs it contradicts or extends" one by one, and propose your decision on its fate and your reasoning. Nothing is decided until I say so.
+Once I have approved of the sections, go through the PDRs under "What PDRs it contradicts or extends", and propose your decision on each one's fate and your reasoning. Nothing is decided until I say so.
 
 The PDR in question can be:
 
@@ -65,17 +69,17 @@ The PDR in question can be:
 - Deprecated and dropped altogether
 - Deprecated and moved below record level
 
-Or, the proposed PDR needs rethinking: with my approval, put the question on the docket as an open question owned by /product-decide, with the decision resting on it, and leave the decision under Product decisions.
+Or, the proposed PDR needs rethinking: with my approval, put the question on the docket as an open question owned by /product-decide, with the decision needing its answer, and leave the decision under Product decisions.
 
 For every PDR to be superseded or deprecated, list the active PDRs citing it. For each citing, add the PDR to "What PDRs it contradicts or extends".
 
-Once the fate of all affected PDRs has been settled, draft the proposed PDR and any new PDR we've decided on adding, one by one. Nothing is written until I've approved. Never draft a PDR on a decision that rests on an open question.
+Once the fate of all affected PDRs has been settled, draft the proposed PDR and any new PDR we've decided on adding, one by one. Nothing is written until I've approved. Never draft a PDR on a decision that needs an open question's answer.
 
 Once all new PDRs are written, with my go-ahead mark any existing PDR superseded or deprecated as concluded; a decision moved below record level becomes a lesser decision.
 
 #### For a proposed lesser decision
 
-Propose if it contradicts or extends any active PDRs. Once I've approved of the affected PDRs, go through them one by one and propose your decision on its fate and your reasoning. Nothing is decided until I say so.
+Propose if it contradicts or extends any active PDRs. Once I've approved of the affected PDRs, go through them and propose your decision on each one's fate and your reasoning. Nothing is decided until I say so.
 
 The PDR in question can be:
 
@@ -83,7 +87,7 @@ The PDR in question can be:
 - Deprecated and dropped altogether
 - Deprecated and moved below record level
 
-Or, the proposed decision needs rethinking: with my approval, put the question on the docket as an open question owned by /product-decide, with the decision resting on it, and leave the decision under Product decisions.
+Or, the proposed decision needs rethinking: with my approval, put the question on the docket as an open question owned by /product-decide, with the decision needing its answer, and leave the decision under Product decisions.
 
 Once the fate of all affected PDRs has been settled, draft any new PDR we've decided on adding, one by one. Nothing is written until I've approved. The proposed lesser decision stays on the docket as a lesser decision or is dropped, depending on my verdict.
 
@@ -91,6 +95,6 @@ Once all new PDRs are written, with my go-ahead mark any existing PDR superseded
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every PDR written, every PDR superseded or deprecated, every lesser decision, the Product decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything rests on a question you put for it, otherwise /code-decide.
+When every row is settled, show me the docket edit, then make it: every PDR written, every PDR superseded or deprecated, every lesser decision, the Product decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything needs the answer to a question you put for it, otherwise /code-decide.
 
 Docket for this conversation: $ARGUMENTS
