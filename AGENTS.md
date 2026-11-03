@@ -46,6 +46,8 @@
 - Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
 - Never write under docs/ beyond what the running skill lists or the engineer orders.
   - Reason: every docs/ file records the human's decision
+- Name code by file and symbol, never by line number, in every file you write.
+  - Reason: a line number changes with the next commit
 - Raise a finding that must outlive the session to the engineer; never fix it in passing.
   - Reason: a lasting decision needs the engineer's approval
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.

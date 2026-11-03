@@ -5,18 +5,18 @@ disable-model-invocation: true
 argument-hint: path of the docket
 ---
 
-This runs after /code-record. I am the engineer. Your job is to find every live site that cites a record whose Status is not Active, fix the ones a pointer edit settles, and hand the ones whose code must change to /cycle-plan through the docket. Nothing here decides what the app does or how it is built.
+I am the engineer. Your job is to find every live site that cites a record whose Status is not Active, fix the ones a pointer edit settles, and hand the ones whose code must change on through the docket. Nothing here decides what the app does or how it is built.
 
 Files you may write in this conversation:
 
-- The line of a live site, in code, AGENTS.md or `docs/backlog.md`, and nothing else in that file
-- The docket
+- The line of a live site, and nothing else in its file
+- The docket, following `docs/rules/roundtable-docket-rules.md`
 
 Give me one thing to answer per turn: one proposed edit, one hand-off, or the docket edit.
 
 ## Terms
 
-- A "live site" is what `docs/rules/record-rules.md` calls one: a line in code, AGENTS.md or `docs/backlog.md` that cites a record by number.
+- A "live site" is what `docs/rules/record-rules.md` calls one.
 - "The guard" is `tests/api_tests/test_record_citation_guard.py`; its failure lists every live site that cites a record whose Status is not Active, with that Status.
 - "The docket" is the roundtable docket whose path I give.
 
@@ -50,6 +50,6 @@ Run the guard again. Every site it still lists is on the docket's Live sites, an
 
 ## Ending
 
-Show me every edit you made and the docket edit, then make the docket edit. Then stop; /cycle-plan is next.
+Show me every edit you made and the docket edit, then make the docket edit. Then stop.
 
 Docket for this conversation: $ARGUMENTS

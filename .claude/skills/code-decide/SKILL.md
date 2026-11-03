@@ -5,9 +5,9 @@ disable-model-invocation: true
 argument-hint: path of the docket, and a topic if the docket holds no question.
 ---
 
-This is a code conversation. I am the engineer; your job is to help me decide how the app is built to deliver what the active PDRs say. Nothing decided here changes what the user experiences. It opens from the docket: the questions it holds for /code-decide, the PDRs it lists, and the lesser decisions the product side left for you; or, when the docket holds no question, from a topic with no PDR behind it: a bug, a refactor, or a replan after a blocked task. /code-record runs next and reads the docket as its only input.
+This is a code conversation. I am the engineer; your job is to help me decide how the app is built to deliver what the active PDRs say. Nothing decided here changes what the user experiences. It opens from the docket, or, when the docket holds no question, from a topic with no PDR behind it.
 
-Files you may write in this conversation: the docket, following `docs/rules/roundtable-docket-rules.md`, and a design canvas when I ask to see how something would look.
+Files you may write in this conversation: the docket and its canvas, following `docs/rules/roundtable-docket-rules.md`.
 
 Give me one thing to answer per turn: one question, or one proposed decision with its alternatives, for me to confirm or pick another. Open it with one line saying what I am deciding.
 
@@ -30,7 +30,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - The Type test in `docs/rules/record-rules.md`.
 - The PDRs the docket lists, in full.
-- Every active ADR, so you can tell me when a decision contradicts or extends one. A Superseded or Deprecated ADR no longer holds; skip it.
+- Every active ADR, so you can tell me when a decision contradicts or extends one.
 - Whatever code you need to understand what has been built.
 - The in-progress cycle files, they tell you what is being built. For a replan, the blocked task is the topic.
 - Nothing else without my explicit permission.
@@ -54,10 +54,10 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 - A decision is confirmed only when I say so. State it plainly and ask me directly.
 - A proposed decision states that decision alone: nothing restated from an earlier one, nothing settled for a later one.
-- Label confirmed decisions CD1 upward, above the highest label the docket holds.
-- Keep each confirmed decision with its anchors in the running list, and with its canvas link when a canvas shows it.
+- Label confirmed decisions as the docket rules label a Code decision.
+- Keep each confirmed decision with its anchors in the running list, and with the drawings that show it.
 - To change one, show the current and the proposed decision in two blocks, each with its anchors; amend in place or drop only after my approval.
-- Anything deferred is an open question owned by you: /code-decide; keep it with what needs its answer.
+- Anything deferred is an open question owned by you.
 
 ## Pushbacks
 
@@ -65,10 +65,10 @@ Apply the Type test in `docs/rules/record-rules.md` to each alternative.
 
 ## Changed PDRs
 
-- For every PDR the docket lists as superseded or deprecated, find every active ADR whose Context cites it and propose, one per turn, whether that ADR still holds. An ADR that no longer holds is decided here like any other.
+- For every PDR the docket lists as superseded or deprecated, propose one per turn whether each active ADR citing it still holds; one that does not is decided here like any other.
 
 ## Ending
 
-When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it: every confirmed decision, every open question, the open questions you decided taken out, the changed PDRs you checked taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /product-decide is next if anything needs the answer to a question you put for it, otherwise /code-record.
+When nothing on the topic is left to decide, say so and ask whether I have more. When I have none, show me the docket edit, then make it. Then stop.
 
 Docket and topic for this conversation: $ARGUMENTS

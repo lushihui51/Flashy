@@ -20,4 +20,4 @@
 
 **Code.** The names the code gives the row's concept, in backticks, joined by "; ": its table and model in `app/models/`, its route in `app/routers/api/`, its error code, and its frontend identifiers where they differ. A Code cell holds the names alone, never a note on how they relate to the row's words.
 
-**Writing.** User-facing text stands in double quotes and code names in backticks, everywhere in the file. An empty cell reads "—". Never say what a word or a name used to be, when it changed, or what will change. Name code by symbol or route, never by line number.
+**Writing.** User-facing text stands in double quotes and code names in backticks, everywhere in the file. An empty cell reads "—". Never say what a word or a name used to be, when it changed, or what will change.
