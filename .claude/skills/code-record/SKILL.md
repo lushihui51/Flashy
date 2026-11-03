@@ -93,6 +93,6 @@ Once the fate of all affected ADRs has been settled, draft any new ADR we've dec
 
 ## Ending
 
-When every row is settled, show me the docket edit, then make it: every ADR written, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything needs the answer to a question you put for it, otherwise /records-sync.
+When every row is settled, show me the docket edit, then make it: every ADR written, every lesser decision, the Code decisions taken out, and, once I approve them, the references in other skills' items to anything you changed fixed. Then stop; /code-decide is next if anything needs the answer to a question you put for it, otherwise /record-sync.
 
 Docket for this conversation: $ARGUMENTS

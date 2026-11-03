@@ -1,5 +1,5 @@
 ---
-name: records-sync
+name: record-sync
 description: Sync conversation — bring every live site that cites a superseded or deprecated record in line with the records that hold now
 disable-model-invocation: true
 argument-hint: path of the docket
