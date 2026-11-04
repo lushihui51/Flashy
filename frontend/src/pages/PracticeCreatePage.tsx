@@ -38,12 +38,20 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const { params, setParams } = useViewParams();
+  const { params, setParams, changeView } = useViewParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
   const selectedHeadingId = useId();
+
+  const filtersRef = useRef<HTMLDivElement>(null);
+  // The pick list, its empty sentence or its failure sentence: whichever shows for the
+  // current filters, so a reveal after a filter change finds where the list starts, and
+  // nothing while the old list stands in for the new one.
+  const pickListRef = useRef<HTMLDivElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLParagraphElement>(null);
 
   const subjectId = params.get('subject');
   const deckId = params.get('deck');
@@ -192,7 +200,11 @@ export default function PracticeCreatePage() {
     else nextParams.delete('subject');
     if (next.deckId) nextParams.set('deck', next.deckId);
     else nextParams.delete('deck');
-    setParams(nextParams);
+    changeView(nextParams, {
+      control: () => filtersRef.current?.firstElementChild ?? null,
+      listStart: () =>
+        pickListRef.current?.firstElementChild ?? emptyRef.current ?? failureRef.current,
+    });
   };
 
   const changeName = (value: string) => {
@@ -290,9 +302,7 @@ export default function PracticeCreatePage() {
           className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
         />
         {nameMissing && (
-          <p className="text-sm text-(--color-aside)">
-            Give this practice a name to create it.
-          </p>
+          <p className="text-sm text-(--color-aside)">Give this practice a name to create it.</p>
         )}
       </div>
 
@@ -317,7 +327,7 @@ export default function PracticeCreatePage() {
         )}
       </section>
 
-      <div className="mt-3">
+      <div ref={filtersRef} className="mt-3">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
           decks={decksQuery.data ?? []}
@@ -332,7 +342,7 @@ export default function PracticeCreatePage() {
       </div>
 
       {configsQuery.isError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
+        <p ref={failureRef} role="alert" className="text-sm text-(--color-wrong)">
           Could not load configurations.
         </p>
       )}
@@ -350,7 +360,10 @@ export default function PracticeCreatePage() {
       )}
 
       {configsQuery.data && groups.length === 0 ? (
-        <div className="flex flex-col items-start gap-3 py-8">
+        <div
+          ref={configsQuery.isPlaceholderData ? undefined : emptyRef}
+          className="flex flex-col items-start gap-3 py-8"
+        >
           <p className="text-[15px] text-(--color-aside)">
             {filtered ? 'No configurations match these filters.' : 'No configurations yet.'}
           </p>
@@ -366,24 +379,26 @@ export default function PracticeCreatePage() {
           )}
         </div>
       ) : (
-        <ConfigurationPickList
-          groups={groups}
-          selectedIds={selectedIdSet}
-          rowError={rowError}
-          onToggle={(group, configId) =>
-            setParams(
-              withSelectedConfigIds(
-                params,
-                toggleConfig(
-                  selectedIds,
-                  group.configs.map((config) => config.id),
-                  configId,
+        <div ref={configsQuery.data && !configsQuery.isPlaceholderData ? pickListRef : undefined}>
+          <ConfigurationPickList
+            groups={groups}
+            selectedIds={selectedIdSet}
+            rowError={rowError}
+            onToggle={(group, configId) =>
+              setParams(
+                withSelectedConfigIds(
+                  params,
+                  toggleConfig(
+                    selectedIds,
+                    group.configs.map((config) => config.id),
+                    configId,
+                  ),
                 ),
-              ),
-            )
-          }
-          onEdit={editConfiguration}
-        />
+              )
+            }
+            onEdit={editConfiguration}
+          />
+        </div>
       )}
     </div>
   );

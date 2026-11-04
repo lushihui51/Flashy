@@ -48,7 +48,9 @@ export default function ConfigurationPickList({
             {group.configs.map((config) => {
               const inputId = `config-${config.id}`;
               return (
-                <div key={config.id} className="flex flex-col gap-1 py-1 pr-1 pl-4">
+                // The mark names this row, not its deck group, as what a reveal after a
+                // filter change brings into view.
+                <div key={config.id} data-reveal-row className="flex flex-col gap-1 py-1 pr-1 pl-4">
                   <div className="flex items-center gap-2">
                     <label
                       htmlFor={inputId}

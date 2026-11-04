@@ -623,7 +623,7 @@ Read in the code: nothing; the diff in the two pages is the import and the optio
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -647,6 +647,7 @@ After a tab or filter change on Your library, a deck's page, the Practice page o
 - `frontend/src/pages/PracticeOverviewPage.tsx`
 - `frontend/src/pages/PracticeCreatePage.tsx`
 - `frontend/src/components/practice/ConfigurationPickList.tsx`
+- `frontend/src/test/setup.ts`
 
 **Details**
 
@@ -765,7 +766,94 @@ The tests, in `viewParams.test.tsx`, each a test of its own, under the memory da
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/lib/revealDelta.test.ts --reporter=verbose` passes, the six tests named:
+  ```
+  ✓ src/lib/revealDelta.test.ts > revealDelta > gives 0 when the control and the rows are all in view
+  ✓ src/lib/revealDelta.test.ts > revealDelta > lands the top of targets above the band on bandTop
+  ✓ src/lib/revealDelta.test.ts > revealDelta > lands the bottom of targets below the viewport on its bottom edge
+  ✓ src/lib/revealDelta.test.ts > revealDelta > lands the control on bandTop when the targets do not fit the band
+  ✓ src/lib/revealDelta.test.ts > revealDelta > reveals the control alone with no rows, and gives 0 with no control either
+  ✓ src/lib/revealDelta.test.ts > revealDelta > reveals the rows alone with no control
+  ```
+- `cd frontend && npx vitest run src/lib/viewParams.test.tsx --reporter=verbose` passes, 7 of 7: the `setParams` test from T1, the four `changeView` tests Details names, and two more on the whole-pixel delta, under the departure below:
+  ```
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > writes like setParams and scrolls once, by the reveal delta, only once listStart gives the list
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > takes the band top from the greatest stuck bottom of the marked elements
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > measures the first two marked rows, not the groups around them
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > scrolls a fractional delta by the whole pixel that keeps the top at or below the band
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > scrolls a fractional delta by the whole pixel above when the top stays below the band
+  ✓ src/lib/viewParams.test.tsx > useViewParams > changeView > measures only the targets of a second changeView made before the commit
+  ```
+- `grep -c "changeView(" ...` over the four pages prints `1` for `LibraryPage.tsx`, `1` for `DeckDetailPage.tsx`, `3` for `PracticeOverviewPage.tsx` and `1` for `PracticeCreatePage.tsx`; grep printed the four lines in another order than the arguments.
+- `grep -rln "data-reveal-clear" frontend/src --exclude=*.test.*` prints three lines:
+  ```
+  frontend/src/lib/viewParams.ts
+  frontend/src/components/shell/AppShell.tsx
+  frontend/src/components/ui/StickyPageRow.tsx
+  ```
+- `grep -rln "data-reveal-row" frontend/src --exclude=*.test.*` prints two lines:
+  ```
+  frontend/src/lib/viewParams.ts
+  frontend/src/components/practice/ConfigurationPickList.tsx
+  ```
+- In headless Chromium against `localhost:5173`, signed out of Clerk, at 390 by 500, each tab clicked through `element.click()` in `page.evaluate`, no page errors. `reveals` is the list of deltas the page passed to `window.scrollBy`, read through a wrapper the script installed; `max` is the page's furthest scroll after the click:
+  ```
+  == /library
+    Decks from bottom: scrollY 102 -> 63 (max 64); tablistTop 114.5 headerBottom 114 tablistAtOrBelowHeader true; rowBottoms [304.5,394.5] atMost500 true; reveals [-1]
+    scrollY less than before: true
+    Subjects from top: scrollY 0 -> 0; stays 0: true; reveals [-1,0]
+  == /decks/d82f1a6b-0b7a-4144-ba4f-9b8e38ea93c0  (Commands, 54 cards)
+    Configurations from bottom: scrollY 32137 -> 117 (max 122); tablistTop 114.3 headerBottom 114 tablistAtOrBelowHeader true; rowBottoms [289.8,356.3] atMost500 true; reveals [-5]
+    Cards after that: scrollY 117 -> 117 (max 32137); tablistTop 114.3 headerBottom 114 tablistAtOrBelowHeader true; rowBottoms [775.6,1412.9] atMost500 false; reveals [-5,0]
+  == /practice
+    Completed from bottom: scrollY 915 -> 126 (max 570); tablistTop 114 headerBottom 114 tablistAtOrBelowHeader true; rowBottoms [238,307] atMost500 true; reveals [-444]
+    rows fit below the tablist: true
+  ```
+  On the deck page's Cards, the two card rows do not fit the band, so the tablist lands on the header's bottom and the rows follow, as Details says for targets that do not fit. On the deck page the browser first clamps the scroll from 32137 to the shorter page's 122, then the reveal moves it 5 more.
+- On `/practice/new`, the deck filter picked with the mouse, Ports, whose response the script held 600ms; a sample per 20ms, printed as runs of equal samples; "reveal at commit" is the geometry the page saw when it called `window.scrollBy`:
+  ```
+  before pick: scrollY 82, headerVar 114px, bandTop 170, filterBar {"top":259.5,"bottom":301.5}, first row "Command to Purpose"
+        1..  606ms x 30 scrollY 82 urlHasDeck true first "Command to Purpose" alert null
+      630..  630ms x  1 scrollY 87 urlHasDeck true first "Oct 1, 2026 at 1:18 PM" alert null
+  scrollY at pick 82; response arrived at 626ms; 30 samples before the change, every one at scrollY 82 with the old first row: true
+  after: scrollY 87, difference 5; bandTop 170; filterBar {"top":254.5,"bottom":296.5}; filterBarAtOrBelowBand true; rows [{"top":393.5,"bottom":446.5},{"top":446.5,"bottom":499.5}]
+  reveal at commit: bandTop 170, filterBar {"top":259.5,"bottom":301.5}, rows [{"top":398.5,"bottom":451.5},{"top":451.5,"bottom":504.5}] -> revealDelta 4.5, whole pixels 5, scrollBy delta 5, equal true; fits the band true; second row bottom now 499.5 at most 500 true
+  ```
+  The first sample after the response already shows the new list at the new scroll, so the scroll landed before the list was drawn.
+- On `/practice/new` with the filtered response a 500; the sentence shows after the app's three retries, 9.4 seconds:
+  ```
+        0.. 9420ms x455 scrollY 82 urlHasDeck true first "Command to Purpose" alert null
+     9440.. 9440ms x  1 scrollY 0 urlHasDeck true first "null" alert "Could not load configurations."
+  after: scrollY 0, difference -82; bandTop 170; filterBar {"top":341.5,"bottom":383.5}; filterBarAtOrBelowBand true; rows []; alert "Could not load configurations."
+  reveal at commit: scrollY 0, bandTop 170, filterBar {"top":341.5,"bottom":383.5}, rows [] -> revealDelta 0, scrollBy delta 0; reveals 1
+  ```
+  The reveal fired once, on the failure sentence, with a delta of 0: the page had already shrunk to nothing scrollable when the list went, which put the scroll at 0 and the filter bar in view on its own.
+- On `/practice/new` with `/api/health` aborted, the banner showing and `--app-header-height` at `172px`, the same filter change:
+  ```
+  before pick: scrollY 140, headerVar 172px, bandTop 228, filterBar {"top":259.5,"bottom":301.5}, first row "Command to Purpose"
+        0..  611ms x 30 scrollY 140 urlHasDeck true first "Command to Purpose" alert null
+      632..  632ms x  1 scrollY 145 urlHasDeck true first "Oct 1, 2026 at 1:18 PM" alert null
+  after: scrollY 145, difference 5; bandTop 228; filterBar {"top":254.5,"bottom":296.5}; filterBarAtOrBelowBand true; rows [{"top":393.5,"bottom":446.5},{"top":446.5,"bottom":499.5}]
+  reveal at commit: bandTop 228, filterBar {"top":259.5,"bottom":301.5}, rows [{"top":398.5,"bottom":451.5},{"top":451.5,"bottom":504.5}] -> revealDelta 4.5, whole pixels 5, scrollBy delta 5, equal true; second row bottom now 499.5 at most 500 true
+  ```
+
+Checks over the whole frontend: `npx vitest run` 57 files and 580 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Departures from Details or Files, three. The first is a path the engineer added to Files in the building conversation; the other two are in how the reveal lands, and both were measured before the change:
+
+- `frontend/src/test/setup.ts` gives jsdom's `window.scrollTo` and `window.scrollBy` a function that does nothing, since jsdom has no scroll position and answered each with a `Not implemented` line: 18 from the reveal on every tab or filter change in the page tests, beside 11 from the router's restoration since T2. The suite prints none now, and `viewParams.test.tsx` still spies on `scrollBy` as before. T7's Files do not hold the path.
+
+- The control for a tab change is the `[role="tablist"]` element, not the tab with `aria-selected="true"`. The pressed tab carries `tappable-pressed`, `transform: translateY(2px)`, so its rect sits 2px below the tablist's; landing it on the band's top left the tablist's top at 112 and the other tabs 2px under the header, and the first Done-when tab line read false on the deck page and the Practice page. The tablist's rect is the union of every tab's, pressed one included.
+- `changeView` passes `window.scrollBy` the whole pixel of `revealDelta`'s result, through `wholePixels` in `viewParams.ts`: the whole number above when that still keeps the targets' top at or below the band, else the one below. `revealDelta` itself is unchanged and exact. The browser lands a scroll offset on a whole pixel and rounds a half up, and every page's h1 is 31.5px tall, so every list sits at a half pixel: a delta of `-0.5` on Your library moved nothing and left the tablist at 113.5, and a delta of `+0.5` on the deck page's Cards would have put it at 113.5. With the whole pixel, the library lands at 114.5 and New practice's second row at 499.5. The two added tests pin the rule.
+
+Findings, for the engineer:
+
+- Under a failed filter on New practice, the page shrinks to nothing scrollable when the old list goes, so the scroll drops to 0 by itself before the failure sentence shows; the reveal then has nothing to do. The Done-when line holds, and the page's place is lost all the same.
+- `grep -c` printed its four counts in a different order than its arguments, on this machine; the counts per file are as the Done when asks.
+
+Read in the code: the layout effect, `bandTop`, `rowsOf` and `wholePixels` in `frontend/src/lib/viewParams.ts`, the only logic here; and the refs on `frontend/src/pages/PracticeOverviewPage.tsx` as the pattern the other three pages follow, where the list's ref is attached only while the list shows the current params.
 
 ### T7 — The "<" that goes back
 

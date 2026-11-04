@@ -51,8 +51,13 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-(--color-ground)">
-      {/* z-40: stays visible above the drawer/sheet's scrim/panel (z-20/30) while open. */}
-      <header ref={headerRef} className="sticky top-0 z-40 flex flex-col gap-0.5 bg-(--color-ground) pb-2">
+      {/* z-40: stays visible above the drawer/sheet's scrim/panel (z-20/30) while open.
+          The mark tells a reveal after a tab or filter change to keep clear of the header. */}
+      <header
+        ref={headerRef}
+        data-reveal-clear
+        className="sticky top-0 z-40 flex flex-col gap-0.5 bg-(--color-ground) pb-2"
+      >
         {connectionStatus !== 'online' && <ConnectionBanner status={connectionStatus} />}
         <TopBar
           onMenuClick={() => setIsMenuOpen((open) => !open)}
