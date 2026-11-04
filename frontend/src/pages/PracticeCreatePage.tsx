@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
@@ -21,6 +21,7 @@ import {
   toggleConfig,
   withSelectedConfigIds,
 } from 'src/lib/practiceSelection';
+import { useViewParams } from 'src/lib/viewParams';
 
 type RowError = { configId: string; sentence: string };
 
@@ -36,16 +37,16 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { params, setParams } = useViewParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
   const selectedHeadingId = useId();
 
-  const subjectId = searchParams.get('subject');
-  const deckId = searchParams.get('deck');
-  const selectedIds = readSelectedConfigIds(searchParams);
+  const subjectId = params.get('subject');
+  const deckId = params.get('deck');
+  const selectedIds = readSelectedConfigIds(params);
   const selectedIdSet = new Set(selectedIds);
 
   // Read from the URL once, at mount: the `name` param is absent until the first edit,
@@ -54,7 +55,7 @@ export default function PracticeCreatePage() {
   // refresh comes back to whatever was typed, empty included. The input stays bound to
   // this local buffer, which mirrors each change to the URL; binding it to the URL
   // would route every keystroke through a navigation.
-  const [name, setName] = useState(() => searchParams.get('name') ?? formatDateTime(new Date()));
+  const [name, setName] = useState(() => params.get('name') ?? formatDateTime(new Date()));
   const [rowError, setRowError] = useState<RowError | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -100,8 +101,8 @@ export default function PracticeCreatePage() {
   const missingIds = useMemo(() => {
     if (!settledConfigs) return [];
     const knownIds = new Set(settledConfigs.map((config) => config.id));
-    return readSelectedConfigIds(searchParams).filter((id) => !knownIds.has(id));
-  }, [settledConfigs, searchParams]);
+    return readSelectedConfigIds(params).filter((id) => !knownIds.has(id));
+  }, [settledConfigs, params]);
 
   // Adjusting state during render, as DeckConfigurationEditor does once a deck's
   // fields land, so no setState runs in the effect below. Stays until the next Create
@@ -111,10 +112,10 @@ export default function PracticeCreatePage() {
   }
 
   // The one effect that writes the URL in reaction to fetched data: two
-  // `setSearchParams` calls after one render both start from that render's params, and
+  // `setParams` calls after one render both start from that render's params, and
   // the second would overwrite the first. It drops `missingIds`, then applies the
   // returned-configuration one-shot if due, then writes once — an effect because
-  // `setSearchParams` is a navigation.
+  // `setParams` is a navigation.
   //
   // The "New configuration…" one-shot is consumed only once the returned config
   // actually appears in the filtered list: after the builder round trip this page
@@ -128,7 +129,7 @@ export default function PracticeCreatePage() {
         : undefined;
     if (missingIds.length === 0 && !match) return;
 
-    let ids = readSelectedConfigIds(searchParams).filter((id) => !missingIds.includes(id));
+    let ids = readSelectedConfigIds(params).filter((id) => !missingIds.includes(id));
     if (match && configsQuery.data) {
       appliedReturnedConfig.current = true;
       const deckConfigIds = configsQuery.data
@@ -136,8 +137,8 @@ export default function PracticeCreatePage() {
         .map((config) => config.id);
       ids = selectConfig(ids, deckConfigIds, match.id);
     }
-    setSearchParams(withSelectedConfigIds(searchParams, ids), { replace: true });
-  }, [missingIds, returnedConfigId, configsQuery.data, searchParams, setSearchParams]);
+    setParams(withSelectedConfigIds(params, ids));
+  }, [missingIds, returnedConfigId, configsQuery.data, params, setParams]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -165,12 +166,11 @@ export default function PracticeCreatePage() {
           setTopError(sentence);
           const goneId = error.detail.config_id;
           if (goneId) {
-            setSearchParams(
+            setParams(
               withSelectedConfigIds(
-                searchParams,
+                params,
                 selectedIds.filter((id) => id !== goneId),
               ),
-              { replace: true },
             );
           }
           queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
@@ -183,55 +183,57 @@ export default function PracticeCreatePage() {
 
   // Changes only its own params, so the draft's `config` ids ride along.
   const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
-    const params = new URLSearchParams(searchParams);
-    if (next.subjectId) params.set('subject', next.subjectId);
-    else params.delete('subject');
-    if (next.deckId) params.set('deck', next.deckId);
-    else params.delete('deck');
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next.subjectId) nextParams.set('subject', next.subjectId);
+    else nextParams.delete('subject');
+    if (next.deckId) nextParams.set('deck', next.deckId);
+    else nextParams.delete('deck');
+    setParams(nextParams);
   };
 
   const changeName = (value: string) => {
     setName(value);
-    const params = new URLSearchParams(searchParams);
-    params.set('name', value);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('name', value);
+    setParams(nextParams);
   };
 
   const newConfiguration = () => {
-    const params = new URLSearchParams();
-    if (subjectId) params.set('subject', subjectId);
-    if (deckId) params.set('deck', deckId);
+    const builderParams = new URLSearchParams();
+    if (subjectId) builderParams.set('subject', subjectId);
+    if (deckId) builderParams.set('deck', deckId);
     // returnTo rides the URL, not router state — it has to survive a further forward if
     // the builder itself opens "New deck…" before coming back here.
-    params.set('returnTo', `${location.pathname}${location.search}`);
-    navigate({ pathname: '/deck-configurations/new', search: params.toString() });
+    builderParams.set('returnTo', `${location.pathname}${location.search}`);
+    navigate({ pathname: '/deck-configurations/new', search: builderParams.toString() });
   };
 
   const removeSelection = (configId: string) =>
-    setSearchParams(
+    setParams(
       withSelectedConfigIds(
-        searchParams,
+        params,
         selectedIds.filter((id) => id !== configId),
       ),
-      { replace: true },
     );
 
   // The draft rides this page's URL, so a returnTo of the full location brings it back
   // intact. An edit's Save hands back no result, so nothing gets auto-selected.
   const editConfiguration = (configId: string) => {
-    const params = new URLSearchParams();
-    params.set('returnTo', `${location.pathname}${location.search}`);
-    navigate({ pathname: `/deck-configurations/${configId}/edit`, search: params.toString() });
+    const builderParams = new URLSearchParams();
+    builderParams.set('returnTo', `${location.pathname}${location.search}`);
+    navigate({
+      pathname: `/deck-configurations/${configId}/edit`,
+      search: builderParams.toString(),
+    });
   };
 
   const cancel = () => {
-    const params = new URLSearchParams();
+    const overviewParams = new URLSearchParams();
     for (const key of OVERVIEW_PARAMS) {
-      const value = searchParams.get(key);
-      if (value !== null) params.set(key, value);
+      const value = params.get(key);
+      if (value !== null) overviewParams.set(key, value);
     }
-    navigate({ pathname: '/practice', search: params.toString() });
+    navigate({ pathname: '/practice', search: overviewParams.toString() });
   };
 
   const selectedCount = selectedIds.length;
@@ -366,16 +368,15 @@ export default function PracticeCreatePage() {
           selectedIds={selectedIdSet}
           rowError={rowError}
           onToggle={(group, configId) =>
-            setSearchParams(
+            setParams(
               withSelectedConfigIds(
-                searchParams,
+                params,
                 toggleConfig(
                   selectedIds,
                   group.configs.map((config) => config.id),
                   configId,
                 ),
               ),
-              { replace: true },
             )
           }
           onEdit={editConfiguration}

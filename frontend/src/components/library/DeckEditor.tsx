@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
@@ -29,6 +29,7 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -231,7 +232,7 @@ type DeckEditorProps = {
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -276,7 +277,7 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       contextualSubject={createLocationState?.subject ?? null}
       // returnTo rides the URL, not state — create mode only; an edit is never entered
       // via a "New deck…" round-trip.
-      returnTo={mode === 'create' ? internalReturnTo(searchParams) : null}
+      returnTo={mode === 'create' ? internalReturnTo(params) : null}
     />
   );
 }

@@ -9,13 +9,13 @@ import {
   Routes,
   useLocation,
   useNavigate,
-  useSearchParams,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
 
@@ -145,14 +145,14 @@ function currentLocation() {
 function NewConfigStub() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
   return (
     <div>
       <span data-testid="new-config-location">{`${location.pathname}${location.search}`}</span>
       <button
         type="button"
         onClick={() =>
-          navigate(searchParams.get('returnTo') ?? '/practice/new', {
+          navigate(params.get('returnTo') ?? '/practice/new', {
             state: { configurationId: 'c2' },
           })
         }

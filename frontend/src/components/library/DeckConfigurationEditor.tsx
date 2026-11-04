@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck, readDecks } from 'src/api/deck';
 import { readSubjects } from 'src/api/subject';
@@ -29,6 +29,7 @@ import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -73,7 +74,7 @@ type DeckConfigurationEditorProps = {
  */
 export default function DeckConfigurationEditor({ mode }: DeckConfigurationEditorProps) {
   const { configId } = useParams<{ configId: string }>();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
   const location = useLocation();
 
   const configQuery = useQuery({
@@ -112,9 +113,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     <DeckConfigurationEditorBody
       mode={mode}
       config={configQuery.data}
-      contextSubjectId={searchParams.get('subject')}
-      contextDeckId={state?.deckId ?? searchParams.get('deck')}
-      returnTo={internalReturnTo(searchParams)}
+      contextSubjectId={params.get('subject')}
+      contextDeckId={state?.deckId ?? params.get('deck')}
+      returnTo={internalReturnTo(params)}
     />
   );
 }

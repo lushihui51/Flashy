@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Play } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
 import { readSubject } from 'src/api/subject';
@@ -15,6 +15,7 @@ import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { failureSentence } from 'src/lib/failureSentence';
+import { useViewParams } from 'src/lib/viewParams';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -38,8 +39,8 @@ export default function DeckDetailPage() {
   const queryClient = useQueryClient();
   // In the URL rather than component state: the configuration builder navigates away and
   // back, and landing on the deck's *cards* after saving one would lose the thread.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'cards';
+  const { params, setParams } = useViewParams();
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'cards';
 
   const [pendingDelete, setPendingDelete] = useState<DeckPracticeConfigSummary | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -97,10 +98,10 @@ export default function DeckDetailPage() {
   const configurations = configurationsQuery.data ?? [];
 
   const setTab = (next: Tab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'cards') params.delete('tab');
-    else params.set('tab', next);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next === 'cards') nextParams.delete('tab');
+    else nextParams.set('tab', next);
+    setParams(nextParams);
   };
 
   // Both carry the deck in router state — the same deck-context wiring the card form

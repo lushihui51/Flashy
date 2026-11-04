@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
@@ -11,6 +11,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import Tabs, { type TabItem } from 'src/components/ui/Tabs';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
@@ -34,14 +35,14 @@ function isStatusTab(value: string | null): value is StatusTab {
  * returns to the list the user was actually looking at. */
 export default function PracticeOverviewPage() {
   usePageTitle('Practice');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { params, setParams } = useViewParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const subjectId = searchParams.get('subject');
-  const deckId = searchParams.get('deck');
-  const statusTab: StatusTab = isStatusTab(searchParams.get('status'))
-    ? (searchParams.get('status') as StatusTab)
+  const subjectId = params.get('subject');
+  const deckId = params.get('deck');
+  const statusTab: StatusTab = isStatusTab(params.get('status'))
+    ? (params.get('status') as StatusTab)
     : 'all';
 
   const [pendingDelete, setPendingDelete] = useState<PracticeRunSummary | null>(null);
@@ -69,19 +70,19 @@ export default function PracticeOverviewPage() {
   });
 
   const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
-    const params = new URLSearchParams(searchParams);
-    if (next.subjectId) params.set('subject', next.subjectId);
-    else params.delete('subject');
-    if (next.deckId) params.set('deck', next.deckId);
-    else params.delete('deck');
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next.subjectId) nextParams.set('subject', next.subjectId);
+    else nextParams.delete('subject');
+    if (next.deckId) nextParams.set('deck', next.deckId);
+    else nextParams.delete('deck');
+    setParams(nextParams);
   };
 
   const setStatusTab = (tab: StatusTab) => {
-    const params = new URLSearchParams(searchParams);
-    if (tab === 'all') params.delete('status');
-    else params.set('status', tab);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (tab === 'all') nextParams.delete('status');
+    else nextParams.set('status', tab);
+    setParams(nextParams);
   };
 
   // Status is the one filter the server doesn't take: it isn't a relation, and every
@@ -98,7 +99,7 @@ export default function PracticeOverviewPage() {
         <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">Practice</h1>
         <AddButton
           label="Add practice"
-          onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
+          onClick={() => navigate({ pathname: '/practice/new', search: params.toString() })}
         />
       </div>
 
@@ -136,7 +137,7 @@ export default function PracticeOverviewPage() {
           {filtered && (
             <button
               type="button"
-              onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
+              onClick={() => setParams(new URLSearchParams())}
               className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
             >
               Clear filters

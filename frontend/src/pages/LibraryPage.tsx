@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
@@ -9,6 +9,7 @@ import AddButton from 'src/components/ui/AddButton';
 import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
@@ -35,14 +36,14 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'subjects';
+  const { params, setParams } = useViewParams();
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'subjects';
 
   const setTab = (next: Tab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'subjects') params.delete('tab');
-    else params.set('tab', next);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next === 'subjects') nextParams.delete('tab');
+    else nextParams.set('tab', next);
+    setParams(nextParams);
   };
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });

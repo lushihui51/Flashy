@@ -20,7 +20,7 @@ Judgement: The engineer judges by driving a mouse through going back from a deck
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -93,7 +93,47 @@ The test, `viewParams.test.tsx`: mount a component that calls `useViewParams` un
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/lib/viewParams.test.tsx --reporter=verbose` passes; the three assertions on `router.state` are in one test:
+  ```
+  ✓ src/lib/viewParams.test.tsx > useViewParams > setParams replaces the entry, writes the params and asks for no scroll reset
+  Tests  1 passed (1)
+  ```
+- `grep -rn "useSearchParams" frontend/src` prints two lines:
+  ```
+  frontend/src/lib/viewParams.ts:2:import { useSearchParams } from 'react-router-dom';
+  frontend/src/lib/viewParams.ts:14:  const [params, setSearchParams] = useSearchParams();
+  ```
+- `grep -rln "setSearchParams" frontend/src` prints one line:
+  ```
+  frontend/src/lib/viewParams.ts
+  ```
+- With the import added to `LibraryPage.tsx`, `npm run lint` exits 1 with this message line, and the import was removed after it; the same run also reports the unused import under `@typescript-eslint/no-unused-vars`:
+  ```
+  1:10  error  'useSearchParams' import from 'react-router-dom' is restricted. read and write a page's search params through useViewParams in src/lib/viewParams.ts, whose writes never reset scroll (ADR 097)  no-restricted-imports
+  ```
+
+Checks over the whole frontend: `npx vitest run` 54 files and 557 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Beyond Done when, a mouse-driven run in headless Chromium, signed out of Clerk, against `localhost:5173`, with no page errors; it wrote only URLs:
+
+```
+library Decks tab -> /library?tab=decks
+library Subjects tab -> /library
+practice Completed tab -> /practice?status=completed
+new practice name -> /practice/new?name=T1+check
+new practice tick -> /practice/new?name=T1+check&config=d6b5ecea-a581-45e9-933b-b2733b7bf8fa
+deck 2nd tab -> /decks/d82f1a6b-0b7a-4144-ba4f-9b8e38ea93c0?tab=configurations
+config editor heading New configuration
+deck editor heading New deck
+```
+
+The scroll behaviour itself is not visible yet: `preventScrollReset` takes effect only under the data router T2 builds, so this task's evidence for it is the `router.state` assertion.
+
+Departures from Details or Files: none. The hook's result is read as `params` at every call site, not aliased, so the local copies that held that name became `nextParams`, and in `PracticeCreatePage.tsx` the ones built for `navigate` became `builderParams` and `overviewParams`.
+
+Read in the code: nothing beyond `frontend/src/lib/viewParams.ts`; the rest of the diff is the mechanical move to the hook.
 
 ### T2 — The data router with scroll restoration
 
