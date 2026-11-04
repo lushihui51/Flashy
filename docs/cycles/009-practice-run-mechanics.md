@@ -1,4 +1,4 @@
-# 009 — Practice run mechanics: rename, CI, requeue rules, rerun, lineage
+# 009 — Practice run mechanics
 
 ## Goal
 

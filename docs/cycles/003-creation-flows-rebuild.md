@@ -1,4 +1,4 @@
-# 003 — Frontend rebuild: creation flows
+# 003 — Creation flows rebuild
 
 ## Goal
 

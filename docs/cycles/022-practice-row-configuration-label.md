@@ -1,4 +1,4 @@
-# 022 — Practice rows name their configurations, and configurations name themselves
+# 022 — Practice row configuration label
 
 ## Goal
 

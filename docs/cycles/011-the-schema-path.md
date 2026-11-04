@@ -1,4 +1,4 @@
-# 011 — Alembic is the only schema path
+# 011 — The schema path
 
 ## Goal
 

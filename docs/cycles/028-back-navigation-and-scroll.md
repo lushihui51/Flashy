@@ -1,4 +1,4 @@
-# 028 — Going back and staying in place
+# 028 — Back navigation and scroll
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# 025 — Record pointers in code, in one form and guarded
+# 025 — Record pointers in code
 
 ## Goal
 

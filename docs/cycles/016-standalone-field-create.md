@@ -1,4 +1,4 @@
-# 016 — Dense rows on the standalone field create
+# 016 — Standalone field create
 
 ## Goal
 

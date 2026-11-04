@@ -1,4 +1,4 @@
-# 021 — One add control per collection
+# 021 — Empty state add button
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# 005 — Structural navigation: breadcrumbs and URL-held tabs
+# 005 — Structural navigation
 
 ## Goal
 

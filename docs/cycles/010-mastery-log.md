@@ -1,4 +1,4 @@
-# 010 — Mastery log: the ledger, and session deltas in the breakdown
+# 010 — Mastery log
 
 ## Goal
 

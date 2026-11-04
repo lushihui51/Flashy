@@ -1,4 +1,4 @@
-# 012 — Payload modules: entity models hold only their own row shapes
+# 012 — Model payload modules
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# 026 — One vocabulary file, and every screen speaking it
+# 026 — The vocabulary file
 
 ## Goal
 

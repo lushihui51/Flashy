@@ -1,4 +1,4 @@
-# 024 — The subject's icon chosen by tapping it
+# 024 — Subject icon control
 
 ## Goal
 

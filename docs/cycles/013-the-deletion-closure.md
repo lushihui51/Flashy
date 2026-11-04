@@ -1,4 +1,4 @@
-# 013 — Deletion drops all influence
+# 013 — The deletion closure
 
 ## Goal
 

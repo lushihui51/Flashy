@@ -1,4 +1,4 @@
-# 030 — What the user changed most recently, first
+# 030 — Collection order
 
 ## Goal
 

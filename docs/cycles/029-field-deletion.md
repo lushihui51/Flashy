@@ -1,4 +1,4 @@
-# 029 — A field deleted with all it held
+# 029 — Field deletion
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# 027 — The canvas's look on every screen
+# 027 — The look of every screen
 
 Canvas: https://claude.ai/artifact/8oKx5LATxAEWz6C2jZWGjW
 

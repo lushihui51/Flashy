@@ -1,4 +1,4 @@
-# 014 — Removed field in the breakdown
+# 014 — Removed field in breakdown
 
 ## Goal
 

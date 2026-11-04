@@ -1,4 +1,4 @@
-# 015 — Sole persistence surface and the empty practice
+# 015 — Persistence surface and empty practice
 
 ## Goal
 

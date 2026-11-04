@@ -1,4 +1,4 @@
-# 017 — A retry's end of the queue
+# 017 — Retry queue position
 
 ## Goal
 

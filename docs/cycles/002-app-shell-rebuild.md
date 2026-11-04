@@ -1,4 +1,4 @@
-# 002 — Frontend rebuild: app shell
+# 002 — App shell rebuild
 
 ## Goal
 

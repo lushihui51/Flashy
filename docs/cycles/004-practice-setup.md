@@ -1,4 +1,4 @@
-# 004 — Practice setup: board rebuild, creation flow, details
+# 004 — Practice setup
 
 ## Goal
 
