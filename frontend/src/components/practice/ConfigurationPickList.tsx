@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
 import type { ConfigurationGroup } from 'src/lib/practiceConfigurationGroups';
 
 type ConfigurationPickListProps = {
@@ -36,26 +36,37 @@ export default function ConfigurationPickList({
   return (
     <div className="flex flex-col gap-4">
       {groups.map((group) => (
-        <fieldset key={group.deckId} className="flex flex-col gap-1">
-          <legend className="pb-1 text-sm font-medium text-(--color-ink)">
+        <fieldset
+          key={group.deckId}
+          className="tappable min-w-0 rounded-[20px] bg-(--color-surface)"
+        >
+          {/* Floated, or the browser cuts the legend into the fieldset's top outline. */}
+          <legend className="float-left w-full px-4 pt-3 pb-2 text-[15px] leading-5 font-semibold text-(--color-ink)">
             {group.subjectName} · {group.deckName}
           </legend>
-          <div className="flex flex-col divide-y divide-(--color-line)">
+          <div className="clear-both flex flex-col divide-y divide-(--color-line)">
             {group.configs.map((config) => {
               const inputId = `config-${config.id}`;
               return (
-                <div key={config.id} className="flex flex-col gap-1 py-2">
+                <div key={config.id} className="flex flex-col gap-1 py-1 pr-1 pl-4">
                   <div className="flex items-center gap-2">
                     <label
                       htmlFor={inputId}
-                      className="flex min-h-11 min-w-0 flex-1 items-center gap-3"
+                      className="relative flex min-h-11 min-w-0 flex-1 items-center gap-3"
                     >
                       <input
                         id={inputId}
                         type="checkbox"
                         checked={selectedIds.has(config.id)}
                         onChange={() => onToggle(group, config.id)}
+                        className="peer sr-only"
                       />
+                      <span
+                        aria-hidden="true"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] border-(--color-ink) bg-(--color-surface) text-transparent peer-checked:bg-(--color-ink) peer-checked:text-(--color-surface) peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-(--color-ink)"
+                      >
+                        <Check strokeWidth={3} className="h-4 w-4" />
+                      </span>
                       <span className="text-[15px] text-(--color-ink)">{config.name}</span>
                     </label>
                     <button
@@ -68,7 +79,7 @@ export default function ConfigurationPickList({
                     </button>
                   </div>
                   {rowError?.configId === config.id && (
-                    <p role="alert" className="pl-7 text-sm text-(--color-wrong)">
+                    <p role="alert" className="pb-2 pl-9 text-sm text-(--color-wrong)">
                       {rowError.sentence}
                     </p>
                   )}

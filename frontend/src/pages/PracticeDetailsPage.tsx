@@ -21,6 +21,9 @@ import type { components } from 'src/api/types';
 
 type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 
+const HEADER_ACTION_CLASS =
+  'tappable flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)';
+
 /**
  * One practice's own page: name, status, when it was created, which decks it covers,
  * and — while it's still active — the way into it. Delete and, once completed, Re-run
@@ -103,29 +106,31 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
     <div className="p-4">
       <Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />
 
-      <div className="mt-1 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-xl font-semibold text-(--color-ink)">{session.name}</h1>
+      <div className="mt-3.5 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <h1 className="min-w-0 text-[30px] leading-[1.05] font-bold tracking-[-0.02em] break-words text-(--color-ink)">
+            {session.name}
+          </h1>
           <PracticeStatusBadge status={session.status} />
         </div>
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-2">
           {session.status === 'completed' && (
             <button
               type="button"
               aria-label={`Re-run ${session.name}`}
               onClick={() => setConfirmRerunOpen(true)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
+              className={HEADER_ACTION_CLASS}
             >
-              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              <RotateCcw aria-hidden="true" className="h-[18px] w-[18px]" />
             </button>
           )}
           <button
             type="button"
             aria-label={`Delete ${session.name}`}
             onClick={() => setConfirmDeleteOpen(true)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
+            className={HEADER_ACTION_CLASS}
           >
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            <Trash2 aria-hidden="true" className="h-[18px] w-[18px]" />
           </button>
         </div>
       </div>
@@ -139,9 +144,9 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         </p>
       )}
 
-      <p className="mt-1 text-sm text-(--color-aside)">{formatDateTime(session.created_at)}</p>
+      <p className="mt-1 text-[15px] text-(--color-aside)">{formatDateTime(session.created_at)}</p>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1">
+      <div className="mt-3 flex flex-wrap items-center gap-x-2">
         <SessionDeckChips decks={session.decks} variant="full" />
       </div>
 
@@ -149,7 +154,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         <button
           type="button"
           onClick={() => navigate(`/practice/${session.id}/run`)}
-          className="mt-6 h-11 w-full rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink)"
+          className="tappable mt-6 h-[52px] w-full rounded-2xl bg-(--color-main-action) text-[17px] font-semibold text-(--color-ink)"
         >
           Start practice
         </button>

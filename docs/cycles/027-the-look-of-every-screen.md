@@ -658,7 +658,7 @@ None.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -731,7 +731,30 @@ Tests: every test in the listed test files that asserts a class name for colour,
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/pages/PracticeOverviewPage.test.tsx src/pages/PracticeCreatePage.test.tsx src/pages/PracticeDetailsPage.test.tsx src/components/practice` printed `Test Files 4 passed (4)` and `Tests 78 passed (78)`.
+- `grep -rn 'role="tablist"' frontend/src/pages` printed nothing on HEAD plus T6's changes alone, with T4 committed. Before T4's commit it printed `src/pages/DeckDetailPage.tsx:151` and `src/pages/LibraryPage.tsx:52`, T4's files.
+- Headless Chromium through playwright-core at `localhost:5173/practice`, signed out of Clerk, 390px wide, launched with `--force-device-scale-factor=2`: the element holding the rows printed `1.5px solid rgb(23, 33, 43)` and `rgb(23, 33, 43) 0px 3px 0px 0px`; all 15 buttons named "Delete …" printed `border-style: none`; the "Active" badge printed the background `rgb(23, 33, 43)`. The line "no element" to yellow does not hold literally: one element printed it, the top bar's "Log in", which T1 and T2 keep yellow when signed out and which the signed-out check always renders. Nothing else on the page did.
+- `localhost:5173/practice/new` with one configuration ticked: two elements printed `rgb(255, 226, 52)`, "Log in" and Create, so "exactly one" holds only apart from "Log in"; with nothing ticked only "Log in" printed it. Both fieldsets printed `1.5px solid rgb(23, 33, 43)` and `rgb(23, 33, 43) 0px 3px 0px 0px`.
+- The page of the seeded active practice "027 T1 colour check": two elements printed yellow, "Log in" and Start practice, the same exception. The completed practice's page printed only "Log in".
+- Screenshots at 390px wide: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-practice.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-new.png` (one configuration ticked), `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-new-empty.png` (nothing ticked), `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-active.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-completed.png`. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-check.cjs` and its output is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d66583fd-e24a-43ba-99d0-1599b53f1c11/scratchpad/t6-check.out`. No page or horizontal overflow error printed. Create was never pressed, so the check added no row to the dev database.
+
+The checks AGENTS.md requires, on HEAD with T4 committed plus T6's changes alone: `npx vitest run` printed `Test Files 53 passed (53)` and `Tests 554 passed (554)`, `npm run lint` printed no problems, and `npm run build` built. The browser checks above ran on a tree that also held peers' uncommitted T4 and T7 work.
+
+Not seen in a browser, since the seeded data does not reach them: "Clear filters" and the empty sentences, a sentence against a configuration row, the error sentences, and the checkbox's keyboard focus outline. The two `ConfirmDialog`s were not opened here; T6 does not change them. Tests assert the behaviour of these states but not their look.
+
+Departures from Details and Files:
+
+- A long name on a practice's page wraps instead of truncating, because 30px beside two 48px squares leaves room for about twelve characters. The badge therefore drops under a name that fills its line, so it is not always "beside it"; `t6-active.png` and `t6-completed.png` show this.
+- The filters' 42px is set from `PracticeFilterBar.tsx` with `[&_input]:h-[42px]`, as `PickerCombobox.tsx` is outside Files and stays 46px elsewhere. The same selector moves the chevron to `top-[13px]`, which printed 13px above and below it. The filters' text stays T3's 16px, where drawing 5 draws 15px.
+- The rows' block on the Practice page renders only when it has a row, and the Selected block only once its configurations resolve, since an empty block draws a bare outline while loading or after a failed load.
+- Each fieldset's legend is floated, because a browser otherwise cuts a legend into the fieldset's top outline. It printed inside the block, under the outline.
+- The headings carry drawing 5's `-0.02em` spacing and `1.05` line height, which Details does not name. The trash and X buttons are 40px wide, as drawing 5 draws the trash.
+- Details does not settle these, and I chose them: "Selected" reads 13px in aside as a label, the empty sentences read 15px in aside, a practice's date sits under the heading as today, and the Re-run and Delete icons are 18px, as drawing 3 draws Edit deck's.
+- No listed test file changed, because none asserts a class name.
+
+To read: `frontend/src/components/practice/PracticeFilterBar.tsx`, for the selectors that reach into the picker, which would break silently if the picker's markup changed; `frontend/src/components/practice/ConfigurationPickList.tsx`, for the hidden checkbox and the floated legend.
 
 ### T7 — The run page
 

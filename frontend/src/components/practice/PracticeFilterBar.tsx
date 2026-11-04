@@ -33,9 +33,14 @@ export default function PracticeFilterBar({
   const selectedSubject = subjects.find((subject) => subject.id === subjectId) ?? null;
   const selectedDeck = decks.find((deck) => deck.id === deckId) ?? null;
 
+  // The picker's input is a form field's height wherever it stands; a filter sits 4px shorter,
+  // with the picker's chevron moved to stay centred on it.
   return (
-    <div className="flex flex-col gap-2 sm:flex-row" data-testid="practice-filters">
-      <div className="flex-1">
+    <div
+      className="flex gap-2.5 [&_input]:h-[42px] [&_svg.absolute]:top-[13px]"
+      data-testid="practice-filters"
+    >
+      <div className="min-w-0 flex-1">
         <PickerCombobox<SubjectOption>
           purpose="filter"
           items={subjects}
@@ -53,7 +58,7 @@ export default function PracticeFilterBar({
           renderLeading={(subject) => <SubjectIcon icon={subject.icon} className="h-4 w-4" />}
         />
       </div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <PickerCombobox<DeckOption>
           purpose="filter"
           items={deckOptions}
