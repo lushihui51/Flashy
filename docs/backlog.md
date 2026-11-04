@@ -51,3 +51,6 @@
 - B20. Are text and the heights around it sized in a unit that scales from one root size, rather than in pixels, and does the sticky row of a form take its offset from the app header's real height?
   - Reason: `frontend/src` sets sizes in pixels, such as `text-[15px]` and `h-[46px]`, beside `rem` utilities, such as `text-sm` and `h-10`, so a larger default font size in the browser scales only part of a screen. `DeckEditor`, `DeckConfigurationEditor` and `PracticeCreatePage` hold their sticky rows at `top-[114px]`, the height of `AppShell`'s header without `ConnectionBanner`, so while the banner shows it covers the row once the page scrolls.
   - Owner: /code-decide
+- B21. When the user presses Cancel on the new deck form they reached from a subject's page, do they return to that subject's page?
+  - Reason: `SubjectDetailPage` in `frontend/src/pages/SubjectDetailPage.tsx` opens the form with the subject in router state and no `returnTo`, and `goBack` in `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` goes to `returnTo` or else `/library`, so Cancel lands on Your library. `returnTo` also decides where Create goes, so passing it would send a new deck back to the subject's page instead of the deck's own.
+  - Owner: /product-decide
