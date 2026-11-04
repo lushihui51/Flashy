@@ -2,7 +2,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  createMemoryRouter,
+  createRoutesFromElements,
+  Route,
+  RouterProvider,
+} from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { server } from 'src/test/server';
@@ -16,15 +21,17 @@ beforeEach(() => {
 
 function renderShell(initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createMemoryRouter(
+    createRoutesFromElements(
+      <Route element={<AppShell />}>
+        <Route path="/" element={<div>home content</div>} />
+      </Route>,
+    ),
+    { initialEntries },
+  );
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={initialEntries}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<div>home content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
 }

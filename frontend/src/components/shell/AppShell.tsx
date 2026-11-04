@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, ScrollRestoration } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@clerk/react';
 import TopBar from 'src/components/shell/TopBar';
@@ -67,6 +67,7 @@ export default function AppShell() {
       <main>
         <Outlet />
       </main>
+      <ScrollRestoration />
     </div>
   );
 }

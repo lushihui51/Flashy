@@ -139,7 +139,7 @@ Read in the code: nothing beyond `frontend/src/lib/viewParams.ts`; the rest of t
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -205,7 +205,81 @@ The test, ADR 089: `renderShell` in `AppShell.test.tsx` builds its router with `
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The first line does not hold as written, and no code can make it hold. Its first grep must print nothing, yet its pattern `BrowserRouter` matches inside `createBrowserRouter`, which Details requires and which the second grep counts. It prints:
+  ```
+  2:  createBrowserRouter,
+  21:const router = createBrowserRouter(
+  ```
+  Those two lines are its only matches, so `<Routes`, `loader=`, `action=` and `errorElement` are absent. Read as a whole word, the old names are gone too: `grep -nw "BrowserRouter\|Routes" frontend/src/App.tsx` prints nothing. The second grep, `grep -c "createBrowserRouter\|RouterProvider" frontend/src/App.tsx`, prints `4`. The engineer accepted the word-bounded grep as the evidence for this line; the line itself stays as written.
+- `grep -n "ScrollRestoration" frontend/src/components/shell/AppShell.tsx` prints two lines:
+  ```
+  2:import { Outlet, ScrollRestoration } from 'react-router-dom';
+  70:      <ScrollRestoration />
+  ```
+- `cd frontend && npx vitest run src/components/shell/AppShell.test.tsx` passes, 10 of 10. `grep -nw MemoryRouter frontend/src/components/shell/AppShell.test.tsx` prints nothing; `createMemoryRouter` is the file's import, as Details requires.
+- The scroll restore, in headless Chromium against `localhost:5173/library`, signed out of Clerk, at 390 by 500:
+  ```
+  library scrollHeight 602 rows 3
+  library scrollY at bottom: 102
+  clicked "Web" -> /subjects/:id
+  new subject page scrollY: 0
+  library scrollY after back: 102
+  equal and above 0: true
+  ```
+- From the subject page, in the same script:
+  ```
+  subject scrollY after history.back() then history.forward(): 0
+  ```
+
+Checks over the whole frontend: `npx vitest run` 54 files and 557 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Beyond Done when, the same script clicked the Decks tab at the bottom of Your library, a `setParams` write under the data router: `tab write 102 -> 64 ?tab=decks`. The page did not jump to the top; it went to 64 because the Decks list is shorter and the page's bottom moved up. The reveal is T3's. Measured: the page's furthest scroll went from 102 to 64.
+
+The engineer then ordered the same check on the other pages, at 390 by 500 (Clear filters at 390 by 300), with clicks that do not make the driver scroll. Before and after are `window.scrollY`; no write reached `0` from a page that stayed scrollable, except the first row below:
+
+```
+Practice, New practice: a filter whose list is not fetched yet   62 -> 0, 158 -> 0
+deck: Cards to Configurations                                    32137 -> 122 (page's bottom)
+deck: Configurations to Cards                                    122 -> 122, or 122 -> 32137
+Practice: All to Completed, Completed to Active                  915 -> 570, 570 -> 156 (page's bottom)
+Practice: Active to All                                          156 -> 156, or 156 -> 570
+Practice: a filter whose list is fetched                         62 -> 62
+New practice: a filter whose list is fetched                     158 -> 158, or 158 -> 94 (page's bottom)
+Practice: Clear filters                                          135 -> 135
+New practice: Clear filters                                      294 -> 294
+New practice: typing the name                                    50 -> 50
+New practice: ticking a configuration                            425 -> 466, 466 -> 529
+New practice: removing a selection                               529 -> 466 (page's bottom)
+```
+
+- A filter whose list is not fetched: the router does not cause the `0`. With the answers held back 600ms on New practice, the trace of scroll and furthest scroll reads `[158,425] [0,0] [0,94]`: the page shrinks to nothing scrollable while the list loads, which forces the scroll to `0`, and it stays there. Practice shows the same numbers and was not held back. This bears on T3: `changeView` moves the page once the list has drawn and does not bring back a position lost while it loaded, so "only as far as that took" may not hold for such a filter. T3's Done when does not exercise it.
+- The two "or" tab rows: the larger value appears only after the page had been scrolled further down earlier, and it is the browser's scroll anchoring, not the router. A log of `window.scrollTo` records no call by the app on any of these tab changes, and with `overflow-anchor: none` the same sequences hold at `122` and `156`.
+- Ticking a configuration: the scroll grows as the selected list above it grows. Its cause was not isolated.
+- Not exercised: the writes with no control of their own, the effect over `missingIds` and the `config_not_found` branch in `PracticeCreatePage.tsx`.
+- Clear filters shows only over an empty list and no single filter in the dev data gives one, so each page was opened at an address holding a subject and a deck of another subject. The script wrote only URLs.
+
+Finding, for the engineer: the data router brings its own default error screen, which `<Routes>` did not.
+
+- Opening an address no route matches now shows the following, in place of the blank page `Routes` rendered (read from `_renderMatches` in react-router, which returns null without a data router; the old page was not run):
+  ```
+  Unexpected Application Error!
+  404 Not Found
+
+  💿 Hey developer 👋
+
+  You can provide a way better UX than this when your app throws errors by providing your own ErrorBoundary or errorElement prop on your route.
+  ```
+- The same screen now catches an error thrown while a page renders, with its stack shown, since react-router's `_renderMatches` falls back to its `defaultErrorElement` under any data router. This was read from the source, not run.
+- The script ran on the dev server only. `frontend/dist` holds both "Unexpected Application Error" and "Hey developer"; which of them a production build shows was not run.
+- This meets two rules in AGENTS.md: a screen shows only words `docs/vocabulary.md` gives, and failures render inline with no error boundary. The task cannot resolve it: Details forbids an `errorElement` and keeps the route tree unchanged, which also rules out a catch-all route. The engineer entered it as B22 in `docs/backlog.md`.
+
+Departures from Details or Files: none in the code. `App.tsx` uses the repository's single quotes and Prettier's line breaks rather than the quoting in Details' block.
+
+`AppShell.test.tsx` now prints `Not implemented: Window's scrollTo() method` from jsdom, because `ScrollRestoration` scrolls on mount: 10 lines in that file's run, with no test failing. Details keeps the test to its router, so nothing stubs it.
+
+Read in the code: nothing; the diff is the router swap, and `App.tsx`'s route tree is the old one re-indented.
 
 ### T3 — Moving only as far as the new list's first rows
 
