@@ -238,17 +238,18 @@ function DeckConfigurationEditorBody({
 
   return (
     <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
+      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
+      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
         <button
           type="button"
           onClick={() =>
             navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
-          className="text-sm font-medium text-(--color-aside)"
+          className="text-[15px] font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-ink)">
+        <h1 className="text-[19px] font-bold text-(--color-ink)">
           {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
         </h1>
         <button
@@ -259,7 +260,7 @@ function DeckConfigurationEditorBody({
             setSaveError(null);
             saveMutation.mutate();
           }}
-          className="bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-40"
+          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>
@@ -268,10 +269,12 @@ function DeckConfigurationEditorBody({
       <div className="mt-3 flex flex-col gap-3">
         {/* Label and control are siblings, not a wrapping <label>: the inline error below
             would otherwise become part of the field's own accessible name. */}
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-ink)">Deck</span>
+        <div
+          className={mode === 'edit' ? 'flex items-baseline gap-2.5' : 'flex flex-col gap-1.5'}
+        >
+          <span className="text-[13px] text-(--color-aside)">Deck</span>
           {mode === 'edit' ? (
-            <span className="inline-flex h-11 items-center rounded-lg bg-(--color-ground) px-3 text-sm text-(--color-ink)">
+            <span className="text-[15px] font-semibold text-(--color-ink)">
               {selectedDeck
                 ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
                 : (deck?.name ?? '')}
@@ -303,8 +306,8 @@ function DeckConfigurationEditorBody({
         </div>
 
         {deckId && (
-          <div className="flex flex-col gap-1">
-            <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-ink)">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={nameInputId} className="text-[13px] text-(--color-aside)">
               Name
             </label>
             <input
@@ -317,7 +320,7 @@ function DeckConfigurationEditorBody({
               }}
               aria-invalid={nameError !== null}
               aria-describedby={nameError ? `${nameInputId}-error` : undefined}
-              className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
+              className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
             {nameError && (
               <span

@@ -152,14 +152,13 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Definition' })).toBeDisabled();
   });
 
-  it('renaming a field via up/down overflow menu reorders the fields', async () => {
+  it("a field's Move up button reorders the fields", async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderEditor();
 
     await screen.findByDisplayValue('Term');
-    await user.click(screen.getByRole('button', { name: 'Reorder Definition' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move up' }));
+    await user.click(screen.getByRole('button', { name: 'Move Definition up' }));
 
     const nameInputs = screen.getAllByRole('textbox', { name: 'Field name' });
     expect(nameInputs.map((i) => (i as HTMLInputElement).value)).toEqual(['Definition', 'Term']);
@@ -614,8 +613,7 @@ describe('DeckEditor — edit mode', () => {
 
     // Reorder: move Front down below Back, then stage Back for removal — the staged
     // field drops out of `order` while staying visible, struck through.
-    await user.click(screen.getByRole('button', { name: 'Reorder Front' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move down' }));
+    await user.click(screen.getByRole('button', { name: 'Move Front down' }));
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -908,8 +906,7 @@ describe('DeckEditor — primary field marker', () => {
       within(screen.getByText('Primary').closest('li')!).getByDisplayValue('Term'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Reorder Definition' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move up' }));
+    await user.click(screen.getByRole('button', { name: 'Move Definition up' }));
 
     const pills = screen.getAllByText('Primary');
     expect(pills).toHaveLength(1);

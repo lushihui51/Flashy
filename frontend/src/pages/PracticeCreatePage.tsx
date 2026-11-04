@@ -248,7 +248,8 @@ export default function PracticeCreatePage() {
 
   return (
     <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
+      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
+      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
         <button
           type="button"
           onClick={cancel}

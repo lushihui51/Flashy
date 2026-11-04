@@ -578,7 +578,7 @@ To read: `frontend/src/components/library/CardList.tsx`, for `HALF_WIDTH_CHARACT
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -588,6 +588,8 @@ The subject, deck, card and configuration forms match drawing 4 in their look.
 
 - T1: the eight tokens and Lexend.
 - T3: `tappable`, `tappable-sm` and `tappable-pressed`; `PickerCombobox`, `ConfirmDialog`, `FullScreenDialog`, `BottomSheet`.
+- T4: no interface; it shares `docs/vocabulary.md`.
+- T6: no interface; it shares `frontend/src/pages/PracticeCreatePage.tsx`.
 
 **Files**
 
@@ -604,6 +606,9 @@ The subject, deck, card and configuration forms match drawing 4 in their look.
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/CardFieldsForm.tsx`
 - `frontend/src/components/library/CardFieldsForm.test.tsx`
+- `docs/vocabulary.md`
+- `frontend/src/pages/PracticeCreatePage.tsx`, for its sticky row only
+- `docs/backlog.md`, for B20 only, by the engineer's order
 
 **Details**
 
@@ -652,7 +657,36 @@ Tests: every test in the listed test files that asserts a class name for colour,
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/components/library` printed `Test Files 9 passed (9)` and `Tests 122 passed (122)`.
+- `grep -rn "opacity-40\|opacity-50\|opacity-60" frontend/src/components/library` printed nothing.
+- Headless Chromium through playwright-core at `localhost:5173/deck-configurations/new?deck=<id>` on the seeded deck Ports, signed out of Clerk, 390px wide, launched with `--force-device-scale-factor=2`: the section labelled "Prompt side" printed `1.5px solid rgb(23, 33, 43)` and `rgb(23, 33, 43) 0px 3px 0px 0px`, and "Not used" printed `1.5px dashed rgb(23, 33, 43)` and `none`. While Create could not be pressed, the only yellow element was "Log in"; once it could, they were "Log in" and Create. "Log in" is the check's signed-out state, so "exactly one" holds apart from it.
+- At `localhost:5173/subjects/new` with the name blank, Create printed `1.5px solid rgb(213, 218, 226)` and `none`, with the only yellow element "Log in".
+- Screenshots at 390px wide: New subject, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-subject-blank.png`; Edit deck, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-deck.png`; New card, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-card.png`; Edit configuration, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-configuration.png`. Also Edit deck with a field staged for removal, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-deck-staged.png`; New deck, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-deck.png`; Edit card, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-card.png`; New configuration, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-configuration.png` and, with its counts, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-configuration-filled.png`; the move sheet, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-move-sheet.png`; the icon picker, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-icon-picker.png`. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-check.cjs` and its output `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-check.out`; it printed no page errors. It also pressed Move up, which reordered the fields, and pressed Create with a blank name, which showed "Name is required."
+
+The commit's checks, on this task's files alone over HEAD, exported to the scratchpad because a peer's uncommitted T7 work is in this checkout: `npx vitest run` printed `Test Files 53 passed (53)` and `Tests 554 passed (554)`, `npm run lint` printed nothing, and `npm run build` built. On the working tree with that work: `Test Files 53 passed (53)`, `Tests 556 passed (556)`, lint printed nothing, and the build built.
+
+Departures from Details and Files, the first by the engineer's order:
+
+- A field's Move up and Move down are bare arrow buttons on each row, spoken "Move <field> up" and "Move <field> down", in place of today's menu, which kept the words Details asked to keep but not the icon buttons Details asked for. The engineer chose this from two options drawn on the canvas, and it is drawing 26C, with the existing drawing relabelled 26A. It departs from "this task changes no word" and from "no test on behaviour changes": `docs/vocabulary.md` joined Files for the row "Moving a field", T5 gained a dependency on T4 because both list that file, and `DeckEditor.test.tsx`'s three reorder steps and one test's name changed.
+- By the engineer's order, the sticky header row on Edit deck, New deck, both configuration forms and New practice stops at `top-[114px]`, beneath the app's sticky header, where at `top-0` it slid behind that header and hid Save, Undo and Cancel. Scrolled in headless Chromium at 390px by 600px, on Edit deck, Edit configuration and New practice, the row's top printed `114`, the header's bottom `114`, and Save was the element under its own centre. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-sticky.cjs`; the screenshot is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-deck-scrolled.png`.
+- A disabled arrow reads as a disabled Remove does, a 1.5px line outline with aside icon, since Details name only Remove. With three icon buttons, a field's name input is 156px wide, so "Protocol Function" clips in it at 390px, and each icon button is 36px, under the 44px the top bar's icons take.
+- Details say drawing 4 draws the trash and move controls. It draws neither, and no drawing the task cites did until 26C.
+- New subject's and Edit subject's button with a blank name uses `aria-disabled`, not `disabled`, and stays pressable. Today it is enabled and pressing it shows "Name is required.", which two tests in `SubjectForm.test.tsx` hold and "no test on behaviour changes" keeps; Done when asks it to read as not pressable. So it looks as if it cannot be pressed, and pressing it still shows the sentence. Every other disabled button is truly `disabled`.
+- Create and Save on the subject and card forms moved from a full-width button under the form to the header row, as Details require, against "Changing any form's layout" in Out of scope. They reach their form through the `form` attribute, and the comment about the old button's position went.
+- Edit card shows its deck as a fixed value from `CardStandaloneForm.tsx` and no longer passes `locked`, so that prop of `PickerCombobox` now has no caller outside its tests. `PickerCombobox.tsx` is not in Files.
+- "Primary" sits above its field's name input, not beside it, since the row has no width to spare; a row with it is taller.
+- Delete subject, Delete deck and Delete card are 48px full-width `tappable` blocks with 16px corners, carrying drawing 26's trash icon. Done and Undo are 40px `tappable-sm` blocks with 14px corners, matching Save. Add field is a 40px pill, as `AddButton` draws one.
+- A field staged for removal reads struck through, in aside on ground, since its row's opacity had to go. Its X stays a mark, not a button, so it carries no outline. The field's type select is always disabled, so it reads as a read-only input, with its native arrow hidden.
+- "Not used" stays above the two sides, where drawing 4 has it below; the Subject and Deck pickers stay without a label above them, where drawing 26 has "Subject"; and the fixed deck on Edit configuration reads "CompTIA A+ · Ports", where drawing 4 has "Ports". Each is a layout or a word this task must not change.
+
+For the engineer to know:
+
+- While the connection banner shows, the row is still hidden once the page scrolls. With the browser set offline, on Edit deck and New practice, the app's header bottom printed `172`, the row's top `114` and its height `56`, and Save and Create were not the elements under their own centres. The engineer left this as it is, and B20 in `docs/backlog.md` keeps the question. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-banner.cjs`; the screenshots are `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-edit-deck-banner.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9c5c26f0-1480-42f7-8904-3eafb9493331/scratchpad/t5-new-practice-banner.png`.
+- `DeckEditor.tsx`, `DeckConfigurationEditor.tsx` and `CardFieldsForm.tsx` fail `prettier --check`, and they failed it at HEAD before this task. They were not reformatted.
+
+To read: `frontend/src/components/library/SubjectForm.tsx`, for the `aria-disabled` on its submit button; `frontend/src/components/library/DeckEditor.tsx`, `FieldsSection`, for the arrow buttons.
 
 ### T6 — Practice, New practice and a practice's page
 

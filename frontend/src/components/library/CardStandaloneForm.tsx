@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
 import { createCard, deleteCard, readCard, updateCard } from 'src/api/card';
 import { readDeck, readDecks } from 'src/api/deck';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
@@ -80,6 +81,7 @@ function CardStandaloneFormBody({
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const formId = useId();
 
   const [deckId, setDeckId] = useState(initialDeckId);
   const [values, setValues] = useState<Record<string, string>>(original?.values ?? {});
@@ -108,9 +110,9 @@ function CardStandaloneFormBody({
     decksQuery.data?.find((deck) => deck.id === deckId) ??
     (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
 
-  // A card can't move between decks once it exists — that's the only case the deck
-  // combobox is ever locked for. A contextual "New card" and the deck-editor round-trip
-  // both just preselect it, still fully editable.
+  // A card can't move between decks once it exists, so editing one shows its deck as a
+  // fixed value. A contextual "New card" and the deck-editor round-trip both just
+  // preselect the combobox, still fully editable.
   const deckLocked = mode === 'edit';
 
   // Gate on the preselected deck's own fetch landing, so the combobox shows the real
@@ -217,18 +219,25 @@ function CardStandaloneFormBody({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={handleCancel}
-          className="text-sm font-medium text-(--color-aside)"
+          className="text-[15px] font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-ink)">
+        <h1 className="text-[19px] font-bold text-(--color-ink)">
           {mode === 'create' ? 'New card' : 'Edit card'}
         </h1>
-        <span aria-hidden="true" className="w-[42px]" />
+        <button
+          type="submit"
+          form={formId}
+          disabled={!canSubmit}
+          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </button>
       </div>
 
       {formError && (
@@ -237,19 +246,27 @@ function CardStandaloneFormBody({
         </p>
       )}
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
-        <PickerCombobox
-          items={decksQuery.data ?? []}
-          selected={selectedDeck}
-          onSelect={(item) => handleDeckChange(item.id)}
-          // No inline create (creating a card never creates a deck) — a deck editor is too
-          // heavy to nest in a dialog, so this always means leaving the page, and only this
-          // form knows whether there are typed values to confirm away first.
-          onSelectCreate={handleCreateNewDeck}
-          createLabel="New deck…"
-          placeholder="Deck"
-          locked={deckLocked}
-        />
+      <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
+        {deckLocked ? (
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-[13px] text-(--color-aside)">Deck</span>
+            <span className="text-[15px] font-semibold text-(--color-ink)">
+              {selectedDeck?.name ?? ''}
+            </span>
+          </div>
+        ) : (
+          <PickerCombobox
+            items={decksQuery.data ?? []}
+            selected={selectedDeck}
+            onSelect={(item) => handleDeckChange(item.id)}
+            // No inline create (creating a card never creates a deck) — a deck editor is too
+            // heavy to nest in a dialog, so this always means leaving the page, and only this
+            // form knows whether there are typed values to confirm away first.
+            onSelectCreate={handleCreateNewDeck}
+            createLabel="New deck…"
+            placeholder="Deck"
+          />
+        )}
 
         {deckId && deckQuery.data && (
           <CardFieldsForm
@@ -258,22 +275,15 @@ function CardStandaloneFormBody({
             onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
           />
         )}
-
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="h-12 w-full rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-60"
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </button>
       </form>
 
       {mode === 'edit' && (
         <button
           type="button"
           onClick={() => setConfirmDeleteOpen(true)}
-          className="h-11 text-sm font-semibold text-(--color-ink)"
+          className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete card
         </button>
       )}

@@ -48,3 +48,6 @@
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
   - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 024) is the only change the user sees.
   - Owner: /product-decide
+- B20. Are text and the heights around it sized in a unit that scales from one root size, rather than in pixels, and does the sticky row of a form take its offset from the app header's real height?
+  - Reason: `frontend/src` sets sizes in pixels, such as `text-[15px]` and `h-[46px]`, beside `rem` utilities, such as `text-sm` and `h-10`, so a larger default font size in the browser scales only part of a screen. `DeckEditor`, `DeckConfigurationEditor` and `PracticeCreatePage` hold their sticky rows at `top-[114px]`, the height of `AppShell`'s header without `ConnectionBanner`, so while the banner shows it covers the row once the page scrolls.
+  - Owner: /code-decide

@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MoreVertical, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
 import { readSubject, readSubjects } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
@@ -39,81 +39,10 @@ type SubjectRead = components['schemas']['SubjectRead'];
  * than any of them so none needs reshaping to pass through. */
 type SubjectItem = { id: string; name: string; icon?: string | null };
 
-function FieldOverflowMenu({
-  fieldName,
-  canMoveUp,
-  canMoveDown,
-  onMoveUp,
-  onMoveDown,
-}: {
-  fieldName: string;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleDocPointerDown(event: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener('pointerdown', handleDocPointerDown);
-    return () => document.removeEventListener('pointerdown', handleDocPointerDown);
-  }, [open]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        type="button"
-        aria-label={`Reorder ${fieldName || 'field'}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center"
-      >
-        <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
-      </button>
-      {open && (
-        <ul
-          role="menu"
-          className="absolute right-0 z-10 mt-1 w-36 rounded-lg border border-(--color-line) bg-(--color-surface) py-1 shadow-lg"
-        >
-          <li role="none">
-            <button
-              role="menuitem"
-              type="button"
-              disabled={!canMoveUp}
-              onClick={() => {
-                onMoveUp();
-                setOpen(false);
-              }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-ink) disabled:opacity-40"
-            >
-              Move up
-            </button>
-          </li>
-          <li role="none">
-            <button
-              role="menuitem"
-              type="button"
-              disabled={!canMoveDown}
-              onClick={() => {
-                onMoveDown();
-                setOpen(false);
-              }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-ink) disabled:opacity-40"
-            >
-              Move down
-            </button>
-          </li>
-        </ul>
-      )}
-    </div>
-  );
-}
+const FIELD_ICON_BUTTON =
+  'my-[5px] flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] border-transparent text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)';
+const FIELD_TYPE_SELECT =
+  'h-[46px] shrink-0 appearance-none rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
 
 type FieldsSectionProps = {
   fields: EditorField[];
@@ -123,7 +52,7 @@ type FieldsSectionProps = {
   onAdd: () => void;
 };
 
-/** Reorder via the Move up/down overflow menu only — no drag. A pointer-events drag
+/** Reorder via each row's Move up and Move down buttons only — no drag. A pointer-events drag
  * handle can be exercised under Playwright's *mouse*-simulated events, but that only
  * covers the "engage immediately" branch; the touch-specific long-press gate (the part
  * real phone users would actually hit) cannot be verified here on a real or
@@ -131,7 +60,7 @@ type FieldsSectionProps = {
  * gesture, the buttons — fully tested and keyboard-operable — are the only mechanism.
  *
  * Removing a *saved* field (one with an `id`) stages the row pending-removal in place
- * (struck through, ghosted, every control disabled) until Save or the header's single
+ * (struck through, every control disabled) until Save or the header's single
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
@@ -149,26 +78,26 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <p className="text-[13px] text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="mt-1 flex flex-col">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface) px-3">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
               <li key={field.key}>
-                <div className="flex h-14 items-center gap-2 opacity-50">
+                <div className="flex items-end gap-1 py-3">
                   <div className="min-w-0 flex-1">
                     <input
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       disabled
-                      className="h-9 w-full rounded-lg border border-(--color-line) px-2 text-(--color-ink) line-through"
+                      className="h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
                     />
                   </div>
                   <select
                     aria-label="Field type"
                     value={field.type}
                     disabled
-                    className="h-9 shrink-0 rounded-lg border border-(--color-line) px-2 text-sm text-(--color-ink)"
+                    className={FIELD_TYPE_SELECT}
                   >
                     {SUPPORTED_FIELD_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -178,17 +107,22 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   </select>
                   <button
                     type="button"
-                    aria-label={`Reorder ${field.name || 'field'}`}
+                    aria-label={`Move ${field.name || 'field'} up`}
                     disabled
-                    className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40"
+                    className={FIELD_ICON_BUTTON}
                   >
-                    <MoreVertical
-                      aria-hidden="true"
-                      className="h-4 w-4 text-(--color-aside)"
-                    />
+                    <ArrowUp aria-hidden="true" className="h-[18px] w-[18px]" />
                   </button>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40">
-                    <X aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} down`}
+                    disabled
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowDown aria-hidden="true" className="h-[18px] w-[18px]" />
+                  </button>
+                  <span className="my-[5px] flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)">
+                    <X aria-hidden="true" className="h-[18px] w-[18px]" />
                   </span>
                 </div>
               </li>
@@ -209,28 +143,23 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
 
           return (
             <li key={field.key}>
-              <div className="flex h-14 items-center gap-2">
-                <div className="min-w-0 flex-1">
+              <div className="flex items-end gap-1 py-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  {index === primaryIndex && <span className="text-[13px] text-(--color-aside)">Primary</span>}
                   <input
                     type="text"
                     aria-label="Field name"
                     value={field.name}
                     onChange={(e) => onRename(field.key, e.target.value)}
-                    className="h-9 w-full rounded-lg border border-(--color-line) px-2 text-(--color-ink)"
+                    className="h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3 text-base text-(--color-ink)"
                   />
                 </div>
-
-                {index === primaryIndex && (
-                  <span className="shrink-0 rounded-full bg-(--color-ground) px-2 py-0.5 text-[11px] font-medium text-(--color-aside)">
-                    Primary
-                  </span>
-                )}
 
                 <select
                   aria-label="Field type"
                   value={field.type}
                   disabled
-                  className="h-9 shrink-0 rounded-lg border border-(--color-line) px-2 text-sm text-(--color-ink)"
+                  className={FIELD_TYPE_SELECT}
                 >
                   {SUPPORTED_FIELD_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -239,13 +168,24 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   ))}
                 </select>
 
-                <FieldOverflowMenu
-                  fieldName={field.name}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < fields.length - 1}
-                  onMoveUp={() => onMove(field.key, index - 1)}
-                  onMoveDown={() => onMove(field.key, index + 1)}
-                />
+                <button
+                  type="button"
+                  aria-label={`Move ${field.name || 'field'} up`}
+                  disabled={index === 0}
+                  onClick={() => onMove(field.key, index - 1)}
+                  className={FIELD_ICON_BUTTON}
+                >
+                  <ArrowUp aria-hidden="true" className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move ${field.name || 'field'} down`}
+                  disabled={index === fields.length - 1}
+                  onClick={() => onMove(field.key, index + 1)}
+                  className={FIELD_ICON_BUTTON}
+                >
+                  <ArrowDown aria-hidden="true" className="h-[18px] w-[18px]" />
+                </button>
 
                 <button
                   type="button"
@@ -253,12 +193,12 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
                   disabled={activeCount <= 2}
                   onClick={() => onRemove(field.key)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center disabled:opacity-40"
+                  className={FIELD_ICON_BUTTON}
                 >
-                  <X aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
+                  <X aria-hidden="true" className="h-[18px] w-[18px]" />
                 </button>
               </div>
-              {error && <p className="text-sm text-(--color-wrong)">{error}</p>}
+              {error && <p className="pb-3 text-sm text-(--color-wrong)">{error}</p>}
             </li>
           );
         })}
@@ -266,7 +206,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <button
         type="button"
         onClick={onAdd}
-        className="mt-2 flex h-9 items-center gap-1 text-sm font-semibold text-(--color-ink)"
+        className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
       >
         <Plus aria-hidden="true" className="h-4 w-4" />
         Add field
@@ -628,24 +568,25 @@ function DeckEditorBody({
 
   return (
     <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
+      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
+      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
         <button
           type="button"
           onClick={showDone ? goBack : handleCancel}
-          className="text-sm font-medium text-(--color-aside)"
+          className={showDone ? 'tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-surface) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]' : 'text-[15px] font-medium text-(--color-aside)'}
         >
           {showDone ? 'Done' : 'Cancel'}
         </button>
-        <h1 className="text-base font-semibold text-(--color-ink)">
+        <h1 className="text-[19px] font-bold text-(--color-ink)">
           {mode === 'edit' ? 'Edit deck' : 'New deck'}
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {mode === 'edit' && (
             <button
               type="button"
               onClick={handleUndo}
               disabled={!canUndo}
-              className="text-sm font-semibold text-(--color-aside) disabled:text-(--color-aside) disabled:opacity-50"
+              className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-surface) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
             >
               Undo
             </button>
@@ -654,7 +595,7 @@ function DeckEditorBody({
             type="button"
             onClick={() => void handleSaveClick()}
             disabled={!canSave || checkingSaveImpact}
-            className="bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:text-(--color-aside)"
+            className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
                 2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
@@ -670,13 +611,13 @@ function DeckEditorBody({
       )}
 
       <div className="mt-4 flex flex-col gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-ink)">Deck name</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] text-(--color-aside)">Deck name</span>
           <input
             type="text"
             value={state.name}
             onChange={(e) => dispatch({ type: 'SET_NAME', name: e.target.value })}
-            className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
+            className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
         </label>
         <PickerCombobox<SubjectItem>
@@ -707,8 +648,9 @@ function DeckEditorBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={deleting || checkingDeletionImpact}
-          className="mt-6 h-11 text-sm font-semibold text-(--color-ink) disabled:opacity-60"
+          className="mt-6 tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete deck
         </button>
       )}

@@ -87,7 +87,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | A field's inputs | "Field name"; "Field type" | New deck; Edit deck | `name`; `type` |
 | Field | The one field type | "Text" | New deck; Edit deck | `FieldType`; `text` |
 | Field | A field the card form cannot show | "Unsupported field type" | New card; Edit card | `image`; `audio` |
-| Field | Moving a field | "Move up"; "Move down"; "Reorder <field>", spoken | New deck; Edit deck | `order`; `position`; `/api/decks/{deck_id}/fields/reorder` |
+| Field | Moving a field, spoken | "Move <field> up"; "Move <field> down" | New deck; Edit deck | `order`; `position`; `/api/decks/{deck_id}/fields/reorder` |
 | Field | Taking a field away | "Remove <field>", spoken | New deck; Edit deck | `FieldDefBatchOps.delete` |
 | Field | The field that names a card | "Primary" | New deck; Edit deck | `primary_field` |
 | Field | A field deleted after a practice used it | "Removed field" | Run page; summary | `ResolvedFieldValue.removed` |
