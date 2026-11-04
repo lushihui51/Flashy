@@ -169,11 +169,9 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                         className="flex items-start justify-between gap-3"
                       >
                         <FieldValue field={field} labeled />
-                        {field.removed !== true && (
-                          <div className="mt-4 shrink-0">
-                            <RatingBadge rating={field.rating} />
-                          </div>
-                        )}
+                        <div className="mt-4 shrink-0">
+                          <RatingBadge rating={field.rating} />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -216,17 +214,10 @@ function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
 
 /** A read-only rendering of one answer's rating, drawing its label/color from the same
  * tier ramp `RatingChip` uses — this is history, so unlike `RatingChip` it never opens
- * anything on tap. `rating: null` arrives only on a removed field's placeholder, which
- * the sheet never hands to `RatingBadge`, so the "Unrated" fallback is defensive. */
-function RatingBadge({ rating }: { rating: number | null }) {
+ * anything on tap. A rating no tier matches renders nothing. */
+function RatingBadge({ rating }: { rating: number }) {
   const tier = RATING_TIERS.find((t) => t.rating === rating);
-  if (!tier) {
-    return (
-      <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-(--color-aside) px-2 text-xs text-(--color-aside)">
-        Unrated
-      </span>
-    );
-  }
+  if (!tier) return null;
   return (
     <span
       className={`inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium ${tier.chipClass}`}

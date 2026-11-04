@@ -90,7 +90,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | Moving a field, spoken | "Move <field> up"; "Move <field> down" | New deck; Edit deck | `order`; `position`; `/api/decks/{deck_id}/fields/reorder` |
 | Field | Taking a field away | "Remove <field>", spoken | New deck; Edit deck | `FieldDefBatchOps.delete` |
 | Field | The field that names a card | "Primary" | New deck; Edit deck | `primary_field` |
-| Field | A field deleted after a practice used it | "Removed field" | Run page; summary | `ResolvedFieldValue.removed` |
 | Field | A field name already taken | "A field with this name already exists." | New deck; Edit deck | `field_name_taken` |
 | Field | Two fields with one name in the deck form | "Duplicate name" | New deck; Edit deck | `isDuplicate` |
 | Field | What the primary field is | "The first field identifies this card in lists and summaries." | New deck; Edit deck | `primaryIndex` |
@@ -166,7 +165,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
 | Run | Leaving a finished practice | "Done" | Run page, under "Practice complete" | `/practice/:practiceSessionId` |
 | Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
-| Run | A missing rating | "Unrated" | Summary | `rating` |
 | Run | One go at a card | "attempt"; "Attempt N of M · Passed" | Summary | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page; summary | `passed` |
 | Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page; summary | `failed`; `still_failed` |

@@ -35,6 +35,7 @@ from app.database_ops.field_def import (
     db_read_owned_field_ids,
     db_stage_delete_field_defs,
 )
+from app.database_ops.practice_card import db_stage_scrub_practice_card_field_ids
 from app.database_ops.practice_run import (
     db_stage_delete_practice_runs,
     db_read_active_run_ids_naming_fields,
@@ -158,6 +159,7 @@ def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpac
     db_stage_delete_deck_practice_configs(db, impact.configuration_ids)
     for deck_id, field_ids in impact.explicit_fields_by_deck.items():
         db_stage_scrub_shown_prompt_ids(db, deck_id, field_ids)
+        db_stage_scrub_practice_card_field_ids(db, deck_id, field_ids)
     db_stage_delete_cards(db, impact.card_ids)
     db_stage_delete_field_defs(db, impact.field_ids)
     db_stage_delete_decks(db, impact.deck_ids)

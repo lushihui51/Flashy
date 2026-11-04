@@ -47,16 +47,12 @@ class ResolvedFieldValue(AppModel):
     server-side resolution every run payload uses instead of bare ids. `value` is `""`
     when no card_field_value row exists for this (card, field) pair; it is passed
     through as-is even if blank, since a value can go blank *after* the practice_card
-    was generated (the blank filter governs generation-time candidacy, not later edits).
-    `removed` is True only for a placeholder the breakdown emits for a stored id whose
-    field_def row no longer exists; every other resolution, including the
-    live run's current card, leaves it False."""
+    was generated (the blank filter governs generation-time candidacy, not later edits)."""
 
     field_def_id: uuid.UUID
     name: str
     type: FieldType
     value: str
-    removed: bool = False
 
 
 class RunProgress(AppModel):
@@ -106,11 +102,9 @@ class BreakdownBucket(str, Enum):
 
 class RatedFieldValue(ResolvedFieldValue):
     """A resolved answer field plus the rating it was given, joined from `review_log`
-    on `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`
-    exactly for a removed field's placeholder, because its review rows cascaded with
-    the field."""
+    on `review_group_id == practice_card.id` and `field_def_id`."""
 
-    rating: int | None
+    rating: int
 
 
 class BreakdownAttempt(AppModel):

@@ -13,7 +13,6 @@ from app.models.field_def import FieldDef, FieldType
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
-from app.models.practice_run_payloads import ResolvedFieldValue
 from app.models.review_log import ReviewLog
 from app.services.mastery import record_review_group
 from app.services.practice_generation import (
@@ -1544,7 +1543,6 @@ class TestRunState:
                 "name": "answer",
                 "type": "text",
                 "value": "Answer value",
-                "removed": False,
             }
         ]
 
@@ -1589,7 +1587,6 @@ class TestRunState:
                 "name": "answer",
                 "type": "text",
                 "value": "",
-                "removed": False,
             }
         ]
 
@@ -2006,7 +2003,6 @@ class TestBreakdown:
             "name": "title",
             "type": "text",
             "value": "",
-            "removed": False,
         }
 
         assert cards_by_id[retry_card]["bucket"] == "passed_after_one_fail"
@@ -2154,10 +2150,9 @@ class TestBreakdown:
         assert small_count > 0
         assert small_count == large_count
 
-    def test_removed_fields_stay_as_placeholders_in_every_attempt(self, client, existing_deck):
-        """A field a completed run's practice_cards still name in `prompts`/`answers`
-        but whose row was later deleted stays visible in the breakdown as a placeholder
-        on both sides, instead of silently vanishing from every attempt."""
+    def test_deleted_fields_leave_every_attempt(self, client, existing_deck):
+        """A field deleted after a practice completed leaves the breakdown's attempts
+        on both sides, because the delete scrubs its id from every practice card."""
         title = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
         ).json()
@@ -2178,7 +2173,7 @@ class TestBreakdown:
             "/api/deck_practice_configs",
             json={
                 "deck_id": existing_deck["id"],
-                "name": "Removed field config",
+                "name": "Deleted field config",
                 "prompt_field_ids": [p1["id"], p2["id"]],
                 "answer_field_ids": [a1["id"], a2["id"]],
                 "prompt_pool_ids": [],
@@ -2208,7 +2203,7 @@ class TestBreakdown:
         card_one = make_card("one")
         card_two = make_card("two")
 
-        session = _start(client, "Removed field run", [config["id"]])
+        session = _start(client, "Deleted field run", [config["id"]])
         _finish_session(client, session["id"])
 
         patch = client.patch(
@@ -2230,63 +2225,54 @@ class TestBreakdown:
         data = res.json()
         assert data["passed_first_try"] == 2
 
+        def every_key(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    yield key
+                    yield from every_key(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from every_key(value)
+
+        assert 'removed' not in set(every_key(data))
+
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
         assert set(cards_by_id) == {card_one, card_two}
 
-        p2_placeholder = {
-            "field_def_id": p2["id"],
-            "name": "",
-            "type": "text",
-            "value": "",
-            "removed": True,
-        }
-        a2_placeholder = {**p2_placeholder, "field_def_id": a2["id"], "rating": None}
-
-        for card in cards_by_id.values():
+        for card_id, card in cards_by_id.items():
+            tag = "one" if card_id == card_one else "two"
             assert [fd["name"] for fd in card["fields"]] == ["title", "p1", "a1"]
             for attempt in card["attempts"]:
-                prompts = attempt["prompts"]
-                assert len(prompts) == 2
-                assert prompts[0]["field_def_id"] == p1["id"]
-                assert prompts[0]["name"] == "p1"
-                assert prompts[0]["removed"] is False
-                assert prompts[1] == p2_placeholder
+                assert attempt["prompts"] == [
+                    {"field_def_id": p1["id"], "name": "p1", "type": "text", "value": f"{tag} p1"}
+                ]
+                assert attempt["answers"] == [
+                    {
+                        "field_def_id": a1["id"],
+                        "name": "a1",
+                        "type": "text",
+                        "value": f"{tag} a1",
+                        "rating": 4,
+                    }
+                ]
 
-                answers = attempt["answers"]
-                assert len(answers) == 2
-                assert answers[0]["field_def_id"] == a1["id"]
-                assert answers[0]["name"] == "a1"
-                assert answers[0]["removed"] is False
-                assert answers[0]["rating"] == 4
-                assert answers[1] == a2_placeholder
-
-    def test_resolver_drops_unknown_ids_unless_asked_to_keep_them(self):
-        """_resolve_field_values's keep_removed switch, exercised directly: the
-        HTTP-level test above only ever sees keep_removed=True through the breakdown,
-        so this covers the default (False) drop path and the ordering contract — live
-        entries first by position, placeholders after in stored order — with no HTTP
-        round trip needed."""
+    def test_resolver_drops_unknown_ids(self):
+        """_resolve_field_values exercised directly: an id with no field_def row is
+        dropped, and the live entries come out by position."""
         unknown = uuid.uuid4()
         assert _resolve_field_values({}, {}, [unknown]) == []
-        assert _resolve_field_values({}, {}, [unknown], keep_removed=True) == [
-            ResolvedFieldValue(
-                field_def_id=unknown, name="", type=FieldType.text, value="", removed=True
-            )
-        ]
 
-        live = FieldDef(
-            id=uuid.uuid4(), deck_id=uuid.uuid4(), name="live", type=FieldType.text, position=0
+        first = FieldDef(
+            id=uuid.uuid4(), deck_id=uuid.uuid4(), name="first", type=FieldType.text, position=0
         )
-        unknown_a = uuid.uuid4()
-        unknown_b = uuid.uuid4()
-        field_defs_by_id = {live.id: live}
-        field_ids = [unknown_a, unknown_b, live.id]
+        second = FieldDef(
+            id=uuid.uuid4(), deck_id=first.deck_id, name="second", type=FieldType.text, position=1
+        )
+        field_defs_by_id = {first.id: first, second.id: second}
+        field_ids = [second.id, uuid.uuid4(), first.id, uuid.uuid4()]
 
-        resolved = _resolve_field_values(field_defs_by_id, {}, field_ids, keep_removed=True)
-        assert [r.field_def_id for r in resolved] == [live.id, unknown_a, unknown_b]
-        assert resolved[0].removed is False
-        assert resolved[1].removed is True
-        assert resolved[2].removed is True
+        resolved = _resolve_field_values(field_defs_by_id, {}, field_ids)
+        assert [r.field_def_id for r in resolved] == [first.id, second.id]
 
     def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
         """The one path a user reaches to the `still_failed` bucket: a field delete

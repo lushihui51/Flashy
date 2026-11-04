@@ -169,7 +169,7 @@ For the engineer to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -245,4 +245,53 @@ The backend tests:
 
 **Debrief**
 
-None.
+Evidence, in Done-when order:
+
+- `grep -n '"Removed field"\|"Unrated"' docs/vocabulary.md` printed nothing, exit status 1.
+- `grep -rn '"removed"\|\.removed\|removed=\|keep_removed\|Unrated' app frontend/src/components/practice frontend/src/api/types.ts tests/api_tests/test_practice_run.py` printed nothing, exit status 1.
+- `grep -n "db_stage_scrub_practice_card_field_ids" app/services/deletion.py` printed two lines: the import at line 38 and the call at line 162.
+- `uv run pytest tests/api_tests/test_deletion.py tests/api_tests/test_practice_run.py` printed `100 passed`, with `TestBreakdown::test_deleted_fields_leave_every_attempt PASSED` and `TestBreakdown::test_resolver_drops_unknown_ids PASSED` in its `-v` output.
+- `uv run pytest` printed `349 passed`, with no other connection to the test database at the start.
+- The cycle's judgement, from `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/5ec235e3-eb0a-453c-9d3e-919a34f24060/scratchpad/t2-judgement.mjs` against `localhost:5173` at 390 by 844, signed out of Clerk. The script made, through the API, the subject "Cycle 029 T2 judgement 2026-11-04 19:45" with the deck "Three fields" (Term, Meaning, Example), three cards, the configuration "Term to Meaning and Example" asking Term and answering Meaning and Example, and the practice "Judgement practice", rated Easy on every answer to completion; the mouse then clicked "Remove Example" and "Save" on Edit deck and "Save" in the confirm. Its output, `t2-judgement.out` in the same folder:
+
+  ```
+  == setup through the API
+    subject 9c4f66d0-aa22-4214-9af6-8c32f71b7d1d
+    deck 728b998d-7e50-4327-8e56-3e3bef8f7c17
+    run c4ea3fe6-cda6-494d-9ddc-7301578a3230 status completed
+    Example field id 782ca2fc-f62f-48de-ba7d-6aace09c1d06
+  == breakdown before
+    attempts 3, naming Example 3, removed key present false
+  == Edit deck: Remove Example, Save, confirm
+    confirm: Save changes? | This removes 1 field from 3 cards and deletes 1 deck configuration. This can't be undone. | Cancel | Save
+    Saved ✓ shown
+  == breakdown after
+    attempts 3, naming Example 0, removed key present false
+    deck fields now: Term, Meaning
+  == the practice's page at 390px
+    sheet: hola | Term | hola | Meaning | hello | Easy | FIELDS | Term | 58 | +8 | Meaning | 58 | +8
+    "Removed field" on page: false; "Unrated" on page: false; "Example" on page: true
+  == the deck page at 390px
+    count line: 3 cards · 2 fields
+    "Example" on deck page: false; "Meaning" on deck page: true; "Term" on deck page: true
+    page errors: 0
+  ```
+
+  The one "Example" on the practice's page is the configuration's name, "Term to Meaning and Example", in the line under the date; the card's sheet holds Term and Meaning alone. The screenshots are `t2-practice-page.png`, the practice's page with the card "hola" open, and `t2-deck-page.png`, the deck page reading "3 cards · 2 fields", both in the scratchpad folder above. The subject, deck and practice stay in the dev database. The script launches the installed Chromium headless shell, revision 1243, by its path, with playwright-core 1.57.0 installed in the scratchpad.
+
+The commit's checks: `npx vitest run` printed `58 passed (58)` files and `587 passed (587)` tests; `npm run lint` and `npm run build` exited 0; `npm run gen:api` regenerated `frontend/src/api/openapi.json` and `frontend/src/api/types.ts`.
+
+Departures from Details:
+
+- `apply_deletion`'s docstring holds no list of what the closure takes, so there was nothing in it to name practice cards; it stays as it was.
+- `_resolve_rated_field_values` reads each rating as `ratings_by_field[value.field_def_id]` rather than `.get`, since `RatedFieldValue.rating` is `int` and a completed practice card's every answer field was rated; a missing rating raises rather than resolving.
+- `db_read_ratings_by_review_group`'s docstring in `app/database_ops/practice_card.py` lost its sentence on the placeholder.
+- `test_resolver_drops_unknown_ids` builds two live fields and two unknown ids and asserts the live entries come out by position; its `ResolvedFieldValue` import went with the placeholder.
+- `test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_configs_and_runs` gains the helper `_practice_card` beside `_snapshot`, and deck2's practice card names B in both arrays, on a completed run of deck2 whose snapshot names only X and Y, so the closure deletes no run of deck2.
+
+Departures from Files: none.
+
+For the engineer to read:
+
+- `db_stage_scrub_practice_card_field_ids` in `app/database_ops/practice_card.py`: one UPDATE per id, narrowed to the deck's cards' practice cards that name the id in `prompts` or in `answers`, removing it from both.
+- `_resolve_rated_field_values` in `app/services/practice_run.py`: the direct index that replaces the placeholder's `None`.

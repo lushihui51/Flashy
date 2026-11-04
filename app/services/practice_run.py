@@ -38,7 +38,7 @@ from app.database_ops.practice_run import (
 )
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
-from app.models.field_def import FieldDef, FieldType
+from app.models.field_def import FieldDef
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
@@ -450,31 +450,18 @@ def _resolve_field_values(
     field_defs_by_id: dict[uuid.UUID, FieldDef],
     values_by_field: dict[uuid.UUID, str],
     field_ids: list[uuid.UUID],
-    *,
-    keep_removed: bool = False,
 ) -> list[ResolvedFieldValue]:
     """One side (prompts or answers) of a practice_card's stored id array, resolved
     against this deck's field_defs and this card's current values, then reordered to
     field_def.position ascending regardless of what order the ids were stored in. An id
-    with no field_def row is dropped, unless keep_removed is True (the breakdown only),
-    in which case it trails the live entries as a placeholder — empty name and value,
-    type text, removed=True — in the order those ids appear in field_ids."""
+    with no field_def row is dropped."""
     live = (fd for fid in field_ids if (fd := field_defs_by_id.get(fid)) is not None)
-    resolved = [
+    return [
         ResolvedFieldValue(
             field_def_id=fd.id, name=fd.name, type=fd.type, value=values_by_field.get(fd.id, "")
         )
         for fd in sorted(live, key=lambda fd: fd.position)
     ]
-    if keep_removed:
-        resolved += [
-            ResolvedFieldValue(
-                field_def_id=fid, name="", type=FieldType.text, value="", removed=True
-            )
-            for fid in field_ids
-            if fid not in field_defs_by_id
-        ]
-    return resolved
 
 
 def _resolve_current_run_card(
@@ -553,15 +540,11 @@ def _resolve_rated_field_values(
 ) -> list[RatedFieldValue]:
     """The breakdown's answer-side resolution: the same id->field_def->value join as
     _resolve_field_values, with each entry's rating attached from the review_log join
-    (db_read_ratings_by_review_group). keep_removed=True so a deleted answer field
-    still resolves, as a placeholder; ratings_by_field.get(...) returns None for it,
-    since its review rows cascaded away with the field — the one case
-    RatedFieldValue.rating's None carries."""
-    resolved = _resolve_field_values(
-        field_defs_by_id, values_by_field, field_ids, keep_removed=True
-    )
+    (db_read_ratings_by_review_group). Every answer field a completed practice card
+    holds was rated, so a missing rating raises KeyError rather than resolving."""
+    resolved = _resolve_field_values(field_defs_by_id, values_by_field, field_ids)
     return [
-        RatedFieldValue(**value.model_dump(), rating=ratings_by_field.get(value.field_def_id))
+        RatedFieldValue(**value.model_dump(), rating=ratings_by_field[value.field_def_id])
         for value in resolved
     ]
 
@@ -726,9 +709,7 @@ def get_practice_run_breakdown(
                 practice_card_id=pc.id,
                 status=pc.status,
                 created_at=pc.created_at,
-                prompts=_resolve_field_values(
-                    field_defs_by_id, values_by_field, pc.prompts, keep_removed=True
-                ),
+                prompts=_resolve_field_values(field_defs_by_id, values_by_field, pc.prompts),
                 answers=_resolve_rated_field_values(
                     field_defs_by_id, values_by_field, ratings_by_group.get(pc.id, {}), pc.answers
                 ),

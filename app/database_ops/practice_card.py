@@ -1,10 +1,11 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import text
+from sqlalchemy import or_, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
+from app.models.card import Card
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_run import PracticeRun
 from app.models.review_log import ReviewLog
@@ -154,10 +155,7 @@ def db_read_ratings_by_review_group(
 ) -> dict[uuid.UUID, dict[uuid.UUID, int]]:
     """Ratings for a batch of practice_cards at once, keyed `review_group_id ->
     {field_def_id: rating}` — a practice_card's id *is* its review_group_id
-    (submit_rating), so this is the completion breakdown's per-answer rating join. A
-    field deleted after the run has no review rows left (they cascaded with it), so
-    its id is simply absent from the result; the breakdown renders that id as a
-    removed-field placeholder with `rating: None`."""
+    (submit_rating), so this is the completion breakdown's per-answer rating join."""
     if not review_group_ids:
         return {}
     rows = db.exec(
@@ -169,6 +167,30 @@ def db_read_ratings_by_review_group(
     for review_group_id, field_def_id, rating in rows:
         ratings.setdefault(review_group_id, {})[field_def_id] = rating
     return ratings
+
+
+def db_stage_scrub_practice_card_field_ids(
+    db: Session, deck_id: uuid.UUID, field_ids: Collection[uuid.UUID]
+) -> None:
+    """Removes each of field_ids from `prompts` and from `answers` on every practice
+    card of this deck's cards, one UPDATE per id narrowed to the rows that name it in
+    either array, so an id no practice card holds touches nothing. No commit —
+    apply_deletion owns the transaction."""
+    if not field_ids:
+        return
+    deck_card_ids = select(Card.id).where(Card.deck_id == deck_id)
+    for field_id in field_ids:
+        db.execute(
+            update(PracticeCard)
+            .where(
+                col(PracticeCard.card_id).in_(deck_card_ids),
+                or_(PracticeCard.prompts.any(field_id), PracticeCard.answers.any(field_id)),
+            )
+            .values(
+                prompts=func.array_remove(PracticeCard.prompts, field_id),
+                answers=func.array_remove(PracticeCard.answers, field_id),
+            )
+        )
 
 
 def db_stage_update_practice_card_status(

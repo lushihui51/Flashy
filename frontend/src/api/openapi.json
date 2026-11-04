@@ -4377,20 +4377,8 @@
             "type": "string",
             "title": "Value"
           },
-          "removed": {
-            "type": "boolean",
-            "title": "Removed",
-            "default": false
-          },
           "rating": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
             "title": "Rating"
           }
         },
@@ -4403,7 +4391,7 @@
           "rating"
         ],
         "title": "RatedFieldValue",
-        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`\nexactly for a removed field's placeholder, because its review rows cascaded with\nthe field."
+        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`."
       },
       "RatingSubmission": {
         "properties": {
@@ -4464,11 +4452,6 @@
           "value": {
             "type": "string",
             "title": "Value"
-          },
-          "removed": {
-            "type": "boolean",
-            "title": "Removed",
-            "default": false
           }
         },
         "type": "object",
@@ -4479,7 +4462,7 @@
           "value"
         ],
         "title": "ResolvedFieldValue",
-        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution every run payload uses instead of bare ids. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (the blank filter governs generation-time candidacy, not later edits).\n`removed` is True only for a placeholder the breakdown emits for a stored id whose\nfield_def row no longer exists; every other resolution, including the\nlive run's current card, leaves it False."
+        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution every run payload uses instead of bare ids. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (the blank filter governs generation-time candidacy, not later edits)."
       },
       "RunProgress": {
         "properties": {
