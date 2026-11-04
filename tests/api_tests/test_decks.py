@@ -81,7 +81,7 @@ class TestDeckCRUD:
             )
             assert card_res.status_code == 201, card_res.text
         front_id = fields["Front"]
-        client.delete(f"/api/fields/{front_id}")  # archived — must not appear below
+        client.delete(f"/api/fields/{front_id}")  # deleted — must not appear below
 
         response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
         assert response.status_code == 200

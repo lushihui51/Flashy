@@ -67,8 +67,8 @@ export function emptyBoard(fieldDefs: DeckFieldDef[]): BoardState {
  * An existing config re-hydrated onto the board.
  *
  * Ids the config references but the deck has no live field for are dropped rather than
- * rendered: archived fields never appear in the builder, and a config saved before a
- * field was archived still names it. Saving from this board therefore
+ * rendered: deleted fields never appear in the builder, and a config fetched before its
+ * field was deleted still names it. Saving from this board therefore
  * also repairs the config — which is the same thing session start would otherwise
  * reject it for.
  */
@@ -96,7 +96,7 @@ export function boardFromConfig(
   assign(config.answer_pool_ids, 'answer_pool');
 
   // Counts are pruned against what actually survived, so a config whose pool lost a
-  // field to archival doesn't load with a count it cannot reach.
+  // field to deletion doesn't load with a count it cannot reach.
   return {
     ...board,
     counts: {

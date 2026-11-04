@@ -67,7 +67,7 @@ def apply_deck_batch_edit(
             raise Refusal(
                 "deck_name_taken", "deck (subject_id, name) already exists"
             ) from e
-        if constraint == "uq_field_def_deck_id_name_active":
+        if constraint == "uq_field_def_deck_id_name":
             raise Refusal(
                 "field_name_taken", "an active field_def (deck_id, name) already exists"
             ) from e

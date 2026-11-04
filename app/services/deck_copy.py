@@ -68,7 +68,7 @@ def copy_deck(
         values = {
             field_map[v.field_def_id]: v.value
             for v in card.values
-            if v.field_def_id in field_map  # value for an archived field — not copied, see field_map
+            if v.field_def_id in field_map
         }
         db_stage_create_card(db, new_deck.id, values)
 
@@ -78,7 +78,7 @@ def copy_deck(
             raise LookupError(f"deck_practice_config {config_id} not found on this deck")
 
         # Re-validate against the source deck — the config may have gone stale (a
-        # field archived) since it was saved, and a stale config's ids wouldn't all
+        # field deleted) since it was saved, and a stale config's ids wouldn't all
         # be in field_map.
         validate_deck_practice_config(
             db,

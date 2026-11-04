@@ -6,7 +6,7 @@ import {
   readFieldDefs,
   readFieldDef,
   updateFieldDef,
-  archiveFieldDef,
+  deleteFieldDef,
 } from "src/api/field_def";
 import type { components } from "src/api/types";
 
@@ -42,21 +42,16 @@ describe("createFieldDef", () => {
 });
 
 describe("readFieldDefs", () => {
-  it("sends include_archived and returns the list of fields", async () => {
-    let includeArchivedQuery: string | null = null;
-
+  it("returns the list of fields", async () => {
     server.use(
-      http.get(`${BASE}/api/decks/:deck_id/fields`, ({ request }) => {
-        const url = new URL(request.url);
-        includeArchivedQuery = url.searchParams.get("include_archived");
-        return HttpResponse.json([
+      http.get(`${BASE}/api/decks/:deck_id/fields`, () =>
+        HttpResponse.json([
           { id: "field_1", deck_id: "deck_1", name: "Front", type: "text", position: 0 },
-        ]);
-      }),
+        ]),
+      ),
     );
 
     const fields = await readFieldDefs("deck_1");
-    expect(includeArchivedQuery).toBe("false");
     expect(fields).toHaveLength(1);
   });
 });
@@ -109,22 +104,12 @@ describe("updateFieldDef", () => {
   });
 });
 
-describe("archiveFieldDef", () => {
-  it("returns the archived field", async () => {
+describe("deleteFieldDef", () => {
+  it("resolves on a 204", async () => {
     server.use(
-      http.delete(`${BASE}/api/fields/:field_id`, ({ params }) =>
-        HttpResponse.json({
-          id: params.field_id,
-          deck_id: "deck_1",
-          name: "Front",
-          type: "text",
-          position: 0,
-          archived_at: "2026-01-01T00:00:00Z",
-        }),
-      ),
+      http.delete(`${BASE}/api/fields/:field_id`, () => new HttpResponse(null, { status: 204 })),
     );
 
-    const archived = await archiveFieldDef("field_1");
-    expect(archived?.archived_at).toBe("2026-01-01T00:00:00Z");
+    await expect(deleteFieldDef("field_1")).resolves.toBeUndefined();
   });
 });

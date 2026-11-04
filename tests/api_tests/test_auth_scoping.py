@@ -103,7 +103,6 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/fields/{field_id}").status_code == 404
         assert client.patch(f"/api/fields/{field_id}", json={"name": "x"}).status_code == 404
         assert client.delete(f"/api/fields/{field_id}").status_code == 404
-        assert client.delete(f"/api/fields/{field_id}/hard").status_code == 404
 
     def test_card_endpoints(self, client, other_user, act_as, owned):
         deck_id = owned["deck"]["id"]

@@ -12,8 +12,8 @@ def db_fetch_generation_candidates(
     db: Session, card_id: uuid.UUID, field_ids: list[uuid.UUID]
 ) -> list[Row]:
     """Raw material for pool resolution: one row per id in field_ids that is still live
-    (drops archived ids left in stale snapshots) and not blank on this card (drops
-    fields this card left unset). LEFT JOIN mastery — a DISTINCT ON subquery of
+    (drops ids no longer live) and not blank on this card (drops fields this card left
+    unset). LEFT JOIN mastery — a DISTINCT ON subquery of
     mastery_log's latest row per field, scoped to this one card — no ordering or
     scoring; the caller folds scores in Python via strategy.field_score."""
     if not field_ids:
@@ -47,6 +47,6 @@ def db_fetch_generation_candidates(
             & (CardFieldValue.value != ""),
         )
         .outerjoin(latest_mastery, latest_mastery.c.field_def_id == FieldDef.id)
-        .where(col(FieldDef.id).in_(field_ids), col(FieldDef.archived_at).is_(None))
+        .where(col(FieldDef.id).in_(field_ids))
     )
     return list(db.exec(query).all())

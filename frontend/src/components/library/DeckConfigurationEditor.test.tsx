@@ -55,7 +55,7 @@ const decks = [
   },
 ];
 
-// The deck endpoint returns live fields only — an archived field never reaches the
+// The deck endpoint returns live fields only — a deleted field never reaches the
 // client at all, which is why the builder can't show one.
 const deckDetail = {
   id: 'd1',
@@ -605,13 +605,13 @@ describe('DeckConfigurationEditor — edit', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
-  it('never shows a field the config references but the deck has since archived', async () => {
+  it('never shows a field the config references but the deck has since deleted', async () => {
     mockLibrary();
-    mockConfig({ ...savedConfig, prompt_pool_ids: ['archived-field'], prompt_pool_counts: [1] });
+    mockConfig({ ...savedConfig, prompt_pool_ids: ['deleted-field'], prompt_pool_counts: [1] });
     renderEdit();
 
     await screen.findByRole('region', { name: 'Not used' });
-    expect(screen.queryByText('archived-field')).not.toBeInTheDocument();
+    expect(screen.queryByText('deleted-field')).not.toBeInTheDocument();
     // The pool area is empty, so its frequency row has nothing to offer either.
     const promptRandom = screen.getByRole('region', { name: 'Prompt · random draw' });
     expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();

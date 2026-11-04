@@ -446,44 +446,11 @@ class TestForcedFailedAnswerFields:
         assert len(requeued.answers) == 2
         assert requeued.answers[1] in {f["pool_a1"], f["pool_a2"], f["pool_a3"]}
 
-    def test_archived_failed_pool_field_drops_out_and_card_still_requeues(
-        self, db, client, existing_user, session_cards, session_config, session_fields
-    ):
-        strategy, original = self._start_and_first_pending(
-            db, existing_user, session_config["id"], seed=1
-        )
-        fixed = session_fields["answer1"]
-        [failed_pool] = [fid for fid in original.answers if fid != fixed]
-
-        archived = client.delete(f"/api/fields/{failed_pool}")
-        assert archived.status_code == 200, archived.text
-
-        _, requeued = submit_rating(
-            db,
-            strategy,
-            existing_user.id,
-            original.id,
-            {fixed: 4, failed_pool: 1},
-            rng=random.Random(4),
-        )
-        db.commit()
-
-        assert requeued is not None
-        assert failed_pool not in requeued.answers
-        # The card still generates: the fixed answer survives, and the pool draw fills
-        # its one slot from the two remaining live pool fields.
-        assert requeued.answers[0] == fixed
-        assert len(requeued.answers) == 2
-        assert requeued.answers[1] in {
-            fid for name, fid in session_fields.items() if name.startswith("pool_a")
-        } - {failed_pool}
-
     def test_blanked_failed_pool_field_drops_out_and_card_still_requeues(
         self, db, client, existing_user, session_cards, session_config, session_fields
     ):
-        """The archived-field test's twin through the one path a user reaches: the
-        force-include is conditional on the failed field being live and non-blank, so a
-        value cleared after it was shown drops out of the retry."""
+        """The force-include is conditional on the failed field being live and
+        non-blank, so a value cleared after it was shown drops out of the retry."""
         strategy, original = self._start_and_first_pending(
             db, existing_user, session_config["id"], seed=1
         )
@@ -1114,23 +1081,22 @@ class TestRunStartErrorShape:
         assert res.json()["detail"]["code"] == "duplicate_deck"
         assert res.json()["detail"]["config_id"] == second.json()["id"]
 
-    def test_config_gone_stale_since_saving_400s_with_the_config_id(
+    def test_config_deleted_with_its_field_is_not_found_at_start(
         self, client, session_cards, session_config, session_fields
     ):
-        # Archiving a field the config still references is exactly how a saved config
-        # goes stale — validation runs again at session start for this reason.
-        archived = client.delete(f"/api/fields/{session_fields['prompt1']}")
-        assert archived.status_code == 200, archived.text
+        # Deleting a field the config names deletes the config with it, so a start
+        # that still names the config finds nothing.
+        deleted = client.delete(f"/api/fields/{session_fields['prompt1']}")
+        assert deleted.status_code == 204, deleted.text
 
         res = client.post(
             "/api/practice_runs",
             json={"name": "Run", "deck_practice_config_ids": [session_config["id"]]},
         )
-        assert res.status_code == 400
+        assert res.status_code == 404
         detail = res.json()["detail"]
-        assert detail["code"] == "stale_config"
+        assert detail["code"] == "config_not_found"
         assert detail["config_id"] == session_config["id"]
-        assert "not live" in detail["message"]
 
     def test_uncounted_pool_config_cannot_start_a_session(
         self, client, db, existing_deck, session_cards, session_fields
@@ -1627,14 +1593,14 @@ class TestRunState:
             }
         ]
 
-    def test_archived_field_still_resolves(self, client, existing_deck):
+    def test_deleting_a_field_deletes_the_active_practice_naming_it(self, client, existing_deck):
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
         ).json()
         answer = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
         ).json()
-        # A third active field so archiving `answer` doesn't hit the deck's two-field floor.
+        # A third field so deleting `answer` doesn't hit the deck's two-field floor.
         client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "filler", "type": "text"}
         )
@@ -1646,7 +1612,7 @@ class TestRunState:
             "/api/deck_practice_configs",
             json={
                 "deck_id": existing_deck["id"],
-                "name": "Archive config",
+                "name": "Delete config",
                 "prompt_field_ids": [prompt["id"]],
                 "answer_field_ids": [answer["id"]],
                 "prompt_pool_ids": [],
@@ -1655,21 +1621,13 @@ class TestRunState:
                 "answer_pool_counts": [],
             },
         ).json()
-        session = _start(client, "Archive run", [config["id"]])
+        session = _start(client, "Delete run", [config["id"]])
+        assert client.get(f"/api/practice_runs/{session['id']}/state").status_code == 200
 
-        archived = client.delete(f"/api/fields/{answer['id']}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{answer['id']}")
+        assert deleted.status_code == 204, deleted.text
 
-        run = client.get(f"/api/practice_runs/{session['id']}/state").json()
-        assert run["current_card"]["answers"] == [
-            {
-                "field_def_id": answer["id"],
-                "name": "answer",
-                "type": "text",
-                "value": "A",
-                "removed": False,
-            }
-        ]
+        assert client.get(f"/api/practice_runs/{session['id']}/state").status_code == 404
 
     def test_attempt_increments_on_a_requeued_row(
         self, client, existing_user, session_cards, session_config
@@ -1729,13 +1687,13 @@ class TestRunState:
         assert final["session_status"] == "completed"
 
     def test_progress_counts_all_four_buckets_end_to_end(self, client, db, existing_deck):
-        """Exercises the stale-snapshot case for real: a card fails after its only
-        answer field is archived mid-session, so the requeue finds nothing to generate
+        """Exercises the stranded-card case for real: a card fails after its only
+        answer value is blanked mid-session, so the requeue finds nothing to generate
         from and the chain ends on `failed` with no successor — still_failed, alongside
         one untouched (unseen), one failed-then-requeued (retry_pending), and one
         passed-first-try card, all counted against the same fixed `total_cards`. Roles
         go by queue position, since only the current card can be rated: the front card
-        fails and requeues, the second passes, the third fails after the archive, the
+        fails and requeues, the second passes, the third fails after the blanking, the
         fourth is never seen mid-run."""
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
@@ -1743,10 +1701,6 @@ class TestRunState:
         answer = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
         ).json()
-        # A third active field so archiving `answer` later doesn't hit the two-field floor.
-        client.post(
-            f"/api/decks/{existing_deck['id']}/fields", json={"name": "filler", "type": "text"}
-        )
 
         def make_card(tag):
             res = client.post(
@@ -1807,11 +1761,14 @@ class TestRunState:
         )
         assert pass_res.status_code == 200, pass_res.text
 
-        # Archive the only answer field: a future requeue has nothing left to draw from.
-        archive_res = client.delete(f"/api/fields/{answer['id']}")
-        assert archive_res.status_code == 200, archive_res.text
+        # Blank the third card's only answer value: its requeue has nothing left to
+        # draw from.
+        blank_res = client.patch(
+            f"/api/cards/{queue[2].card_id}", json={"values": {answer["id"]: ""}}
+        )
+        assert blank_res.status_code == 200, blank_res.text
 
-        # queue[2]: fails after the archival -> zero surviving answer candidates ->
+        # queue[2]: fails after the blanking -> zero surviving answer candidates ->
         # no successor -> still_failed.
         fail_stuck = client.post(
             f"/api/practice_cards/{queue[2].id}/rate",
@@ -1874,8 +1831,8 @@ class TestBreakdown:
         """A 4-field deck: `title` (position 0, the primary field, kept out of the
         practice config so its value never changes across attempts), `prompt` and
         `answer` (the config's only fixed fields — no pool, so generation is
-        deterministic), and `filler` (keeps the deck at 4 active fields so archiving
-        `answer` later doesn't hit the two-field floor)."""
+        deterministic), and `filler` (never named by the config and never set on a
+        card)."""
         title = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
         ).json()
@@ -1922,11 +1879,11 @@ class TestBreakdown:
         return res.json()["id"]
 
     def test_full_breakdown_all_four_buckets(self, client, db, existing_deck, existing_subject):
-        """The stuck card lives in a second deck whose answer field is archived right
-        after the run starts: only the current card can be rated, and a single deck of
-        four cannot fail one card twice before the archive and still leave another
-        unrated until after it. The run is driven from the state endpoint with a
-        per-card rating script, so any starting order gives the same outcome."""
+        """The stuck card lives in a second deck, and its only answer value is blanked
+        right after the run starts: only the current card can be rated, and a single
+        deck of four cannot fail one card twice before the blanking and still leave
+        another unrated until after it. The run is driven from the state endpoint with
+        a per-card rating script, so any starting order gives the same outcome."""
         title, prompt, answer, config = self._setup_deck(client, existing_deck)
 
         first_card = self._make_card(client, existing_deck, title, prompt, answer, "first", "")
@@ -1982,10 +1939,12 @@ class TestBreakdown:
         session = _start(client, "Breakdown run", [config["id"], stuck_config["id"]])
         session_id = uuid.UUID(session["id"])
 
-        # Archive the stuck deck's only answer field: its card's requeue has nothing to
-        # draw from, while the first deck's requeues are unaffected.
-        archived = client.delete(f"/api/fields/{stuck_fields['answer']}")
-        assert archived.status_code == 200, archived.text
+        # Blank the stuck card's only answer value: its requeue has nothing to draw
+        # from, while the first deck's requeues are unaffected.
+        blanked = client.patch(
+            f"/api/cards/{stuck_card}", json={"values": {stuck_fields["answer"]: ""}}
+        )
+        assert blanked.status_code == 200, blanked.text
 
         by_card_id = {
             str(pc.card_id): pc.id
@@ -2073,7 +2032,7 @@ class TestBreakdown:
         stuck_attempts = cards_by_id[stuck_card]["attempts"]
         assert [a["status"] for a in stuck_attempts] == ["failed"]
         assert stuck_attempts[0]["answers"][0]["rating"] == 1
-        # `answer` was archived before this attempt but still resolves.
+        # `answer` was blanked before this attempt; the field still resolves.
         assert stuck_attempts[0]["answers"][0]["name"] == "answer"
 
         # Ordered by first attempt's position ascending.
@@ -2330,11 +2289,11 @@ class TestBreakdown:
         assert resolved[2].removed is True
 
     def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
-        """The one path a user reaches to the `still_failed` bucket: archiving is
-        unexposed and a hard field delete removes the active practices naming the
-        field, so clearing a card's only answer value while a practice uses it is what
-        leaves the requeue nothing to generate from. The blank value passes through
-        unlabelled in the breakdown's attempt detail."""
+        """The one path a user reaches to the `still_failed` bucket: a field delete
+        removes the active practices naming the field, so clearing a card's only
+        answer value while a practice uses it is what leaves the requeue nothing to
+        generate from. The blank value passes through unlabelled in the breakdown's
+        attempt detail."""
         fields = {}
         for name in ("prompt", "answer", "filler"):
             res = client.post(
@@ -2727,7 +2686,7 @@ class TestRerun:
         assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db, existing_subject):
-        # Deck A: three fields so `answer` can be archived afterward without hitting
+        # Deck A: three fields so `answer` can be deleted afterward without hitting
         # the deck's two-field floor — this is what makes A's snapshot go stale.
         deck_a = client.post(
             "/api/decks",
@@ -2806,8 +2765,8 @@ class TestRerun:
         session = _start(client, "Two healthy decks", [config_a["id"], config_b["id"]])
         _finish_session(client, session["id"])
 
-        archived = client.delete(f"/api/fields/{fields_a['answer']}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{fields_a['answer']}")
+        assert deleted.status_code == 204, deleted.text
 
         res = _rerun(client, session["id"], "Two healthy decks (rerun)")
         assert res.status_code == 201, res.text
@@ -2821,15 +2780,15 @@ class TestRerun:
     def test_rerun_refuses_when_nothing_survives(
         self, client, session_cards, session_config
     ):
-        """Archiving the config's only answer field, not deleting the deck — a run
-        whose only deck is deleted is gone itself, so there would be no run left to
-        call rerun against at all."""
+        """Deleting the config's only answer field, not the deck — a run whose only
+        deck is deleted is gone itself, so there would be no run left to call rerun
+        against at all."""
         session = _start(client, "Doomed run", [session_config["id"]])
         _finish_session(client, session["id"])
 
         stale_field_id = session_config["answer_field_ids"][0]
-        archived = client.delete(f"/api/fields/{stale_field_id}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{stale_field_id}")
+        assert deleted.status_code == 204, deleted.text
 
         res = _rerun(client, session["id"], "Doomed run (rerun)")
         assert res.status_code == 400, res.text

@@ -27,9 +27,7 @@ def _is_blank(value: str) -> bool:
 
 def _card_read(card, active_field_ids: set[uuid.UUID]) -> CardRead:
     """Dense over active_field_ids regardless of what rows actually exist —
-    every active field gets a key, "" if there's no row for it. An archived field's
-    row is kept in the database as inert history (AGENTS.md) but never surfaced on a
-    read."""
+    every active field gets a key, "" if there's no row for it."""
     existing = {v.field_def_id: v.value for v in card.values if v.field_def_id in active_field_ids}
     return CardRead(
         id=card.id,

@@ -74,7 +74,7 @@ def db_read_decks_with_summary(
     field_names_by_deck: dict[uuid.UUID, list[str]] = defaultdict(list)
     field_rows = db.exec(
         select(FieldDef.deck_id, FieldDef.name)
-        .where(col(FieldDef.deck_id).in_(deck_ids), col(FieldDef.archived_at).is_(None))
+        .where(col(FieldDef.deck_id).in_(deck_ids))
         .order_by(col(FieldDef.deck_id), col(FieldDef.position))
     ).all()
     for deck_id, name in field_rows:

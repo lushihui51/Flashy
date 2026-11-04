@@ -127,10 +127,7 @@ def db_fetch_mastery_read_rows(
             latest_mastery.c.answer_review_count,
         )
         .select_from(Card)
-        .join(
-            FieldDef,
-            (FieldDef.deck_id == Card.deck_id) & (col(FieldDef.archived_at).is_(None)),
-        )
+        .join(FieldDef, FieldDef.deck_id == Card.deck_id)
         .outerjoin(
             latest_mastery,
             (latest_mastery.c.card_id == Card.id)

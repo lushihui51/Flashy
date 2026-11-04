@@ -12,8 +12,7 @@ import type { components } from 'src/api/types';
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
 
 type FieldAssignmentBoardProps = {
-  /** The deck's **live** fields, already fetched by the page — archived fields never
-   * reach here. */
+  /** The deck's fields, already fetched by the page. */
   fieldDefs: DeckFieldDef[];
   state: BoardState;
   onMove: (fieldId: string, to: BoardSlot) => void;

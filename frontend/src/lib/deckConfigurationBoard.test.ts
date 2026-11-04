@@ -128,16 +128,16 @@ describe('boardFromConfig', () => {
   });
 
   it('drops ids the deck no longer has live, and prunes counts to what survived', () => {
-    // 'archived' was archived after the config was saved: it must not appear anywhere in
+    // 'deleted' was deleted after the config was fetched: it must not appear anywhere in
     // the builder, and the count of 2 it made possible goes with it.
     const board = boardFromConfig(fieldDefs, {
       ...emptyConfigArrays,
       answer_field_ids: ['f1'],
-      prompt_pool_ids: ['f2', 'archived'],
+      prompt_pool_ids: ['f2', 'deleted'],
       prompt_pool_counts: [1, 2],
     });
 
-    expect(board.order).not.toContain('archived');
+    expect(board.order).not.toContain('deleted');
     expect(fieldsIn(board, 'prompt_pool')).toEqual(['f2']);
     expect(board.counts.prompt_pool).toEqual([1]);
   });

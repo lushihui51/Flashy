@@ -116,7 +116,7 @@ class TestDeckPracticeConfigValidation:
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
 
-    def test_archived_field_id_rejected(
+    def test_deleted_field_id_rejected(
         self, client, valid_config_payload, config_fields
     ):
         client.delete(f"/api/fields/{config_fields['prompt1']}")

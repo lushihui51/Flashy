@@ -124,29 +124,16 @@ export interface paths {
         get: operations["read_field_def_api_fields__field_id__get"];
         put?: never;
         post?: never;
-        /** Archive Field Def */
-        delete: operations["archive_field_def_api_fields__field_id__delete"];
+        /**
+         * Delete Field Def
+         * @description 404 for a field that is not the user's; 422 with code `too_few_fields` when the
+         *     deck would keep fewer than two fields.
+         */
+        delete: operations["delete_field_def_api_fields__field_id__delete"];
         options?: never;
         head?: never;
         /** Update Field Def */
         patch: operations["update_field_def_api_fields__field_id__patch"];
-        trace?: never;
-    };
-    "/api/fields/{field_id}/hard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Hard Delete Field Def */
-        delete: operations["hard_delete_field_def_api_fields__field_id__hard_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/cards": {
@@ -908,8 +895,6 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Archived At */
-            archived_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1686,9 +1671,7 @@ export interface operations {
     };
     read_field_defs_api_decks__deck_id__fields_get: {
         parameters: {
-            query?: {
-                include_archived?: boolean;
-            };
+            query?: never;
             header?: {
                 authorization?: string | null;
                 "x-timezone"?: string | null;
@@ -1830,7 +1813,7 @@ export interface operations {
             };
         };
     };
-    archive_field_def_api_fields__field_id__delete: {
+    delete_field_def_api_fields__field_id__delete: {
         parameters: {
             query?: never;
             header?: {
@@ -1845,13 +1828,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["FieldDefRead"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1890,38 +1871,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FieldDefRead"];
                 };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    hard_delete_field_def_api_fields__field_id__hard_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation Error */
             422: {

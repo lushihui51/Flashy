@@ -21,7 +21,7 @@ Judgement: The engineer judges on the live server, on Edit deck of a deck with a
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -43,10 +43,12 @@ None.
 - `app/routers/api/deck.py`
 - `app/routers/api/card.py`
 - `app/services/deletion.py`
+- `app/services/deck_batch_edit.py`
 - `app/services/deck_copy.py`
 - `app/services/deck_practice_config.py`
 - `app/services/practice_run.py`
 - `frontend/src/api/field_def.ts`
+- `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
 - `frontend/src/test/field_def.test.ts`
 - `frontend/src/components/library/CardTable.tsx`
@@ -133,7 +135,35 @@ The backend tests, each named for what it now proves:
 
 **Debrief**
 
-None.
+Evidence, in Done-when order:
+
+- `grep -rin "archiv" app frontend/src tests docs/vocabulary.md` printed nothing, exit status 1.
+- `uv run alembic heads` printed `45fe82fb6098 (head)`; `uv run alembic current` printed `45fe82fb6098 (head)`. The migration is `alembic/versions/45fe82fb6098_no_field_archive.py`. Before applying it, a `pg_dump` copy of the dev database took the upgrade (columns `created_at deck_id name type position id`, index `uq_field_def_deck_id_name` on `(deck_id, name)` with no condition), took the downgrade back (column `archived_at` and the conditioned index `uq_field_def_deck_id_name_active` restored), and with one row's `archived_at` set the upgrade raised `RuntimeError: 1 field_def row(s) have archived_at set; decide what becomes of them by hand before dropping the column`. The copy was dropped afterwards. The dev database held no archived row and took the upgrade.
+- The inspect command printed `['created_at', 'deck_id', 'name', 'type', 'position', 'id'] ['uq_field_def_deck_id', 'uq_field_def_deck_id_name']`.
+- The eight-file pytest printed `214 passed`, with every renamed test named PASSED in its `-v` output: `test_delete_below_two_fields_refused`, `test_list_field_defs_omits_a_deleted_field`, `test_delete_then_recreate_same_name_succeeds`, `test_delete_removes_the_field_and_its_values`, `test_field_delete_touches_deck_last_activity`, `test_card_create_after_a_field_delete_fills_the_remaining_fields`, `test_deleted_field_id_rejected`, `test_does_not_copy_a_deleted_field_or_its_values`, `test_config_deleted_with_its_field_is_not_found_on_copy`, `test_failed_copy_leaves_no_partial_state`, `test_config_deleted_with_its_field_is_not_found_at_start`, `test_deleting_a_field_deletes_the_active_practice_naming_it`, `test_progress_counts_all_four_buckets_end_to_end`, `test_full_breakdown_all_four_buckets`, `test_rerun_drops_a_stale_deck_but_keeps_others`, `test_rerun_refuses_when_nothing_survives`.
+- `uv run pytest` printed `349 passed`, with no other connection to the test database at the start.
+- `grep -c "archived_at\|include_archived" frontend/src/api/types.ts` printed `0`.
+
+The commit's checks: `npx vitest run` printed `58 passed (58)` files and `588 passed (588)` tests; `npm run lint` and `npm run build` printed no error; `npm run gen:api` regenerated `frontend/src/api/types.ts` and `frontend/src/api/openapi.json`.
+
+Departures from Files:
+
+- `frontend/src/components/library/CardTable.tsx` does not exist; cycle 027 renamed it to `CardList.tsx`, which Details anticipates, and that file took the comment edit.
+- `app/services/deck_batch_edit.py`, added with the engineer's go-ahead: the name-clash handler in `apply_deck_batch_edit` matched the unique index by its old name, so a field renamed to a taken name on Edit deck fell through to the generic 422; it now matches `uq_field_def_deck_id_name`.
+- `frontend/src/api/openapi.json`, added with the engineer's go-ahead: `npm run gen:api` writes it before `types.ts`, and the grep over `frontend/src` reads it. On the engineer's order it is also added to T2's Files, since T2 runs the same command.
+
+Departures from Details:
+
+- `db_read_field_ids_for_decks` has a third caller, `validate_deck_practice_config` in `app/services/deck_practice_config.py`, which followed the rename.
+- `test_progress_counts_all_four_buckets_end_to_end` no longer creates its `filler` field, whose only reason was the two-field floor the archive hit; every assertion is kept. The breakdown's `_setup_deck` keeps its `filler`, which a card's dense write still fills, with its docstring reworded.
+- `test_blanked_failed_pool_field_drops_out_and_card_still_requeues` keeps its assertions; its docstring no longer names the removed archive test as its twin.
+- `test_deleting_a_field_deletes_the_active_practice_naming_it` also asserts the practice's state read 200 before the delete, so the 404 after it is the delete's doing.
+
+For the engineer to read:
+
+- `delete_field` in `app/services/deletion.py`: the two-field floor is checked by counting the deck's fields through `db_read_field_defs` before anything is staged, and the `Refusal` carries the same message as `apply_deck_batch_edit`'s.
+- The `upgrade` of `alembic/versions/45fe82fb6098_no_field_archive.py`: the count query and the `RuntimeError` it raises are the migration's refusal.
+- `test_config_deleted_with_its_field_is_not_found_at_start` in `tests/api_tests/test_practice_run.py` asserts 404 with code `config_not_found` and the configuration's id, which is what `create_practice_run` gives an unknown id.
 
 ### T2 — Practice cards scrubbed and the placeholder gone
 
@@ -156,6 +186,7 @@ A deleted field's id is gone from every practice card, so every id a practice ca
 - `app/services/deletion.py`
 - `app/services/practice_run.py`
 - `app/models/practice_run_payloads.py`
+- `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
 - `frontend/src/components/practice/FieldValue.tsx`
 - `frontend/src/components/practice/RunBreakdown.tsx`

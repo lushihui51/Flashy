@@ -856,16 +856,6 @@
             }
           },
           {
-            "name": "include_archived",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Include Archived"
-            }
-          },
-          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1181,83 +1171,9 @@
         "tags": [
           "Field Definitions"
         ],
-        "summary": "Archive Field Def",
-        "operationId": "archive_field_def_api_fields__field_id__delete",
-        "parameters": [
-          {
-            "name": "field_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Field Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FieldDefRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/fields/{field_id}/hard": {
-      "delete": {
-        "tags": [
-          "Field Definitions"
-        ],
-        "summary": "Hard Delete Field Def",
-        "operationId": "hard_delete_field_def_api_fields__field_id__hard_delete",
+        "summary": "Delete Field Def",
+        "description": "404 for a field that is not the user's; 422 with code `too_few_fields` when the\ndeck would keep fewer than two fields.",
+        "operationId": "delete_field_def_api_fields__field_id__delete",
         "parameters": [
           {
             "name": "field_id",
@@ -4035,18 +3951,6 @@
             "format": "uuid",
             "title": "Id"
           },
-          "archived_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Archived At"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4060,7 +3964,6 @@
           "type",
           "position",
           "id",
-          "archived_at",
           "created_at"
         ],
         "title": "FieldDefRead"

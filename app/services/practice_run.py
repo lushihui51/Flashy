@@ -80,7 +80,7 @@ class RunStartError(Exception):
     """A session-start failure that names the config responsible.
 
     The creation page lists several configs at once and must render a failure against
-    the offending row rather than as a bare toast — a stale config (a field archived
+    the offending row rather than as a bare toast — a stale config (a field deleted
     since it was saved) is fixable, but only if the user is told *which* one to fix. A
     plain message string can't carry that, so the id travels on the exception and is
     serialized into the error body by the router. Codes: `config_not_found`,
@@ -268,7 +268,7 @@ def start_practice_run(
     next_position = 0
     for config in configs:
         # Session start is the second of the two call sites that must validate — a
-        # config can go stale (a field archived) between template save and now, and
+        # config can go stale (a field deleted) between template save and now, and
         # the snapshot about to become immutable must be valid at the moment it's cut.
         try:
             validate_deck_practice_config(
@@ -454,8 +454,7 @@ def _resolve_field_values(
     keep_removed: bool = False,
 ) -> list[ResolvedFieldValue]:
     """One side (prompts or answers) of a practice_card's stored id array, resolved
-    against this deck's field_defs (archived included — a field only drops out here if
-    its row no longer exists at all) and this card's current values, then reordered to
+    against this deck's field_defs and this card's current values, then reordered to
     field_def.position ascending regardless of what order the ids were stored in. An id
     with no field_def row is dropped, unless keep_removed is True (the breakdown only),
     in which case it trails the live entries as a placeholder — empty name and value,
@@ -483,8 +482,7 @@ def _resolve_current_run_card(
 ) -> CurrentRunCard:
     """Builds the run payload's one live card: attempt is read off the chain fold
     (run_progress's same grouping) rather than stored anywhere, and field
-    resolution goes through the card's own deck so archived prompt/answer fields still
-    resolve."""
+    resolution goes through the card's own deck."""
     chain = _chains_by_card_id(cards)[current.card_id]
     attempt = chain.index(current) + 1
 
@@ -492,7 +490,7 @@ def _resolve_current_run_card(
     assert card is not None, "a practice_card's card_id cascades on card delete"
     values_by_field = {v.field_def_id: v.value for v in card.values}
     field_defs_by_id = {
-        fd.id: fd for fd in db_read_field_defs(db, card.deck_id, user_id, include_archived=True)
+        fd.id: fd for fd in db_read_field_defs(db, card.deck_id, user_id)
     }
 
     return CurrentRunCard(
@@ -713,11 +711,10 @@ def get_practice_run_breakdown(
         deck_id_by_card[card_id] = deck_id
         if deck_id not in field_defs_by_deck:
             field_defs_by_deck[deck_id] = {
-                fd.id: fd
-                for fd in db_read_field_defs(db, deck_id, user_id, include_archived=True)
+                fd.id: fd for fd in db_read_field_defs(db, deck_id, user_id)
             }
-            # db_read_field_defs is already active-only and position-sorted; the
-            # primary field is index 0, the mastery domain is every entry.
+            # db_read_field_defs is position-sorted; the primary field is index 0, the
+            # mastery domain is every entry.
             active_field_defs_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)
             primary_field_by_deck[deck_id] = active_field_defs_by_deck[deck_id][0]
         field_defs_by_id = field_defs_by_deck[deck_id]
@@ -847,9 +844,9 @@ def _requeue_failed_card(
     queue. `failed_field_ids` (the answer fields rated "Again") are forced into the new
     row's answer set ahead of pool sampling, so the retry always re-asks what was
     missed — a failed
-    field archived or blanked since drops out of the generation filters like any other.
+    field deleted or blanked since drops out of the generation filters like any other.
     Returns None if the card can no longer be generated at all (e.g. every remaining
-    field archived since the snapshot was cut) — nothing to requeue with, same as at
+    field deleted since the snapshot was cut) — nothing to requeue with, same as at
     session start."""
     resolved = generate_practice_card_fields(
         db,

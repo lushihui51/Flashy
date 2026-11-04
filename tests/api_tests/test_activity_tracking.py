@@ -1,7 +1,7 @@
 """last_activity_at is the server-side recency sort key for every subject and deck
 list; the frontend never re-sorts. It equals created_at on insert and is bumped by a
 row's own-column edits and by child activity: a card create, edit, or delete and a
-field create, rename, reorder, archive, or hard delete bump the deck; a deck created,
+field create, rename, reorder, or delete bump the deck; a deck created,
 deleted, or moved under a subject bumps the subject (a move bumps both the source and
 the target). A card write stops at the deck and never reaches the subject, and a PATCH
 carrying no fields bumps nothing."""
@@ -137,7 +137,7 @@ class TestFieldWritesTouchDeck:
         after = client.get(f"/api/decks/{deck['id']}").json()
         assert _parse(after["last_activity_at"]) > _parse(deck["last_activity_at"])
 
-    def test_field_archive_touches_deck_last_activity(self, client, existing_subject):
+    def test_field_delete_touches_deck_last_activity(self, client, existing_subject):
         deck = self._deck(client, existing_subject)
         client.post(f"/api/decks/{deck['id']}/fields", json={"name": "Extra", "type": "text"})
         before = client.get(f"/api/decks/{deck['id']}").json()
@@ -154,18 +154,6 @@ class TestFieldWritesTouchDeck:
         client.post(f"/api/decks/{deck['id']}/fields/reorder", json=list(reversed(ids)))
         after = client.get(f"/api/decks/{deck['id']}").json()
         assert _parse(after["last_activity_at"]) > _parse(deck["last_activity_at"])
-
-    def test_field_hard_delete_touches_deck_last_activity(self, client, existing_subject):
-        deck = self._deck(client, existing_subject)
-        client.post(f"/api/decks/{deck['id']}/fields", json={"name": "Extra", "type": "text"})
-        field_id = deck["field_defs"][0]["id"]
-        client.delete(f"/api/fields/{field_id}")
-        before = client.get(f"/api/decks/{deck['id']}").json()
-
-        client.delete(f"/api/fields/{field_id}/hard")
-
-        after = client.get(f"/api/decks/{deck['id']}").json()
-        assert _parse(after["last_activity_at"]) > _parse(before["last_activity_at"])
 
 
 class TestCardWritesTouchDeck:

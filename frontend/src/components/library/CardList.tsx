@@ -3,8 +3,7 @@ import type { components } from 'src/api/types';
 
 type CardListProps = {
   deckName: string;
-  /** Sorted by position — already active-only: archived fields never appear in
-   * DeckDetail.field_defs at all. The first one leads each card. */
+  /** Sorted by position. The first one leads each card. */
   fieldDefs: components['schemas']['DeckFieldDefRead'][];
   cards: components['schemas']['CardRead'][];
   /** Where tapping a card goes: the card's edit route. */
