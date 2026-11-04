@@ -5,7 +5,7 @@ type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummar
 
 type SelectedConfigurationListProps = {
   /** Selected configs that resolved against the unfiltered list, in that list's order
-   * (subject → deck → name). */
+   * (decks by their most recent change, then configurations by theirs). */
   configs: DeckPracticeConfigSummary[];
   onRemove: (configId: string) => void;
 };

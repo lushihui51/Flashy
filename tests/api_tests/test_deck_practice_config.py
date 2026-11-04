@@ -231,14 +231,18 @@ class TestDeckPracticeConfigList:
         self, client, multi_subject_library
     ):
         lib = multi_subject_library
-        rows = client.get("/api/deck_practice_configs").json()
+        rows = {row["name"]: row for row in client.get("/api/deck_practice_configs").json()}
 
-        assert [row["name"] for row in rows] == ["Config A", "Config B"]
-        assert rows[0]["deck_id"] == lib["decks"]["a"]["id"]
-        assert rows[0]["deck_name"] == "Shared Deck Name"
-        assert rows[0]["subject_id"] == lib["subjects"]["a"]["id"]
-        assert rows[0]["subject_name"] == "Alpha"
-        assert rows[0]["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
+        assert set(rows) == {"Config A", "Config B"}
+        config_a = rows["Config A"]
+        assert config_a["deck_id"] == lib["decks"]["a"]["id"]
+        assert config_a["deck_name"] == "Shared Deck Name"
+        assert config_a["subject_id"] == lib["subjects"]["a"]["id"]
+        assert config_a["subject_name"] == "Alpha"
+        assert config_a["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
+        config_b = rows["Config B"]
+        assert config_b["deck_id"] == lib["decks"]["b"]["id"]
+        assert config_b["subject_name"] == "Beta"
 
     def test_subject_filter(self, client, multi_subject_library):
         lib = multi_subject_library

@@ -136,7 +136,7 @@ To read: `app/routers/api/deck_practice_config.py`, where `_touch_deck_and_subje
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -151,7 +151,9 @@ A deck's cards, a deck's configurations and New practice's configurations under 
 - `app/database_ops/card.py`
 - `app/database_ops/deck_practice_config.py`
 - `frontend/src/lib/practiceConfigurationGroups.ts`
+- `frontend/src/pages/PracticeCreatePage.tsx`
 - `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/components/practice/SelectedConfigurationList.tsx`
 - `tests/api_tests/test_activity_tracking.py`
 - `tests/api_tests/test_deck_practice_config.py`
 
@@ -188,4 +190,21 @@ The tests:
 
 **Debrief**
 
-None.
+Evidence, per criterion:
+
+- `grep -n "order_by" app/database_ops/card.py app/database_ops/deck_practice_config.py` printed three lines: `db_read_deck_practice_configs`, `db_read_deck_practice_configs_with_context` and `db_read_cards_for_deck`, one each.
+- The `.sort(` grep over `frontend/src/pages`, `frontend/src/components/library` and `frontend/src/components/practice` printed nothing.
+- `uv run pytest tests/api_tests/test_activity_tracking.py tests/api_tests/test_deck_practice_config.py` printed `61 passed`, with `test_deck_cards_ordered_by_last_activity_desc`, `test_configurations_ordered_by_deck_recency_then_own` and `test_deck_configurations_ordered_by_last_activity_desc` each named PASSED in the `-v` output.
+- `uv run pytest` printed `362 passed`, with no other connection to the test database. `npx vitest run` printed 587 passed, `npm run lint` printed nothing, `npm run build` built.
+- In headless Chromium at 390px, signed out of Clerk, the script `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/eee53411-674b-4ae6-83fb-6289d1027fe1/scratchpad/pickers.mjs` printed, output in `pickers.out` beside it: on `/practice` the subject filter's options begin "All subjects" and the deck filter's begin "All decks"; on `/decks/new` the subject picker's options end "New subject…"; on `/cards/new` the deck picker's end "New deck…".
+- The cycle's judgement: `judgement.mjs` in the same scratchpad, output in `judgement.out`, chose the deck "Three fields", second on the Decks tab, under the subject "Cycle 029 T2 judgement 2026-11-04 19:45", second on the Subjects tab; opened the deck's last-listed card "gracias" from the deck's page, changed its "Term" to "gracias (T2)" and saved; then printed "gracias (T2)" as the first card on the deck's page, "Three fields" as the first deck on `/library?tab=decks` and on the subject's page, and the subject as the first on `/library`; then created the configuration "T2 judgement 20:31:45" (Term → Meaning) through "Add configuration" on the deck's Configurations tab, and printed "Cycle 029 T2 judgement 2026-11-04 19:45 · Three fields" as the first group on `/practice/new` with that configuration first, and the same configuration first on the deck's Configurations tab. All six checks printed OK. Screenshots beside the script: `judgement-deck-page.png`, `judgement-decks-tab.png`, `judgement-new-practice.png`. A first run of the script, stopped by a wrong button label in the configuration form, had already edited the card "cd" of "Commands" to "cd (T2)", which is why "Commands" led the Decks tab at the second run; both edits and the configuration stay in the dev database.
+
+Departures from Files, approved in the session and added to Files above:
+
+- `frontend/src/pages/PracticeCreatePage.tsx` and `frontend/src/components/practice/SelectedConfigurationList.tsx`: one comment each named the order as subject, deck then name, false now; each says decks by their most recent change, then configurations by theirs. No code changed.
+
+Departures from Details: none.
+
+Comments: the docstring of `db_read_deck_practice_configs_with_context` and the comment on `groupConfigurationsByDeck` state the new order, as Details asked; the two comments above are the only others the change made false. `db_read_deck_practice_configs` has no caller under `app/`; it is ordered as Details requires and left as it was otherwise.
+
+To read: the `order_by` in `db_read_deck_practice_configs_with_context` in `app/database_ops/deck_practice_config.py`, where the deck's recency precedes the configuration's, which is what puts a deck whose card was just edited above a deck whose configuration changed earlier.

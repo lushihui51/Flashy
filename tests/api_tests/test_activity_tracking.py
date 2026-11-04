@@ -449,3 +449,45 @@ class TestRecencyOrdering:
         response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
         ids = [d["id"] for d in response.json()]
         assert ids.index(first["id"]) < ids.index(second["id"])
+
+    def test_deck_cards_ordered_by_last_activity_desc(self, client, existing_subject):
+        deck = _make_deck(client, existing_subject)
+        front_id, _ = _field_ids(deck)
+        first = _make_card(client, deck, "A")
+        second = _make_card(client, deck, "B")
+        third = _make_card(client, deck, "C")
+
+        response = client.patch(f"/api/cards/{first['id']}", json={"values": {front_id: "A2"}})
+        assert response.status_code == 200, response.text
+
+        ids = [c["id"] for c in client.get("/api/cards", params={"deck_id": deck["id"]}).json()]
+        assert ids == [first["id"], third["id"], second["id"]]
+
+    def test_configurations_ordered_by_deck_recency_then_own(self, client, existing_subject):
+        first_deck = _make_deck(client, existing_subject)
+        first_a = _make_config(client, first_deck, "First A")
+        first_b = _make_config(client, first_deck, "First B")
+        second_deck = _make_deck(client, existing_subject)
+        second_a = _make_config(client, second_deck, "Second A")
+        second_b = _make_config(client, second_deck, "Second B")
+
+        response = client.patch(
+            f"/api/deck_practice_configs/{first_a['id']}", json={"name": "First A renamed"}
+        )
+        assert response.status_code == 200, response.text
+
+        ids = [c["id"] for c in client.get("/api/deck_practice_configs").json()]
+        assert ids == [first_a["id"], first_b["id"], second_b["id"], second_a["id"]]
+
+    def test_deck_configurations_ordered_by_last_activity_desc(self, client, existing_subject):
+        deck = _make_deck(client, existing_subject)
+        first = _make_config(client, deck, "First")
+        second = _make_config(client, deck, "Second")
+
+        response = client.patch(
+            f"/api/deck_practice_configs/{first['id']}", json={"name": "First renamed"}
+        )
+        assert response.status_code == 200, response.text
+
+        response = client.get("/api/deck_practice_configs", params={"deck_id": deck["id"]})
+        assert [c["id"] for c in response.json()] == [first["id"], second["id"]]

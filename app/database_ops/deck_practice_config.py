@@ -64,6 +64,7 @@ def db_read_deck_practice_configs(
             .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
             .join(Subject, Subject.id == Deck.subject_id)
             .where(DeckPracticeConfig.deck_id == deck_id, Subject.user_id == user_id)
+            .order_by(col(DeckPracticeConfig.last_activity_at).desc(), col(DeckPracticeConfig.id))
         ).all()
     )
 
@@ -78,8 +79,8 @@ def db_read_deck_practice_configs_with_context(
     narrowed to one subject or one deck. One query — the deck/subject context comes
     from the same join chain that already scopes ownership.
 
-    Ordered subject → deck → config name so a grouped list renders in a stable,
-    human-sorted order without the client re-sorting."""
+    Ordered by the deck's most recent change, then by the configuration's own, so a
+    grouped list renders in this order without the client re-sorting."""
     query = (
         select(DeckPracticeConfig, Deck.name, Subject.id, Subject.name)
         .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
@@ -91,7 +92,10 @@ def db_read_deck_practice_configs_with_context(
     if deck_id is not None:
         query = query.where(DeckPracticeConfig.deck_id == deck_id)
     query = query.order_by(
-        col(Subject.name), col(Deck.name), col(DeckPracticeConfig.name)
+        col(Deck.last_activity_at).desc(),
+        col(Deck.id),
+        col(DeckPracticeConfig.last_activity_at).desc(),
+        col(DeckPracticeConfig.id),
     )
 
     return [
