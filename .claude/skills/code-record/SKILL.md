@@ -38,7 +38,7 @@ Give me one thing to answer per turn: one question, the triage table, one ADR's 
 
 ### 1. The triage
 
-First, propose one triage for every Code decision on the docket, as a table: one row per proposed ADR or lesser decision. Each row names the decisions it groups and why it is, or is not, significant per record-rules.md.
+First, propose one triage for every Code decision on the docket, as a table: one row per proposed ADR or lesser decision. Each row names the decisions it groups, the active record they make one decision with, if any, and why it is, or is not, significant per record-rules.md.
 
 In addition, talk about each grouping or split you considered and did not propose, and why.
 
@@ -69,7 +69,7 @@ Propose which active ADRs it contradicts or extends. Those are the affected ADRs
 
 Once I have approved the affected ADRs, propose your decision on each one's fate and your reasoning. Nothing is decided until I say so. The ADR in question can be:
 
-- Untouched, when no new decision changes its Decision
+- Untouched, when no new decision changes its Decision or makes one decision with it
 - Edited in place, when it has not reached main
 - Superseded by the proposed ADR
 - Superseded by a new ADR
