@@ -11,3 +11,16 @@
   --color-ground: #f3f4f8;
   --color-surface: #ffffff;
 }
+
+@utility tappable {
+  border: 1.5px solid var(--color-ink);
+  box-shadow: 0 3px 0 var(--color-ink);
+}
+@utility tappable-sm {
+  border: 1.5px solid var(--color-ink);
+  box-shadow: 0 2px 0 var(--color-ink);
+}
+@utility tappable-pressed {
+  box-shadow: none !important;
+  transform: translateY(2px);
+}

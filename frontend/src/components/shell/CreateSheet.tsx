@@ -13,6 +13,9 @@ type CreateSheetProps = {
   hasDecks: boolean | undefined;
 };
 
+const ROW_CLASS =
+  'tappable flex min-h-14 w-full items-center gap-3 rounded-2xl bg-(--color-surface) px-4 py-2 text-left';
+
 /** The four things a user makes, in the order they nest: a subject holds decks, a deck
  * holds cards, and a practice is run over them.
  *
@@ -30,23 +33,15 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
 
   return (
     <BottomSheet open={open} onClose={onClose} triggerRef={triggerRef} ariaLabel="New">
-      <ul className="flex flex-col">
+      <ul className="flex flex-col gap-3">
         <li>
-          <button
-            type="button"
-            onClick={() => go('/subjects/new')}
-            className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
-          >
+          <button type="button" onClick={() => go('/subjects/new')} className={ROW_CLASS}>
             <Folder aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="font-medium text-(--color-ink)">New subject</span>
           </button>
         </li>
         <li>
-          <button
-            type="button"
-            onClick={() => go('/decks/new')}
-            className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
-          >
+          <button type="button" onClick={() => go('/decks/new')} className={ROW_CLASS}>
             <Layers aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="font-medium text-(--color-ink)">New deck</span>
           </button>
@@ -55,7 +50,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
           <button
             type="button"
             onClick={() => go(hasDecks === false ? '/decks/new' : '/cards/new')}
-            className="flex min-h-14 w-full items-center gap-3 rounded-xl px-2 py-2 text-left"
+            className={ROW_CLASS}
           >
             <CreditCard aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="flex flex-col">
@@ -69,11 +64,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
         <li>
           {/* Straight to where a practice is made — choosing configurations and naming
               the run — not to the list of past ones. */}
-          <button
-            type="button"
-            onClick={() => go('/practice/new')}
-            className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
-          >
+          <button type="button" onClick={() => go('/practice/new')} className={ROW_CLASS}>
             <Zap aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="font-medium text-(--color-ink)">New practice</span>
           </button>

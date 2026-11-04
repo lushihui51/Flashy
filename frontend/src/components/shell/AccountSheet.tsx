@@ -30,7 +30,10 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
         {user?.imageUrl ? (
           <img src={user.imageUrl} alt={name} className="h-14 w-14 rounded-full object-cover" />
         ) : (
-          <div aria-hidden="true" className="h-14 w-14 rounded-full bg-(--color-ink)" />
+          <div
+            aria-hidden="true"
+            className="h-14 w-14 rounded-full border-[1.5px] border-(--color-ink) bg-(--color-ground)"
+          />
         )}
         <div>
           <p id={nameId} className="font-semibold text-(--color-ink)">
@@ -45,7 +48,7 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
       <button
         type="button"
         onClick={handleLogOut}
-        className="h-11 rounded-full bg-(--color-ground) text-sm font-semibold text-(--color-ink)"
+        className="tappable h-12 rounded-2xl bg-(--color-surface) text-[15px] font-semibold text-(--color-ink)"
       >
         Log out
       </button>

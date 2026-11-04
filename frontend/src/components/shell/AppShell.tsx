@@ -31,9 +31,9 @@ export default function AppShell() {
   });
 
   return (
-    <div className="min-h-screen bg-(--color-surface)">
+    <div className="min-h-screen bg-(--color-ground)">
       {/* z-40: stays visible above the drawer/sheet's scrim/panel (z-20/30) while open. */}
-      <header className="sticky top-0 z-40 flex flex-col gap-2 bg-(--color-surface) pb-2">
+      <header className="sticky top-0 z-40 flex flex-col gap-0.5 bg-(--color-ground) pb-2">
         {connectionStatus !== 'online' && <ConnectionBanner status={connectionStatus} />}
         <TopBar
           onMenuClick={() => setIsMenuOpen((open) => !open)}
@@ -44,7 +44,7 @@ export default function AppShell() {
           avatarButtonRef={avatarButtonRef}
           createButtonRef={createButtonRef}
         />
-        <div className="px-3">
+        <div className="px-4">
           <SearchBar />
         </div>
       </header>

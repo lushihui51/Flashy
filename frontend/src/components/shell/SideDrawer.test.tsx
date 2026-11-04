@@ -14,16 +14,11 @@ function LocationProbe() {
 }
 
 describe('SideDrawer', () => {
-  it('renders exactly the four nav items in order when open', () => {
+  it('renders exactly Home, Your library and Practice in order when open', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
     const items = screen.getAllByRole('link');
-    expect(items.map((item) => item.textContent)).toEqual([
-      'Home',
-      'Your library',
-      'Practice',
-      'Notifications',
-    ]);
+    expect(items.map((item) => item.textContent)).toEqual(['Home', 'Your library', 'Practice']);
   });
 
   it('renders nothing when closed', () => {
@@ -49,9 +44,7 @@ describe('SideDrawer', () => {
   });
 
   it('highlights the active item and only the active item', () => {
-    renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />, [
-      '/library',
-    ]);
+    renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />, ['/library']);
 
     expect(screen.getByRole('link', { name: /your library/i })).toHaveAttribute(
       'aria-current',

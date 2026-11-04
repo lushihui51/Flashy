@@ -36,10 +36,10 @@ describe('TopBar', () => {
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
-  it('Practice links to the unfiltered overview, the same target as the drawer item', () => {
+  it('has no link named Practice', () => {
     renderTopBar();
 
-    expect(screen.getByRole('link', { name: 'Practice' })).toHaveAttribute('href', '/practice');
+    expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
   });
 
   it('signed in: renders the avatar instead of Log in', () => {

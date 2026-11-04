@@ -178,7 +178,7 @@ To read: `frontend/src/test/theme.test.ts`, whose four regular expressions decid
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -190,6 +190,7 @@ The top bar holds the menu, the Flashy logo, Search, New and Account, the menu h
 
 **Files**
 
+- `frontend/src/index.css`
 - `frontend/src/components/shell/TopBar.tsx`
 - `frontend/src/components/shell/TopBar.test.tsx`
 - `frontend/src/components/shell/Logo.tsx`
@@ -290,7 +291,39 @@ Notifications:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `ls frontend/src/pages/NotificationsPage.tsx` printed "No such file or directory", and `grep -rin "notifications" frontend/src` printed nothing.
+- `grep -n "Notifications\|Coming soon" docs/vocabulary.md` printed one line: `| Places | A place not built yet | "Coming soon." | Home | `HomePage` |`.
+- `cd frontend && npx vitest run src/components/shell src/pages/placeholderPages.test.tsx` printed `Test Files 10 passed (10)` and `Tests 61 passed (61)`, with ✓ on `SideDrawer > renders exactly Home, Your library and Practice in order when open` and `TopBar > has no link named Practice`.
+- `curl -s localhost:5173/favicon.svg | grep -c "M0,0 H49 V15 H18 V29 H42 V44 H18 V70 H0 Z"` printed `1`.
+- Headless Chromium at `localhost:5173/library`, signed out of Clerk: the header's buttons and links printed `["Open menu","Flashy home","New","Log in"]`, and the search input labelled "Search" was found once. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/43d3159d-9154-491e-88bd-e6a0eea9a57d/scratchpad/t2-check.cjs` and its output is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/43d3159d-9154-491e-88bd-e6a0eea9a57d/scratchpad/t2-check.out`.
+- `localhost:5173/notifications` printed `headings: 0`, with no page errors.
+- Screenshots at 390px width: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/43d3159d-9154-491e-88bd-e6a0eea9a57d/scratchpad/t2-topbar.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/43d3159d-9154-491e-88bd-e6a0eea9a57d/scratchpad/t2-menu.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/43d3159d-9154-491e-88bd-e6a0eea9a57d/scratchpad/t2-new-sheet.png`. The page beneath them shows a peer's uncommitted T3 work.
+
+The same script computed these at 2x, launched with `--force-device-scale-factor=2 --window-size=390,844` and `viewport: null`, because Chromium floors `1.5px` to `1px` at 1x and Playwright's `deviceScaleFactor` does not change that. Each menu item and the New sheet's rows read `1.5px solid rgb(23, 33, 43)`, and every one but the current item read the shadow `rgb(23, 33, 43) 0px 3px 0px 0px`; the current item read `box-shadow: none` and `translateY(2px)`, filled in ink. The search bar read `46px` with `1.5px solid rgb(213, 218, 226)` on white. The header and the shell read `rgb(243, 244, 248)`, with a `0px` border under the bar. The word read 21px, weight 700, `-0.21px` spacing, on one line.
+
+Not seen in a browser: Account's 38px circle, the account sheet's placeholder avatar and its "Log out" block, since the check runs signed out. `AuthSlot.test.tsx` and `AccountSheet.test.tsx` pass but assert behaviour, not look, so these are for the engineer to judge signed in.
+
+Departures from Details and Files:
+
+- `frontend/src/index.css` was added to T2's Files on the engineer's go-ahead, and it holds T3's three `@utility` blocks, so the shell's blocks go through them. T3 lost the path from its Files and gained a dependency on T2. A peer building T3 at the same time holds its commit until T2's lands.
+- `tappable-pressed` reads `box-shadow: none !important`, not T3's plain `none`. Tailwind compiles it ahead of `tappable` and `tappable-sm`, whose shadow otherwise wins; the compiled order is in the script's output. T3's peer found the same on `tappable-sm` and its Debrief depends on this staying.
+- The logo's `style` gains `display: 'inline'`, because Tailwind's reset makes every `svg` a block and the F would sit on its own line above "lashy". The `viewBox` and the path are as written.
+- The Where of "The main places" changed from "Side menu; top bar" to "Side menu", since the top bar no longer shows any of them. Details named only that row's words and code.
+- The current menu item uses `tappable`, not `tappable-sm`, with `tappable-pressed`, because the items are 48px rows with 16px corners and T3 gives those to `tappable`. `tappable-sm` is for a pill.
+- The New sheet's rows and "Log out" are 56px and 48px `tappable` blocks with 16px corners, set 12px apart.
+- The bar is 58px with 16px sides and the gaps as drawing 1 has them, the search bar sits 2px under it, and the drawer's top padding is 126px: the 114px header plus 12px.
+- `ConnectionBanner.tsx` went from `px-3` to `px-4`, to align with the bar, as Details allow.
+- `favicon.svg` carries no `vector-effect`, since Details give only the path, `viewBox`, fill and stroke; the stroke is thin at tab size.
+- `Logo.test.tsx` gained a test for the F's path and the text "lashy", and `placeholderPages.test.tsx` became two plain tests, as one case was left.
+- The interface comment on `PRACTICE_NAV` and the spacing comments in `TopBar.tsx` went, since they described the bolt link.
+
+The whole-frontend checks ran on a tree holding a peer's uncommitted work: `npx vitest run` printed `Test Files 53 passed (53)` and `Tests 554 passed (554)`, `npm run lint` printed nothing, and `npm run build` built. On T2's staged hunks alone, exported to the scratchpad: `Test Files 52 passed (52)`, `Tests 551 passed (551)`, `npm run lint` printed nothing, and `npm run build` built.
+
+Seen and not changed: `AccountSheet.tsx` holds a comment saying rows will be added later, against "Never mark deferred work in code".
+
+To read: `frontend/src/index.css`, for the `!important`.
 
 ### T3 — The shared blocks
 
@@ -305,10 +338,10 @@ The components every page builds rows, buttons, tabs, dialogs and pickers from a
 **Dependencies**
 
 - T1: the eight tokens and Lexend.
+- T2: `tappable`, `tappable-sm` and `tappable-pressed` in `src/index.css`.
 
 **Files**
 
-- `frontend/src/index.css`
 - `frontend/src/components/ui/ListRow.tsx`
 - `frontend/src/components/ui/ListRow.test.tsx`
 - `frontend/src/components/ui/AddButton.tsx`

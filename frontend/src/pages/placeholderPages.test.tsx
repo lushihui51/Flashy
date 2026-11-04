@@ -2,22 +2,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import HomePage from 'src/pages/HomePage';
-import NotificationsPage from 'src/pages/NotificationsPage';
 
 describe('placeholder pages', () => {
-  it.each([
-    ['HomePage', HomePage, 'Home'],
-    ['NotificationsPage', NotificationsPage, 'Notifications'],
-  ] as const)('%s smoke renders with an <h1>', (_name, Page, heading) => {
-    render(<Page />);
-    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+  it('HomePage smoke renders with an <h1>', () => {
+    render(<HomePage />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument();
   });
 
-  it.each([
-    ['HomePage', HomePage, 'Home · Flashy'],
-    ['NotificationsPage', NotificationsPage, 'Notifications · Flashy'],
-  ] as const)('%s titles the browser tab', (_name, Page, title) => {
-    render(<Page />);
-    expect(document.title).toBe(title);
+  it('HomePage titles the browser tab', () => {
+    render(<HomePage />);
+    expect(document.title).toBe('Home · Flashy');
   });
 });

@@ -41,10 +41,10 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
               event.preventDefault();
             }
           }}
-          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[7.25rem] focus:outline-none"
+          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[7.875rem] focus:outline-none"
         >
           <nav>
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-3">
               {NAV_ITEMS.map(({ label, to, icon: Icon, end }) => (
                 <li key={to}>
                   <NavLink
@@ -52,10 +52,10 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
                     end={end}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium ${
+                      `tappable flex h-12 items-center gap-3 rounded-2xl px-4 text-[15px] font-semibold ${
                         isActive
-                          ? 'bg-(--color-ink) text-(--color-surface)'
-                          : 'text-(--color-ink)'
+                          ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)'
+                          : 'bg-(--color-surface) text-(--color-ink)'
                       }`
                     }
                   >
