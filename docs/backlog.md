@@ -54,3 +54,6 @@
 - B21. When the user presses Cancel on the new deck form they reached from a subject's page, do they return to that subject's page?
   - Reason: `SubjectDetailPage` in `frontend/src/pages/SubjectDetailPage.tsx` opens the form with the subject in router state and no `returnTo`, and `goBack` in `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` goes to `returnTo` or else `/library`, so Cancel lands on Your library. `returnTo` also decides where Create goes, so passing it would send a new deck back to the subject's page instead of the deck's own.
   - Owner: /product-decide
+- B22. What does the user see when they open an address that leads to no page, and when a page fails while drawing?
+  - Reason: Under the data router (ADR 089), both show React Router's default error screen, in its own words and outside `AppShell`, which meets neither the rule that a screen shows only words `docs/vocabulary.md` gives nor the rule that a failure renders inline with no error boundary (PDR 002, ADR 063). ADR 089 sets no `errorElement`, and `App.tsx` holds no catch-all route.
+  - Owner: /product-decide
