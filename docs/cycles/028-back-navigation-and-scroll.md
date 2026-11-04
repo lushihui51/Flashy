@@ -859,7 +859,7 @@ Read in the code: the layout effect, `bandTop`, `rowsOf` and `wholePixels` in `f
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -934,4 +934,75 @@ The tests, each a test of its own:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `grep -n '"Back"' docs/vocabulary.md` prints one line, the "Places" row for the row above a page's heading, whose User reads now opens with `"Back", spoken, on the "<" that goes back`.
+- `grep -rn "history.state" frontend/src --exclude=*.test.*` prints one line:
+  ```
+  frontend/src/lib/historyIndex.ts:7:  const index: unknown = window.history.state?.idx;
+  ```
+- `grep -n "navigate(-1)\|hasEarlierPage()" frontend/src/components/ui/Breadcrumb.tsx` prints two lines, and `grep -c "'default'"` on the file prints `0`:
+  ```
+  28:      {hasEarlierPage() && (
+  32:          onClick={() => navigate(-1)}
+  ```
+- `cd frontend && npx vitest run src/lib/historyIndex.test.tsx src/components/ui/Breadcrumb.test.tsx --reporter=verbose` passes, 12 of 12: the four Breadcrumb tests the file held, unchanged, and the new ones:
+  ```
+  ✓ src/lib/historyIndex.test.tsx > hasEarlierPage > is false on the entry the page was opened at
+  ✓ src/lib/historyIndex.test.tsx > hasEarlierPage > stays false after a replace on that entry
+  ✓ src/lib/historyIndex.test.tsx > hasEarlierPage > is true after a push
+  ✓ src/lib/historyIndex.test.tsx > hasEarlierPage > stays true after a replace on the pushed entry
+  ✓ src/lib/historyIndex.test.tsx > hasEarlierPage > is false again after going back
+  ✓ src/components/ui/Breadcrumb.test.tsx > Breadcrumb > shows no Back button under a memory router
+  ✓ src/components/ui/Breadcrumb.test.tsx > Breadcrumb > shows no Back button on the opened entry, a replace on it included
+  ✓ src/components/ui/Breadcrumb.test.tsx > Breadcrumb > shows a Back button after a push, and its click returns to the first address
+  ```
+- In headless Chromium against `localhost:5173`, signed out of Clerk, in a fresh context, the deck Commands opened by its address, the Configurations tab clicked with the mouse, then a reload; `idx` is the router's position the task reads:
+  ```
+  deck by address: links named "Your library" 1, Back buttons 0, idx 0
+  after Configurations tab: url /decks/d82f1a6b-0b7a-4144-ba4f-9b8e38ea93c0?tab=configurations, Back buttons 0, idx 0
+  after reload: Back buttons 0, idx 0
+  ```
+- In the same script, in a second fresh context, no page errors in either:
+  ```
+  clicked "Web" -> /subjects/:id: Back buttons 1, hit area 44x44, at least 44x44 true
+    nav left 16 top 130 height 22.5; chevron left 16 width 16; first place left 52
+  after reload: Back buttons 1, idx 1
+  after Back: address /library, Back buttons on Your library 0
+  page errors: 0
+  ```
+- The cycle's judgement, from `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/dabb6343-0a73-498a-80cd-b01a216c90d7/scratchpad/t7-judgement.mjs` against `localhost:5173` at 390 by 500, each path in a fresh context; the mouse clicked every row, Back, filter and option, the Decks tab alone went through `element.click()`; in step 5 the script lowered the viewport's height from 500 in steps of 40 until the page scrolled far enough for the row to reach the header, and prints the height used:
+  ```
+  == 1. /library at its bottom, the last visible row, Back on the page it reaches
+  scrollY before leaving 102; clicked row 3 of 3, "Stott Pilates"; subject page scrollY 0; after Back scrollY 102; equal and above 0: true
+  == 2. a deck's page by its address, then a reload
+  Back buttons on open 0, after reload 0
+  == 3. /library at its bottom, the Decks tab through element.click()
+  scrollY 102 -> 63; tablistTop 114.5 headerBottom 114 tablist at or below header true; first two rows' bottoms [304.5,394.5] at most 500 true
+  == 4. /practice/new, the deck filter Ports, its response held 600ms
+  before pick: scrollY 80, first row "Command to Purpose", deck filter input top 261.5 in view true
+       33..  642ms x 30 scrollY 80 urlHasDeck true first "Command to Purpose"
+      663..  874ms x 11 scrollY 87 urlHasDeck true first "Oct 1, 2026 at 1:18 PM"
+  held requests 1; first row changed at 663ms; samples before the change 30, every one at scrollY 80 with the old first row: true; final scrollY 87
+  == 5. the banner showing: the three forms at their bottoms, and the side menu
+  /practice/new             w390 banner h500 scrollY 483 headerVar 172px headerBottom 172 rowTop 172 within 1px true
+  /decks/new                w390 banner h500 scrollY 196 headerVar 172px headerBottom 172 rowTop 172 within 1px true
+  /deck-configurations/new  w390 banner h300 scrollY 44 headerVar 172px headerBottom 172 rowTop 172 within 1px true
+  side menu w390 banner headerBottom 172 firstItemTop 184 diff 12 is 12 within 1px true
+  /practice/new             w1280 banner h500 scrollY 463 headerVar 152px headerBottom 152 rowTop 152 within 1px true
+  /decks/new                w1280 banner h500 scrollY 176 headerVar 152px headerBottom 152 rowTop 152 within 1px true
+  /deck-configurations/new  w1280 banner h300 scrollY 24 headerVar 152px headerBottom 152 rowTop 152 within 1px true
+  side menu w1280 banner headerBottom 152 firstItemTop 164 diff 12 is 12 within 1px true
+  page errors: 0
+  ```
+  The first script is `t7-back.mjs` in the same folder. Both launch the installed Chromium headless shell, revision 1243, by its path, since the scratchpad's playwright-core asks for revision 1248, which is not installed.
+
+Checks over the whole frontend: `npx vitest run` 58 files and 588 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Departures from Details or Files: none. The "<" carries the classes Details names, `h-11 w-11` with `-my-3.5 -ml-3.5`.
+
+Finding, for the engineer: the places sit further right when the "<" shows. The button's margin box is 30px wide, 44 less the 14 pulled back on its left, where the chevron alone was 16; with the row's 6px gap, the first place now starts 36px into the row, where it started 22px in before this task, and starts at the row's left edge when there is no "<". `-mx-3.5` in place of `-ml-3.5` would keep the first place at 22px, with the button's right 8px lying under the first place's link, which is later in the DOM and takes the clicks there. The hit area is 44 by 44 as built, so the task kept Details' way; where the places sit is the row's look, which this task does not decide.
+
+In `Breadcrumb.test.tsx`, every test now resets jsdom's history with `window.history.replaceState(null, '', '/')` and disposes its router, since the browser-router tests push entries into the one history jsdom holds and a later test would otherwise read their position.
+
+Read in the code: `hasEarlierPage` in `frontend/src/lib/historyIndex.ts`, the one read of the router's position; and the button in `frontend/src/components/ui/Breadcrumb.tsx`, rendered on `hasEarlierPage()` during render, which holds because every navigation re-renders the page that holds the row.

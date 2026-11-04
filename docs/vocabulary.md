@@ -37,7 +37,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The main places | "Home"; "Your library"; "Practice" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
-| Places | The row above a page's heading naming the places it belongs to, widest first | "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "Practice" on a practice's page; "Practice › <Practice>" on the run page | Subject page; deck page; practice's page; run page | `Breadcrumb`; `places` |
+| Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "Practice" on a practice's page; "Practice › <Practice>" on the run page | Subject page; deck page; practice's page; run page | `Breadcrumb`; `places` |
 | Places | A thing's address, widest place first | "Subject · Deck"; "Deck · Configuration"; "Subject · Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
 | Places | A place not built yet | "Coming soon." | Home | `HomePage` |
 | Library | The library's tabs | "Library", spoken; "Subjects"; "Decks" | Library | `TABS`; `tab` |
