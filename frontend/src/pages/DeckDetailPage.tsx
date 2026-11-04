@@ -6,11 +6,12 @@ import { readDeck } from 'src/api/deck';
 import { readSubject } from 'src/api/subject';
 import { deleteDeckPracticeConfig, readDeckPracticeConfigs } from 'src/api/deck_practice_config';
 import SubjectIcon from 'src/components/library/SubjectIcon';
-import CardTable from 'src/components/library/CardTable';
+import CardList from 'src/components/library/CardList';
 import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -21,6 +22,11 @@ type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummar
 
 const TABS = ['cards', 'configurations'] as const;
 type Tab = (typeof TABS)[number];
+
+const TAB_ITEMS: { value: Tab; label: string }[] = [
+  { value: 'cards', label: 'Cards' },
+  { value: 'configurations', label: 'Configurations' },
+];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
@@ -120,90 +126,66 @@ export default function DeckDetailPage() {
         ]}
       />
 
-      <h1 className="mt-1 text-[22px] font-medium text-(--color-ink)">{deck.name}</h1>
-
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3.5 flex items-center gap-2.5">
+        <h1 className="min-w-0 flex-1 break-words text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          {deck.name}
+        </h1>
         <button
           type="button"
           // Both params, not just the deck: two decks in different subjects can share a
           // name, so the subject is what makes the filtered list unambiguous on arrival.
           onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
-          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink)"
+          className="tappable flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-(--color-main-action) px-3.5 text-[17px] font-semibold text-(--color-ink)"
         >
-          <Play aria-hidden="true" className="h-4 w-4" />
+          <Play aria-hidden="true" fill="currentColor" className="h-3.5 w-3.5" />
           Practice
         </button>
         <button
           type="button"
           aria-label="Edit deck"
           onClick={() => navigate(`/decks/${deck.id}/edit`)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
+          className="tappable flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
-          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-aside)">
-            <Pencil aria-hidden="true" className="h-4 w-4 text-(--color-ink)" />
-          </span>
+          <Pencil aria-hidden="true" className="h-[18px] w-[18px] text-(--color-ink)" />
         </button>
       </div>
 
       {/* This deck's two contents, in the same tab grammar the library uses for subjects
           and decks — a configuration belongs to this deck exactly as its cards do. */}
-      <div
-        role="tablist"
-        aria-label="Deck contents"
-        className="mt-4 flex gap-4 border-b border-(--color-line)"
-      >
-        {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`h-11 border-b-2 px-1 text-sm font-medium ${
-              tab === t
-                ? 'border-(--color-ink) text-(--color-ink)'
-                : 'border-transparent text-(--color-aside)'
-            }`}
-          >
-            {t === 'cards' ? 'Cards' : 'Configurations'}
-          </button>
-        ))}
+      <div className="mt-3.5">
+        <Tabs ariaLabel="Deck contents" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>
 
       {tab === 'cards' ? (
-        /* The table (and its header row) renders whenever the deck has any active
-           fields, regardless of card count — a zero-card deck still has a schema, and
-           that's exactly what an empty deck has to show. The empty state is a sibling
-           below it, outside CardTable's own horizontally-scrolling wrapper, so it
-           stays put under the frozen first column instead of scrolling away with the
-           header. */
-        <div className="mt-2">
+        <div className="mt-3.5">
           {/* Inside the tab, and labeled: a control whose meaning depends on which tab
               is open has no business sitting in the page header. */}
-          <div className="flex items-center justify-between py-2">
-            <h2 className="text-[12px] font-medium text-(--color-aside)">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-medium text-(--color-aside)">
               {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
             </h2>
             <AddButton label="Add card" onClick={addCard} />
           </div>
-          {fieldDefs.length > 0 && (
-            <CardTable
-              deckName={deck.name}
-              fieldDefs={fieldDefs}
-              cards={deck.cards}
-              cardHref={(cardId) => `/cards/${cardId}/edit`}
-            />
+          {fieldDefs.length > 0 && deck.cards.length > 0 && (
+            <div className="mt-3.5">
+              <CardList
+                deckName={deck.name}
+                fieldDefs={fieldDefs}
+                cards={deck.cards}
+                cardHref={(cardId) => `/cards/${cardId}/edit`}
+              />
+            </div>
           )}
           {deck.cards.length === 0 && (
-            <div className="px-3 py-8">
-              <p className="text-(--color-aside)">No cards in this deck yet.</p>
+            <div className="py-8">
+              <p className="text-[15px] text-(--color-aside)">No cards in this deck yet.</p>
             </div>
           )}
         </div>
       ) : (
-        <section aria-label="Configurations" className="mt-2">
-          <div className="flex items-center justify-between py-2">
-            <h2 className="text-[12px] font-medium text-(--color-aside)">
+        <section aria-label="Configurations" className="mt-3.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-medium text-(--color-aside)">
               {configurationsQuery.data
                 ? pluralize(configurations.length, 'configuration')
                 : 'Configurations'}
@@ -217,12 +199,13 @@ export default function DeckDetailPage() {
             </p>
           )}
 
-          {configurationsQuery.data && configurations.length === 0 ? (
+          {configurationsQuery.data && configurations.length === 0 && (
             <div className="py-8">
-              <p className="text-(--color-aside)">No configurations yet.</p>
+              <p className="text-[15px] text-(--color-aside)">No configurations yet.</p>
             </div>
-          ) : (
-            <ul className="flex flex-col divide-y divide-(--color-line)">
+          )}
+          {configurations.length > 0 && (
+            <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)">
               {configurations.map((configuration) => (
                 <li key={configuration.id}>
                   <DeckConfigurationRow

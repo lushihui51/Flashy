@@ -466,7 +466,7 @@ To read: `frontend/src/index.css`, for the `!important`.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -540,7 +540,39 @@ The vocabulary: in `docs/vocabulary.md`, the rows "A deck's cards" and "A blank 
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `ls frontend/src/components/library/CardTable.tsx` printed "No such file or directory", and `grep -rn "CardTable" frontend/src docs/vocabulary.md` printed nothing.
+- `grep -c "CardList" docs/vocabulary.md` printed `2`.
+- `grep -n 'role="tablist"' frontend/src/pages/LibraryPage.tsx frontend/src/pages/DeckDetailPage.tsx` printed nothing.
+- `cd frontend && npx vitest run src/pages/LibraryPage.test.tsx src/pages/SubjectDetailPage.test.tsx src/pages/DeckDetailPage.test.tsx src/components/library` printed `Test Files 12 passed (12)` and `Tests 182 passed (182)`.
+- Headless Chromium through playwright-core, signed out of Clerk, 390px wide, launched with `--force-device-scale-factor=2`, on the seeded decks Commands and Ports: `document.querySelector('table')` printed `null`; all 54 and all 21 links in the element labelled "Cards in <deck>" printed one value, `1.5px solid rgb(23, 33, 43)` and `rgb(23, 33, 43) 0px 3px 0px 0px`. **The yellow count does not hold as written:** two elements computed to `rgb(255, 226, 52)`, the Practice button and the top bar's "Log in". T1's Debrief reports the same on a subject's page: AGENTS.md has the check run signed out, and a signed-in user does not see "Log in". Nothing else on the page is yellow. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-check.cjs` and its output is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-check.out`.
+- At `localhost:5173/library`, the same script printed the tab with `aria-selected="true"` as `rgb(23, 33, 43)` and shadow `none`, and the other as `rgb(255, 255, 255)` and `rgb(23, 33, 43) 0px 2px 0px 0px`.
+- Screenshots at 390px wide: Your library, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-library-subjects.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-library-decks.png`; a subject's page, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-subject.png`; a deck's Cards tab, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-deck-cards-1.png` (Ports) and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-deck-cards-0.png` (Commands, 12 fields); a deck's Configurations tab, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-deck-configurations.png`; a deck with no cards, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e3fefd90-976e-4c4c-8dcd-da3d6a4a3559/scratchpad/t4-deck-empty.png`.
+
+The commit's checks, on this task's files alone over HEAD, exported to the scratchpad because a peer's uncommitted T7 work is in this checkout: `npx vitest run` printed `Test Files 53 passed (53)` and `Tests 554 passed (554)`, `npm run lint` printed nothing, and `npm run build` built. On the tree with the peer's work: `Tests 556 passed (556)`, and lint and build the same.
+
+Departures from Details and the drawings:
+
+- A card's other fields sit in two equal columns, and a value over 18 characters, `HALF_WIDTH_CHARACTERS` in `CardList.tsx`, spans both, in place of the drawing's `1fr auto`, which misaligns from card to card once a deck has 12 fields. Fields stay in position order, so a short value before a long one leaves its right cell empty; `t4-deck-cards-0.png` shows "path".
+- The 1.5px ink rule is drawn only when a card has a second field, since a one-field card would otherwise have it directly above the block's own outline.
+- A deck's Practice button has 14px sides and a 6px gap, not the drawing's 18px and 8px. With the drawing's, "Commands" broke to "Command" and "s" at 390px. A single word too long for the column still breaks.
+- The subject's description sits under the icon and name, as drawing 2 has it, not beside the icon as it did.
+- A card's link has no spoken name of its own: the drawing's "Edit 80" is not in the vocabulary, and this task changes no such row, so the link is named by its content.
+- With no cards, the page renders no `CardList`, so the deck's field names no longer show above "No cards in this deck yet."; the count "0 cards · 5 fields" stays. `DeckDetailPage.test.tsx`'s two zero-card tests now assert that.
+- `DeckConfigurationRow.tsx`'s trash button stays 44px wide, where drawing 5 has 40px.
+- The block of configuration rows renders only with at least one row, because it would otherwise show as an empty outlined box while loading or after a failed load.
+- `SubjectIcon.tsx`, `SubjectIcon.test.tsx`, `LibraryPage.test.tsx` and `SubjectDetailPage.test.tsx` did not change: the icon's size is set by the caller, and every test on those pages passes as it stood.
+
+For the engineer to know:
+
+- `docs/backlog.md` and ADR 032 still name `CardTable`, and `docs/cycles/029-field-deletion.md` lists `CardTable.tsx` in a task's Files. None is in T4's Files or Done when, so all three stand as they were; the backlog's line and cycle 029's path are yours to decide.
+- T5, T6 and T7's Done-when lines that count one yellow element, and T7's "every count is 0 or 1", meet the same "Log in" when checked signed out.
+- T6's Done when asks `border-style: none` of every button named "Delete …". Tailwind's reset gives a bare button `0px solid`, and `DeckConfigurationRow.tsx`'s bare trash button prints `solid`, so a bare button will fail that line as written.
+
+Seen and not changed: `LibraryPage.tsx`'s toolbar writes its count without `pluralize`, so one subject reads "1 subjects" and one deck "1 decks".
+
+To read: `frontend/src/components/library/CardList.tsx`, for `HALF_WIDTH_CHARACTERS` and the rule's condition.
 
 ### T5 — The forms
 

@@ -27,13 +27,13 @@ export default function DeckConfigurationRow({
   onDelete,
 }: DeckConfigurationRowProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 pr-1 pl-4">
       <Link
         to={`/deck-configurations/${configuration.id}/edit`}
-        className="flex min-h-16 min-w-0 flex-1 flex-col justify-center py-2"
+        className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-3"
       >
-        <span className="truncate text-[15px] leading-5 text-(--color-ink)">{configuration.name}</span>
-        <span className="truncate text-[11px] text-(--color-aside)">{shape(configuration)}</span>
+        <span className="truncate text-[15px] leading-5 font-semibold text-(--color-ink)">{configuration.name}</span>
+        <span className="truncate text-[13px] text-(--color-aside)">{shape(configuration)}</span>
       </Link>
 
       <button
@@ -42,7 +42,7 @@ export default function DeckConfigurationRow({
         onClick={onDelete}
         className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
       >
-        <Trash2 aria-hidden="true" className="h-4 w-4" />
+        <Trash2 aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
     </div>
   );

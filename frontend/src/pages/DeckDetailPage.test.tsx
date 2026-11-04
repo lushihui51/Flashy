@@ -123,14 +123,15 @@ afterEach(() => {
 });
 
 describe('DeckDetailPage', () => {
-  it('renders name, breadcrumb, table, and card values with no console errors', async () => {
+  it('renders name, breadcrumb, card list, and card values with no console errors', async () => {
     mockDeck();
     renderAtDeckRoute();
 
     expect(await screen.findByRole('heading', { name: 'Vocab Deck' })).toBeInTheDocument();
     expect(await screen.findByText(/French/)).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Cards in Vocab Deck' })).toBeInTheDocument();
+    expect(screen.getByText('Front')).toBeInTheDocument();
+    expect(screen.getByText('Back')).toBeInTheDocument();
     expect(screen.getByText('Bonjour')).toBeInTheDocument();
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();
@@ -224,7 +225,7 @@ describe('DeckDetailPage', () => {
     });
   });
 
-  it('shows an empty state when the deck has no cards, and still renders the field header', async () => {
+  it('shows an empty state and no card list when the deck has no cards', async () => {
     mockDeck({ deckData: { ...deck, cards: [] } });
     renderAtDeckRoute();
 
@@ -232,13 +233,10 @@ describe('DeckDetailPage', () => {
     // The tab's toolbar button is the only add control; the empty state is its text
     // alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
-    // the table (and its field header) is not replaced by the empty state.
-    expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
-    expect(screen.queryAllByRole('row')).toHaveLength(1); // header row only, no card rows
+    expect(screen.queryByRole('list', { name: 'Cards in Vocab Deck' })).not.toBeInTheDocument();
   });
 
-  it('a zero-card deck with 8+ fields renders a scrollable header with the empty state beneath', async () => {
+  it('a zero-card deck with 8+ fields counts its fields over the empty state', async () => {
     const manyFields = Array.from({ length: 8 }, (_, i) => ({
       id: `f${i}`,
       name: `Field ${i}`,
@@ -249,7 +247,7 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     expect(await screen.findByText('No cards in this deck yet.')).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    expect(screen.getByText('0 cards · 8 fields')).toBeInTheDocument();
   });
 
   it('the header carries deck-level actions only — no bare + whose meaning depends on a tab', async () => {
@@ -337,7 +335,8 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     await screen.findByRole('heading', { name: 'Vocab Deck' });
-    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    const card = screen.getByRole('link', { name: /v-f0/ });
+    manyFields.forEach((f) => expect(within(card).getByText(`v-${f.id}`)).toBeInTheDocument());
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -374,7 +373,7 @@ describe('DeckDetailPage', () => {
       await user.click(screen.getByRole('tab', { name: 'Configurations' }));
 
       expect(await screen.findByText('Front to Back')).toBeInTheDocument();
-      expect(screen.queryByRole('columnheader', { name: 'Front' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Bonjour')).not.toBeInTheDocument();
       // Scoped to this deck — a configuration belongs to exactly one.
       expect(configRequests[0]!.get('deck_id')).toBe('d1');
     });

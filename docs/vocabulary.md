@@ -96,11 +96,11 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | What the primary field is | "The first field identifies this card in lists and summaries." | New deck; Edit deck | `primaryIndex` |
 | Field | A field's name left blank | "Name is required." | New deck; Edit deck | `FieldsSection` |
 | Card | A card | "card" | Deck page; forms; run page; summary | `card`; `Card`; `CardRead`; `card_field_value`; `CardFieldValue`; `/api/cards`; `cardId` |
-| Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardTable` |
+| Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardList` |
 | Card | Adding a card to the list in view | "Add card" | Deck page's Cards tab | `AddButton` |
 | Card | The page where a card is made | "New card" | Its heading | `/cards/new`; `CardStandaloneForm` |
 | Card | The page where a card is changed | "Edit card" | Its heading | `/cards/:cardId/edit`; `CardStandaloneForm` |
-| Card | A blank value | "empty" | Deck page's Cards tab | `CardTable` |
+| Card | A blank value | "empty" | Deck page's Cards tab | `CardList` |
 | Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
 | Card | Deleting a card | "Delete card" | Edit card | `deleteCard`; `/api/cards/{card_id}` |
