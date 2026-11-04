@@ -513,7 +513,7 @@ Read in the code: nothing; the diff is three class lists and one comment.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -566,7 +566,58 @@ The tests, each a test of its own, each holding the filtered response behind a p
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/pages/PracticeOverviewPage.test.tsx src/pages/PracticeCreatePage.test.tsx --reporter=verbose` passes, 56 of 56, the new tests named:
+  ```
+  ✓ src/pages/PracticeOverviewPage.test.tsx > PracticeOverviewPage > a filter whose list is loading keeps the old row until the new list arrives
+  ✓ src/pages/PracticeOverviewPage.test.tsx > PracticeOverviewPage > a filter whose list fails removes the old row and says so
+  ✓ src/pages/PracticeCreatePage.test.tsx > PracticeCreatePage > a filter whose list is loading keeps the old row until the new list arrives
+  ✓ src/pages/PracticeCreatePage.test.tsx > PracticeCreatePage > a filter whose list fails removes the old row and says so
+  ✓ src/pages/PracticeCreatePage.test.tsx > PracticeCreatePage > a configuration ticked while the list loads stays selected after a list that omits it
+  ```
+- `grep -rn "keepPreviousData" frontend/src --exclude=*.test.*` prints four lines:
+  ```
+  frontend/src/pages/PracticeOverviewPage.tsx:3:import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+  frontend/src/pages/PracticeOverviewPage.tsx:62:    placeholderData: keepPreviousData,
+  frontend/src/pages/PracticeCreatePage.tsx:3:import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+  frontend/src/pages/PracticeCreatePage.tsx:82:    placeholderData: keepPreviousData,
+  ```
+- In headless Chromium against `localhost:5173`, signed out of Clerk, at 390 by 500, a fresh context per page, picking the deck Ports with the mouse, its response held 600ms. The samples are one per animation frame, printed as runs of equal frames. Neither new list was shorter than the page's position, so neither page landed on its bottom:
+  ```
+  == /practice; held requests 1, responded true
+  recorded scrollY 54, old first row "Nov 3, 2026, 10:42 p.m."
+       0..   0ms frames   2 scrollY 54 urlHasDeck false first "Nov 3, 2026, 10:42 p.m."
+      15.. 631ms frames  38 scrollY 54 urlHasDeck true first "Nov 3, 2026, 10:42 p.m."
+     648.. 948ms frames  19 scrollY 54 urlHasDeck true first "T7 two-tab check"
+  samples before the row changed: 40, every one holds scrollY 54 and old row: true
+  first row changed after response: true
+  final scrollY 54, page's furthest 363
+
+  == /practice/new; held requests 1, responded true
+  recorded scrollY 142, old first row "Command to Purpose"
+       0..   0ms frames   1 scrollY 142 urlHasDeck false first "Command to Purpose"
+       6.. 606ms frames  37 scrollY 142 urlHasDeck true first "Command to Purpose"
+     623.. 923ms frames  19 scrollY 142 urlHasDeck true first "Oct 1, 2026 at 1:18 PM"
+  samples before the row changed: 38, every one holds scrollY 142 and old row: true
+  first row changed after response: true
+  final scrollY 142, page's furthest 156
+  ```
+
+Checks over the whole frontend: `npx vitest run` 56 files and 568 tests passed; `npm run lint` and `npm run build` exit 0. A peer's uncommitted T4 edits were in the checkout for these checks and for the browser script; no T4 path is in this task's diff.
+
+Finding, for the engineer: the option holds an old empty list as well as an old list of rows, so the page's empty sentence stays or changes while the new list loads, where before this task nothing showed.
+
+- On the Practice page, opened at a filter that matches nothing, Clear filters with the unfiltered list held 600ms: `No practices match these filters. x1 | No practices yet. x12 | rows x7`, sampled every 50ms. A user with 16 practices reads "No practices yet." until the list arrives.
+- On the Practice page, the same filter, then picking a subject that has practices, held 600ms: `No practices match these filters. x12 | rows x8`. The sentence stands for the new filter until the list arrives.
+- On New practice, Clear filters shows rows at once, `No configurations match these filters. x1 | rows x19`, since `allConfigsQuery` has the unfiltered list in the cache from the page's mount.
+- This task does not resolve it. Testing `isPlaceholderData` in the empty-state branch would hide the sentence, but this task's Out of scope gives `isPlaceholderData` to T6, and T6's Details read it only for `listStart`. So no later task in this cycle fixes it as written.
+
+Not run: a failure under the app's own `QueryClient`. `main.tsx` keeps TanStack Query's default of three retries, and the old list stays through them, about 7 seconds by the library's default backoff, before the failure sentence replaces it. The page tests run with retries off.
+
+Departures from Details or Files: none. `renderOverview` in `PracticeOverviewPage.test.tsx` now also renders a probe of the page's search, since no test there could read the URL on the page's own route.
+
+Read in the code: nothing; the diff in the two pages is the import and the option, each with one comment.
 
 ### T6 — Moving only as far as the new list's first rows
 

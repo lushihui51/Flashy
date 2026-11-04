@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
@@ -57,6 +57,9 @@ export default function PracticeOverviewPage() {
     queryKey: ['practice_runs', subjectId, deckId],
     queryFn: () =>
       readPracticeRuns({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+    // An empty list while a filter's new one loads would shrink the page and lose the
+    // user's place on it.
+    placeholderData: keepPreviousData,
   });
 
   const deleteMutation = useMutation({

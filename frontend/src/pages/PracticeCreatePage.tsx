@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { readDeckPracticeConfigs } from 'src/api/deck_practice_config';
@@ -77,6 +77,9 @@ export default function PracticeCreatePage() {
     queryKey: ['deck_practice_configs', subjectId, deckId],
     queryFn: () =>
       readDeckPracticeConfigs({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+    // An empty list while a filter's new one loads would shrink the page and lose the
+    // user's place on it.
+    placeholderData: keepPreviousData,
   });
 
   // Every configuration, unfiltered: the Selected section resolves ids against this,
