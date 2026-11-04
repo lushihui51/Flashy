@@ -13,6 +13,14 @@ class ResizeObserverStub {
 }
 globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
 
+// jsdom does no layout either, so it has no scroll position and answers a scroll with a
+// "Not implemented" line; the router's scroll restoration and the reveal after a tab or
+// filter change would print one on every page test.
+if (typeof window !== 'undefined') {
+  window.scrollTo = () => {};
+  window.scrollBy = () => {};
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterEach(() => cleanup());

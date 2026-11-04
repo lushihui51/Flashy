@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pencil, Play } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
 import { readSubject } from 'src/api/subject';
@@ -15,6 +15,7 @@ import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { failureSentence } from 'src/lib/failureSentence';
+import { useViewParams } from 'src/lib/viewParams';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 
@@ -38,8 +39,16 @@ export default function DeckDetailPage() {
   const queryClient = useQueryClient();
   // In the URL rather than component state: the configuration builder navigates away and
   // back, and landing on the deck's *cards* after saving one would lose the thread.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'cards';
+  const { params, changeView } = useViewParams();
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'cards';
+
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // The open tab's list, its empty sentence or its failure sentence: whichever shows, so a
+  // reveal after a tab change finds where the list starts, and nothing until one does.
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const configurationsRef = useRef<HTMLUListElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLParagraphElement>(null);
 
   const [pendingDelete, setPendingDelete] = useState<DeckPracticeConfigSummary | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -97,10 +106,19 @@ export default function DeckDetailPage() {
   const configurations = configurationsQuery.data ?? [];
 
   const setTab = (next: Tab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'cards') params.delete('tab');
-    else params.set('tab', next);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next === 'cards') nextParams.delete('tab');
+    else nextParams.set('tab', next);
+    changeView(nextParams, {
+      // The whole tablist rather than the pressed tab, whose pressed look sits 2px lower than
+      // the others: at the band's top it would leave them under the header.
+      control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
+      listStart: () =>
+        cardsRef.current?.querySelector('ul') ??
+        configurationsRef.current ??
+        emptyRef.current ??
+        failureRef.current,
+    });
   };
 
   // Both carry the deck in router state — the same deck-context wiring the card form
@@ -152,7 +170,7 @@ export default function DeckDetailPage() {
 
       {/* This deck's two contents, in the same tab grammar the library uses for subjects
           and decks — a configuration belongs to this deck exactly as its cards do. */}
-      <div className="mt-3.5">
+      <div ref={tabsRef} className="mt-3.5">
         <Tabs ariaLabel="Deck contents" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>
 
@@ -167,7 +185,7 @@ export default function DeckDetailPage() {
             <AddButton label="Add card" onClick={addCard} />
           </div>
           {fieldDefs.length > 0 && deck.cards.length > 0 && (
-            <div className="mt-3.5">
+            <div ref={cardsRef} className="mt-3.5">
               <CardList
                 deckName={deck.name}
                 fieldDefs={fieldDefs}
@@ -177,7 +195,7 @@ export default function DeckDetailPage() {
             </div>
           )}
           {deck.cards.length === 0 && (
-            <div className="py-8">
+            <div ref={emptyRef} className="py-8">
               <p className="text-[15px] text-(--color-aside)">No cards in this deck yet.</p>
             </div>
           )}
@@ -194,18 +212,21 @@ export default function DeckDetailPage() {
           </div>
 
           {configurationsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load configurations.
             </p>
           )}
 
           {configurationsQuery.data && configurations.length === 0 && (
-            <div className="py-8">
+            <div ref={emptyRef} className="py-8">
               <p className="text-[15px] text-(--color-aside)">No configurations yet.</p>
             </div>
           )}
           {configurations.length > 0 && (
-            <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)">
+            <ul
+              ref={configurationsRef}
+              className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)"
+            >
               {configurations.map((configuration) => (
                 <li key={configuration.id}>
                   <DeckConfigurationRow

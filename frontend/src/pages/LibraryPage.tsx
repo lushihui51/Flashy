@@ -1,4 +1,5 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useRef, type Ref } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
@@ -9,6 +10,7 @@ import AddButton from 'src/components/ui/AddButton';
 import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
@@ -22,9 +24,9 @@ function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
 }
 
-function EmptyState({ copy }: { copy: string }) {
+function EmptyState({ copy, ref }: { copy: string; ref?: Ref<HTMLDivElement> }) {
   return (
-    <div className="py-8">
+    <div ref={ref} className="py-8">
       <p className="text-[15px] text-(--color-aside)">{copy}</p>
     </div>
   );
@@ -35,14 +37,26 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'subjects';
+  const { params, changeView } = useViewParams();
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'subjects';
+
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // The open tab's list, its empty sentence or its failure sentence: whichever shows, so a
+  // reveal after a tab change finds where the list starts, and nothing until one does.
+  const listRef = useRef<HTMLUListElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLParagraphElement>(null);
 
   const setTab = (next: Tab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'subjects') params.delete('tab');
-    else params.set('tab', next);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next === 'subjects') nextParams.delete('tab');
+    else nextParams.set('tab', next);
+    changeView(nextParams, {
+      // The whole tablist rather than the pressed tab, whose pressed look sits 2px lower than
+      // the others: at the band's top it would leave them under the header.
+      control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
+      listStart: () => listRef.current ?? emptyRef.current ?? failureRef.current,
+    });
   };
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
@@ -52,9 +66,11 @@ export default function LibraryPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">Your library</h1>
+      <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        Your library
+      </h1>
 
-      <div className="mt-4">
+      <div ref={tabsRef} className="mt-4">
         <Tabs ariaLabel="Library" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>
 
@@ -67,21 +83,24 @@ export default function LibraryPage() {
             <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load subjects.
             </p>
           )}
 
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
-            <EmptyState copy="No subjects yet." />
+            <EmptyState ref={emptyRef} copy="No subjects yet." />
           ) : (
-            <ul className="mt-4 flex flex-col gap-3">
+            <ul ref={subjectsQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
               {(subjectsQuery.data ?? []).map((subject) => (
                 <li key={subject.id}>
                   <ListRow
                     leading={
                       <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border-[1.5px] border-(--color-ink)">
-                        <SubjectIcon icon={subject.icon} className="h-[22px] w-[22px] text-(--color-ink)" />
+                        <SubjectIcon
+                          icon={subject.icon}
+                          className="h-[22px] w-[22px] text-(--color-ink)"
+                        />
                       </span>
                     }
                     title={subject.name}
@@ -103,15 +122,15 @@ export default function LibraryPage() {
             <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load decks.
             </p>
           )}
 
           {decksQuery.data && decksQuery.data.length === 0 ? (
-            <EmptyState copy="No decks yet." />
+            <EmptyState ref={emptyRef} copy="No decks yet." />
           ) : (
-            <ul className="mt-4 flex flex-col gap-3">
+            <ul ref={decksQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
                   <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />

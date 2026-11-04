@@ -2,7 +2,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  createMemoryRouter,
+  createRoutesFromElements,
+  Route,
+  RouterProvider,
+} from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { server } from 'src/test/server';
@@ -16,15 +21,17 @@ beforeEach(() => {
 
 function renderShell(initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createMemoryRouter(
+    createRoutesFromElements(
+      <Route element={<AppShell />}>
+        <Route path="/" element={<div>home content</div>} />
+      </Route>,
+    ),
+    { initialEntries },
+  );
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={initialEntries}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<div>home content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
 }
@@ -108,6 +115,54 @@ describe('AppShell', () => {
     // overlays can't both be open through the UI.
     expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
+  });
+});
+
+describe('AppShell header height', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty('--app-header-height');
+  });
+
+  it('writes the header height to --app-header-height, follows it, and stops on unmount', () => {
+    let headerHeight = 114;
+    let headerResized: () => void = () => {};
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        callback: () => void;
+        constructor(callback: () => void) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          if (target.tagName === 'HEADER') headerResized = this.callback;
+        }
+        unobserve() {}
+        disconnect = disconnect;
+      },
+    );
+    const realRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'HEADER'
+        ? new DOMRect(0, 0, 390, headerHeight)
+        : realRect.call(this);
+    });
+    const readVariable = () =>
+      document.documentElement.style.getPropertyValue('--app-header-height');
+
+    const { unmount } = renderShell();
+    expect(readVariable()).toBe('114px');
+
+    headerHeight = 172;
+    act(() => headerResized());
+    expect(readVariable()).toBe('172px');
+
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
   });
 });
 

@@ -9,13 +9,13 @@ import {
   Routes,
   useLocation,
   useNavigate,
-  useSearchParams,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
 
@@ -145,14 +145,14 @@ function currentLocation() {
 function NewConfigStub() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
   return (
     <div>
       <span data-testid="new-config-location">{`${location.pathname}${location.search}`}</span>
       <button
         type="button"
         onClick={() =>
-          navigate(searchParams.get('returnTo') ?? '/practice/new', {
+          navigate(params.get('returnTo') ?? '/practice/new', {
             state: { configurationId: 'c2' },
           })
         }
@@ -177,6 +177,27 @@ function renderCreate(initialPath = '/practice/new') {
     </>,
     [initialPath],
   );
+}
+
+/** Serves every configuration unfiltered, and holds any filtered answer until `release`
+ * is called, so a test can look at the page between the filter's write and the new list. */
+function holdFilteredConfigs(respond: () => Response) {
+  mockLibrary();
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const filteredRequests: URLSearchParams[] = [];
+  server.use(
+    http.get(`${BASE}/api/deck_practice_configs`, async ({ request }) => {
+      const query = new URL(request.url).searchParams;
+      if (query.get('subject_id') === null) return HttpResponse.json(ALL_CONFIGS);
+      filteredRequests.push(query);
+      await released;
+      return respond();
+    }),
+  );
+  return { filteredRequests, release };
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -804,5 +825,75 @@ describe('PracticeCreatePage', () => {
     expect(landed.params.get('status')).toBe('completed');
     expect(landed.params.has('config')).toBe(false);
     expect([...landed.params.keys()].sort()).toEqual(['status', 'subject']);
+  });
+
+  it('a filter whose list is loading keeps the old row until the new list arrives', async () => {
+    const { filteredRequests, release } = holdFilteredConfigs(() =>
+      HttpResponse.json([configBasics]),
+    );
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByPlaceholderText('All subjects'));
+    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+
+    await waitFor(() => expect(filteredRequests).toHaveLength(1));
+    expect(currentLocation().params.get('subject')).toBe('s2');
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeInTheDocument();
+
+    release();
+
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('group', { name: 'Beta · Shared Deck Name' })).toBeInTheDocument();
+  });
+
+  it('a filter whose list fails removes the old row and says so', async () => {
+    const { filteredRequests, release } = holdFilteredConfigs(() =>
+      HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+    );
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByPlaceholderText('All subjects'));
+    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+
+    await waitFor(() => expect(filteredRequests).toHaveLength(1));
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeInTheDocument();
+
+    release();
+
+    expect(await screen.findByText('Could not load configurations.')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument();
+  });
+
+  it('a configuration ticked while the list loads stays selected after a list that omits it', async () => {
+    const { filteredRequests, release } = holdFilteredConfigs(() =>
+      HttpResponse.json([configBasics]),
+    );
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByPlaceholderText('All subjects'));
+    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+    await waitFor(() => expect(filteredRequests).toHaveLength(1));
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
+    expect(currentLocation().params.getAll('config')).toEqual(['c1']);
+
+    release();
+
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
+    );
+    expect(currentLocation().params.getAll('config')).toEqual(['c1']);
+    const selected = screen.getByRole('region', { name: 'Selected' });
+    expect(within(selected).getByText('Recall')).toBeInTheDocument();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 });

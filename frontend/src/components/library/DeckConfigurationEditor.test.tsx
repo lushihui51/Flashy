@@ -3,10 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
+import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
 
@@ -119,8 +120,8 @@ function StateProbe() {
 // returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
 // compared as an encoded string literal.
 function ReturnToProbe() {
-  const [searchParams] = useSearchParams();
-  return <span data-testid="return-to">{searchParams.get('returnTo') ?? ''}</span>;
+  const { params } = useViewParams();
+  return <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>;
 }
 
 function renderCreate(path = '/deck-configurations/new') {

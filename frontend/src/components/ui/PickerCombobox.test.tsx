@@ -119,6 +119,24 @@ describe('PickerCombobox', () => {
   });
 
   describe('purpose="filter"', () => {
+    it('draws a chevron with no hard-coded top', () => {
+      const { container } = render(
+        <PickerCombobox
+          purpose="filter"
+          items={items}
+          selected={null}
+          onSelect={() => {}}
+          clearLabel="All decks"
+          onClear={() => {}}
+          placeholder="Deck"
+        />,
+      );
+
+      const chevron = container.querySelector('svg.lucide-chevron-down');
+      expect(chevron).not.toBeNull();
+      expect(chevron?.getAttribute('class')).not.toContain('top-[');
+    });
+
     it('offers a clear row first, and no create row', async () => {
       const user = userEvent.setup();
       render(

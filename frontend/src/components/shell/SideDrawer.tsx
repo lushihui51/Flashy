@@ -41,7 +41,7 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
               event.preventDefault();
             }
           }}
-          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[7.875rem] focus:outline-none"
+          className="fixed inset-y-0 left-0 z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[calc(var(--app-header-height)+0.75rem)] focus:outline-none"
         >
           <nav>
             <ul className="flex flex-col gap-3">
