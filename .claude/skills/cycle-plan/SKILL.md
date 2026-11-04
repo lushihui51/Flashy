@@ -36,6 +36,7 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 - The only legitimate decisions to act on are the records the docket lists and its lesser decisions. If something you propose depends on an unsettled decision, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
 - If a task would be written differently by the answer to an open question, its cycle waits for the question's owner: raise it to me, and plan the other outcomes.
 - For a docket opened for a blocked task, every done task stays as it stands, and the blocked task's Status goes back to not started.
+- Before the outcomes, name each cycle not yet merged whose canvas holds a drawing the docket's canvas has since changed.
 
 ## What you do
 
