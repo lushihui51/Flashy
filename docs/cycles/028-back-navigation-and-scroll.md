@@ -285,7 +285,7 @@ Read in the code: nothing; the diff is the router swap, and `App.tsx`'s route tr
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -386,13 +386,34 @@ The test, `viewParams.test.tsx`: under the memory data router from T1, mount a p
 
 **Debrief**
 
-None.
+Blocked before any code was written. I read the records and every file in Files, then measured New practice in headless Chromium at 390 by 500, signed out of Clerk. No file but this one changed.
+
+1. Details names an element that does not exist. It has `listStart` on `DeckDetailPage.tsx` return "the `<tbody>` of the cards table". `CardList` in `frontend/src/components/library/CardList.tsx` renders a `<ul>` of blocks, and no non-test file under `frontend/src` holds a `<table>` or `<tbody>`; commit 74253de (cycle 027 T4) made each card a block. The `<ul>` is the likely target, but the file does not say so.
+
+2. Details hides the tapped control on New practice, against the Goal. `PracticeCreatePage.tsx` has a second sticky row, the one holding Cancel, the heading and Create, which stops under `AppShell`'s header. Details makes `headerBottom` the bottom of `#app-header` alone, so the arithmetic does not see that row. Measured:
+
+   ```
+   header bottom                      114
+   sticky row when stuck              114 to 170, above the content (z-10)
+   filter bar                         42 tall
+   first two deck groups              253 and 200 tall
+   filter bar top to 2nd group bottom 567 (at scrollY 0: 342 to 909)
+   band in view                       386 (114 to 500)
+   ```
+   - The two rows are whole deck groups, because `ConfigurationPickList`'s root has one `<fieldset>` per deck as its children. So on this data the targets do not fit the band.
+   - `revealDelta` then returns `control.top - headerBottom`, which puts the filter bar at 114 to 156, wholly behind the sticky row. This is worked out from the measurements; the reveal was not built or run.
+   - The same bar that is hidden is the control the user just tapped. T3's Done when does not exercise New practice, so every line of it would still pass.
+   - The file does not settle the fix. It could count the sticky row in `headerBottom`, change what counts as a row on this page, or accept the result. The first two change a constraint in Details, and all three change what the user sees.
+
+3. A filter whose list is not fetched moves the page further than the Goal allows. T2's Debrief measured it: on New practice, with the answers held back 600ms, scroll and furthest scroll read `[158,425] [0,0] [0,94]`, because the page shrinks to nothing scrollable while the list loads. `changeView` as Details defines it acts once, after the list has drawn, and cannot bring back a position already lost, so the page ends near `0` when it needed to move little or not at all. Keeping the page's height while the list loads, or restoring the position before the reveal, is outside what Details says of `changeView` and the four pages, and each changes what the user sees during a load. The file does not say which, or whether this case is accepted.
+
+For the planner, not a block: `Tabs` in `frontend/src/components/ui/Tabs.tsx` is not in Files and takes no ref, so "a ref on the tablist" can only be a ref on the `div` around `Tabs` that each page already has, reading the selected tab from inside it. On `PracticeCreatePage.tsx`, Clear filters calls `setFilters` today, so the Done-when count of `2` needs that button to call `changeView` itself.
 
 ### T4 — The "<" that goes back
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -440,4 +461,43 @@ The tests, `Breadcrumb.test.tsx`, each a test of its own:
 
 **Debrief**
 
-None.
+Blocked on two findings. The first is a constraint in Details that defeats the task's Goal; the second is a Done-when line that cannot hold before T3 is built.
+
+Attempted: the vocabulary row, the "<" in `Breadcrumb.tsx` as Details states it, with `useLocation().key !== 'default'`, and the two tests. These were reverted on the block. While they stood, `npx vitest run` passed 54 files and 559 tests, and `npm run lint` and `npm run build` printed no error. The first four Done-when lines held:
+
+```
+L4 clicked Web -> /subjects/5f6da298-e5db-41af-ad83-36e20b0487e4
+L4 Back buttons in row: 1
+L4 hit area 44 x 44
+L4 address after Back: /library
+L4 by address: link Your library 1 ; Back buttons 0
+```
+
+The first two parts of the cycle's judgement held too:
+
+```
+J1 rows 3 clicked row 2 scrollY before leaving 102 after returning 102 equal and above 0: true
+J2 deck by address /decks/d82f1 Back buttons 0
+```
+
+Finding 1: the key stops being `'default'` on the first tab change, so the "<" appears with no earlier page and leaves Flashy.
+
+- The router gives every navigation a fresh key, `replace` included, so `setParams` replaces the opened entry's key. `DeckDetailPage.tsx`'s `setTab` is the write that reaches a page with the row. A deck's page opened by its address, in a fresh context whose earlier entry is `about:blank`:
+  ```
+  opened by address: Back 0 {"idx":0,"key":null}
+  after tab: Back 1 {"idx":0,"key":"imlo97pv"} ?tab=configurations
+  after reload: Back 1 {"idx":0,"key":"imlo97pv"}
+  clicked Back: address about:blank
+  ```
+- This is the case PDR 017 rejects, "A '<' that always does what the browser's back does", and the Goal's "absent when the page was opened from its address" fails on the deck's page after any tab change. No Done-when line exercises it.
+- Details' "exactly when `useLocation().key !== 'default'`" is a constraint and the Done-when grep counts `'default'`, so the builder cannot change the test. Any test that holds needs one of: the router's position in `history.state`, which stays `0` through the replace and is `1` on a page reached inside (`subject reached inside: Back 1 {"idx":1,"key":"g5amflso"}`), but is not a documented API and is absent under `MemoryRouter`, the router Details' test uses; or a marker `setParams` carries in location state, which changes `viewParams.ts`, a file outside Files that T3 also changes. Each changes Details, Done when, or both, and which to take is the engineer's.
+
+Finding 2: the third part of the cycle's judgement needs T3, and T4's Dependencies does not list T3.
+
+- T3 is not started, and `changeView` and `revealDelta` do not exist. On `/library` scrolled to the bottom, the Decks tab reads:
+  ```
+  J3 scrollY 102 -> {"y":64,"tablistTop":113.5,"headerBottom":114,"rowBottoms":[303.5,393.5]} holds: false
+  ```
+- The tablist sits half a pixel under the header's bottom, by accident of the page's shrink rather than by a reveal. No file in T4's Files can make the line hold.
+
+Not exercised: straight after signing in, since the browser check runs signed out of Clerk.
