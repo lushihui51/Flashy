@@ -16,6 +16,7 @@ from app.database_ops.field_def import (
 )
 from app.database_ops.subject import db_read_subject
 from app.mastery.strategy import MasteryStrategy
+from app.models.card import Card
 from app.models.deck import Deck
 from app.models.deck_payloads import DeckBatchEdit
 from app.models.field_def import FieldDef
@@ -83,6 +84,7 @@ def _stage_deck_batch_edit(
 ) -> None:
     touch_deck = False
     touch_subject_ids: set[uuid.UUID] = set()
+    updated_cards: list[Card] = []
 
     # --- own columns: name, subject_id ---
     if payload.name is not None:
@@ -232,6 +234,7 @@ def _stage_deck_batch_edit(
                 raise DeckBatchEditValidationError(
                     f"cards.update id {entry.id} not found on this deck"
                 )
+            updated_cards.append(card)
             # The flush at the end of the field phase precedes this read, so a "" row
             # backfilled for a field created in this request is already in card.values.
             existing = {v.field_def_id: v for v in card.values}
@@ -269,8 +272,12 @@ def _stage_deck_batch_edit(
                 {field_id: resolved_values.get(field_id, "") for field_id in active_fields},
             )
 
+    # A card updated by id is the user's change to that card; a field operation that
+    # rewrites every card's values is not, so no card is touched for it (ADR 096).
+    touch(db, *updated_cards)
     if touch_deck:
         touch(db, deck)
+        touch_subject_ids.add(deck.subject_id)
     if touch_subject_ids:
         subjects = [db_read_subject(db, sid, user_id) for sid in touch_subject_ids]
         touch(db, *(s for s in subjects if s is not None))

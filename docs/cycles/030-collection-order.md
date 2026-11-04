@@ -19,7 +19,7 @@ Judgement: The engineer judges on the live server: editing a card from a deck's 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -36,12 +36,15 @@ None.
 - `app/models/deck_practice_config.py`
 - `app/services/activity.py`
 - `app/routers/api/card.py`
+- `app/routers/api/deck.py`
 - `app/routers/api/field_def.py`
 - `app/routers/api/deck_practice_config.py`
 - `app/services/deck_batch_edit.py`
 - `app/services/deletion.py`
 - `app/services/field_def_create.py`
+- `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
+- `frontend/src/components/library/CardList.test.tsx`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/DeckEditor.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
@@ -104,7 +107,30 @@ The frontend: after `npm run gen:api`, each card and configuration fixture the c
 
 **Debrief**
 
-None.
+Evidence, per criterion:
+
+- `uv run alembic heads` printed `004a6932a7f5 (head)`; `uv run alembic current` printed `004a6932a7f5 (head)`. The migration was first run on a `pg_dump` copy of the dev database, where it filled 78 cards and 7 configurations from `created_at`, downgraded and upgraded again cleanly; the copy was dropped, then `alembic upgrade head` ran on the dev database.
+- The inspect command printed `[('last_activity_at', False), ('last_activity_at', False)]`.
+- `grep -rn "\.last_activity_at = " app` printed one line: `app/services/activity.py:17:        row.last_activity_at = now`.
+- `grep -c "last_activity_at: string" src/api/types.ts` printed `7`.
+- `uv run pytest tests/api_tests/test_activity_tracking.py` printed `29 passed`, with `test_card_edit_touches_subject`, the four tests of `TestCardWritesTouchCard`, the three of `TestConfigurationWrites`, `test_card_and_configuration_timestamps_equal_created_at_on_insert`, `test_field_create_touches_subject_last_activity` and `test_deck_rename_touches_subject_last_activity` each named PASSED in the `-v` output.
+- `uv run pytest` printed `359 passed`, with no other connection to the test database. `npx vitest run` printed 587 passed, `npm run lint` printed nothing, `npm run build` built.
+
+Departures from Files, each approved in the session and added to Files above:
+
+- `app/routers/api/deck.py`: `_deck_detail` builds `CardRead` field by field, and the now-required `last_activity_at` had to be passed, one line.
+- `frontend/src/components/library/CardList.test.tsx`: the compiler required the field on its four card literals; of the seven test files Files listed, only `deckEditorReducer.test.ts` had a literal the compiler required it on, so the other six are unchanged.
+- `frontend/src/api/openapi.json`: the intermediate `npm run gen:api` writes before deriving `types.ts`; regenerated, not edited.
+
+Departures from Details:
+
+- `create_field_def` in `app/services/field_def_create.py` takes the subject as a parameter, read by its one caller in `app/routers/api/field_def.py` with the deck's `subject_id` and the user's id; the service has no user id of its own to read it with.
+- `update_card` in `app/routers/api/card.py` and `update_field_def` in `app/routers/api/field_def.py` assert the deck exists where they tested `if deck:`, since the scoped read of the card or field already proved it, as `delete_card` does.
+- Both frontend test files touched failed Prettier before this task; only the lines this task wrote are wrapped to its width.
+
+Comments: the two comments in `app/routers/api/card.py` that said a card write stops at the deck are gone, false now; `delete_field`'s docstring in `app/services/deletion.py` and `create_field_def`'s name the subject; the batch edit's touch block carries one comment on why updated cards are touched and field operations touch none.
+
+To read: `app/routers/api/deck_practice_config.py`, where `_touch_deck_and_subject` sits after validation and before each write so a refused configuration moves nothing; the touch block at the end of `_stage_deck_batch_edit` in `app/services/deck_batch_edit.py`; and the migration's three steps per table.
 
 ### T2 — The order of cards and configurations
 

@@ -3126,6 +3126,11 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
           "values": {
             "additionalProperties": {
               "type": "string"
@@ -3142,6 +3147,7 @@
           "deck_id",
           "id",
           "created_at",
+          "last_activity_at",
           "values"
         ],
         "title": "CardRead"
@@ -3501,6 +3507,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
           }
         },
         "type": "object",
@@ -3514,7 +3525,8 @@
           "answer_pool_ids",
           "answer_pool_counts",
           "id",
-          "created_at"
+          "created_at",
+          "last_activity_at"
         ],
         "title": "DeckPracticeConfigRead"
       },
@@ -3585,6 +3597,11 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
           "deck_name": {
             "type": "string",
             "title": "Deck Name"
@@ -3611,6 +3628,7 @@
           "answer_pool_counts",
           "id",
           "created_at",
+          "last_activity_at",
           "deck_name",
           "subject_id",
           "subject_name"

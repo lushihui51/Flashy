@@ -11,8 +11,20 @@ const fieldDefs = [
   { id: 'f2', name: 'Back', type: 'text' as const, position: 1 },
 ];
 const cards = [
-  { id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour', f2: 'Hello' } },
-  { id: 'c2', deck_id: 'd1', created_at: '', values: { f1: '', f2: 'Salut' } },
+  {
+    id: 'c1',
+    deck_id: 'd1',
+    created_at: '',
+    last_activity_at: '',
+    values: { f1: 'Bonjour', f2: 'Hello' },
+  },
+  {
+    id: 'c2',
+    deck_id: 'd1',
+    created_at: '',
+    last_activity_at: '',
+    values: { f1: '', f2: 'Salut' },
+  },
 ];
 
 function LocationProbe() {
@@ -98,7 +110,15 @@ describe('CardList', () => {
   it('renders a card for a single-field deck', () => {
     renderList({
       fieldDefs: [fieldDefs[0]!],
-      cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' } }],
+      cards: [
+        {
+          id: 'c1',
+          deck_id: 'd1',
+          created_at: '',
+          last_activity_at: '',
+          values: { f1: 'Bonjour' },
+        },
+      ],
     });
 
     expect(screen.getByRole('link')).toHaveTextContent(/^FrontBonjour$/);
@@ -113,7 +133,7 @@ describe('CardList', () => {
     }));
     renderList({
       fieldDefs: manyFields,
-      cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: {} }],
+      cards: [{ id: 'c1', deck_id: 'd1', created_at: '', last_activity_at: '', values: {} }],
     });
 
     const card = screen.getByRole('link');

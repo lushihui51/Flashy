@@ -560,6 +560,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
             /** Values */
             values: {
                 [key: string]: string;
@@ -713,6 +718,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
         };
         /**
          * DeckPracticeConfigSummary
@@ -750,6 +760,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
             /** Deck Name */
             deck_name: string;
             /**

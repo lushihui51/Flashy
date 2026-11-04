@@ -47,6 +47,7 @@ def _deck_detail(db: Session, deck: Deck, user_id: uuid.UUID) -> DeckDetail:
                 id=card.id,
                 deck_id=card.deck_id,
                 created_at=card.created_at,
+                last_activity_at=card.last_activity_at,
                 values={
                     v.field_def_id: v.value
                     for v in card.values

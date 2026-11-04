@@ -193,9 +193,11 @@ def delete_card(
 ) -> None:
     deck = db_read_deck(db, card.deck_id, user_id)
     assert deck is not None, "a card's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, user_id)
+    assert subject is not None, "a deck's subject always exists"
     impact = compute_deletion_impact(db, user_id, card_ids=[card.id])
     apply_deletion(db, strategy, impact)
-    touch(db, deck)
+    touch(db, deck, subject)
     db.commit()
 
 
@@ -204,12 +206,14 @@ def delete_field(
 ) -> None:
     """Raises Refusal("too_few_fields", ...) before anything is staged when the deck
     has two fields; otherwise compute_deletion_impact over the one field, apply_deletion,
-    touch(deck), commit."""
+    touch(deck, subject), commit."""
     deck = db_read_deck(db, field_def.deck_id, user_id)
     assert deck is not None, "a field's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, user_id)
+    assert subject is not None, "a deck's subject always exists"
     if len(db_read_field_defs(db, deck.id, user_id)) <= 2:
         raise Refusal("too_few_fields", "the deck would keep fewer than two active field_defs")
     impact = compute_deletion_impact(db, user_id, field_ids=[field_def.id])
     apply_deletion(db, strategy, impact)
-    touch(db, deck)
+    touch(db, deck, subject)
     db.commit()
