@@ -794,7 +794,7 @@ To read: `frontend/src/components/practice/PracticeFilterBar.tsx`, for the selec
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -860,4 +860,54 @@ The actions:
 
 **Debrief**
 
-None.
+Two Done-when lines do not hold as written, and the reason is one thing: the check runs signed out of Clerk, as AGENTS.md requires, and signed out the top bar's "Log in" is also yellow, as T1 and T2 require. `AuthSlot.tsx` is outside this task's Files, so I did not change it. T1's Debrief reported the same count. Every yellow count below is therefore printed twice, the whole page and outside the header. I have not seen any screen signed in.
+
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/pages/PracticeRunPage.test.tsx src/components/practice` printed `Test Files 2 passed (2)` and `Tests 35 passed (35)`.
+- Headless Chromium through playwright-core on the run page of the seeded active practice "Nov 3, 2026, 10:42 p.m.", 390px wide, launched with `--force-device-scale-factor=2`, before "Show answer": the one "Hidden" tile printed background `rgb(255, 243, 166)`, height `34`, width `319` and its row's width `319`. The bar printed `rgba(0, 0, 0, 0)` and its three segments `4px`. **Not as written:** two elements computed to `rgb(255, 226, 52)`, "Log in" and "Show answer"; outside the header, one, "Show answer". This card has one answer and the practice no failed card, so the tile and segment checks were repeated on a stubbed run state with nothing written: four tiles of the same background, height and width, including an image answer, and four segments in `rgb(23, 33, 43)`, `rgb(229, 72, 77)`, `rgb(92, 102, 114)` and `rgb(213, 218, 226)`, each `4px`. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-run.cjs` and its output is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-run.out`.
+- After "Show answer": the button named "Rate OS" printed `dashed`, `1.5px rgb(23, 33, 43)` and `none`. Rated Good in the page, it printed `1.5px solid rgb(23, 33, 43)` and `rgb(23, 33, 43) 0px 2px 0px 0px`. The rating was never submitted. On the stubbed state, the other three chips printed: Again, fill `rgb(229, 72, 77)` with an ink outline; Hard, white with a `rgb(229, 72, 77)` outline; Easy, fill and outline in ink; all with the ink shadow.
+- The cycle's judgement, by `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-judge.cjs` at 390px wide. **Not as written:** six counts are 2, each being "Log in" and one other thing. Outside the header every count is 0 or 1:
+
+```
+library-subjects       count=1 outside-header=0 ["Log in"]
+library-decks          count=1 outside-header=0 ["Log in"]
+subject                count=2 outside-header=1 ["Log in","Practice"]
+deck-cards             count=2 outside-header=1 ["Log in","Practice"]
+deck-configurations    count=2 outside-header=1 ["Log in","Practice"]
+edit-configuration     count=2 outside-header=1 ["Log in","Save"]
+practice               count=1 outside-header=0 ["Log in"]
+practice-new           count=1 outside-header=0 ["Log in"]
+practice-page          count=2 outside-header=1 ["Log in","Start practice"]
+run-before-show        count=2 outside-header=1 ["Log in","Show answer"]
+run-after-show         count=1 outside-header=0 ["Log in"]
+home                   count=1 outside-header=0 ["Log in"]
+open-menu              count=1 outside-header=0 ["Log in"]
+delete-confirm         count=1 outside-header=0 ["Log in"]
+/notifications headings 0
+other origins and fonts ["fast-katydid-31.clerk.accounts.dev","FONT http://localhost:5173/node_modules/@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2",""]
+```
+
+The one font request is from `localhost`, and no request went to Google Fonts; the empty entry is a URL with no host. The delete confirm was opened and cancelled, and nothing was deleted.
+
+Screenshots at 390px wide, one per line above, named `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-j-<name>.png`, for example `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-j-run-before-show.png`. For drawings 18 and 19, use the full-page shots `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-run-hidden.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-run-shown.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-run-popover.png`. For the edge cases, use `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-stub-hidden.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-stub-shown.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/a11e54c0-03f5-4474-aa41-ea9155fae8d5/scratchpad/t7-complete.png`; in the stubbed full-page shots the sticky header is painted partway down the page, which only the capture does.
+
+The output above is from a re-run after T4, T5 and T6 were committed, on the tree that is this commit, so these screens are final and the screenshots show them. The counts did not change from the first run, which had T4 and T6 uncommitted and T5 unbuilt. I re-ran the checks and the scripts after approval, because those three commits landed while T7 waited; this paragraph and the next changed then. I have not compared those screens with their drawings; that comparison is the engineer's, as is the rest of the judgement, and the Goal's "the cycle's judgement holds" rests on it.
+
+The whole-frontend checks on that tree: `npx vitest run` printed `Test Files 53 passed (53)` and `Tests 556 passed (556)`, `npm run lint` printed no problem, and `npm run build` built.
+
+Departures from Details and Files:
+
+- `ratingTiers.ts` gains `blockClass` beside `chipClass`. `RunBreakdown.tsx` is outside Files and its read-only badge needs `chipClass` complete with its own border, while a block's width and shadow come from `tappable-sm`.
+- Hard's outline is `border-(--color-wrong)!`, since `tappable-sm`'s ink outline otherwise won in the browser. Details do not ask for `!important`.
+- Again's and Easy's chips have an ink outline: T1 gives them no outline colour, so they keep the block's.
+- `FieldValue` gains an optional `zone` prop, `'prompt' | 'answer'`. Without it, sizes stay as they were, so the summary renders as T1 left it. The 26px value also takes drawing 3's line-height 1.1 and letter-spacing −0.01em, which Details cite but do not write out.
+- The image and audio chip on the run page is now a `tappable-sm` block, which Details do not name, since it can be tapped. The same chip in the summary stays T1's, so the two differ until the later cycle that draws the summary.
+- The popover's arrow is left out, as the guidance allows, and the popover gains `collisionPadding={16}`, since the panel touched the screen's right edge.
+- A disabled "Next card" is white, with a line outline, aside words and no shadow. This is written from T5's Details and drawing 18's "Edit card", in `PracticeRunPage.tsx`, by swapping classes rather than through T5's `disabled:` variants, which landed after it; the look is the one T5 specifies. It also takes this look while a rating is being sent.
+- Spacing follows drawings 18 and 19: 14px between the card's parts and 18px at the zones' sides.
+- `PracticeRunPage.test.tsx` gained a test on the twelve-character threshold. No existing test changed, since none asserted a class this task changed.
+
+For the engineer to judge: a prompt of twelve characters with no space does not fit on one line at 54px in the 319px row. A stubbed "SUPERCALIFRA" broke mid-word onto two lines, 108px tall, and did not overflow. Long unbroken words in other values also break mid-word (`wrap-anywhere`), because otherwise they push out of the block. Details fix the threshold, so I kept it.
+
+To read: `frontend/src/components/practice/ratingTiers.ts`, for the two class lists and the `!`; `frontend/src/components/practice/FieldValue.tsx`, for `zone`.

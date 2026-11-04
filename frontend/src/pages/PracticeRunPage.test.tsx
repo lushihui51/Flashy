@@ -125,6 +125,26 @@ describe('PracticeRunPage', () => {
     expect(screen.getByText('Front')).toBeInTheDocument();
   });
 
+  it.each([
+    ['twelve characters or fewer', 'A'.repeat(12), 'text-[54px]'],
+    ['longer than twelve characters', 'A'.repeat(13), 'text-[26px]'],
+  ])('sizes a prompt value of %s', async (_name, value, sizeClass) => {
+    mockRun(
+      runState({
+        current_card: {
+          practice_card_id: 'pc1',
+          card_id: 'card1',
+          attempt: 1,
+          prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value }],
+          answers: [{ field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello' }],
+        },
+      }),
+    );
+    renderRun();
+
+    expect(await screen.findByText(value)).toHaveClass(sizeClass);
+  });
+
   it('hides answer values until Show answer is tapped, then reveals them labeled', async () => {
     mockRun();
     const user = userEvent.setup();
