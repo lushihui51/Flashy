@@ -14,7 +14,7 @@
 
 **Sections.** Title; Goal, the cycle's outcome, scope and judgement; Records, the records the builder reads before building; Tasks. In that order. Every section appears; one with nothing to hold reads "None."
 
-**Title.** A unique number in ascending order and a short noun phrase naming the cycle's outcome. The file is docs/cycles/NNN-<slug>.md, the slug taken from the phrase.
+**Title.** A number and a noun phrase of two to five words naming the thing the cycle changes, never what becomes true of it. The file is docs/cycles/NNN-<slug>.md; the slug is the phrase in lowercase ASCII words joined by hyphens.
 
 **Goal.** Three labelled paragraphs, in prose, in this order. Outcome: the cycle's approved outcome, stated in one sentence. Scope: what the cycle covers and what it leaves out. Judgement: what the engineer checks, and where, to accept the cycle as a whole. Never say what prompted the cycle or how it was planned.
 
@@ -26,7 +26,7 @@
 
 **Parts of a task.** Status; Goal, what the task delivers; Dependencies, the tasks that must be done first, and which of their interfaces this task uses; Files, the paths it may touch; Details, the constraints and guidance for building it, and every interface it creates, written out exactly; Out of scope, what it must not do; Done when, what must be true when it is done; Debrief, what the builder reports when it is done. In that order. Every part appears; one with nothing to hold reads "None."
 
-**Task heading.** A task is headed by its number, T1 upward in the order the tasks are to be built, and a short noun phrase naming what it delivers.
+**Task heading.** A task is headed by its number, T1 upward in the order the tasks are to be built, and a noun phrase naming what it delivers.
 
 **Cut.** A task leaves the branch working with its tests green when it completes; work that would leave the branch broken until another task is done belongs in that task. Work with no checkable criterion of its own rides in a task whose evidence shows it.
 
