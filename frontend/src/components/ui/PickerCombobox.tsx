@@ -202,7 +202,7 @@ export default function PickerCombobox<T extends PickerItem>({
       {filtering && (
         <ChevronDown
           aria-hidden="true"
-          className="pointer-events-none absolute top-[15px] right-3.5 h-4 w-4 text-(--color-ink)"
+          className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 h-4 w-4 text-(--color-ink)"
         />
       )}
       {open && (

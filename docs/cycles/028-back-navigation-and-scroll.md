@@ -420,7 +420,7 @@ Read in the code: the layout effect in `AppShell`, the only logic here; the thre
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -472,7 +472,42 @@ The tests, jsdom doing no layout (ADR 017), each a test of its own:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/components/shell/SideDrawer.test.tsx src/components/ui/PickerCombobox.test.tsx --reporter=verbose` passes, 21 of 21, the new tests named:
+  ```
+  ✓ src/components/shell/SideDrawer.test.tsx > SideDrawer > pads its first item from the measured header height
+  ✓ src/components/ui/PickerCombobox.test.tsx > PickerCombobox > purpose="filter" > draws a chevron with no hard-coded top
+  ```
+- `grep -n "7.875rem" frontend/src/components/shell/SideDrawer.tsx` prints nothing, exit 1.
+- `grep -n "top-\[" frontend/src/components/ui/PickerCombobox.tsx frontend/src/components/practice/PracticeFilterBar.tsx` prints nothing, exit 1.
+- In headless Chromium against `localhost:5173`, signed out of Clerk, the side menu opened with a mouse click on `/library`, no page errors in any run:
+  ```
+  menu w390 plain  headerBottom 114 firstItemTop 126 diff 12 ok true
+  menu w390 banner headerBottom 172 firstItemTop 184 diff 12 ok true
+  menu w1280 plain  headerBottom 114 firstItemTop 126 diff 12 ok true
+  menu w1280 banner headerBottom 152 firstItemTop 164 diff 12 ok true
+  ```
+- In the same script, every filter's chevron against its input, at 390 and at 1280 wide:
+  ```
+  chevron w390 /practice "All subjects" input 184-226 chevron 197-213 wrapperH 42 centreDiff 0 ok true
+  chevron w390 /practice "All decks" input 184-226 chevron 197-213 wrapperH 42 centreDiff 0 ok true
+  chevron w390 /practice/new "All subjects" input 341.5-383.5 chevron 354.5-370.5 wrapperH 42 centreDiff 0 ok true
+  chevron w390 /practice/new "All decks" input 341.5-383.5 chevron 354.5-370.5 wrapperH 42 centreDiff 0 ok true
+  chevron w1280 /practice "All subjects" input 184-226 chevron 197-213 wrapperH 42 centreDiff 0 ok true
+  chevron w1280 /practice "All decks" input 184-226 chevron 197-213 wrapperH 42 centreDiff 0 ok true
+  chevron w1280 /practice/new "All subjects" input 341.5-383.5 chevron 354.5-370.5 wrapperH 42 centreDiff 0 ok true
+  chevron w1280 /practice/new "All decks" input 341.5-383.5 chevron 354.5-370.5 wrapperH 42 centreDiff 0 ok true
+  ```
+
+Checks over the whole frontend: `npx vitest run` 56 files and 563 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Beyond Done when, the same script opened the first filter's list on each page: its top sits 4px below the input's bottom at both widths, the `mt-1` it had.
+
+Departures from Details or Files: none. `block` on the input was not needed: the wrapper measures 42, the input's own height, so `top-1/2 -translate-y-1/2` centres the chevron alone. `PracticeFilterBar`'s root div fits one line once its class list shortens, so its tag is reflowed.
+
+Read in the code: nothing; the diff is three class lists and one comment.
+
 
 ### T5 — The old list while a new one loads
 

@@ -87,6 +87,12 @@ describe('SideDrawer', () => {
     expect(document.body).not.toHaveAttribute('data-scroll-locked');
   });
 
+  it('pads its first item from the measured header height', () => {
+    renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
+
+    expect(screen.getByRole('dialog').className).toContain('var(--app-header-height)');
+  });
+
   it('has dialog semantics with the expected label', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
