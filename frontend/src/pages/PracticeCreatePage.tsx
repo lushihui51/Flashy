@@ -99,7 +99,8 @@ export default function PracticeCreatePage() {
   });
 
   const groups = groupConfigurationsByDeck(configsQuery.data ?? []);
-  // Filtering keeps the backend's subject → deck → name order.
+  // Filtering keeps the backend's order, decks by their most recent change, then
+  // configurations by theirs.
   const selectedConfigs = (allConfigsQuery.data ?? []).filter((config) =>
     selectedIdSet.has(config.id),
   );

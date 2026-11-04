@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import ARRAY, Integer, Uuid
-from sqlmodel import Column, Field, UniqueConstraint
+from sqlmodel import Column, DateTime, Field, UniqueConstraint, func
 
 from app.models.base import AppModel, TimestampMixin
 
@@ -22,6 +22,11 @@ class DeckPracticeConfigBase(AppModel):
 
 class DeckPracticeConfig(DeckPracticeConfigBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # The recency sort key — see Subject's identical field (app/models/subject.py).
+    # No `onupdate`; the only writer is `touch()`.
+    last_activity_at: datetime = Field(
+        sa_type=DateTime(timezone=True), sa_column_kwargs={"server_default": func.now()}
+    )
 
 
 class DeckPracticeConfigCreate(DeckPracticeConfigBase):
@@ -31,6 +36,7 @@ class DeckPracticeConfigCreate(DeckPracticeConfigBase):
 class DeckPracticeConfigRead(DeckPracticeConfigBase):
     id: uuid.UUID
     created_at: datetime
+    last_activity_at: datetime
 
 
 class DeckPracticeConfigSummary(DeckPracticeConfigRead):

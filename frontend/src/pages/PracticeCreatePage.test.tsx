@@ -631,7 +631,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
-  it('Selected lists every selection subject → deck → name, with its deck and subject (MD-5)', async () => {
+  it("Selected lists every selection in the configurations' order, with its deck and subject", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();

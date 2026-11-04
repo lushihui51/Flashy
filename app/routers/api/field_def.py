@@ -10,6 +10,7 @@ from app.database_ops.field_def import (
     db_rename_field_def,
     db_reorder_field_defs,
 )
+from app.database_ops.subject import db_read_subject
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
@@ -28,8 +29,10 @@ def create_field_def(
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
+    subject = db_read_subject(db, deck.subject_id, current_user.id)
+    assert subject is not None, "a deck's subject always exists"
     try:
-        return create_field_def_service(db, deck, payload.name, payload.type)
+        return create_field_def_service(db, deck, subject, payload.name, payload.type)
     except Refusal as e:
         raise HTTPException(status_code=400, detail=e.detail) from e
     except ValueError as e:
@@ -67,7 +70,9 @@ def reorder_field_defs(
             status_code=400,
             detail="ordered_ids must contain exactly the deck's field ids",
         )
-    touch(db, deck)
+    subject = db_read_subject(db, deck.subject_id, current_user.id)
+    assert subject is not None, "a deck's subject always exists"
+    touch(db, deck, subject)
     return db_reorder_field_defs(db, field_defs, ordered_ids)
 
 
@@ -91,8 +96,10 @@ def update_field_def(
     if payload.name is None:
         return field_def
     deck = db_read_deck(db, field_def.deck_id, current_user.id)
-    if deck:
-        touch(db, deck)
+    assert deck is not None, "a field's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, current_user.id)
+    assert subject is not None, "a deck's subject always exists"
+    touch(db, deck, subject)
     try:
         return db_rename_field_def(db, field_def, payload.name)
     except Refusal as e:

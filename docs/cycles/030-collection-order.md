@@ -19,7 +19,7 @@ Judgement: The engineer judges on the live server: editing a card from a deck's 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -36,12 +36,15 @@ None.
 - `app/models/deck_practice_config.py`
 - `app/services/activity.py`
 - `app/routers/api/card.py`
+- `app/routers/api/deck.py`
 - `app/routers/api/field_def.py`
 - `app/routers/api/deck_practice_config.py`
 - `app/services/deck_batch_edit.py`
 - `app/services/deletion.py`
 - `app/services/field_def_create.py`
+- `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
+- `frontend/src/components/library/CardList.test.tsx`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/DeckEditor.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
@@ -104,13 +107,36 @@ The frontend: after `npm run gen:api`, each card and configuration fixture the c
 
 **Debrief**
 
-None.
+Evidence, per criterion:
+
+- `uv run alembic heads` printed `004a6932a7f5 (head)`; `uv run alembic current` printed `004a6932a7f5 (head)`. The migration was first run on a `pg_dump` copy of the dev database, where it filled 78 cards and 7 configurations from `created_at`, downgraded and upgraded again cleanly; the copy was dropped, then `alembic upgrade head` ran on the dev database.
+- The inspect command printed `[('last_activity_at', False), ('last_activity_at', False)]`.
+- `grep -rn "\.last_activity_at = " app` printed one line: `app/services/activity.py:17:        row.last_activity_at = now`.
+- `grep -c "last_activity_at: string" src/api/types.ts` printed `7`.
+- `uv run pytest tests/api_tests/test_activity_tracking.py` printed `29 passed`, with `test_card_edit_touches_subject`, the four tests of `TestCardWritesTouchCard`, the three of `TestConfigurationWrites`, `test_card_and_configuration_timestamps_equal_created_at_on_insert`, `test_field_create_touches_subject_last_activity` and `test_deck_rename_touches_subject_last_activity` each named PASSED in the `-v` output.
+- `uv run pytest` printed `359 passed`, with no other connection to the test database. `npx vitest run` printed 587 passed, `npm run lint` printed nothing, `npm run build` built.
+
+Departures from Files, each approved in the session and added to Files above:
+
+- `app/routers/api/deck.py`: `_deck_detail` builds `CardRead` field by field, and the now-required `last_activity_at` had to be passed, one line.
+- `frontend/src/components/library/CardList.test.tsx`: the compiler required the field on its four card literals; of the seven test files Files listed, only `deckEditorReducer.test.ts` had a literal the compiler required it on, so the other six are unchanged.
+- `frontend/src/api/openapi.json`: the intermediate `npm run gen:api` writes before deriving `types.ts`; regenerated, not edited.
+
+Departures from Details:
+
+- `create_field_def` in `app/services/field_def_create.py` takes the subject as a parameter, read by its one caller in `app/routers/api/field_def.py` with the deck's `subject_id` and the user's id; the service has no user id of its own to read it with.
+- `update_card` in `app/routers/api/card.py` and `update_field_def` in `app/routers/api/field_def.py` assert the deck exists where they tested `if deck:`, since the scoped read of the card or field already proved it, as `delete_card` does.
+- Both frontend test files touched failed Prettier before this task; only the lines this task wrote are wrapped to its width.
+
+Comments: the two comments in `app/routers/api/card.py` that said a card write stops at the deck are gone, false now; `delete_field`'s docstring in `app/services/deletion.py` and `create_field_def`'s name the subject; the batch edit's touch block carries one comment on why updated cards are touched and field operations touch none.
+
+To read: `app/routers/api/deck_practice_config.py`, where `_touch_deck_and_subject` sits after validation and before each write so a refused configuration moves nothing; the touch block at the end of `_stage_deck_batch_edit` in `app/services/deck_batch_edit.py`; and the migration's three steps per table.
 
 ### T2 — The order of cards and configurations
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -125,7 +151,9 @@ A deck's cards, a deck's configurations and New practice's configurations under 
 - `app/database_ops/card.py`
 - `app/database_ops/deck_practice_config.py`
 - `frontend/src/lib/practiceConfigurationGroups.ts`
+- `frontend/src/pages/PracticeCreatePage.tsx`
 - `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/components/practice/SelectedConfigurationList.tsx`
 - `tests/api_tests/test_activity_tracking.py`
 - `tests/api_tests/test_deck_practice_config.py`
 
@@ -162,4 +190,21 @@ The tests:
 
 **Debrief**
 
-None.
+Evidence, per criterion:
+
+- `grep -n "order_by" app/database_ops/card.py app/database_ops/deck_practice_config.py` printed three lines: `db_read_deck_practice_configs`, `db_read_deck_practice_configs_with_context` and `db_read_cards_for_deck`, one each.
+- The `.sort(` grep over `frontend/src/pages`, `frontend/src/components/library` and `frontend/src/components/practice` printed nothing.
+- `uv run pytest tests/api_tests/test_activity_tracking.py tests/api_tests/test_deck_practice_config.py` printed `61 passed`, with `test_deck_cards_ordered_by_last_activity_desc`, `test_configurations_ordered_by_deck_recency_then_own` and `test_deck_configurations_ordered_by_last_activity_desc` each named PASSED in the `-v` output.
+- `uv run pytest` printed `362 passed`, with no other connection to the test database. `npx vitest run` printed 587 passed, `npm run lint` printed nothing, `npm run build` built.
+- In headless Chromium at 390px, signed out of Clerk, the script `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/eee53411-674b-4ae6-83fb-6289d1027fe1/scratchpad/pickers.mjs` printed, output in `pickers.out` beside it: on `/practice` the subject filter's options begin "All subjects" and the deck filter's begin "All decks"; on `/decks/new` the subject picker's options end "New subject…"; on `/cards/new` the deck picker's end "New deck…".
+- The cycle's judgement: `judgement.mjs` in the same scratchpad, output in `judgement.out`, chose the deck "Three fields", second on the Decks tab, under the subject "Cycle 029 T2 judgement 2026-11-04 19:45", second on the Subjects tab; opened the deck's last-listed card "gracias" from the deck's page, changed its "Term" to "gracias (T2)" and saved; then printed "gracias (T2)" as the first card on the deck's page, "Three fields" as the first deck on `/library?tab=decks` and on the subject's page, and the subject as the first on `/library`; then created the configuration "T2 judgement 20:31:45" (Term → Meaning) through "Add configuration" on the deck's Configurations tab, and printed "Cycle 029 T2 judgement 2026-11-04 19:45 · Three fields" as the first group on `/practice/new` with that configuration first, and the same configuration first on the deck's Configurations tab. All six checks printed OK. Screenshots beside the script: `judgement-deck-page.png`, `judgement-decks-tab.png`, `judgement-new-practice.png`. A first run of the script, stopped by a wrong button label in the configuration form, had already edited the card "cd" of "Commands" to "cd (T2)", which is why "Commands" led the Decks tab at the second run; both edits and the configuration stay in the dev database.
+
+Departures from Files, approved in the session and added to Files above:
+
+- `frontend/src/pages/PracticeCreatePage.tsx` and `frontend/src/components/practice/SelectedConfigurationList.tsx`: one comment each named the order as subject, deck then name, false now; each says decks by their most recent change, then configurations by theirs. No code changed.
+
+Departures from Details: none.
+
+Comments: the docstring of `db_read_deck_practice_configs_with_context` and the comment on `groupConfigurationsByDeck` state the new order, as Details asked; the two comments above are the only others the change made false. `db_read_deck_practice_configs` has no caller under `app/`; it is ordered as Details requires and left as it was otherwise.
+
+To read: the `order_by` in `db_read_deck_practice_configs_with_context` in `app/database_ops/deck_practice_config.py`, where the deck's recency precedes the configuration's, which is what puts a deck whose card was just edited above a deck whose configuration changed earlier.

@@ -135,7 +135,13 @@ describe('deckDetailToEditorState', () => {
       { id: 'front-id', name: 'Front', type: 'text', position: 0 },
     ],
     cards: [
-      { id: 'card-1', deck_id: 'deck-1', created_at: '', values: { 'front-id': 'Bonjour', 'back-id': 'Hello' } },
+      {
+        id: 'card-1',
+        deck_id: 'deck-1',
+        created_at: '',
+        last_activity_at: '',
+        values: { 'front-id': 'Bonjour', 'back-id': 'Hello' },
+      },
     ],
   };
 
