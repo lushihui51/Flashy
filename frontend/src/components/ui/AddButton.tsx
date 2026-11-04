@@ -13,9 +13,9 @@ export default function AddButton({ label, onClick }: AddButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 shrink-0 items-center gap-1 rounded-full bg-(--color-ink) px-3 text-sm font-semibold text-(--color-surface)"
+      className="tappable-sm flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
     >
-      <Plus aria-hidden="true" className="h-4 w-4" />
+      <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5" />
       {label}
     </button>
   );

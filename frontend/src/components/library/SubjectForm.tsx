@@ -294,7 +294,6 @@ export function SubjectFormBody({
         title="Discard changes?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
         onConfirm={onCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
@@ -305,7 +304,6 @@ export function SubjectFormBody({
           title="Delete subject?"
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

@@ -283,7 +283,6 @@ function CardStandaloneFormBody({
         title="Discard this card?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
         onConfirm={goBack}
         onCancel={() => setConfirmCancelOpen(false)}
       />
@@ -293,7 +292,6 @@ function CardStandaloneFormBody({
         title="Change deck?"
         description="Switching decks will clear the card you were filling in."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => {
           setValues({});
           setDeckChange(null);
@@ -309,7 +307,6 @@ function CardStandaloneFormBody({
         title="Create a new deck?"
         description="This will clear the card you were filling in."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => {
           setValues({});
           goToCreateDeck();
@@ -323,7 +320,6 @@ function CardStandaloneFormBody({
           title="Delete card?"
           description="This can't be undone."
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

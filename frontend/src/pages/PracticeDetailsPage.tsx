@@ -172,7 +172,6 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         // else, and reviews already logged stay on record.
         description="Its progress will be gone. The decks it practiced are not affected."
         confirmLabel="Delete"
-        destructive
         onConfirm={() => {
           setDeleteError(null);
           deleteMutation.mutate();

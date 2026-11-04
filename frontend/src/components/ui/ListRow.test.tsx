@@ -25,9 +25,9 @@ describe('ListRow', () => {
     renderWithRouter(<ListRow title="Cells" meta="3 cards" to="/decks/d2" />);
 
     const row = screen.getByRole('link', { name: /Cells/ });
-    // only one text node under the text column (the title) — no empty/placeholder
+    // only the title and the meta under the text column — no empty/placeholder
     // subtitle span rendered.
-    expect(row.querySelectorAll('span > span')).toHaveLength(1);
+    expect(row.querySelectorAll('span > span')).toHaveLength(2);
   });
 
   it('rows with and without a subtitle share the same min-height class', () => {
@@ -40,8 +40,8 @@ describe('ListRow', () => {
 
     const rowWith = withSub.querySelector('a')!;
     const rowWithout = withoutSub.querySelector('a')!;
-    expect(rowWith.className).toMatch(/min-h-16/);
-    expect(rowWithout.className).toMatch(/min-h-16/);
+    expect(rowWith.className).toMatch(/min-h-\[78px\]/);
+    expect(rowWithout.className).toMatch(/min-h-\[78px\]/);
   });
 
   it('meta is not truncated (no truncate class) while subtitle is', () => {

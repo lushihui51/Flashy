@@ -329,7 +329,7 @@ To read: `frontend/src/index.css`, for the `!important`.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -363,6 +363,7 @@ The components every page builds rows, buttons, tabs, dialogs and pickers from a
 - `frontend/src/pages/PracticeOverviewPage.tsx`, for the removal of `destructive` only
 - `frontend/src/pages/DeckDetailPage.tsx`, for the removal of `destructive` only
 - `frontend/src/pages/PracticeDetailsPage.tsx`, for the removal of `destructive` only
+- `frontend/src/pages/LibraryPage.test.tsx`, for the Add button's height class only
 
 **Details**
 
@@ -437,7 +438,29 @@ export default function Tabs<T extends string>(props: TabsProps<T>): ReactNode;
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `grep -c "^@utility tappable" frontend/src/index.css` printed `3`.
+- `grep -rn "destructive" frontend/src --include=*.tsx | grep -v "^.*//\|^.*\*"` printed nothing.
+- `cd frontend && npx vitest run src/components/ui src/components/library/DeckRow.test.tsx` printed `Test Files 5 passed (5)` and `Tests 33 passed (33)`, `Tabs.test.tsx` among them.
+- Headless Chromium through playwright-core at `localhost:5173/library`, signed out of Clerk, 390px wide, launched with `--force-device-scale-factor=2`: each of the three subject rows printed `border 1.5px solid rgb(23, 33, 43)` and `shadow rgb(23, 33, 43) 0px 3px 0px 0px`; "Add subject" printed the same border and `rgb(23, 33, 43) 0px 2px 0px 0px`. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/92748cdc-d007-4e84-83c9-89d8d32d38bd/scratchpad/t3-final.cjs`.
+- Screenshots at 390px wide: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/92748cdc-d007-4e84-83c9-89d8d32d38bd/scratchpad/t3-library.png` for drawing 1 and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/92748cdc-d007-4e84-83c9-89d8d32d38bd/scratchpad/t3-confirm.png` for drawing 26, which is a practice's delete confirm, opened and cancelled. Also `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/92748cdc-d007-4e84-83c9-89d8d32d38bd/scratchpad/t3-picker-open.png` for the open filter list and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/92748cdc-d007-4e84-83c9-89d8d32d38bd/scratchpad/t3-sheet.png` for the sheet.
+
+Departures from Details and Files:
+
+- `tappable-pressed` in `src/index.css` reads `box-shadow: none !important`, not the `box-shadow: none` Details writes. Tailwind sorts `tappable-pressed` ahead of `tappable-sm` in the compiled CSS, so as written the chosen tab kept its 2px shadow, which T4's Done when forbids. With `!important`, an element with both classes printed `shadow none` and `transform matrix(1, 0, 0, 1, 0, 2)`.
+- `frontend/src/pages/LibraryPage.test.tsx` was added to Files with the engineer's go-ahead: its Add button test now matches `h-10`, not `h-9`.
+- A `ListRow`'s meta stacks under its subtitle, as the drawings have it, so one `ListRow.test.tsx` count of spans under the text column went from 1 to 2 and the row's min-height is `min-h-[78px]`; a row with a subtitle and a meta grows to 96px.
+- `DeckRow.tsx` and `Breadcrumb.test.tsx` did not change: `DeckRow` draws through `ListRow`, and the "‹" stays the `ChevronLeft` icon at 16px, since a text character would break the test on the row's text.
+- `PickerCombobox`'s input is 46px for every purpose, as T3 says, while T6 asks for 42px filters and does not list the file. T6 can set the height from `PracticeFilterBar.tsx`, which it lists.
+
+For the engineer to know:
+
+- Until T4 and T6 place them, rows sit in their old divided lists, so Your library's blocks touch with a hairline between them, and "Add practice" stays T1's ink pill.
+- Chromium floors a computed border to whole device pixels: at scale 1 a plain `1.5px solid` element computes to `1px`, at 2 to `1.5px`, at 3 to `1.33333px`, and Playwright's `deviceScaleFactor` option does not change this. Every later Done when that names `1.5px` needs the launch flag above.
+- Another session's uncommitted T2 work is in this checkout, and these checks ran over it. Its edit to this file moved `frontend/src/index.css` from T3's Files to T2's and added T2 to T3's Dependencies, which that session reports the engineer approved; it also reports removing a duplicate of the utilities after our writes collided. T3's code does not work without the utilities, so T3's commit holds no `index.css` hunk and must follow T2's commit, and the `!important` above stands only if T2's commit keeps it.
+
+To read: `frontend/src/index.css`, for the `!important`.
 
 ### T4 — Your library, a subject's page and a deck's page
 

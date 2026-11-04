@@ -50,7 +50,7 @@ export default function BottomSheet({
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className={`fixed inset-x-0 bottom-0 ${aboveDialogs ? 'z-80' : 'z-30'} flex flex-col gap-4 rounded-t-2xl bg-(--color-surface) p-4 pb-6 focus:outline-none`}
+          className={`fixed inset-x-0 bottom-0 ${aboveDialogs ? 'z-80' : 'z-30'} flex flex-col gap-4 rounded-t-[20px] border-t-[1.5px] border-(--color-ink) bg-(--color-surface) p-4 pb-6 focus:outline-none`}
         >
           <div
             aria-hidden="true"

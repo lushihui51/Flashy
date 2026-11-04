@@ -7,8 +7,6 @@ type ConfirmDialogProps = {
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
-  /** Accepted from callers and ignored: every confirm's button is drawn alike. */
-  destructive?: boolean;
   /** Renders below the description — for a caller that wants the failed mutation's
    * error inline in the dialog instead of closing it and showing the error elsewhere
    * on the page (the practice detail page's delete). */
@@ -51,27 +49,27 @@ export default function ConfirmDialog({
         />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed inset-x-4 top-1/2 z-80 -translate-y-1/2 rounded-2xl bg-(--color-surface) p-4 focus:outline-none"
+          className="tappable fixed inset-x-5 top-1/2 z-80 flex -translate-y-1/2 flex-col gap-3.5 rounded-[20px] bg-(--color-surface) p-5 focus:outline-none"
         >
-          <Dialog.Title className="text-base font-semibold text-(--color-ink)">
+          <Dialog.Title className="text-[19px] font-bold text-(--color-ink)">
             {title}
           </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-(--color-ink)">
+          <Dialog.Description className="text-[15px] leading-normal font-light text-(--color-ink)">
             {description}
           </Dialog.Description>
           {children}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-1 flex gap-2.5">
             <button
               type="button"
               onClick={onCancel}
-              className="h-11 flex-1 rounded-full bg-(--color-ground) text-sm font-semibold text-(--color-ink)"
+              className="tappable h-12 flex-1 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink)"
             >
               {cancelLabel}
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className="h-11 flex-1 rounded-full bg-(--color-ink) text-sm font-semibold text-(--color-surface)"
+              className="tappable h-12 flex-1 rounded-2xl bg-(--color-ink) text-base font-semibold text-(--color-surface)"
             >
               {confirmLabel}
             </button>

@@ -176,7 +176,6 @@ export default function PracticeOverviewPage() {
         // record.
         description="Its progress will be gone. The decks it practiced are not affected."
         confirmLabel="Delete"
-        destructive
         onConfirm={() => {
           setDeleteError(null);
           if (pendingDelete) deleteMutation.mutate(pendingDelete.id);

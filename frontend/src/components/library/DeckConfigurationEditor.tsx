@@ -369,7 +369,6 @@ function DeckConfigurationEditorBody({
         title="Change deck?"
         description="Fields belong to their own deck, so switching clears everything assigned here."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => pendingDeck && applyDeck(pendingDeck)}
         onCancel={() => setPendingDeck(null)}
       />

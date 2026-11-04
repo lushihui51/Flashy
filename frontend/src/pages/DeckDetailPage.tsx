@@ -243,7 +243,6 @@ export default function DeckDetailPage() {
         // already run is affected.
         description="Practices that already used it are unaffected."
         confirmLabel="Delete"
-        destructive
         onConfirm={() => {
           setDeleteError(null);
           if (pendingDelete) deleteMutation.mutate(pendingDelete.id);

@@ -741,7 +741,6 @@ function DeckEditorBody({
         title="Discard this deck?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
         onConfirm={goBack}
         onCancel={() => setConfirmCancelOpen(false)}
       />
@@ -751,7 +750,6 @@ function DeckEditorBody({
         title="Save changes?"
         description={saveConfirm ? impactSummaryText(saveConfirm) : ''}
         confirmLabel="Save"
-        destructive
         onConfirm={() => {
           setSaveConfirm(null);
           void handleSave();
@@ -767,7 +765,6 @@ function DeckEditorBody({
           // included — nothing about it survives the delete.
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDeleteDeck()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />
