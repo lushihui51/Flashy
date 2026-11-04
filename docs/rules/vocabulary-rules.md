@@ -8,7 +8,7 @@
 
 **Lifetime.** One file, titled "# Vocabulary", never numbered and never deleted.
 
-**Layout.** The title line, a one-sentence preamble saying what the file gives, then one table, and nothing else: no section heading, no bullet, no record number, and no mention of a docket or a cycle. A row is one line, so a grep on any word or name in it returns the whole row.
+**Layout.** The title line, a one-sentence preamble saying what the file gives, then one table, and nothing else: no section heading, no bullet, and no record number. A row is one line, so a grep on any word or name in it returns the whole row.
 
 **Table.** The columns Area, Concept, User reads, Where, Code, in that order. One row per concept as the user meets it. Rows of one Area stand together. A concept the user never meets reads "—" in User reads and Where, and stands in the file for its code names.
 

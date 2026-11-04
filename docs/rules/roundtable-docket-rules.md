@@ -2,7 +2,7 @@
 
 **What a docket is.** A roundtable docket is the one file an initiative's decisions pass through on their way to cycle files. It holds everything the six skills, named in Order below, have raised or decided and no PDR, ADR or cycle file has absorbed yet, and nothing else.
 
-**Who reads a docket.** Each of the six skills reads this in full before it can work. The human (the engineer or the product owner) reads it to see where an initiative stands. No one else should read it, so do not cite it anywhere, ever.
+**Who reads a docket.** Each of the six skills reads it in full before anything else. The human (the engineer or the product owner) reads it to see where an initiative stands. No one else reads it, so no other tracked file cites it or names an item of it by label.
 
 **Lifetime.** Only the human creates a docket. A docket opened for a blocked task amends that task's cycle file and plans no other. When the docket is empty, it is finished: /cycle-plan deletes it and its canvas in the commit that emptied it.
 
@@ -36,4 +36,4 @@
 
 **Order.** The skills run on a docket in this order: /product-decide, /product-record, /code-decide, /code-record, /record-sync, /cycle-plan. Going back to a skill means running every skill after it again, in that order.
 
-**Writing.** Write every sentence as a statement. Keep an item as short as the next skill's act allows; never say what happened, when, or in which conversation. Write a product item in the user-facing vocabulary of `docs/vocabulary.md`, so it makes sense to someone who has never seen code. Refer to an item from anywhere by its bare label, and to a record by its type and number. Never write "etc.", "as needed", or any wording that leaves the next skill to guess.
+**Writing.** Write every sentence as a statement. Keep an item as short as the next skill's act allows; never say what happened, when, or in which conversation. Write a product item in the user-facing vocabulary of `docs/vocabulary.md`, so it makes sense to someone who has never seen code. Refer to an item by its bare label, and to a record by its type and number. Never write "etc.", "as needed", or any wording that leaves the next skill to guess.

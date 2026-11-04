@@ -1,8 +1,8 @@
 # Cycle file rules
 
-**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged to main, the file is complete and is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history; the only exception is a commit message.
+**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged to main, the file is complete and is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history.
 
-**Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
+**Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation or the docket. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
 
 **Edits before the merge.** Until the cycle's merge, the builder writes a task's Status and Debrief; for a path outside the task's Files that the engineer approves, the Files and Dependencies lines that path changes; and, on the cycle's canvas, only an alternative to a drawing, beside it, the drawing and its alternative then lettered A upward under the drawing's number, and the alternative staying only as evidence a blocked task's Debrief cites; every other edit is the planner's, made by /cycle-plan.
 
@@ -38,9 +38,9 @@
 
 **Files.** Every path the task may create or change, exact, from the repository root, marked new where it does not exist yet; a generated file counts. A path not listed is not touched.
 
-**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is a constraint. A drawing cited from the cycle's canvas, by its number, is a constraint. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
+**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is written out as a constraint. A drawing cited from the cycle's canvas, by its number, is a constraint. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
 
-**Out of scope.** What a builder would be tempted to add here and must not, one line each, with where it belongs: another task by number, a later cycle, or never.
+**Out of scope.** What a builder would be tempted to add here and must not, one line each, with where it belongs: another task by number, a later cycle, an unsettled decision, or never.
 
 **Done when.** One line per criterion, each checkable by the builder alone and each yielding evidence for the Debrief: a command and its exact expected output, a test by name that must pass, or a behaviour to observe and where. Never a judgement such as "works correctly". Never a check AGENTS.md already requires of every commit. The last task's Done when carries the cycle's judgement.
 
