@@ -22,6 +22,12 @@ After a tab or filter change, the new list's first two rows are to be on screen 
 
 `AppShell`'s header is sticky, so content starts at the header's bottom edge, not at the top of the viewport.
 
+The header grows when `ConnectionBanner` shows.
+
+New practice has a sticky row of its own below the header, the only such row on a page that reveals a list.
+
+A sticky row not yet stuck sits below its stuck place, by any distance on a page where it sits further down.
+
 `scrollIntoView({ block: 'nearest' })` ignores a sticky header unless its target sets a scroll margin.
 
 jsdom does no layout (ADR 017).
@@ -32,7 +38,9 @@ We will make `useViewParams()` in `frontend/src/lib/viewParams.ts` the only code
 
 It offers two writes. `setParams(next)` writes without moving the page, and every write but a change to what a page's list shows goes through it. `changeView(next, { control, listStart })` writes a change to a list's tab, filters, chosen counts or order, then, on the first commit where the page reports its list rendered for the new params, scrolls by `revealDelta`.
 
-`revealDelta` is a pure function of the viewport, the bottom of `AppShell`'s sticky header, the control's rect, and the rects of the list's first two rows, or of the whole list when it is shorter. It returns the smallest scroll that puts all of them in view, 0 when they already are, and keeps the control in view first when they do not all fit. Node unit tests pin it.
+`revealDelta` is a pure function of the viewport, the top of the band in view, the control's rect, and the rects of the list's first two rows, or of the whole list when it is shorter. It returns the smallest scroll that puts all of them in view, 0 when they already are, and keeps the control in view first when they do not all fit. Node unit tests pin it.
+
+We will mark every sticky element a reveal must clear with `data-reveal-clear`. `changeView` reads only the marked elements on the page it runs on, and takes the greatest stuck bottom among them, each being its computed sticky `top` plus its height, as the top of the band in view.
 
 ## Alternatives considered
 
@@ -48,6 +56,22 @@ Rejected because two history entries on one path would share a position, so a pa
 
 Rejected because it ignores the sticky header unless every list sets a scroll margin, and on a short screen it can push the tapped control off the top.
 
+### The header's bottom alone
+
+Rejected because a sticky row below the header would cover the control just tapped.
+
+### The page passing its sticky row to each `changeView` call
+
+Rejected because every call can forget it.
+
+### A constant for the row's height
+
+Rejected because it goes wrong when a height changes.
+
+### The greatest current bottom edge
+
+Rejected because it puts the band's top wherever a row not yet stuck happens to sit.
+
 ## Consequences
 
 **Positive**
@@ -55,11 +79,13 @@ Rejected because it ignores the sticky header unless every list sets a scroll ma
 - The user's write to a page's own URL never moves the page, except a change to what its list shows, which moves it only as far as needed.
 - The developer cannot write a page's URL any other way without failing lint.
 - The developer tests the reveal's arithmetic without layout.
+- The developer's marked sticky row is cleared with no change to any `changeView` call, wherever it sits on the page.
 
 **Negative**
 
 - The developer who sends a change to what a list shows through `setParams` gets a page that stays put instead of revealing, and nothing fails.
 - The developer moves eleven call sites to the hook once.
+- The developer who leaves unmarked a sticky row a reveal must clear hides the control from the user, and nothing fails.
 
 **Neutral**
 
