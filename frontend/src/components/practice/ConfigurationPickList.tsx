@@ -37,10 +37,10 @@ export default function ConfigurationPickList({
     <div className="flex flex-col gap-4">
       {groups.map((group) => (
         <fieldset key={group.deckId} className="flex flex-col gap-1">
-          <legend className="pb-1 text-sm font-medium text-(--color-text)">
+          <legend className="pb-1 text-sm font-medium text-(--color-ink)">
             {group.subjectName} · {group.deckName}
           </legend>
-          <div className="flex flex-col divide-y divide-(--color-surface-elevated)">
+          <div className="flex flex-col divide-y divide-(--color-line)">
             {group.configs.map((config) => {
               const inputId = `config-${config.id}`;
               return (
@@ -56,19 +56,19 @@ export default function ConfigurationPickList({
                         checked={selectedIds.has(config.id)}
                         onChange={() => onToggle(group, config.id)}
                       />
-                      <span className="text-[15px] text-(--color-text)">{config.name}</span>
+                      <span className="text-[15px] text-(--color-ink)">{config.name}</span>
                     </label>
                     <button
                       type="button"
                       aria-label={`Edit ${config.name}`}
                       onClick={() => onEdit(config.id)}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
                     </button>
                   </div>
                   {rowError?.configId === config.id && (
-                    <p role="alert" className="pl-7 text-sm text-(--color-danger)">
+                    <p role="alert" className="pl-7 text-sm text-(--color-wrong)">
                       {rowError.sentence}
                     </p>
                   )}

@@ -19,7 +19,7 @@ function isTab(value: string | null): value is Tab {
 function EmptyState({ copy }: { copy: string }) {
   return (
     <div className="py-8">
-      <p className="text-(--color-text-muted)">{copy}</p>
+      <p className="text-(--color-aside)">{copy}</p>
     </div>
   );
 }
@@ -46,12 +46,12 @@ export default function LibraryPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold text-(--color-text)">Your library</h1>
+      <h1 className="text-xl font-semibold text-(--color-ink)">Your library</h1>
 
       <div
         role="tablist"
         aria-label="Library"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
+        className="mt-4 flex gap-4 border-b border-(--color-line)"
       >
         {(['subjects', 'decks'] as const).map((t) => (
           <button
@@ -62,8 +62,8 @@ export default function LibraryPage() {
             onClick={() => setTab(t)}
             className={`h-11 border-b-2 px-1 text-sm font-medium ${
               tab === t
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
+                ? 'border-(--color-ink) text-(--color-ink)'
+                : 'border-transparent text-(--color-aside)'
             }`}
           >
             {t === 'subjects' ? 'Subjects' : 'Decks'}
@@ -74,13 +74,13 @@ export default function LibraryPage() {
       {tab === 'subjects' ? (
         <section aria-label="Subjects">
           <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+            <h2 className="text-sm font-medium text-(--color-aside)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
             <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load subjects.
             </p>
           )}
@@ -88,13 +88,13 @@ export default function LibraryPage() {
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
             <EmptyState copy="No subjects yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul className="flex flex-col divide-y divide-(--color-line)">
               {(subjectsQuery.data ?? []).map((subject) => (
                 <li key={subject.id}>
                   <ListRow
                     leading={
                       <span className="flex h-8 w-8 items-center justify-center">
-                        <SubjectIcon icon={subject.icon} className="h-5 w-5 text-(--color-text)" />
+                        <SubjectIcon icon={subject.icon} className="h-5 w-5 text-(--color-ink)" />
                       </span>
                     }
                     title={subject.name}
@@ -110,13 +110,13 @@ export default function LibraryPage() {
       ) : (
         <section aria-label="Decks">
           <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+            <h2 className="text-sm font-medium text-(--color-aside)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
             <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load decks.
             </p>
           )}
@@ -124,7 +124,7 @@ export default function LibraryPage() {
           {decksQuery.data && decksQuery.data.length === 0 ? (
             <EmptyState copy="No decks yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul className="flex flex-col divide-y divide-(--color-line)">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
                   <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />

@@ -74,12 +74,12 @@ function FieldOverflowMenu({
         onClick={() => setOpen((o) => !o)}
         className="flex h-9 w-9 shrink-0 items-center justify-center"
       >
-        <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+        <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
       </button>
       {open && (
         <ul
           role="menu"
-          className="absolute right-0 z-10 mt-1 w-36 rounded-lg border border-(--color-surface-elevated) bg-(--color-surface) py-1 shadow-lg"
+          className="absolute right-0 z-10 mt-1 w-36 rounded-lg border border-(--color-line) bg-(--color-surface) py-1 shadow-lg"
         >
           <li role="none">
             <button
@@ -90,7 +90,7 @@ function FieldOverflowMenu({
                 onMoveUp();
                 setOpen(false);
               }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-text) disabled:opacity-40"
+              className="flex w-full px-3 py-2 text-left text-sm text-(--color-ink) disabled:opacity-40"
             >
               Move up
             </button>
@@ -104,7 +104,7 @@ function FieldOverflowMenu({
                 onMoveDown();
                 setOpen(false);
               }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-text) disabled:opacity-40"
+              className="flex w-full px-3 py-2 text-left text-sm text-(--color-ink) disabled:opacity-40"
             >
               Move down
             </button>
@@ -145,8 +145,8 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
 
   return (
     <section className="mt-6">
-      <h2 className="text-sm font-medium text-(--color-text-muted)">Fields</h2>
-      <p className="text-[13px] text-(--color-text-muted)">
+      <h2 className="text-sm font-medium text-(--color-aside)">Fields</h2>
+      <p className="text-[13px] text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
       <ul className="mt-1 flex flex-col">
@@ -161,14 +161,14 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                       aria-label="Field name"
                       value={field.name}
                       disabled
-                      className="h-9 w-full rounded-lg border border-(--color-surface-elevated) px-2 text-(--color-text) line-through"
+                      className="h-9 w-full rounded-lg border border-(--color-line) px-2 text-(--color-ink) line-through"
                     />
                   </div>
                   <select
                     aria-label="Field type"
                     value={field.type}
                     disabled
-                    className="h-9 shrink-0 rounded-lg border border-(--color-surface-elevated) px-2 text-sm text-(--color-text)"
+                    className="h-9 shrink-0 rounded-lg border border-(--color-line) px-2 text-sm text-(--color-ink)"
                   >
                     {SUPPORTED_FIELD_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -184,11 +184,11 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   >
                     <MoreVertical
                       aria-hidden="true"
-                      className="h-4 w-4 text-(--color-text-muted)"
+                      className="h-4 w-4 text-(--color-aside)"
                     />
                   </button>
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40">
-                    <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+                    <X aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
                   </span>
                 </div>
               </li>
@@ -216,12 +216,12 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     aria-label="Field name"
                     value={field.name}
                     onChange={(e) => onRename(field.key, e.target.value)}
-                    className="h-9 w-full rounded-lg border border-(--color-surface-elevated) px-2 text-(--color-text)"
+                    className="h-9 w-full rounded-lg border border-(--color-line) px-2 text-(--color-ink)"
                   />
                 </div>
 
                 {index === primaryIndex && (
-                  <span className="shrink-0 rounded-full bg-(--color-surface-elevated) px-2 py-0.5 text-[11px] font-medium text-(--color-text-muted)">
+                  <span className="shrink-0 rounded-full bg-(--color-ground) px-2 py-0.5 text-[11px] font-medium text-(--color-aside)">
                     Primary
                   </span>
                 )}
@@ -230,7 +230,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   aria-label="Field type"
                   value={field.type}
                   disabled
-                  className="h-9 shrink-0 rounded-lg border border-(--color-surface-elevated) px-2 text-sm text-(--color-text)"
+                  className="h-9 shrink-0 rounded-lg border border-(--color-line) px-2 text-sm text-(--color-ink)"
                 >
                   {SUPPORTED_FIELD_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -255,10 +255,10 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   onClick={() => onRemove(field.key)}
                   className="flex h-9 w-9 shrink-0 items-center justify-center disabled:opacity-40"
                 >
-                  <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+                  <X aria-hidden="true" className="h-4 w-4 text-(--color-aside)" />
                 </button>
               </div>
-              {error && <p className="text-sm text-(--color-danger)">{error}</p>}
+              {error && <p className="text-sm text-(--color-wrong)">{error}</p>}
             </li>
           );
         })}
@@ -266,7 +266,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <button
         type="button"
         onClick={onAdd}
-        className="mt-2 flex h-9 items-center gap-1 text-sm font-semibold text-(--color-primary)"
+        className="mt-2 flex h-9 items-center gap-1 text-sm font-semibold text-(--color-ink)"
       >
         <Plus aria-hidden="true" className="h-4 w-4" />
         Add field
@@ -313,9 +313,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       return (
         <div className="p-4">
           {isNotFound(deckQuery.error) ? (
-            <p className="text-(--color-text-muted)">Deck not found.</p>
+            <p className="text-(--color-aside)">Deck not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               Could not load this deck.
             </p>
           )}
@@ -632,11 +632,11 @@ function DeckEditorBody({
         <button
           type="button"
           onClick={showDone ? goBack : handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-sm font-medium text-(--color-aside)"
         >
           {showDone ? 'Done' : 'Cancel'}
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-base font-semibold text-(--color-ink)">
           {mode === 'edit' ? 'Edit deck' : 'New deck'}
         </h1>
         <div className="flex items-center gap-3">
@@ -645,7 +645,7 @@ function DeckEditorBody({
               type="button"
               onClick={handleUndo}
               disabled={!canUndo}
-              className="text-sm font-semibold text-(--color-text-secondary) disabled:text-(--color-text-muted) disabled:opacity-50"
+              className="text-sm font-semibold text-(--color-aside) disabled:text-(--color-aside) disabled:opacity-50"
             >
               Undo
             </button>
@@ -654,7 +654,7 @@ function DeckEditorBody({
             type="button"
             onClick={() => void handleSaveClick()}
             disabled={!canSave || checkingSaveImpact}
-            className="text-sm font-semibold text-(--color-primary) disabled:text-(--color-text-muted)"
+            className="bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:text-(--color-aside)"
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
                 2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
@@ -664,19 +664,19 @@ function DeckEditorBody({
       </div>
 
       {saveError && (
-        <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+        <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
           {saveError}
         </p>
       )}
 
       <div className="mt-4 flex flex-col gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Deck name</span>
+          <span className="text-sm font-medium text-(--color-ink)">Deck name</span>
           <input
             type="text"
             value={state.name}
             onChange={(e) => dispatch({ type: 'SET_NAME', name: e.target.value })}
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+            className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
           />
         </label>
         <PickerCombobox<SubjectItem>
@@ -707,7 +707,7 @@ function DeckEditorBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={deleting || checkingDeletionImpact}
-          className="mt-6 h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
+          className="mt-6 h-11 text-sm font-semibold text-(--color-ink) disabled:opacity-60"
         >
           Delete deck
         </button>

@@ -82,7 +82,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-(--color-text-muted)">
+      <p className="text-sm text-(--color-aside)">
         {breakdown.total_cards} card{breakdown.total_cards === 1 ? '' : 's'} practiced
       </p>
 
@@ -96,8 +96,8 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
             onClick={() => setSortKey(option.key)}
             className={`h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-sm font-medium ${
               sortKey === option.key
-                ? 'border-(--color-primary) bg-(--color-primary) text-(--color-primary-contrast)'
-                : 'border-(--color-surface-elevated) text-(--color-text-muted)'
+                ? 'border-(--color-ink) bg-(--color-ink) text-(--color-surface)'
+                : 'border-(--color-line) text-(--color-aside)'
             }`}
           >
             {option.label}
@@ -116,21 +116,21 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
               }}
               className="flex min-h-16 w-full items-center gap-3 py-[14px] text-left"
             >
-              <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-text)">
+              <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-ink)">
                 {cardTitle(card)}
               </span>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-surface-elevated) px-2 text-xs text-(--color-text-muted)">
+              <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-line) px-2 text-xs text-(--color-aside)">
                 {BUCKET_LABELS[card.bucket]}
               </span>
-              <span className="shrink-0 text-sm font-medium text-(--color-text)">
+              <span className="shrink-0 text-sm font-medium text-(--color-ink)">
                 {formatMastery(card.mastery)}
               </span>
-              <span className="shrink-0 text-sm font-medium text-(--color-text)">
+              <span className="shrink-0 text-sm font-medium text-(--color-ink)">
                 {formatDelta(card.delta)}
               </span>
               <ChevronRight
                 aria-hidden="true"
-                className="h-4 w-4 shrink-0 text-(--color-text-muted)"
+                className="h-4 w-4 shrink-0 text-(--color-aside)"
               />
             </button>
           </li>
@@ -145,14 +145,14 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
       >
         {selectedCard && (
           <>
-            <h2 id={titleId} className="text-base font-semibold text-(--color-text)">
+            <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
               {cardTitle(selectedCard)}
             </h2>
             <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto">
               {selectedCard.attempts.map((attempt, index) => (
                 <div key={attempt.practice_card_id} className="flex flex-col gap-3">
                   {selectedCard.attempts.length > 1 && (
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
                       Attempt {index + 1} of {selectedCard.attempts.length} ·{' '}
                       {attempt.status === 'passed' ? 'Passed' : 'Failed'}
                     </h3>
@@ -180,7 +180,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                 </div>
               ))}
               <div className="flex flex-col gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
                   Fields
                 </h3>
                 <ul className="flex flex-col gap-2">
@@ -203,11 +203,11 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
 function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
   return (
     <li className="flex items-center justify-between gap-3">
-      <span className="min-w-0 flex-1 truncate text-sm text-(--color-text)">{field.name}</span>
-      <span className="shrink-0 text-sm font-medium text-(--color-text)">
+      <span className="min-w-0 flex-1 truncate text-sm text-(--color-ink)">{field.name}</span>
+      <span className="shrink-0 text-sm font-medium text-(--color-ink)">
         {formatMastery(field.mastery)}
       </span>
-      <span className="shrink-0 text-sm font-medium text-(--color-text)">
+      <span className="shrink-0 text-sm font-medium text-(--color-ink)">
         {formatDelta(field.delta)}
       </span>
     </li>
@@ -222,7 +222,7 @@ function RatingBadge({ rating }: { rating: number | null }) {
   const tier = RATING_TIERS.find((t) => t.rating === rating);
   if (!tier) {
     return (
-      <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-(--color-text-muted) px-2 text-xs text-(--color-text-muted)">
+      <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-(--color-aside) px-2 text-xs text-(--color-aside)">
         Unrated
       </span>
     );

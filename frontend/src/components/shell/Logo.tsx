@@ -15,14 +15,14 @@ export default function Logo({ className }: LogoProps) {
         aria-hidden="true"
         className="rounded-lg"
       >
-        <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
+        <rect width="32" height="32" rx="8" fill="var(--color-ink)" />
         <text
           x="16"
           y="22"
           textAnchor="middle"
           fontSize="18"
           fontWeight="700"
-          fill="var(--color-primary-contrast)"
+          fill="var(--color-surface)"
         >
           F
         </text>

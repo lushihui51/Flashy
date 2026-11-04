@@ -22,7 +22,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         className="flex min-h-16 min-w-0 flex-1 flex-col justify-center gap-1 py-2"
       >
         <span className="flex items-center gap-2">
-          <span className="truncate text-[15px] leading-5 text-(--color-text)">{session.name}</span>
+          <span className="truncate text-[15px] leading-5 text-(--color-ink)">{session.name}</span>
           <PracticeStatusBadge status={session.status} />
         </span>
 
@@ -35,7 +35,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         type="button"
         aria-label={`Delete ${session.name}`}
         onClick={onDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+        className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
       >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
       </button>

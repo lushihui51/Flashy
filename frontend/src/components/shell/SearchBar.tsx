@@ -19,7 +19,7 @@ export default function SearchBar({ placeholder = 'Search' }: SearchBarProps) {
     <div className="relative flex w-full items-center">
       <Search
         aria-hidden="true"
-        className="pointer-events-none absolute left-3 h-4 w-4 text-(--color-text-muted)"
+        className="pointer-events-none absolute left-3 h-4 w-4 text-(--color-aside)"
       />
       <input
         type="search"
@@ -28,7 +28,7 @@ export default function SearchBar({ placeholder = 'Search' }: SearchBarProps) {
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-11 w-full rounded-full bg-(--color-surface-elevated) pl-10 pr-4 text-(--color-text) placeholder:text-(--color-text-muted) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
+        className="h-11 w-full rounded-full bg-(--color-ground) pl-10 pr-4 text-(--color-ink) placeholder:text-(--color-aside) focus:outline-none focus:ring-2 focus:ring-(--color-ink)"
       />
     </div>
   );

@@ -41,7 +41,7 @@ export default function SubjectIconPicker({
               aria-label={name}
               aria-pressed={pressed}
               onClick={() => onChange(key)}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg text-(--color-text) ${pressed ? 'ring-2 ring-(--color-primary)' : ''}`}
+              className={`flex h-11 w-11 items-center justify-center rounded-lg text-(--color-ink) ${pressed ? 'ring-2 ring-(--color-ink)' : ''}`}
             >
               <SubjectIcon icon={key} className="h-6 w-6" />
             </button>

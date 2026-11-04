@@ -7,8 +7,7 @@ type ConfirmDialogProps = {
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
-  /** Renders the confirm button in the danger palette — for actions that delete or
-   * otherwise cannot be undone. */
+  /** Accepted from callers and ignored: every confirm's button is drawn alike. */
   destructive?: boolean;
   /** Renders below the description — for a caller that wants the failed mutation's
    * error inline in the dialog instead of closing it and showing the error elsewhere
@@ -34,7 +33,6 @@ export default function ConfirmDialog({
   description,
   confirmLabel,
   cancelLabel = 'Cancel',
-  destructive,
   children,
   onConfirm,
   onCancel,
@@ -49,16 +47,16 @@ export default function ConfirmDialog({
       <Dialog.Portal>
         <Dialog.Overlay
           data-testid="confirm-scrim"
-          className="fixed inset-0 z-70 bg-(--color-scrim)"
+          className="fixed inset-0 z-70 bg-(--color-ink)/50"
         />
         <Dialog.Content
           aria-describedby={undefined}
           className="fixed inset-x-4 top-1/2 z-80 -translate-y-1/2 rounded-2xl bg-(--color-surface) p-4 focus:outline-none"
         >
-          <Dialog.Title className="text-base font-semibold text-(--color-text)">
+          <Dialog.Title className="text-base font-semibold text-(--color-ink)">
             {title}
           </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-(--color-text-secondary)">
+          <Dialog.Description className="mt-1 text-sm text-(--color-ink)">
             {description}
           </Dialog.Description>
           {children}
@@ -66,18 +64,14 @@ export default function ConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="h-11 flex-1 rounded-full bg-(--color-surface-elevated) text-sm font-semibold text-(--color-text)"
+              className="h-11 flex-1 rounded-full bg-(--color-ground) text-sm font-semibold text-(--color-ink)"
             >
               {cancelLabel}
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className={`h-11 flex-1 rounded-full text-sm font-semibold ${
-                destructive
-                  ? 'bg-(--color-danger) text-(--color-danger-contrast)'
-                  : 'bg-(--color-primary) text-(--color-primary-contrast)'
-              }`}
+              className="h-11 flex-1 rounded-full bg-(--color-ink) text-sm font-semibold text-(--color-surface)"
             >
               {confirmLabel}
             </button>

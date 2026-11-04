@@ -24,7 +24,7 @@ export default function ConnectionBanner({
   return (
     <div
       role="status"
-      className="flex items-center gap-2 bg-(--color-warning) px-3 py-2 text-sm text-(--color-text)"
+      className="flex items-center gap-2 bg-(--color-wrong) px-3 py-2 text-sm text-(--color-surface)"
     >
       <Icon aria-hidden className="h-4 w-4 shrink-0" />
       {text}

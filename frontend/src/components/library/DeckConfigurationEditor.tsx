@@ -89,9 +89,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     return (
       <div className="p-4">
         {isNotFound(configQuery.error) ? (
-          <p className="text-(--color-text-muted)">Deck configuration not found.</p>
+          <p className="text-(--color-aside)">Deck configuration not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-danger)">
+          <p role="alert" className="text-sm text-(--color-wrong)">
             Could not load this deck configuration.
           </p>
         )}
@@ -244,11 +244,11 @@ function DeckConfigurationEditorBody({
           onClick={() =>
             navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-sm font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-base font-semibold text-(--color-ink)">
           {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
         </h1>
         <button
@@ -259,7 +259,7 @@ function DeckConfigurationEditorBody({
             setSaveError(null);
             saveMutation.mutate();
           }}
-          className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
+          className="bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-40"
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>
@@ -269,9 +269,9 @@ function DeckConfigurationEditorBody({
         {/* Label and control are siblings, not a wrapping <label>: the inline error below
             would otherwise become part of the field's own accessible name. */}
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Deck</span>
+          <span className="text-sm font-medium text-(--color-ink)">Deck</span>
           {mode === 'edit' ? (
-            <span className="inline-flex h-11 items-center rounded-lg bg-(--color-surface-elevated) px-3 text-sm text-(--color-text)">
+            <span className="inline-flex h-11 items-center rounded-lg bg-(--color-ground) px-3 text-sm text-(--color-ink)">
               {selectedDeck
                 ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
                 : (deck?.name ?? '')}
@@ -294,7 +294,7 @@ function DeckConfigurationEditorBody({
               createLabel="New deck…"
               placeholder="Deck"
               renderLeading={(item) => (
-                <span className="shrink-0 text-xs text-(--color-text-muted)">
+                <span className="shrink-0 text-xs text-(--color-aside)">
                   {item.subject_name}
                 </span>
               )}
@@ -304,7 +304,7 @@ function DeckConfigurationEditorBody({
 
         {deckId && (
           <div className="flex flex-col gap-1">
-            <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+            <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-ink)">
               Name
             </label>
             <input
@@ -317,13 +317,13 @@ function DeckConfigurationEditorBody({
               }}
               aria-invalid={nameError !== null}
               aria-describedby={nameError ? `${nameInputId}-error` : undefined}
-              className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+              className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
             />
             {nameError && (
               <span
                 id={`${nameInputId}-error`}
                 role="alert"
-                className="text-sm text-(--color-danger)"
+                className="text-sm text-(--color-wrong)"
               >
                 {nameError}
               </span>
@@ -332,7 +332,7 @@ function DeckConfigurationEditorBody({
         )}
       </div>
 
-      {deckId && !deck && <p className="mt-4 text-(--color-text-muted)">Loading fields…</p>}
+      {deckId && !deck && <p className="mt-4 text-(--color-aside)">Loading fields…</p>}
 
       {deck && board && (
         <div className="mt-4">
@@ -350,7 +350,7 @@ function DeckConfigurationEditorBody({
       )}
 
       {deck && board && (validationError || nameMissing) && (
-        <p className="mt-3 text-sm text-(--color-text-muted)">
+        <p className="mt-3 text-sm text-(--color-aside)">
           {validationError ??
             (mode === 'edit'
               ? 'Give this configuration a name to save it.'
@@ -359,7 +359,7 @@ function DeckConfigurationEditorBody({
       )}
 
       {saveError && (
-        <p role="alert" className="mt-3 text-sm text-(--color-danger)">
+        <p role="alert" className="mt-3 text-sm text-(--color-wrong)">
           {saveError}
         </p>
       )}

@@ -11,7 +11,7 @@ type SessionDeckChipsProps = {
 };
 
 const CHIP_CLASS =
-  'rounded-full bg-(--color-surface-elevated) px-2 py-0.5 text-[11px] text-(--color-text-secondary)';
+  'rounded-full bg-(--color-ground) px-2 py-0.5 text-[11px] text-(--color-aside)';
 
 /**
  * The chips naming what a practice ran, one per deck in the server's subject → deck

@@ -32,15 +32,15 @@ export default function ListRow({ leading, title, subtitle, meta, to, onClick }:
     <>
       {leading && <span className="shrink-0">{leading}</span>}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] leading-5 text-(--color-text)">{title}</span>
+        <span className="block truncate text-[15px] leading-5 text-(--color-ink)">{title}</span>
         {subtitle && (
-          <span className="block truncate text-[13px] leading-4 text-(--color-text-secondary)">
+          <span className="block truncate text-[13px] leading-4 text-(--color-aside)">
             {subtitle}
           </span>
         )}
       </span>
-      {meta && <span className="shrink-0 text-[13px] text-(--color-text-muted)">{meta}</span>}
-      <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-(--color-text-muted)" />
+      {meta && <span className="shrink-0 text-[13px] text-(--color-aside)">{meta}</span>}
+      <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-(--color-aside)" />
     </>
   );
 

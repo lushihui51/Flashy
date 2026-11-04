@@ -74,9 +74,9 @@ export default function DeckDetailPage() {
     return (
       <div className="p-4">
         {isNotFound(deckQuery.error) ? (
-          <p className="text-(--color-text-muted)">Deck not found.</p>
+          <p className="text-(--color-aside)">Deck not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-danger)">
+          <p role="alert" className="text-sm text-(--color-wrong)">
             Could not load this deck.
           </p>
         )}
@@ -120,7 +120,7 @@ export default function DeckDetailPage() {
         ]}
       />
 
-      <h1 className="mt-1 text-[22px] font-medium text-(--color-text)">{deck.name}</h1>
+      <h1 className="mt-1 text-[22px] font-medium text-(--color-ink)">{deck.name}</h1>
 
       <div className="mt-3 flex items-center gap-2">
         <button
@@ -128,7 +128,7 @@ export default function DeckDetailPage() {
           // Both params, not just the deck: two decks in different subjects can share a
           // name, so the subject is what makes the filtered list unambiguous on arrival.
           onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
-          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
+          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink)"
         >
           <Play aria-hidden="true" className="h-4 w-4" />
           Practice
@@ -139,8 +139,8 @@ export default function DeckDetailPage() {
           onClick={() => navigate(`/decks/${deck.id}/edit`)}
           className="flex h-11 w-11 shrink-0 items-center justify-center"
         >
-          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-text-muted)">
-            <Pencil aria-hidden="true" className="h-4 w-4 text-(--color-text)" />
+          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-aside)">
+            <Pencil aria-hidden="true" className="h-4 w-4 text-(--color-ink)" />
           </span>
         </button>
       </div>
@@ -150,7 +150,7 @@ export default function DeckDetailPage() {
       <div
         role="tablist"
         aria-label="Deck contents"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
+        className="mt-4 flex gap-4 border-b border-(--color-line)"
       >
         {TABS.map((t) => (
           <button
@@ -161,8 +161,8 @@ export default function DeckDetailPage() {
             onClick={() => setTab(t)}
             className={`h-11 border-b-2 px-1 text-sm font-medium ${
               tab === t
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
+                ? 'border-(--color-ink) text-(--color-ink)'
+                : 'border-transparent text-(--color-aside)'
             }`}
           >
             {t === 'cards' ? 'Cards' : 'Configurations'}
@@ -181,7 +181,7 @@ export default function DeckDetailPage() {
           {/* Inside the tab, and labeled: a control whose meaning depends on which tab
               is open has no business sitting in the page header. */}
           <div className="flex items-center justify-between py-2">
-            <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+            <h2 className="text-[12px] font-medium text-(--color-aside)">
               {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
             </h2>
             <AddButton label="Add card" onClick={addCard} />
@@ -196,14 +196,14 @@ export default function DeckDetailPage() {
           )}
           {deck.cards.length === 0 && (
             <div className="px-3 py-8">
-              <p className="text-(--color-text-muted)">No cards in this deck yet.</p>
+              <p className="text-(--color-aside)">No cards in this deck yet.</p>
             </div>
           )}
         </div>
       ) : (
         <section aria-label="Configurations" className="mt-2">
           <div className="flex items-center justify-between py-2">
-            <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+            <h2 className="text-[12px] font-medium text-(--color-aside)">
               {configurationsQuery.data
                 ? pluralize(configurations.length, 'configuration')
                 : 'Configurations'}
@@ -212,17 +212,17 @@ export default function DeckDetailPage() {
           </div>
 
           {configurationsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load configurations.
             </p>
           )}
 
           {configurationsQuery.data && configurations.length === 0 ? (
             <div className="py-8">
-              <p className="text-(--color-text-muted)">No configurations yet.</p>
+              <p className="text-(--color-aside)">No configurations yet.</p>
             </div>
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul className="flex flex-col divide-y divide-(--color-line)">
               {configurations.map((configuration) => (
                 <li key={configuration.id}>
                   <DeckConfigurationRow
@@ -255,7 +255,7 @@ export default function DeckDetailPage() {
       >
         {/* In the dialog, since the scrim covers the page while it stays open. */}
         {deleteError && (
-          <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+          <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
             {deleteError}
           </p>
         )}

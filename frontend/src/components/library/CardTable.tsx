@@ -48,7 +48,7 @@ export default function CardTable({ deckName, fieldDefs, cards, cardHref }: Card
                 <th
                   key={fieldDef.id}
                   scope="col"
-                  className={`min-w-[120px] border-b border-(--color-surface-elevated) px-3 py-2 text-left text-[12px] font-normal text-(--color-text-muted) ${
+                  className={`min-w-[120px] border-b border-(--color-line) px-3 py-2 text-left text-[12px] font-normal text-(--color-aside) ${
                     i === 0 ? 'sticky left-0 z-10 bg-(--color-surface)' : ''
                   }`}
                 >
@@ -62,19 +62,19 @@ export default function CardTable({ deckName, fieldDefs, cards, cardHref }: Card
               <tr
                 key={card.id}
                 onClick={() => navigate(cardHref(card.id))}
-                className="cursor-pointer hover:bg-(--color-surface-elevated) active:bg-(--color-surface-elevated)"
+                className="cursor-pointer hover:bg-(--color-ground) active:bg-(--color-ground)"
               >
                 {fieldDefs.map((fieldDef, i) => {
                   const value = card.values[fieldDef.id] ?? '';
                   const content = value === '' ? (
-                    <span className="italic text-(--color-text-muted)">empty</span>
+                    <span className="italic text-(--color-aside)">empty</span>
                   ) : (
                     value
                   );
                   return (
                     <td
                       key={fieldDef.id}
-                      className={`min-w-[120px] border-b border-(--color-surface-elevated) px-3 py-2 text-(--color-text) ${
+                      className={`min-w-[120px] border-b border-(--color-line) px-3 py-2 text-(--color-ink) ${
                         i === 0 ? 'sticky left-0 z-10 bg-(--color-surface)' : ''
                       }`}
                     >

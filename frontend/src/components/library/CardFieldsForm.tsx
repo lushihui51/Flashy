@@ -26,16 +26,16 @@ export default function CardFieldsForm({ fieldDefs, values, onChange }: CardFiel
         const supported = isSupportedFieldType(field.type);
         return (
           <label key={field.key} className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-(--color-text)">{field.name}</span>
+            <span className="text-sm font-medium text-(--color-ink)">{field.name}</span>
             <input
               type="text"
               value={values[field.key] ?? ''}
               onChange={(e) => onChange(field.key, e.target.value)}
               readOnly={!supported}
-              className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text) read-only:bg-(--color-surface-elevated) read-only:text-(--color-text-muted)"
+              className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink) read-only:bg-(--color-ground) read-only:text-(--color-aside)"
             />
             {!supported && (
-              <span className="text-sm text-(--color-text-muted)">
+              <span className="text-sm text-(--color-aside)">
                 Unsupported field type
               </span>
             )}

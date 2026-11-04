@@ -39,7 +39,7 @@ export default function BottomSheet({
       <Dialog.Portal>
         <Dialog.Overlay
           data-testid="scrim"
-          className={`fixed inset-0 ${aboveDialogs ? 'z-70' : 'z-20'} bg-(--color-scrim)`}
+          className={`fixed inset-0 ${aboveDialogs ? 'z-70' : 'z-20'} bg-(--color-ink)/50`}
         />
         <Dialog.Content
           id={id}
@@ -54,7 +54,7 @@ export default function BottomSheet({
         >
           <div
             aria-hidden="true"
-            className="mx-auto h-1.5 w-10 rounded-full bg-(--color-surface-elevated)"
+            className="mx-auto h-1.5 w-10 rounded-full bg-(--color-line)"
           />
           {children}
         </Dialog.Content>

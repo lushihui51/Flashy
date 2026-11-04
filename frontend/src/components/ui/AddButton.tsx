@@ -13,7 +13,7 @@ export default function AddButton({ label, onClick }: AddButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 shrink-0 items-center gap-1 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
+      className="flex h-9 shrink-0 items-center gap-1 rounded-full bg-(--color-ink) px-3 text-sm font-semibold text-(--color-surface)"
     >
       <Plus aria-hidden="true" className="h-4 w-4" />
       {label}

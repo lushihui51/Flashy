@@ -37,8 +37,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             onClick={() => go('/subjects/new')}
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
-            <Folder aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">New subject</span>
+            <Folder aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
+            <span className="font-medium text-(--color-ink)">New subject</span>
           </button>
         </li>
         <li>
@@ -47,8 +47,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             onClick={() => go('/decks/new')}
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
-            <Layers aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">New deck</span>
+            <Layers aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
+            <span className="font-medium text-(--color-ink)">New deck</span>
           </button>
         </li>
         <li>
@@ -57,11 +57,11 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             onClick={() => go(hasDecks === false ? '/decks/new' : '/cards/new')}
             className="flex min-h-14 w-full items-center gap-3 rounded-xl px-2 py-2 text-left"
           >
-            <CreditCard aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
+            <CreditCard aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="flex flex-col">
-              <span className="font-medium text-(--color-text)">New card</span>
+              <span className="font-medium text-(--color-ink)">New card</span>
               {hasDecks === false && (
-                <span className="text-sm text-(--color-text-muted)">Create a deck first</span>
+                <span className="text-sm text-(--color-aside)">Create a deck first</span>
               )}
             </span>
           </button>
@@ -74,8 +74,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             onClick={() => go('/practice/new')}
             className="flex h-14 w-full items-center gap-3 rounded-xl px-2 text-left"
           >
-            <Zap aria-hidden="true" className="h-5 w-5 text-(--color-text-muted)" />
-            <span className="font-medium text-(--color-text)">New practice</span>
+            <Zap aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
+            <span className="font-medium text-(--color-ink)">New practice</span>
           </button>
         </li>
       </ul>

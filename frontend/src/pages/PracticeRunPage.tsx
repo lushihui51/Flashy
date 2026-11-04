@@ -46,9 +46,9 @@ export default function PracticeRunPage() {
 
       {runQuery.isError &&
         (isNotFound(runQuery.error) ? (
-          <p className="mt-4 text-(--color-text-muted)">Practice not found.</p>
+          <p className="mt-4 text-(--color-aside)">Practice not found.</p>
         ) : (
-          <p role="alert" className="mt-4 text-sm text-(--color-danger)">
+          <p role="alert" className="mt-4 text-sm text-(--color-wrong)">
             Could not load this practice.
           </p>
         ))}
@@ -96,10 +96,10 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-(--color-text)">Practice complete</h2>
+      <h2 className="text-lg font-semibold text-(--color-ink)">Practice complete</h2>
 
       {breakdownQuery.isError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {failureSentence(breakdownQuery.error, 'Practice not found.')}
         </p>
       )}
@@ -107,7 +107,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
       <Link
         to={`/practice/${practiceSessionId}`}
-        className="flex h-11 items-center justify-center rounded-full bg-(--color-primary) px-6 text-sm font-semibold text-(--color-primary-contrast)"
+        className="flex h-11 items-center justify-center rounded-full bg-(--color-main-action) px-6 text-sm font-semibold text-(--color-ink)"
       >
         Done
       </Link>
@@ -137,14 +137,14 @@ function PracticeCardView({
   return (
     <div className="mt-4 flex flex-col gap-4">
       {currentCard.attempt > 1 && (
-        <span className="w-fit rounded-full bg-(--color-warning) px-3 py-1 text-xs font-semibold text-(--color-text)">
+        <span className="w-fit rounded-full bg-(--color-aside) px-3 py-1 text-xs font-semibold text-(--color-surface)">
           Retry
         </span>
       )}
 
       <div className="flex flex-col gap-4 landscape:flex-row">
         <section className="space-y-3 rounded-2xl bg-(--color-surface) p-5 shadow-lg landscape:flex-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
             Prompt
           </h2>
           {currentCard.prompts.map((field) => (
@@ -154,10 +154,10 @@ function PracticeCardView({
 
         <section
           className={`space-y-3 rounded-2xl bg-(--color-surface) p-5 landscape:flex-1 ${
-            showAnswer ? 'shadow-lg' : 'border-2 border-dashed border-(--color-text-muted)'
+            showAnswer ? 'shadow-lg' : 'border-2 border-dashed border-(--color-aside)'
           }`}
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
             Answer
           </h2>
           {currentCard.answers.map((field) =>
@@ -187,12 +187,12 @@ function PracticeCardView({
             type="button"
             disabled={!allRated || rateMutation.isPending}
             onClick={() => rateMutation.mutate()}
-            className="h-11 w-full shrink-0 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
+            className="h-11 w-full shrink-0 rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-60"
           >
             Next card
           </button>
           {rateMutation.isError && (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               {failureSentence(rateMutation.error, 'Practice not found.')}
             </p>
           )}
@@ -201,7 +201,7 @@ function PracticeCardView({
         <button
           type="button"
           onClick={() => setShowAnswer(true)}
-          className="h-11 w-full shrink-0 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
+          className="h-11 w-full shrink-0 rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink)"
         >
           Show answer
         </button>

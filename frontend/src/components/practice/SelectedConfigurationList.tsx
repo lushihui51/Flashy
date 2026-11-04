@@ -20,12 +20,12 @@ export default function SelectedConfigurationList({
   onRemove,
 }: SelectedConfigurationListProps) {
   return (
-    <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+    <ul className="flex flex-col divide-y divide-(--color-line)">
       {configs.map((config) => (
         <li key={config.id} className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-col py-2">
-            <span className="truncate text-[15px] text-(--color-text)">{config.name}</span>
-            <span className="truncate text-[11px] text-(--color-text-muted)">
+            <span className="truncate text-[15px] text-(--color-ink)">{config.name}</span>
+            <span className="truncate text-[11px] text-(--color-aside)">
               {config.subject_name} · {config.deck_name}
             </span>
           </div>
@@ -33,7 +33,7 @@ export default function SelectedConfigurationList({
             type="button"
             aria-label={`Remove ${config.name}`}
             onClick={() => onRemove(config.id)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>

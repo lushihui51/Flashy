@@ -70,7 +70,7 @@ export default function FieldAssignmentBoard({
         triggerRef.current = event.currentTarget;
         setActiveFieldId(fieldId);
       }}
-      className="min-h-9 truncate rounded-full bg-(--color-surface-elevated) px-3 py-1.5 text-sm text-(--color-text)"
+      className="min-h-9 truncate rounded-full bg-(--color-ground) px-3 py-1.5 text-sm text-(--color-ink)"
     >
       {nameById.get(fieldId) ?? fieldId}
     </button>
@@ -83,7 +83,7 @@ export default function FieldAssignmentBoard({
         {ids.length > 0 ? (
           ids.map(chipButton)
         ) : (
-          <span className="text-sm text-(--color-text-muted)">{emptyText}</span>
+          <span className="text-sm text-(--color-aside)">{emptyText}</span>
         )}
       </div>
     );
@@ -93,7 +93,7 @@ export default function FieldAssignmentBoard({
     const size = fieldsIn(state, slot).length;
     if (size === 0) return null;
     return (
-      <fieldset className="flex flex-wrap items-center gap-2 text-sm text-(--color-text)">
+      <fieldset className="flex flex-wrap items-center gap-2 text-sm text-(--color-ink)">
         <legend className="sr-only">{RANDOM_DRAW_LEGEND[slot]}</legend>
         <span>Each card shows</span>
         {Array.from({ length: size }, (_, i) => i + 1).map((count) => (
@@ -117,17 +117,17 @@ export default function FieldAssignmentBoard({
     return (
       <div
         key={side}
-        className="flex flex-col gap-3 rounded-lg border border-(--color-surface-elevated) p-3"
+        className="flex flex-col gap-3 rounded-lg border border-(--color-line) p-3"
       >
-        <h2 className="text-sm font-medium text-(--color-text)">
+        <h2 className="text-sm font-medium text-(--color-ink)">
           {side === 'prompt' ? 'Prompt side' : 'Answer side'}
         </h2>
         <section aria-label={SLOT_LABELS[alwaysSlot]} className="flex flex-col gap-1">
-          <h3 className="text-sm text-(--color-text-muted)">Always shown</h3>
+          <h3 className="text-sm text-(--color-aside)">Always shown</h3>
           {area(alwaysSlot, 'None yet.')}
         </section>
         <section aria-label={SLOT_LABELS[randomSlot]} className="flex flex-col gap-1">
-          <h3 className="text-sm text-(--color-text-muted)">Random draw</h3>
+          <h3 className="text-sm text-(--color-aside)">Random draw</h3>
           {area(randomSlot, 'None yet.')}
           {frequencyRow(randomSlot)}
         </section>
@@ -141,7 +141,7 @@ export default function FieldAssignmentBoard({
   return (
     <div className="flex flex-col gap-4">
       <section aria-label={SLOT_LABELS.unassigned} className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium text-(--color-text-muted)">{SLOT_LABELS.unassigned}</h2>
+        <h2 className="text-sm font-medium text-(--color-aside)">{SLOT_LABELS.unassigned}</h2>
         {area('unassigned', 'Every field is assigned.')}
       </section>
 
@@ -154,7 +154,7 @@ export default function FieldAssignmentBoard({
         triggerRef={triggerRef}
         ariaLabelledBy={titleId}
       >
-        <h2 id={titleId} className="text-base font-semibold text-(--color-text)">
+        <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
           Move "{activeName}" to…
         </h2>
         <ul className="flex flex-col">
@@ -166,7 +166,7 @@ export default function FieldAssignmentBoard({
                   if (activeFieldId) onMove(activeFieldId, destination);
                   closeSheet();
                 }}
-                className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-text)"
+                className="flex min-h-14 w-full items-center rounded-xl px-2 text-left font-medium text-(--color-ink)"
               >
                 {SLOT_LABELS[destination]}
               </button>

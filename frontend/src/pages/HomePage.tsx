@@ -4,8 +4,8 @@ export default function HomePage() {
   usePageTitle('Home');
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold text-(--color-text)">Home</h1>
-      <p className="text-(--color-text-muted)">Coming soon.</p>
+      <h1 className="text-xl font-semibold text-(--color-ink)">Home</h1>
+      <p className="text-(--color-aside)">Coming soon.</p>
     </div>
   );
 }

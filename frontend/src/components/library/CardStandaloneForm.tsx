@@ -35,9 +35,9 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
       return (
         <div className="p-4">
           {isNotFound(cardQuery.error) ? (
-            <p className="text-(--color-text-muted)">Card not found.</p>
+            <p className="text-(--color-aside)">Card not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               Could not load this card.
             </p>
           )}
@@ -221,18 +221,18 @@ function CardStandaloneFormBody({
         <button
           type="button"
           onClick={handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-sm font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-base font-semibold text-(--color-ink)">
           {mode === 'create' ? 'New card' : 'Edit card'}
         </h1>
         <span aria-hidden="true" className="w-[42px]" />
       </div>
 
       {formError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {formError}
         </p>
       )}
@@ -262,7 +262,7 @@ function CardStandaloneFormBody({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
+          className="h-12 w-full rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-60"
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
@@ -272,7 +272,7 @@ function CardStandaloneFormBody({
         <button
           type="button"
           onClick={() => setConfirmDeleteOpen(true)}
-          className="h-11 text-sm font-semibold text-(--color-danger)"
+          className="h-11 text-sm font-semibold text-(--color-ink)"
         >
           Delete card
         </button>

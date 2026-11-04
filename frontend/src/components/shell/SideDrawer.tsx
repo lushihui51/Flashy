@@ -24,7 +24,7 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay data-testid="scrim" className="fixed inset-0 z-20 bg-(--color-scrim)" />
+        <Dialog.Overlay data-testid="scrim" className="fixed inset-0 z-20 bg-(--color-ink)/50" />
         <Dialog.Content
           id="side-drawer"
           aria-label="Main menu"
@@ -54,8 +54,8 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
                     className={({ isActive }) =>
                       `flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium ${
                         isActive
-                          ? 'bg-(--color-primary) text-(--color-primary-contrast)'
-                          : 'text-(--color-text)'
+                          ? 'bg-(--color-ink) text-(--color-surface)'
+                          : 'text-(--color-ink)'
                       }`
                     }
                   >

@@ -93,11 +93,11 @@ export default function PracticeOverviewPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-(--color-text)">Practice</h1>
+        <h1 className="text-xl font-semibold text-(--color-ink)">Practice</h1>
         <button
           type="button"
           onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
-          className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
+          className="h-9 shrink-0 rounded-full bg-(--color-ink) px-3 text-sm font-semibold text-(--color-surface)"
         >
           Add practice
         </button>
@@ -116,7 +116,7 @@ export default function PracticeOverviewPage() {
       <div
         role="tablist"
         aria-label="Practice status"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
+        className="mt-4 flex gap-4 border-b border-(--color-line)"
       >
         {STATUS_TABS.map((tab) => (
           <button
@@ -127,8 +127,8 @@ export default function PracticeOverviewPage() {
             onClick={() => setStatusTab(tab)}
             className={`h-11 border-b-2 px-1 text-sm font-medium ${
               statusTab === tab
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
+                ? 'border-(--color-ink) text-(--color-ink)'
+                : 'border-transparent text-(--color-aside)'
             }`}
           >
             {TAB_LABELS[tab]}
@@ -137,14 +137,14 @@ export default function PracticeOverviewPage() {
       </div>
 
       {sessionsQuery.isError && (
-        <p role="alert" className="mt-4 text-sm text-(--color-danger)">
+        <p role="alert" className="mt-4 text-sm text-(--color-wrong)">
           Could not load practices.
         </p>
       )}
 
       {sessionsQuery.data && sessions.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-8">
-          <p className="text-(--color-text-muted)">
+          <p className="text-(--color-aside)">
             {filtered ? 'No practices match these filters.' : 'No practices yet.'}
           </p>
           {/* No Add practice button here — the header's is always on screen. */}
@@ -152,14 +152,14 @@ export default function PracticeOverviewPage() {
             <button
               type="button"
               onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
-              className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
+              className="h-9 rounded-full border border-(--color-aside) px-3 text-sm font-medium text-(--color-ink)"
             >
               Clear filters
             </button>
           )}
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+        <ul className="flex flex-col divide-y divide-(--color-line)">
           {sessions.map((session) => (
             <li key={session.id}>
               <PracticeRunRow session={session} onDelete={() => setPendingDelete(session)} />
@@ -187,7 +187,7 @@ export default function PracticeOverviewPage() {
         }}
       >
         {deleteError && (
-          <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+          <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
             {deleteError}
           </p>
         )}

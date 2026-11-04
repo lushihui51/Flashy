@@ -8,8 +8,8 @@ type RatingChipProps = {
   onSelect: (rating: number) => void;
 };
 
-/** One answer field's rating control: an outlined "Rate" chip until rated, then filled
- * with its tier's color and label — tapping either opens a non-blocking Popover of the
+/** One answer field's rating control: a grey-outlined "Rate" chip until rated, then
+ * drawn in its tier's colours with its label — tapping either opens a non-blocking Popover of the
  * four options so rating several fields in a row never blocks on a modal. Each chip
  * owns its own open state; Radix dismisses a Popover on an outside interaction by
  * default, so tapping a different chip closes this one without any shared
@@ -27,7 +27,7 @@ export default function RatingChip({ fieldName, rating, onSelect }: RatingChipPr
           className={
             tier
               ? `inline-flex h-9 shrink-0 items-center rounded-full px-3 text-sm font-medium ${tier.chipClass}`
-              : 'inline-flex h-9 shrink-0 items-center rounded-full border border-(--color-text-muted) px-3 text-sm text-(--color-text-muted)'
+              : 'inline-flex h-9 shrink-0 items-center rounded-full border border-(--color-aside) px-3 text-sm text-(--color-aside)'
           }
         >
           {tier ? tier.label : 'Rate'}

@@ -30,17 +30,17 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
         {user?.imageUrl ? (
           <img src={user.imageUrl} alt={name} className="h-14 w-14 rounded-full object-cover" />
         ) : (
-          <div aria-hidden="true" className="h-14 w-14 rounded-full bg-(--color-primary)" />
+          <div aria-hidden="true" className="h-14 w-14 rounded-full bg-(--color-ink)" />
         )}
         <div>
-          <p id={nameId} className="font-semibold text-(--color-text)">
+          <p id={nameId} className="font-semibold text-(--color-ink)">
             {name}
           </p>
-          <p className="text-sm text-(--color-text-muted)">{email}</p>
+          <p className="text-sm text-(--color-aside)">{email}</p>
         </div>
       </div>
 
-      <hr className="border-(--color-surface-elevated)" />
+      <hr className="border-(--color-line)" />
 
       {/* Only row for now — Achievements/Settings/Light mode/Privacy/Help
           are explicitly out of scope for this phase; add rows here later
@@ -49,7 +49,7 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
       <button
         type="button"
         onClick={handleLogOut}
-        className="h-11 rounded-full bg-(--color-surface-elevated) text-sm font-semibold text-(--color-text)"
+        className="h-11 rounded-full bg-(--color-ground) text-sm font-semibold text-(--color-ink)"
       >
         Log out
       </button>

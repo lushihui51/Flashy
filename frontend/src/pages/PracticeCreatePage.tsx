@@ -252,20 +252,20 @@ export default function PracticeCreatePage() {
         <button
           type="button"
           onClick={cancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-sm font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">New practice</h1>
+        <h1 className="text-base font-semibold text-(--color-ink)">New practice</h1>
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
-            <span className="text-sm text-(--color-text-muted)">{selectedCount} selected</span>
+            <span className="text-sm text-(--color-aside)">{selectedCount} selected</span>
           )}
           <button
             type="button"
             disabled={!canCreate}
             onClick={submit}
-            className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
+            className="bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-40"
           >
             Create
           </button>
@@ -273,7 +273,7 @@ export default function PracticeCreatePage() {
       </div>
 
       <div className="mt-3 flex flex-col gap-1">
-        <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+        <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-ink)">
           Name
         </label>
         <input
@@ -281,25 +281,25 @@ export default function PracticeCreatePage() {
           type="text"
           value={name}
           onChange={(event) => changeName(event.target.value)}
-          className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+          className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
         />
         {nameMissing && (
-          <p className="text-sm text-(--color-text-muted)">
+          <p className="text-sm text-(--color-aside)">
             Give this practice a name to create it.
           </p>
         )}
       </div>
 
       <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1">
-        <h2 id={selectedHeadingId} className="text-sm font-medium text-(--color-text)">
+        <h2 id={selectedHeadingId} className="text-sm font-medium text-(--color-ink)">
           Selected
         </h2>
         {selectedCount === 0 ? (
-          <p className="text-sm text-(--color-text-muted)">
+          <p className="text-sm text-(--color-aside)">
             Select at least one configuration to practice.
           </p>
         ) : allConfigsQuery.isError ? (
-          <p role="alert" className="text-sm text-(--color-danger)">
+          <p role="alert" className="text-sm text-(--color-wrong)">
             Could not load your selected configurations.
           </p>
         ) : (
@@ -322,26 +322,26 @@ export default function PracticeCreatePage() {
       </div>
 
       {configsQuery.isError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           Could not load configurations.
         </p>
       )}
 
       {topError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {topError}
         </p>
       )}
 
       {saveError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {saveError}
         </p>
       )}
 
       {configsQuery.data && groups.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-8">
-          <p className="text-(--color-text-muted)">
+          <p className="text-(--color-aside)">
             {filtered ? 'No configurations match these filters.' : 'No configurations yet.'}
           </p>
           {/* No New configuration… button here — the toolbar's is always on screen. */}
@@ -349,7 +349,7 @@ export default function PracticeCreatePage() {
             <button
               type="button"
               onClick={() => setFilters({ subjectId: null, deckId: null })}
-              className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
+              className="h-9 rounded-full border border-(--color-aside) px-3 text-sm font-medium text-(--color-ink)"
             >
               Clear filters
             </button>

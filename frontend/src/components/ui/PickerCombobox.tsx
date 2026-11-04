@@ -143,7 +143,7 @@ export default function PickerCombobox<T extends PickerItem>({
 
   if (locked) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-(--color-surface-elevated) px-3 py-2 text-sm text-(--color-text)">
+      <span className="inline-flex items-center gap-2 rounded-full bg-(--color-ground) px-3 py-2 text-sm text-(--color-ink)">
         {selected && renderLeading?.(selected)}
         {selected?.name ?? ''}
       </span>
@@ -158,10 +158,10 @@ export default function PickerCombobox<T extends PickerItem>({
         e.preventDefault();
         chooseIndex(actionIndex);
       }}
-      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm font-medium text-(--color-primary) ${
+      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm font-medium text-(--color-ink) ${
         filtering ? 'border-b' : 'border-t'
-      } border-(--color-surface-elevated) ${
-        highlighted === actionIndex ? 'bg-(--color-surface-elevated)' : ''
+      } border-(--color-line) ${
+        highlighted === actionIndex ? 'bg-(--color-ground)' : ''
       }`}
     >
       {filtering ? (
@@ -197,13 +197,13 @@ export default function PickerCombobox<T extends PickerItem>({
         onBlur={() => setOpen(false)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+        className="h-11 w-full rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
       />
       {open && (
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-10 mt-1 w-full rounded-lg border border-(--color-surface-elevated) bg-(--color-surface) py-1 shadow-lg"
+          className="absolute z-10 mt-1 w-full rounded-lg border border-(--color-line) bg-(--color-surface) py-1 shadow-lg"
         >
           {/* The action row: first when it clears a filter, last when it creates. Same
               markup either way, so both are one keyboard cycle and one click path. */}
@@ -223,7 +223,7 @@ export default function PickerCombobox<T extends PickerItem>({
                 chooseIndex(index + firstItemIndex);
               }}
               className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm ${
-                index + firstItemIndex === highlighted ? 'bg-(--color-surface-elevated)' : ''
+                index + firstItemIndex === highlighted ? 'bg-(--color-ground)' : ''
               }`}
             >
               {renderLeading?.(item)}
@@ -233,7 +233,7 @@ export default function PickerCombobox<T extends PickerItem>({
           {hasMore && (
             <li
               aria-hidden="true"
-              className="px-3 py-2 text-xs text-(--color-text-muted)"
+              className="px-3 py-2 text-xs text-(--color-aside)"
             >
               Showing {shown.length} of {matches.length} · type to narrow
             </li>

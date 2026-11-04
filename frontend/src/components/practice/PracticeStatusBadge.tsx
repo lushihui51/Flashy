@@ -15,8 +15,8 @@ export default function PracticeStatusBadge({ status }: PracticeStatusBadgeProps
     <span
       className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
         active
-          ? 'bg-(--color-primary) text-(--color-primary-contrast)'
-          : 'bg-(--color-surface-elevated) text-(--color-text-secondary)'
+          ? 'bg-(--color-ink) text-(--color-surface)'
+          : 'bg-(--color-ground) text-(--color-aside)'
       }`}
     >
       {active ? 'Active' : 'Completed'}

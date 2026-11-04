@@ -22,7 +22,7 @@ Judgement: On the live server at phone width, the engineer opens each screen bes
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -149,7 +149,30 @@ Shapes stay as they are. The task changes colours and the font and nothing else.
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/test/theme.test.ts --reporter=verbose` printed `Tests 2 passed (2)`, with ✓ on `theme > declares exactly the eight colour tokens in @theme` and `theme > uses no colour outside the eight in any source file`. With a line `// #abc rgb(1,2,3) bg-gray-100 text-white --color-primary` appended to `Logo.tsx`, the second test failed naming all five, then the line was removed.
+- `grep -rn "fonts.googleapis\|fonts.gstatic" frontend/src frontend/index.html` printed nothing.
+- `grep -c "^  --color-" frontend/src/index.css` printed `8`.
+- `grep -rln "color-primary\|color-text\|color-danger\|color-success\|color-warning\|color-pending\|color-rating\|color-scrim\|color-surface-elevated" frontend/src` printed nothing.
+- Headless Chromium through playwright-core at `localhost:5173/library`, signed out of Clerk, 390px wide: `document.fonts.check('16px "Lexend Variable"')` printed `true` after `document.fonts.ready`; the body's computed `font-family` printed `"Lexend Variable", system-ui, sans-serif`; the `.woff2` requests printed one, `http://localhost:5173/node_modules/@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2`; the requests to another origin were Clerk's scripts and API at `fast-katydid-31.clerk.accounts.dev` and none was a font. The script is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/893e09ae-7b89-4374-b375-d0972b6e461a/scratchpad/t1-check.cjs`.
+- No practice in the dev database has a failed card, and `run_progress` in `app/services/practice_run.py` counts a card as `still_failed` only when a retry cannot be generated for it, which needs a field archived while the run is open; so no run page can show four segments without changing a seeded deck. I created the practice "027 T1 colour check" from the "Command to Purpose" configuration, rated one answer Again and one Good through the page, and reloaded its run page: the bar's label read `1 passed, 0 failed, 1 retrying, 52 unseen` and its three segments computed to `rgb(23, 33, 43)`, `rgb(92, 102, 114)` and `rgb(213, 218, 226)` in that order. In the same page an element given the failed segment's class, `bg-(--color-wrong)`, computed to `rgb(229, 72, 77)`; `PracticeRunPage.test.tsx` asserts the four classes in order. The practice stays in the dev database.
+- On the subject "CompTIA A+", two elements computed to `rgb(255, 226, 52)`: the Practice button and the top bar's "Log in", which Details names as yellow when signed out and which the check, signed out of Clerk, renders; a signed-in user does not see it. The run page likewise showed "Log in" and "Show answer". Screenshots at 390px wide, in the scratchpad: `t1-subject.png`, `t1-run.png`, `t1-run-rating.png` (the rating popover open), `t1-edit-deck.png`, `t1-library.png` and `t1-practice.png`.
+
+Departures from Details:
+
+- `--font-sans` is written with single quotes, as the repository's Prettier formats `index.css`.
+- `index.css` is left out of the guard's sweep as well as the four exclusions named, since it holds the eight hex values.
+- `theme.test.ts` reads the files through `node:fs` under a `/// <reference types="node" />` directive, because `tsconfig.app.json` lists only `vite/client` types and is outside Files, and a `?raw` import of `index.css` arrives compiled by the Tailwind plugin, with no `@theme` left to read.
+- Save and Create on `DeckEditor.tsx`, `DeckConfigurationEditor.tsx` and `PracticeCreatePage.tsx` are bare words today; each gained the main-action fill behind its words and nothing else, so the yellow hugs the word until T5 shapes the button; `t1-edit-deck.png` shows it.
+- Delete subject in `SubjectForm.tsx` and Delete card in `CardStandaloneForm.tsx` are ink words like Delete deck, since red means only what went wrong.
+- The subject's description in `SubjectDetailPage.tsx` and the confirm's description in `ConfirmDialog.tsx` are ink, following the guidance that a description is content; every other `text-secondary` is aside.
+- The sheet's handle in `BottomSheet.tsx` is line, not ground: it is a mark drawn on the panel, not a ground.
+- In `ConfirmDialog.tsx` the confirm button is ink with surface words whatever `destructive` says; the prop stays in the type and is no longer read, and its member comment says so.
+- The Add buttons, the Active badge, the account sheet's placeholder avatar and the logo's square take the literal mapping, ink filled with surface words, until T2 and T3 redraw them.
+- The interface comments of `ratingTiers.ts` and `RatingChip.tsx` were rewritten, since they named the old tokens and a hex value.
+
+To read: `frontend/src/test/theme.test.ts`, whose four regular expressions decide what the guard catches; `frontend/src/components/practice/ratingTiers.ts`, where the Hard and Good chips carry the one outline this task adds.
 
 ### T2 — The top bar, the menu and the logo
 

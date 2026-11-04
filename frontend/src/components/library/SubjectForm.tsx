@@ -36,9 +36,9 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       return (
         <div className="p-4">
           {isNotFound(subjectQuery.error) ? (
-            <p className="text-(--color-text-muted)">Subject not found.</p>
+            <p className="text-(--color-aside)">Subject not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               Could not load this subject.
             </p>
           )}
@@ -197,18 +197,18 @@ export function SubjectFormBody({
         <button
           type="button"
           onClick={handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-sm font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-base font-semibold text-(--color-ink)">
           {mode === 'create' ? 'New subject' : 'Edit subject'}
         </h1>
         <span aria-hidden="true" className="w-[42px]" />
       </div>
 
       {formError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {formError}
         </p>
       )}
@@ -218,33 +218,33 @@ export function SubjectFormBody({
           viewport) never overlaps it; the page just scrolls. */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Name</span>
+          <span className="text-sm font-medium text-(--color-ink)">Name</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+            className="h-11 rounded-lg border border-(--color-line) px-3 text-(--color-ink)"
           />
           {nameError && (
-            <span role="alert" className="text-sm text-(--color-danger)">
+            <span role="alert" className="text-sm text-(--color-wrong)">
               {nameError}
             </span>
           )}
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Description</span>
+          <span className="text-sm font-medium text-(--color-ink)">Description</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="rounded-lg border border-(--color-surface-elevated) px-3 py-2 text-(--color-text)"
+            className="rounded-lg border border-(--color-line) px-3 py-2 text-(--color-ink)"
           />
         </label>
 
         <div className="flex flex-col gap-1">
           {/* Hidden from screen readers: the button's own name already says "Icon". */}
-          <span aria-hidden="true" className="text-sm font-medium text-(--color-text)">
+          <span aria-hidden="true" className="text-sm font-medium text-(--color-ink)">
             Icon
           </span>
           <button
@@ -252,7 +252,7 @@ export function SubjectFormBody({
             type="button"
             aria-label={`Icon: ${subjectIconName(icon)}`}
             onClick={() => setIconPickerOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-(--color-surface-elevated) text-(--color-text)"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-(--color-line) text-(--color-ink)"
           >
             <SubjectIcon icon={icon} className="h-6 w-6" />
           </button>
@@ -261,7 +261,7 @@ export function SubjectFormBody({
         <button
           type="submit"
           disabled={submitting}
-          className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
+          className="h-12 w-full rounded-full bg-(--color-main-action) text-sm font-semibold text-(--color-ink) disabled:opacity-60"
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
@@ -272,7 +272,7 @@ export function SubjectFormBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={checkingDeletionImpact}
-          className="h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
+          className="h-11 text-sm font-semibold text-(--color-ink) disabled:opacity-60"
         >
           Delete subject
         </button>

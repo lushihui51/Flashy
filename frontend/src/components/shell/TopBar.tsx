@@ -25,7 +25,7 @@ export default function TopBar({
   createButtonRef,
 }: TopBarProps) {
   return (
-    <div className="flex h-14 w-full items-center gap-3 border-b border-(--color-surface-elevated) bg-(--color-surface) px-3">
+    <div className="flex h-14 w-full items-center gap-3 border-b border-(--color-line) bg-(--color-surface) px-3">
       <button
         ref={menuButtonRef}
         type="button"
@@ -38,7 +38,7 @@ export default function TopBar({
         // drawer is open — an element's own inline style always wins over
         // an inherited one, regardless of any stylesheet's presence.
         style={{ pointerEvents: 'auto' }}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--color-text-muted)"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--color-aside)"
       >
         <Menu aria-hidden="true" className="h-5 w-5" />
       </button>
@@ -59,7 +59,7 @@ export default function TopBar({
           type="button"
           onClick={onCreateClick}
           aria-label="New"
-          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-ink) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
         >
           <Plus aria-hidden="true" className="h-5 w-5" />
         </button>
@@ -68,7 +68,7 @@ export default function TopBar({
         <Link
           to={PRACTICE_NAV.to}
           aria-label={PRACTICE_NAV.label}
-          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-text) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
+          className="relative flex h-11 w-5 shrink-0 items-center justify-center text-(--color-ink) after:absolute after:inset-y-0 after:-inset-x-1.5 after:content-['']"
         >
           <PRACTICE_NAV.icon aria-hidden="true" className="h-5 w-5" />
         </Link>

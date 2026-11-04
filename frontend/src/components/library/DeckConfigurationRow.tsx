@@ -32,15 +32,15 @@ export default function DeckConfigurationRow({
         to={`/deck-configurations/${configuration.id}/edit`}
         className="flex min-h-16 min-w-0 flex-1 flex-col justify-center py-2"
       >
-        <span className="truncate text-[15px] leading-5 text-(--color-text)">{configuration.name}</span>
-        <span className="truncate text-[11px] text-(--color-text-muted)">{shape(configuration)}</span>
+        <span className="truncate text-[15px] leading-5 text-(--color-ink)">{configuration.name}</span>
+        <span className="truncate text-[11px] text-(--color-aside)">{shape(configuration)}</span>
       </Link>
 
       <button
         type="button"
         aria-label={`Delete ${configuration.name}`}
         onClick={onDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+        className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-aside)"
       >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
       </button>

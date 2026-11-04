@@ -452,11 +452,11 @@ describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
 
     // retry_pending is 0, so only three of the four segments render.
     expect(segments).toHaveLength(3);
-    expect(segments[0]).toHaveClass('bg-(--color-success)');
+    expect(segments[0]).toHaveClass('bg-(--color-ink)');
     expect(segments[0]).toHaveStyle({ width: '30%' });
-    expect(segments[1]).toHaveClass('bg-(--color-danger)');
+    expect(segments[1]).toHaveClass('bg-(--color-wrong)');
     expect(segments[1]).toHaveStyle({ width: '30%' });
-    expect(segments[2]).toHaveClass('bg-(--color-pending)');
+    expect(segments[2]).toHaveClass('bg-(--color-line)');
     expect(segments[2]).toHaveStyle({ width: '40%' });
   });
 
@@ -474,7 +474,7 @@ describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
     const segments = Array.from(bar.children) as HTMLElement[];
 
     expect(segments).toHaveLength(1);
-    expect(segments[0]).toHaveClass('bg-(--color-pending)');
+    expect(segments[0]).toHaveClass('bg-(--color-line)');
     expect(segments[0]).toHaveStyle({ width: '100%' });
   });
 

@@ -13,10 +13,10 @@ type RunProgressBarProps = {
  * right. Numeric counts are screen-reader-only (`aria-label`) — the bar itself carries
  * no visible text. */
 const SEGMENTS = [
-  { key: 'passed', label: 'passed', colorClass: 'bg-(--color-success)' },
-  { key: 'still_failed', label: 'failed', colorClass: 'bg-(--color-danger)' },
-  { key: 'retry_pending', label: 'retrying', colorClass: 'bg-(--color-warning)' },
-  { key: 'unseen', label: 'unseen', colorClass: 'bg-(--color-pending)' },
+  { key: 'passed', label: 'passed', colorClass: 'bg-(--color-ink)' },
+  { key: 'still_failed', label: 'failed', colorClass: 'bg-(--color-wrong)' },
+  { key: 'retry_pending', label: 'retrying', colorClass: 'bg-(--color-aside)' },
+  { key: 'unseen', label: 'unseen', colorClass: 'bg-(--color-line)' },
 ] as const;
 
 export default function RunProgressBar({ progress }: RunProgressBarProps) {
@@ -29,7 +29,7 @@ export default function RunProgressBar({ progress }: RunProgressBarProps) {
     <div
       role="img"
       aria-label={ariaLabel}
-      className="flex h-2 w-full overflow-hidden rounded-full bg-(--color-surface-elevated)"
+      className="flex h-2 w-full overflow-hidden rounded-full bg-(--color-ground)"
     >
       {total > 0 &&
         SEGMENTS.filter((segment) => progress[segment.key] > 0).map((segment) => (

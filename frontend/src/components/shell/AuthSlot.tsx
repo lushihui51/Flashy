@@ -27,7 +27,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
     return (
       <div
         aria-hidden="true"
-        className="h-11 w-11 shrink-0 rounded-full bg-(--color-surface-elevated)"
+        className="h-11 w-11 shrink-0 rounded-full bg-(--color-ground)"
       />
     );
   }
@@ -37,7 +37,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       <button
         type="button"
         onClick={() => clerk.openSignIn()}
-        className="h-11 shrink-0 rounded-full bg-(--color-primary) px-4 text-sm font-semibold text-(--color-primary-contrast)"
+        className="h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
       >
         Log in
       </button>
@@ -57,7 +57,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       {user.imageUrl ? (
         <img src={user.imageUrl} alt={name} className="h-full w-full object-cover" />
       ) : (
-        <span className="flex h-full w-full items-center justify-center rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)">
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-(--color-ink) text-sm font-semibold text-(--color-surface)">
           {initialsFor(user)}
         </span>
       )}

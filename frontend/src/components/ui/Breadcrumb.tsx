@@ -20,13 +20,13 @@ export default function Breadcrumb({ places }: BreadcrumbProps): ReactNode {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="inline-flex items-center gap-1 text-[13px] text-(--color-text-secondary)"
+      className="inline-flex items-center gap-1 text-[13px] text-(--color-aside)"
     >
       <ChevronLeft aria-hidden="true" className="h-[15px] w-[15px]" />
       {places.map((place, index) => (
         <Fragment key={place.to}>
           {index > 0 && (
-            <span aria-hidden="true" className="text-(--color-text-muted)">
+            <span aria-hidden="true" className="text-(--color-aside)">
               ›
             </span>
           )}
