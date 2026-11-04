@@ -30,6 +30,7 @@ import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
+import StickyPageRow from 'src/components/ui/StickyPageRow';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -239,8 +240,7 @@ function DeckConfigurationEditorBody({
 
   return (
     <div className="p-4">
-      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
-      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
+      <StickyPageRow>
         <button
           type="button"
           onClick={() =>
@@ -265,7 +265,7 @@ function DeckConfigurationEditorBody({
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>
-      </div>
+      </StickyPageRow>
 
       <div className="mt-3 flex flex-col gap-3">
         {/* Label and control are siblings, not a wrapping <label>: the inline error below

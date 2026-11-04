@@ -22,6 +22,7 @@ import {
   withSelectedConfigIds,
 } from 'src/lib/practiceSelection';
 import { useViewParams } from 'src/lib/viewParams';
+import StickyPageRow from 'src/components/ui/StickyPageRow';
 
 type RowError = { configId: string; sentence: string };
 
@@ -250,8 +251,7 @@ export default function PracticeCreatePage() {
 
   return (
     <div className="p-4">
-      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
-      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
+      <StickyPageRow>
         <button
           type="button"
           onClick={cancel}
@@ -273,7 +273,7 @@ export default function PracticeCreatePage() {
             Create
           </button>
         </div>
-      </div>
+      </StickyPageRow>
 
       <div className="mt-3 flex flex-col gap-1.5">
         <label htmlFor={nameInputId} className="text-[13px] text-(--color-aside)">

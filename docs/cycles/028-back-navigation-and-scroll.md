@@ -288,7 +288,7 @@ Read in the code: nothing; the diff is the router swap, and `App.tsx`'s route tr
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -362,7 +362,59 @@ The tests:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `cd frontend && npx vitest run src/components/shell/AppShell.test.tsx src/components/ui/StickyPageRow.test.tsx src/test/stickyOffset.test.ts --reporter=verbose` passes, 14 of 14, the new tests named:
+  ```
+  ✓ src/test/stickyOffset.test.ts > sticky offsets > reports a hard-coded top beside sticky and passes a measured one
+  ✓ src/test/stickyOffset.test.ts > sticky offsets > finds no hard-coded top beside sticky in any source file
+  ✓ src/components/ui/StickyPageRow.test.tsx > StickyPageRow > renders its children in a row marked for a reveal to clear
+  ✓ src/components/shell/AppShell.test.tsx > AppShell header height > writes the header height to --app-header-height, follows it, and stops on unmount
+  ```
+- `grep -rn "114px" frontend/src --include=*.ts --include=*.tsx --include=*.css --exclude=*.test.*` prints nothing, exit 1.
+- `grep -rln "data-reveal-clear" frontend/src --exclude=*.test.*` prints one line:
+  ```
+  frontend/src/components/ui/StickyPageRow.tsx
+  ```
+- With `<div className="sticky top-[114px]" />` added to `LibraryPage.tsx` and removed after it, `npx vitest run src/test/stickyOffset.test.ts` fails, naming file and line; `git status` shows `LibraryPage.tsx` unchanged after it:
+  ```
+  FAIL  src/test/stickyOffset.test.ts > sticky offsets > finds no hard-coded top beside sticky in any source file
+  AssertionError: expected [ 'pages/LibraryPage.tsx:55' ] to deeply equal []
+  ```
+- In headless Chromium against `localhost:5173`, signed out of Clerk, with the height lowered from 300 in steps of 40, at each page's bottom:
+  ```
+  /practice/new             w390 plain  h300 scrollY 625    headerBottom 114 rowTop 114 within1px true
+  /practice/new             w390 banner h300 scrollY 683    headerBottom 172 rowTop 172 within1px true
+  /practice/new             w1280 plain  h300 scrollY 625    headerBottom 114 rowTop 114 within1px true
+  /practice/new             w1280 banner h300 scrollY 663    headerBottom 152 rowTop 152 within1px true
+  /decks/new                w390 plain  h300 scrollY 338    headerBottom 114 rowTop 114 within1px true
+  /decks/new                w390 banner h300 scrollY 396    headerBottom 172 rowTop 172 within1px true
+  /decks/new                w1280 plain  h300 scrollY 338    headerBottom 114 rowTop 114 within1px true
+  /decks/new                w1280 banner h300 scrollY 376    headerBottom 152 rowTop 152 within1px true
+  /deck-configurations/new  w390 plain  h260 scrollY 26     headerBottom 114 rowTop 114 within1px true
+  /deck-configurations/new  w390 banner h300 scrollY 44     headerBottom 172 rowTop 172 within1px true
+  /deck-configurations/new  w1280 plain  h260 scrollY 26     headerBottom 114 rowTop 114 within1px true
+  /deck-configurations/new  w1280 banner h300 scrollY 24     headerBottom 152 rowTop 152 within1px true
+  /practice/new 390                header grows with banner: true (114 -> 172)
+  /practice/new 1280               header grows with banner: true (114 -> 152)
+  /decks/new 390                   header grows with banner: true (114 -> 172)
+  /decks/new 1280                  header grows with banner: true (114 -> 152)
+  /deck-configurations/new 390     header grows with banner: true (114 -> 172)
+  /deck-configurations/new 1280    header grows with banner: true (114 -> 152)
+  ```
+- In the same script, on `/practice/new` at 390 wide, with the abort removed and the banner gone, with no navigation between the two lines:
+  ```
+  before {"computedTop":"172px","headerBottom":172,"rowTop":172,"scrollY":683,"variable":"172px"}
+  after  {"computedTop":"114px","headerBottom":114,"rowTop":114,"scrollY":625,"variable":"114px"} navigations 0
+  ```
+
+Checks over the whole frontend: `npx vitest run` 56 files and 561 tests passed; `npm run lint` and `npm run build` exit 0.
+
+Departures from Details or Files: none. The guard's walk copies `sourceFiles` from `theme.test.ts` without its exclusions of `test/` and the generated API files, so it scans every non-test file under `frontend/src`, as Details says.
+
+The side menu still sits at its hard-coded padding, behind the header with the banner showing; that is T4's.
+
+Read in the code: the layout effect in `AppShell`, the only logic here; the three rows are the same children inside `StickyPageRow`.
 
 ### T4 — Offsets with no number
 

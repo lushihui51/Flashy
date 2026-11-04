@@ -30,6 +30,7 @@ import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
+import StickyPageRow from 'src/components/ui/StickyPageRow';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -569,8 +570,7 @@ function DeckEditorBody({
 
   return (
     <div className="p-4">
-      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
-      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
+      <StickyPageRow>
         <button
           type="button"
           onClick={showDone ? goBack : handleCancel}
@@ -603,7 +603,7 @@ function DeckEditorBody({
             {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
           </button>
         </div>
-      </div>
+      </StickyPageRow>
 
       {saveError && (
         <p role="alert" className="mt-2 text-sm text-(--color-wrong)">

@@ -118,6 +118,54 @@ describe('AppShell', () => {
   });
 });
 
+describe('AppShell header height', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty('--app-header-height');
+  });
+
+  it('writes the header height to --app-header-height, follows it, and stops on unmount', () => {
+    let headerHeight = 114;
+    let headerResized: () => void = () => {};
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        callback: () => void;
+        constructor(callback: () => void) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          if (target.tagName === 'HEADER') headerResized = this.callback;
+        }
+        unobserve() {}
+        disconnect = disconnect;
+      },
+    );
+    const realRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'HEADER'
+        ? new DOMRect(0, 0, 390, headerHeight)
+        : realRect.call(this);
+    });
+    const readVariable = () =>
+      document.documentElement.style.getPropertyValue('--app-header-height');
+
+    const { unmount } = renderShell();
+    expect(readVariable()).toBe('114px');
+
+    headerHeight = 172;
+    act(() => headerResized());
+    expect(readVariable()).toBe('172px');
+
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+  });
+});
+
 describe('AppShell connection banner', () => {
   afterEach(() => {
     onlineManager.setOnline(true);
