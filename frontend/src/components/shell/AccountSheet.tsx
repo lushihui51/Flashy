@@ -42,10 +42,6 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
 
       <hr className="border-(--color-line)" />
 
-      {/* Only row for now — Achievements/Settings/Light mode/Privacy/Help
-          are explicitly out of scope for this phase; add rows here later
-          without restructuring. */}
-
       <button
         type="button"
         onClick={handleLogOut}
