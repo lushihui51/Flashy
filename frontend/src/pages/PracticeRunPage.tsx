@@ -19,6 +19,12 @@ import { usePageTitle } from 'src/lib/pageTitle';
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
 
+const ZONE_CLASS = 'tappable rounded-[20px] bg-(--color-surface) px-[18px] landscape:flex-1';
+const ZONE_HEADING_CLASS =
+  'flex h-[42px] items-center border-b-[1.5px] border-(--color-ink) text-sm font-semibold text-(--color-ink)';
+const ZONE_ROW_CLASS = 'pt-3.5 pb-4 last:pb-[18px]';
+const CARD_ACTION_CLASS = 'mt-2 h-[54px] w-full shrink-0 rounded-2xl text-[17px] font-semibold';
+
 /** The active-session run surface: the current card as a static two-zone reveal with
  * rating, live progress, and a retry marker. Once `current_card` is null, nothing is
  * pending and this page shows the same completion breakdown the details page shows
@@ -46,9 +52,9 @@ export default function PracticeRunPage() {
 
       {runQuery.isError &&
         (isNotFound(runQuery.error) ? (
-          <p className="mt-4 text-(--color-text-muted)">Practice not found.</p>
+          <p className="mt-4 text-(--color-aside)">Practice not found.</p>
         ) : (
-          <p role="alert" className="mt-4 text-sm text-(--color-danger)">
+          <p role="alert" className="mt-4 text-sm text-(--color-wrong)">
             Could not load this practice.
           </p>
         ))}
@@ -96,10 +102,10 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-(--color-text)">Practice complete</h2>
+      <h2 className="text-[19px] font-bold text-(--color-ink)">Practice complete</h2>
 
       {breakdownQuery.isError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {failureSentence(breakdownQuery.error, 'Practice not found.')}
         </p>
       )}
@@ -107,7 +113,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
       <Link
         to={`/practice/${practiceSessionId}`}
-        className="flex h-11 items-center justify-center rounded-full bg-(--color-primary) px-6 text-sm font-semibold text-(--color-primary-contrast)"
+        className="tappable flex h-[52px] items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-[17px] font-semibold text-(--color-ink)"
       >
         Done
       </Link>
@@ -133,51 +139,55 @@ function PracticeCardView({
   });
 
   const allRated = currentCard.answers.every((field) => field.field_def_id in ratings);
+  const canSubmit = allRated && !rateMutation.isPending;
 
   return (
-    <div className="mt-4 flex flex-col gap-4">
+    <div className="mt-3.5 flex flex-col gap-3.5">
       {currentCard.attempt > 1 && (
-        <span className="w-fit rounded-full bg-(--color-warning) px-3 py-1 text-xs font-semibold text-(--color-text)">
+        <span className="w-fit rounded-[10px] bg-(--color-aside) px-[9px] py-[3px] text-xs font-semibold text-(--color-surface)">
           Retry
         </span>
       )}
 
-      <div className="flex flex-col gap-4 landscape:flex-row">
-        <section className="space-y-3 rounded-2xl bg-(--color-surface) p-5 shadow-lg landscape:flex-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
-            Prompt
-          </h2>
-          {currentCard.prompts.map((field) => (
-            <FieldValue key={field.field_def_id} field={field} labeled />
-          ))}
+      <div className="flex flex-col gap-3.5 landscape:flex-row">
+        <section className={ZONE_CLASS}>
+          <h2 className={ZONE_HEADING_CLASS}>Prompt</h2>
+          <div className="divide-y divide-(--color-line)">
+            {currentCard.prompts.map((field) => (
+              <div key={field.field_def_id} className={ZONE_ROW_CLASS}>
+                <FieldValue field={field} labeled zone="prompt" />
+              </div>
+            ))}
+          </div>
         </section>
 
-        <section
-          className={`space-y-3 rounded-2xl bg-(--color-surface) p-5 landscape:flex-1 ${
-            showAnswer ? 'shadow-lg' : 'border-2 border-dashed border-(--color-text-muted)'
-          }`}
-        >
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
-            Answer
-          </h2>
-          {currentCard.answers.map((field) =>
-            showAnswer ? (
-              <div key={field.field_def_id} className="flex items-start justify-between gap-3">
-                <FieldValue field={field} labeled />
-                <div className="mt-4 shrink-0">
-                  <RatingChip
-                    fieldName={field.name}
-                    rating={ratings[field.field_def_id] ?? null}
-                    onSelect={(rating) =>
-                      setRatings((prev) => ({ ...prev, [field.field_def_id]: rating }))
-                    }
-                  />
+        <section className={ZONE_CLASS}>
+          <h2 className={ZONE_HEADING_CLASS}>Answer</h2>
+          <div className="divide-y divide-(--color-line)">
+            {currentCard.answers.map((field) =>
+              showAnswer ? (
+                <div
+                  key={field.field_def_id}
+                  className={`flex items-end justify-between gap-3 ${ZONE_ROW_CLASS}`}
+                >
+                  <FieldValue field={field} labeled zone="answer" />
+                  <div className="shrink-0">
+                    <RatingChip
+                      fieldName={field.name}
+                      rating={ratings[field.field_def_id] ?? null}
+                      onSelect={(rating) =>
+                        setRatings((prev) => ({ ...prev, [field.field_def_id]: rating }))
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <FieldValue key={field.field_def_id} field={field} labeled hidden />
-            ),
-          )}
+              ) : (
+                <div key={field.field_def_id} className={ZONE_ROW_CLASS}>
+                  <FieldValue field={field} labeled hidden zone="answer" />
+                </div>
+              ),
+            )}
+          </div>
         </section>
       </div>
 
@@ -185,14 +195,18 @@ function PracticeCardView({
         <>
           <button
             type="button"
-            disabled={!allRated || rateMutation.isPending}
+            disabled={!canSubmit}
             onClick={() => rateMutation.mutate()}
-            className="h-11 w-full shrink-0 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
+            className={`${CARD_ACTION_CLASS} ${
+              canSubmit
+                ? 'tappable bg-(--color-main-action) text-(--color-ink)'
+                : 'border-[1.5px] border-(--color-line) bg-(--color-surface) text-(--color-aside)'
+            }`}
           >
             Next card
           </button>
           {rateMutation.isError && (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               {failureSentence(rateMutation.error, 'Practice not found.')}
             </p>
           )}
@@ -201,7 +215,7 @@ function PracticeCardView({
         <button
           type="button"
           onClick={() => setShowAnswer(true)}
-          className="h-11 w-full shrink-0 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
+          className={`tappable bg-(--color-main-action) text-(--color-ink) ${CARD_ACTION_CLASS}`}
         >
           Show answer
         </button>

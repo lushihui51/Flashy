@@ -34,13 +34,12 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Why leaving discards | "You have unsaved changes. Leaving now will discard them." | New subject; Edit subject; New deck; Edit deck; New card; Edit card | `confirmCancelOpen` |
 | App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit subject; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
 | App | Switching the deck a form is filling in | "Change deck?" | New card; New configuration | `deckChange`; `pendingDeck` |
-| Places | The main places | "Home"; "Your library"; "Practice"; "Notifications" | Side menu; top bar | `NAV_ITEMS`; `/`; `/library`; `/practice`; `/notifications` |
+| Places | The main places | "Home"; "Your library"; "Practice" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
-| Places | Notices for the user | "Notifications" | Side menu; its heading | `NotificationsPage`; `/notifications` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "Practice" on a practice's page; "Practice › <Practice>" on the run page | Subject page; deck page; practice's page; run page | `Breadcrumb`; `places` |
 | Places | A thing's address, widest place first | "Subject · Deck"; "Deck · Configuration"; "Subject · Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
-| Places | A place not built yet | "Coming soon." | Home; Notifications | `HomePage`; `NotificationsPage` |
+| Places | A place not built yet | "Coming soon." | Home | `HomePage` |
 | Library | The library's tabs | "Library", spoken; "Subjects"; "Decks" | Library | `TABS`; `tab` |
 | Library | The Subjects tab's toolbar label | "N subjects"; "Subjects" while the list loads | Library | `readSubjects`; `/api/subjects` |
 | Library | The Decks tab's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
@@ -88,7 +87,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | A field's inputs | "Field name"; "Field type" | New deck; Edit deck | `name`; `type` |
 | Field | The one field type | "Text" | New deck; Edit deck | `FieldType`; `text` |
 | Field | A field the card form cannot show | "Unsupported field type" | New card; Edit card | `image`; `audio` |
-| Field | Moving a field | "Move up"; "Move down"; "Reorder <field>", spoken | New deck; Edit deck | `order`; `position`; `/api/decks/{deck_id}/fields/reorder` |
+| Field | Moving a field, spoken | "Move <field> up"; "Move <field> down" | New deck; Edit deck | `order`; `position`; `/api/decks/{deck_id}/fields/reorder` |
 | Field | Taking a field away | "Remove <field>", spoken | New deck; Edit deck | `FieldDefBatchOps.delete` |
 | Field | The field that names a card | "Primary" | New deck; Edit deck | `primary_field` |
 | Field | A field deleted after a practice used it | "Removed field" | Run page; summary | `ResolvedFieldValue.removed` |
@@ -97,11 +96,11 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | What the primary field is | "The first field identifies this card in lists and summaries." | New deck; Edit deck | `primaryIndex` |
 | Field | A field's name left blank | "Name is required." | New deck; Edit deck | `FieldsSection` |
 | Card | A card | "card" | Deck page; forms; run page; summary | `card`; `Card`; `CardRead`; `card_field_value`; `CardFieldValue`; `/api/cards`; `cardId` |
-| Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardTable` |
+| Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardList` |
 | Card | Adding a card to the list in view | "Add card" | Deck page's Cards tab | `AddButton` |
 | Card | The page where a card is made | "New card" | Its heading | `/cards/new`; `CardStandaloneForm` |
 | Card | The page where a card is changed | "Edit card" | Its heading | `/cards/:cardId/edit`; `CardStandaloneForm` |
-| Card | A blank value | "empty" | Deck page's Cards tab | `CardTable` |
+| Card | A blank value | "empty" | Deck page's Cards tab | `CardList` |
 | Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
 | Card | Deleting a card | "Delete card" | Edit card | `deleteCard`; `/api/cards/{card_id}` |

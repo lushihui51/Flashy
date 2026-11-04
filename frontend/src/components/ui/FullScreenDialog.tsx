@@ -32,7 +32,7 @@ export default function FullScreenDialog({ open, onClose, ariaLabel, triggerRef,
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-(--color-scrim)" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-(--color-ink)/50" />
         <Dialog.Content
           aria-label={ariaLabel}
           onCloseAutoFocus={(event) => {
@@ -41,7 +41,7 @@ export default function FullScreenDialog({ open, onClose, ariaLabel, triggerRef,
               triggerRef.current.focus();
             }
           }}
-          className="fixed inset-0 z-60 flex flex-col overflow-y-auto bg-(--color-surface) p-4 focus:outline-none"
+          className="fixed inset-0 z-60 flex flex-col overflow-y-auto bg-(--color-ground) p-4 focus:outline-none"
         >
           {children}
         </Dialog.Content>

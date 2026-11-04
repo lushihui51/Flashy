@@ -31,9 +31,9 @@ export default function SubjectDetailPage() {
     return (
       <div className="p-4">
         {isNotFound(subjectQuery.error) ? (
-          <p className="text-(--color-text-muted)">Subject not found.</p>
+          <p className="text-(--color-aside)">Subject not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-danger)">
+          <p role="alert" className="text-sm text-(--color-wrong)">
             Could not load this subject.
           </p>
         )}
@@ -52,56 +52,58 @@ export default function SubjectDetailPage() {
       <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
       {subject && (
-        <div className="mt-2 flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-(--color-surface-elevated)">
-            <SubjectIcon icon={subject.icon} className="h-6 w-6 text-(--color-text)" />
-          </span>
-          <div>
-            <h1 className="text-[22px] font-medium text-(--color-text)">{subject.name}</h1>
-            {subject.description && (
-              <p className="text-[13px] text-(--color-text-secondary)">{subject.description}</p>
-            )}
+        <>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="tappable flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)">
+              <SubjectIcon icon={subject.icon} className="h-[26px] w-[26px] text-(--color-ink)" />
+            </span>
+            <h1 className="min-w-0 break-words text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+              {subject.name}
+            </h1>
           </div>
-        </div>
+          {subject.description && (
+            <p className="mt-4 text-[15px] leading-normal font-light text-(--color-ink)">
+              {subject.description}
+            </p>
+          )}
+        </>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2.5">
         <button
           type="button"
           // Deep-links into the overview with this subject already filtered — the filters
           // live in the URL precisely so an entry point is just the right link.
           onClick={() => navigate(`/practice?subject=${subjectId!}`)}
-          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)"
+          className="tappable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-[17px] font-semibold text-(--color-ink)"
         >
-          <Play aria-hidden="true" className="h-4 w-4" />
+          <Play aria-hidden="true" fill="currentColor" className="h-[15px] w-[15px]" />
           Practice
         </button>
         <button
           type="button"
           aria-label="Edit subject"
           onClick={() => navigate(`/subjects/${subjectId}/edit`)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center"
+          className="tappable flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
-          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-(--color-text-muted)">
-            <Pencil aria-hidden="true" className="h-4 w-4 text-(--color-text)" />
-          </span>
+          <Pencil aria-hidden="true" className="h-[18px] w-[18px] text-(--color-ink)" />
         </button>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-6">
         {/* The add control sits with the collection it adds to, carrying this
             subject so the deck form opens with it preselected. */}
         <div className="flex items-center justify-between">
-          <h2 className="text-[12px] font-medium text-(--color-text-muted)">
+          <h2 className="text-[15px] font-medium text-(--color-aside)">
             {decks ? `${pluralize(decks.length, 'deck')} · ${pluralize(totalCards, 'card')}` : 'Decks'}
           </h2>
           <AddButton label="Add deck" onClick={addDeck} />
         </div>
         {decks && decks.length === 0 ? (
           // No button here — the row's above is the one add control.
-          <p className="py-8 text-(--color-text-muted)">No decks yet.</p>
+          <p className="py-8 text-[15px] text-(--color-aside)">No decks yet.</p>
         ) : (
-          <ul className="mt-1 flex flex-col divide-y divide-(--color-surface-elevated) border-t border-(--color-surface-elevated)">
+          <ul className="mt-4 flex flex-col gap-3">
             {(decks ?? []).map((deck) => (
               <li key={deck.id}>
                 <DeckRow deck={deck} />

@@ -27,7 +27,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
     return (
       <div
         aria-hidden="true"
-        className="h-11 w-11 shrink-0 rounded-full bg-(--color-surface-elevated)"
+        className="h-[38px] w-[38px] shrink-0 rounded-full bg-(--color-ground)"
       />
     );
   }
@@ -37,14 +37,15 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       <button
         type="button"
         onClick={() => clerk.openSignIn()}
-        className="h-11 shrink-0 rounded-full bg-(--color-primary) px-4 text-sm font-semibold text-(--color-primary-contrast)"
+        className="h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
       >
         Log in
       </button>
     );
   }
 
-  const name = user.fullName ?? user.username ?? user.primaryEmailAddress?.emailAddress ?? 'Account';
+  const name =
+    user.fullName ?? user.username ?? user.primaryEmailAddress?.emailAddress ?? 'Account';
 
   return (
     <button
@@ -52,12 +53,12 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       type="button"
       onClick={onAvatarClick}
       aria-label={`Account menu for ${name}`}
-      className="h-11 w-11 shrink-0 overflow-hidden rounded-full"
+      className="h-[38px] w-[38px] shrink-0 overflow-hidden rounded-full border-[1.5px] border-(--color-ink) bg-(--color-surface)"
     >
       {user.imageUrl ? (
         <img src={user.imageUrl} alt={name} className="h-full w-full object-cover" />
       ) : (
-        <span className="flex h-full w-full items-center justify-center rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast)">
+        <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-(--color-ink)">
           {initialsFor(user)}
         </span>
       )}

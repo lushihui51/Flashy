@@ -196,7 +196,7 @@ describe('LibraryPage', () => {
     await screen.findByText('Math');
     const button = screen.getByRole('button', { name: 'Add subject' });
     expect(button).toBeInTheDocument();
-    expect(button.className).toMatch(/h-9/);
+    expect(button.className).toMatch(/h-10/);
   });
 
   it('navigates to /subjects/new when the Subjects create button is clicked', async () => {

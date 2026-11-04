@@ -6,7 +6,9 @@ import { readDecks } from 'src/api/deck';
 import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import PracticeRunRow from 'src/components/practice/PracticeRunRow';
+import AddButton from 'src/components/ui/AddButton';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import Tabs, { type TabItem } from 'src/components/ui/Tabs';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import type { components } from 'src/api/types';
@@ -16,11 +18,11 @@ type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
 const STATUS_TABS = ['all', 'active', 'completed'] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
 
-const TAB_LABELS: Record<StatusTab, string> = {
-  all: 'All',
-  active: 'Active',
-  completed: 'Completed',
-};
+const TAB_ITEMS: TabItem<StatusTab>[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+];
 
 function isStatusTab(value: string | null): value is StatusTab {
   return value !== null && (STATUS_TABS as readonly string[]).includes(value);
@@ -93,17 +95,14 @@ export default function PracticeOverviewPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-(--color-text)">Practice</h1>
-        <button
-          type="button"
+        <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">Practice</h1>
+        <AddButton
+          label="Add practice"
           onClick={() => navigate({ pathname: '/practice/new', search: searchParams.toString() })}
-          className="h-9 shrink-0 rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-(--color-primary-contrast)"
-        >
-          Add practice
-        </button>
+        />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3.5">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
           decks={decksQuery.data ?? []}
@@ -113,38 +112,24 @@ export default function PracticeOverviewPage() {
         />
       </div>
 
-      <div
-        role="tablist"
-        aria-label="Practice status"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
-      >
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={statusTab === tab}
-            onClick={() => setStatusTab(tab)}
-            className={`h-11 border-b-2 px-1 text-sm font-medium ${
-              statusTab === tab
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
-            }`}
-          >
-            {TAB_LABELS[tab]}
-          </button>
-        ))}
+      <div className="mt-3.5">
+        <Tabs
+          ariaLabel="Practice status"
+          items={TAB_ITEMS}
+          value={statusTab}
+          onChange={setStatusTab}
+        />
       </div>
 
       {sessionsQuery.isError && (
-        <p role="alert" className="mt-4 text-sm text-(--color-danger)">
+        <p role="alert" className="mt-4 text-sm text-(--color-wrong)">
           Could not load practices.
         </p>
       )}
 
       {sessionsQuery.data && sessions.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-8">
-          <p className="text-(--color-text-muted)">
+          <p className="text-[15px] text-(--color-aside)">
             {filtered ? 'No practices match these filters.' : 'No practices yet.'}
           </p>
           {/* No Add practice button here — the header's is always on screen. */}
@@ -152,20 +137,24 @@ export default function PracticeOverviewPage() {
             <button
               type="button"
               onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
-              className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
+              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
             >
               Clear filters
             </button>
           )}
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
-          {sessions.map((session) => (
-            <li key={session.id}>
-              <PracticeRunRow session={session} onDelete={() => setPendingDelete(session)} />
-            </li>
-          ))}
-        </ul>
+        // Nothing to hold while the list loads or fails, and an empty block would draw a bare
+        // outline.
+        sessions.length > 0 && (
+          <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)">
+            {sessions.map((session) => (
+              <li key={session.id}>
+                <PracticeRunRow session={session} onDelete={() => setPendingDelete(session)} />
+              </li>
+            ))}
+          </ul>
+        )
       )}
 
       <ConfirmDialog
@@ -176,7 +165,6 @@ export default function PracticeOverviewPage() {
         // record.
         description="Its progress will be gone. The decks it practiced are not affected."
         confirmLabel="Delete"
-        destructive
         onConfirm={() => {
           setDeleteError(null);
           if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
@@ -187,7 +175,7 @@ export default function PracticeOverviewPage() {
         }}
       >
         {deleteError && (
-          <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+          <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
             {deleteError}
           </p>
         )}

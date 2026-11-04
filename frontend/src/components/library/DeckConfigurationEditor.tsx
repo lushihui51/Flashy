@@ -89,9 +89,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     return (
       <div className="p-4">
         {isNotFound(configQuery.error) ? (
-          <p className="text-(--color-text-muted)">Deck configuration not found.</p>
+          <p className="text-(--color-aside)">Deck configuration not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-danger)">
+          <p role="alert" className="text-sm text-(--color-wrong)">
             Could not load this deck configuration.
           </p>
         )}
@@ -238,17 +238,18 @@ function DeckConfigurationEditorBody({
 
   return (
     <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
+      {/* 114px is the height of AppShell's sticky header, which this row stops beneath. */}
+      <div className="sticky top-[114px] z-10 -mx-4 flex items-center justify-between gap-2 bg-(--color-ground) px-4 py-2">
         <button
           type="button"
           onClick={() =>
             navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-[15px] font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-[19px] font-bold text-(--color-ink)">
           {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
         </h1>
         <button
@@ -259,7 +260,7 @@ function DeckConfigurationEditorBody({
             setSaveError(null);
             saveMutation.mutate();
           }}
-          className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
+          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>
@@ -268,10 +269,12 @@ function DeckConfigurationEditorBody({
       <div className="mt-3 flex flex-col gap-3">
         {/* Label and control are siblings, not a wrapping <label>: the inline error below
             would otherwise become part of the field's own accessible name. */}
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Deck</span>
+        <div
+          className={mode === 'edit' ? 'flex items-baseline gap-2.5' : 'flex flex-col gap-1.5'}
+        >
+          <span className="text-[13px] text-(--color-aside)">Deck</span>
           {mode === 'edit' ? (
-            <span className="inline-flex h-11 items-center rounded-lg bg-(--color-surface-elevated) px-3 text-sm text-(--color-text)">
+            <span className="text-[15px] font-semibold text-(--color-ink)">
               {selectedDeck
                 ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
                 : (deck?.name ?? '')}
@@ -294,7 +297,7 @@ function DeckConfigurationEditorBody({
               createLabel="New deck…"
               placeholder="Deck"
               renderLeading={(item) => (
-                <span className="shrink-0 text-xs text-(--color-text-muted)">
+                <span className="shrink-0 text-xs text-(--color-aside)">
                   {item.subject_name}
                 </span>
               )}
@@ -303,8 +306,8 @@ function DeckConfigurationEditorBody({
         </div>
 
         {deckId && (
-          <div className="flex flex-col gap-1">
-            <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={nameInputId} className="text-[13px] text-(--color-aside)">
               Name
             </label>
             <input
@@ -317,13 +320,13 @@ function DeckConfigurationEditorBody({
               }}
               aria-invalid={nameError !== null}
               aria-describedby={nameError ? `${nameInputId}-error` : undefined}
-              className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+              className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
             {nameError && (
               <span
                 id={`${nameInputId}-error`}
                 role="alert"
-                className="text-sm text-(--color-danger)"
+                className="text-sm text-(--color-wrong)"
               >
                 {nameError}
               </span>
@@ -332,7 +335,7 @@ function DeckConfigurationEditorBody({
         )}
       </div>
 
-      {deckId && !deck && <p className="mt-4 text-(--color-text-muted)">Loading fields…</p>}
+      {deckId && !deck && <p className="mt-4 text-(--color-aside)">Loading fields…</p>}
 
       {deck && board && (
         <div className="mt-4">
@@ -350,7 +353,7 @@ function DeckConfigurationEditorBody({
       )}
 
       {deck && board && (validationError || nameMissing) && (
-        <p className="mt-3 text-sm text-(--color-text-muted)">
+        <p className="mt-3 text-sm text-(--color-aside)">
           {validationError ??
             (mode === 'edit'
               ? 'Give this configuration a name to save it.'
@@ -359,7 +362,7 @@ function DeckConfigurationEditorBody({
       )}
 
       {saveError && (
-        <p role="alert" className="mt-3 text-sm text-(--color-danger)">
+        <p role="alert" className="mt-3 text-sm text-(--color-wrong)">
           {saveError}
         </p>
       )}
@@ -369,7 +372,6 @@ function DeckConfigurationEditorBody({
         title="Change deck?"
         description="Fields belong to their own deck, so switching clears everything assigned here."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => pendingDeck && applyDeck(pendingDeck)}
         onCancel={() => setPendingDeck(null)}
       />

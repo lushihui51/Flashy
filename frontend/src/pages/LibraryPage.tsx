@@ -6,11 +6,17 @@ import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
 import AddButton from 'src/components/ui/AddButton';
+import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
+
+const TAB_ITEMS: { value: Tab; label: string }[] = [
+  { value: 'subjects', label: 'Subjects' },
+  { value: 'decks', label: 'Decks' },
+];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
@@ -19,7 +25,7 @@ function isTab(value: string | null): value is Tab {
 function EmptyState({ copy }: { copy: string }) {
   return (
     <div className="py-8">
-      <p className="text-(--color-text-muted)">{copy}</p>
+      <p className="text-[15px] text-(--color-aside)">{copy}</p>
     </div>
   );
 }
@@ -46,41 +52,22 @@ export default function LibraryPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold text-(--color-text)">Your library</h1>
+      <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">Your library</h1>
 
-      <div
-        role="tablist"
-        aria-label="Library"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
-      >
-        {(['subjects', 'decks'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`h-11 border-b-2 px-1 text-sm font-medium ${
-              tab === t
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
-            }`}
-          >
-            {t === 'subjects' ? 'Subjects' : 'Decks'}
-          </button>
-        ))}
+      <div className="mt-4">
+        <Tabs ariaLabel="Library" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>
 
       {tab === 'subjects' ? (
         <section aria-label="Subjects">
-          <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+          <div className="mt-4 flex items-center justify-between">
+            <h2 className="text-[15px] font-medium text-(--color-aside)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
             <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load subjects.
             </p>
           )}
@@ -88,13 +75,13 @@ export default function LibraryPage() {
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
             <EmptyState copy="No subjects yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul className="mt-4 flex flex-col gap-3">
               {(subjectsQuery.data ?? []).map((subject) => (
                 <li key={subject.id}>
                   <ListRow
                     leading={
-                      <span className="flex h-8 w-8 items-center justify-center">
-                        <SubjectIcon icon={subject.icon} className="h-5 w-5 text-(--color-text)" />
+                      <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border-[1.5px] border-(--color-ink)">
+                        <SubjectIcon icon={subject.icon} className="h-[22px] w-[22px] text-(--color-ink)" />
                       </span>
                     }
                     title={subject.name}
@@ -109,14 +96,14 @@ export default function LibraryPage() {
         </section>
       ) : (
         <section aria-label="Decks">
-          <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+          <div className="mt-4 flex items-center justify-between">
+            <h2 className="text-[15px] font-medium text-(--color-aside)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
             <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load decks.
             </p>
           )}
@@ -124,7 +111,7 @@ export default function LibraryPage() {
           {decksQuery.data && decksQuery.data.length === 0 ? (
             <EmptyState copy="No decks yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul className="mt-4 flex flex-col gap-3">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
                   <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />

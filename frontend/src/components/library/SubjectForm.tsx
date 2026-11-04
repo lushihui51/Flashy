@@ -1,6 +1,7 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
@@ -36,9 +37,9 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       return (
         <div className="p-4">
           {isNotFound(subjectQuery.error) ? (
-            <p className="text-(--color-text-muted)">Subject not found.</p>
+            <p className="text-(--color-aside)">Subject not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
+            <p role="alert" className="text-sm text-(--color-wrong)">
               Could not load this subject.
             </p>
           )}
@@ -90,6 +91,7 @@ export function SubjectFormBody({
   onDelete,
 }: SubjectFormBodyProps) {
   const queryClient = useQueryClient();
+  const formId = useId();
 
   const [name, setName] = useState(original?.name ?? '');
   const [description, setDescription] = useState(original?.description ?? '');
@@ -193,58 +195,65 @@ export function SubjectFormBody({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
+          className="text-[15px] font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
+        <h1 className="text-[19px] font-bold text-(--color-ink)">
           {mode === 'create' ? 'New subject' : 'Edit subject'}
         </h1>
-        <span aria-hidden="true" className="w-[42px]" />
+        {/* A blank name reads as not pressable yet, but stays pressable: pressing it is how
+            "Name is required." appears. */}
+        <button
+          type="submit"
+          form={formId}
+          disabled={submitting}
+          aria-disabled={name.trim() === '' || undefined}
+          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </button>
       </div>
 
       {formError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
+        <p role="alert" className="text-sm text-(--color-wrong)">
           {formError}
         </p>
       )}
 
-      {/* No fixed/sticky positioning on the submit button — it sits in normal
-          document flow so a mobile keyboard opening (which shrinks the visual
-          viewport) never overlaps it; the page just scrolls. */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Name</span>
+      <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] text-(--color-aside)">Name</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+            className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
           {nameError && (
-            <span role="alert" className="text-sm text-(--color-danger)">
+            <span role="alert" className="text-sm text-(--color-wrong)">
               {nameError}
             </span>
           )}
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Description</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] text-(--color-aside)">Description</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="rounded-lg border border-(--color-surface-elevated) px-3 py-2 text-(--color-text)"
+            className="rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 py-2.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
         </label>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {/* Hidden from screen readers: the button's own name already says "Icon". */}
-          <span aria-hidden="true" className="text-sm font-medium text-(--color-text)">
+          <span aria-hidden="true" className="text-[13px] text-(--color-aside)">
             Icon
           </span>
           <button
@@ -252,19 +261,11 @@ export function SubjectFormBody({
             type="button"
             aria-label={`Icon: ${subjectIconName(icon)}`}
             onClick={() => setIconPickerOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-(--color-surface-elevated) text-(--color-text)"
+            className="tappable flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)"
           >
             <SubjectIcon icon={icon} className="h-6 w-6" />
           </button>
         </div>
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </button>
       </form>
 
       {mode === 'edit' && (
@@ -272,8 +273,9 @@ export function SubjectFormBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={checkingDeletionImpact}
-          className="h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
+          className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete subject
         </button>
       )}
@@ -294,7 +296,6 @@ export function SubjectFormBody({
         title="Discard changes?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
         onConfirm={onCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
@@ -305,7 +306,6 @@ export function SubjectFormBody({
           title="Delete subject?"
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

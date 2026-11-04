@@ -1,19 +1,26 @@
 @import 'tailwindcss';
 
 @theme {
+  --font-sans: 'Lexend Variable', system-ui, sans-serif;
+  --color-main-action: #ffe234;
+  --color-hidden: #fff3a6;
+  --color-ink: #17212b;
+  --color-aside: #5c6672;
+  --color-line: #d5dae2;
+  --color-wrong: #e5484d;
+  --color-ground: #f3f4f8;
   --color-surface: #ffffff;
-  --color-surface-elevated: #f4f4f6;
-  --color-text: #1a1a2e;
-  --color-text-secondary: #45455a;
-  --color-text-muted: #6b6b7b;
-  --color-primary: #4147f5;
-  --color-primary-contrast: #ffffff;
-  --color-danger: #d33a3a;
-  --color-danger-contrast: #ffffff;
-  --color-scrim: rgb(0 0 0 / 0.5);
-  --color-success: #2e9e44;
-  --color-warning: #d9a514;
-  --color-pending: #a0a0ad;
-  --color-rating-hard: #e08a2e;
-  --color-rating-good: #9ec32f;
+}
+
+@utility tappable {
+  border: 1.5px solid var(--color-ink);
+  box-shadow: 0 3px 0 var(--color-ink);
+}
+@utility tappable-sm {
+  border: 1.5px solid var(--color-ink);
+  box-shadow: 0 2px 0 var(--color-ink);
+}
+@utility tappable-pressed {
+  box-shadow: none !important;
+  transform: translateY(2px);
 }

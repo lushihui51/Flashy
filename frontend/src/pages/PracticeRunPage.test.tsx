@@ -125,6 +125,26 @@ describe('PracticeRunPage', () => {
     expect(screen.getByText('Front')).toBeInTheDocument();
   });
 
+  it.each([
+    ['twelve characters or fewer', 'A'.repeat(12), 'text-[54px]'],
+    ['longer than twelve characters', 'A'.repeat(13), 'text-[26px]'],
+  ])('sizes a prompt value of %s', async (_name, value, sizeClass) => {
+    mockRun(
+      runState({
+        current_card: {
+          practice_card_id: 'pc1',
+          card_id: 'card1',
+          attempt: 1,
+          prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value }],
+          answers: [{ field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello' }],
+        },
+      }),
+    );
+    renderRun();
+
+    expect(await screen.findByText(value)).toHaveClass(sizeClass);
+  });
+
   it('hides answer values until Show answer is tapped, then reveals them labeled', async () => {
     mockRun();
     const user = userEvent.setup();
@@ -452,11 +472,11 @@ describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
 
     // retry_pending is 0, so only three of the four segments render.
     expect(segments).toHaveLength(3);
-    expect(segments[0]).toHaveClass('bg-(--color-success)');
+    expect(segments[0]).toHaveClass('bg-(--color-ink)');
     expect(segments[0]).toHaveStyle({ width: '30%' });
-    expect(segments[1]).toHaveClass('bg-(--color-danger)');
+    expect(segments[1]).toHaveClass('bg-(--color-wrong)');
     expect(segments[1]).toHaveStyle({ width: '30%' });
-    expect(segments[2]).toHaveClass('bg-(--color-pending)');
+    expect(segments[2]).toHaveClass('bg-(--color-line)');
     expect(segments[2]).toHaveStyle({ width: '40%' });
   });
 
@@ -474,7 +494,7 @@ describe('PracticeRunPage progress bar and retry badge (MD-3)', () => {
     const segments = Array.from(bar.children) as HTMLElement[];
 
     expect(segments).toHaveLength(1);
-    expect(segments[0]).toHaveClass('bg-(--color-pending)');
+    expect(segments[0]).toHaveClass('bg-(--color-line)');
     expect(segments[0]).toHaveStyle({ width: '100%' });
   });
 

@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode, type RefObject } from 'react';
-import { Plus, X } from 'lucide-react';
+import { ChevronDown, Plus, X } from 'lucide-react';
 import { PICKER_MAX_ITEMS } from 'src/lib/pickerConfig';
 
 export type PickerItem = { id: string; name: string };
@@ -143,7 +143,7 @@ export default function PickerCombobox<T extends PickerItem>({
 
   if (locked) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-(--color-surface-elevated) px-3 py-2 text-sm text-(--color-text)">
+      <span className="inline-flex items-center gap-2 rounded-full border border-(--color-line) bg-(--color-ground) px-3 py-2 text-sm text-(--color-ink)">
         {selected && renderLeading?.(selected)}
         {selected?.name ?? ''}
       </span>
@@ -158,10 +158,8 @@ export default function PickerCombobox<T extends PickerItem>({
         e.preventDefault();
         chooseIndex(actionIndex);
       }}
-      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm font-medium text-(--color-primary) ${
-        filtering ? 'border-b' : 'border-t'
-      } border-(--color-surface-elevated) ${
-        highlighted === actionIndex ? 'bg-(--color-surface-elevated)' : ''
+      className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[15px] font-semibold text-(--color-ink) ${
+        highlighted === actionIndex ? 'bg-(--color-ground)' : ''
       }`}
     >
       {filtering ? (
@@ -197,13 +195,21 @@ export default function PickerCombobox<T extends PickerItem>({
         onBlur={() => setOpen(false)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+        className={`h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
+          filtering ? 'pr-9 pl-3.5' : 'px-3.5'
+        }`}
       />
+      {filtering && (
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute top-[15px] right-3.5 h-4 w-4 text-(--color-ink)"
+        />
+      )}
       {open && (
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-10 mt-1 w-full rounded-lg border border-(--color-surface-elevated) bg-(--color-surface) py-1 shadow-lg"
+          className="tappable absolute z-10 mt-1 w-full divide-y divide-(--color-line) overflow-hidden rounded-[14px] bg-(--color-surface)"
         >
           {/* The action row: first when it clears a filter, last when it creates. Same
               markup either way, so both are one keyboard cycle and one click path. */}
@@ -222,8 +228,8 @@ export default function PickerCombobox<T extends PickerItem>({
                 e.preventDefault();
                 chooseIndex(index + firstItemIndex);
               }}
-              className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm ${
-                index + firstItemIndex === highlighted ? 'bg-(--color-surface-elevated)' : ''
+              className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[15px] text-(--color-ink) ${
+                index + firstItemIndex === highlighted ? 'bg-(--color-ground)' : ''
               }`}
             >
               {renderLeading?.(item)}
@@ -233,7 +239,7 @@ export default function PickerCombobox<T extends PickerItem>({
           {hasMore && (
             <li
               aria-hidden="true"
-              className="px-3 py-2 text-xs text-(--color-text-muted)"
+              className="px-3 py-2 text-xs text-(--color-aside)"
             >
               Showing {shown.length} of {matches.length} · type to narrow
             </li>

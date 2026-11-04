@@ -7,7 +7,6 @@ import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import PracticeRunPage from 'src/pages/PracticeRunPage';
 import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
-import NotificationsPage from 'src/pages/NotificationsPage';
 import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
 import SubjectForm from 'src/components/library/SubjectForm';
@@ -25,7 +24,6 @@ function App() {
           <Route path="/practice/new" element={<PracticeCreatePage />} />
           <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
           <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
           <Route path="/decks/:deckId" element={<DeckDetailPage />} />
           <Route path="/subjects/new" element={<SubjectForm mode="create" />} />
