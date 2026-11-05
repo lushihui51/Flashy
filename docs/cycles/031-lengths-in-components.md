@@ -21,7 +21,7 @@ Judgement: The engineer judges in headless Chromium against the dev server at 39
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -145,7 +145,17 @@ The screen check, PDR 030, for the Done when below: in headless Chromium through
 
 **Debrief**
 
-None.
+Blocked on one Done-when line: the headless Chromium script cannot print `58 46 38 78 44` at 16px, because the first subject row on Your library is 80 tall before and after this task.
+
+Attempted: the whole sweep, the eighteen tokens and the six utilities. Every other Done-when line held on that build. Both greps gave what they name, eleven lines in `index.css` and nothing under `components/ui` and `components/shell`; the named `npx vitest run` passed, 96 tests; the whole frontend's `npx vitest run` passed, 587 tests; `npm run lint` and `npm run build` were clean. The script `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/shell.mjs`, output in `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/after.out`, printed `58 46 38 80 44` at 16px and `87 69 57 117 66` at 24px. The five 16px screenshots, `before-*-16.png` and `after-*-16.png` in that folder, are byte-identical across the build. The build is saved as `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/t1-build.patch`.
+
+Found: `LibraryPage.tsx` gives every subject row a leading icon box of `h-[46px] w-[46px]`, which sets the row's height over `ListRow.tsx`'s `min-h`: 46 + 32 padding + 2 outline, since Chromium draws a 1.5px border as 1px at a device pixel ratio of 1. `before-library-16.png` was taken before any edit and the same script printed 80 on it. The line's 78 is the height of a row with no leading icon.
+
+The file cannot settle it: the 78 cannot be reached by any edit that keeps the task's constraint that nothing changes at the default text size, and the row's height comes from `LibraryPage.tsx`, which is outside Files and is T2's. The Done when is the planner's to change.
+
+Also found, for the planner, on the same build at a 24px root and 390 wide, signed out (`/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/overflow.out`): the page scrolls sideways, `scrollWidth` 419. "Log in" ends at 419 on both pages measured, Your library and the Practice page, and on the Practice page the "Completed" tab ends at 403. T1 lays nothing out differently and its Done when does not cover this, but the cycle's Judgement says everything grows together with no label spilling, and its Scope leaves out any layout change, so the two meet in T3. `after-library-menu-24.png` and `after-delete-confirm-24.png` show it. After T2 converts the leading icon box the row at 24px will measure 119, not this line's 117.
+
+Departures in the build, for the rebuild: `SearchBar.tsx`'s container is a `label`, so a click on the icon or the padding still reaches the input, confirmed by a script; its `pl-3.25` and `gap-2.75` are the values that keep the icon and the text where they were at 16px. The account sheet's screenshots use a stand-in user served through `page.route` in `shell.mjs`, since a signed-out top bar has no way to open that sheet.
 
 ### T2 — The library's components and pages
 
