@@ -20,7 +20,7 @@ Judgement: The engineer judges on the live server: opening `/nowhere` shows the 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -92,4 +92,42 @@ The test, new at `frontend/src/App.test.tsx`, mounting `appRoutes` on `createMem
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+1. `grep -c "errorElement" frontend/src/App.tsx` printed `1`, `grep -c 'path="\*"' frontend/src/App.tsx` printed `1`, and `grep -rn "useRouteError" frontend/src` printed nothing.
+2. `grep -c "NotFoundPage\|FailedPage" docs/vocabulary.md` printed `2`.
+3. `npx vitest run src/App.test.tsx src/components/shell/AppShell.test.tsx src/pages/placeholderPages.test.tsx`: 3 files passed, 16 tests passed.
+4. The browser script, at 390 wide, signed out of Clerk, printed:
+
+```
+start url: /library
+url: /nowhere
+Open menu button visible: true
+"Page not found." visible: true
+document.title: Flashy
+links to / outside the menu: 1
+main text: "Page not found."
+menu > Your library lands on: /library
+back on: /nowhere
+history.back() from /nowhere lands on: /library
+banner text: "Can't reach Flashy. Check your connection; retrying automatically."
+banner bottom < sentence top: 56 < 188 = true
+page errors: []
+```
+
+The line "no element links to `/` outside the menu" fails as written: the one link is the top bar's logo, "Flashy home", which every page has. By the engineer's order in this conversation, this one check was held to the page's content instead. A second script printed `links to / in main: 0` and `links to / in header: 1`, and found one link each for Home, Your library and Practice in the open menu. The line's wording in Done when stays as the planner wrote it.
+
+5. Screenshot: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/bd4d6186-d5f9-4d7a-b608-23c0960a7764/scratchpad/nowhere-with-banner-390.png`. It shows the banner, then the top bar and Search, then "Page not found."
+
+The checks for every commit passed: `npx vitest run` with 61 files and 672 tests, `npm run lint` with no problems, and `npm run build` with no errors.
+
+Departures from Details and Files:
+
+- `export const appRoutes` in `frontend/src/App.tsx` fails `npm run lint` under `react-refresh/only-export-components`, because that file also exports a component. Details and the first Done-when line keep the export in that file, so the line above it carries `eslint-disable-next-line` and a comment giving the reason. It is the only `eslint-disable` in `frontend/src`. An edit to `App.tsx` now reloads the page in development rather than refreshing it in place.
+- `frontend/src/App.test.tsx` sets `document.title` to `Flashy` before each test, because jsdom loads no `index.html`. Its title assertion therefore shows only that `NotFoundPage` leaves the title alone. The browser script shows the real tab title.
+
+Read in the code:
+
+- `appRoutes` in `frontend/src/App.tsx`, for the lint exemption, the one thing here that a reviewer might want done otherwise.
+
+Not checked in a browser: the "Could not load this page." screen. No page throws on the live server, and Done when asks for it only in `frontend/src/App.test.tsx`, where it passes with `HomePage` mocked to throw.
