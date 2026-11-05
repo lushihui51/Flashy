@@ -51,7 +51,7 @@
 - Raise a finding that must outlive the session to the engineer; never fix it in passing.
   - Reason: a lasting decision needs the engineer's approval
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
-- After the engineer says "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
+- After the engineer orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
   - Reason: one standing approval, given once a conversation
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
