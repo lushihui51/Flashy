@@ -20,7 +20,7 @@
 
 **Records.** One line per active record, ADR or PDR: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
 
-**Canvas.** When a task cites a drawing, the cycle has a canvas of its own, linked on the line under the title as "Canvas: " and the link. /cycle-plan makes it from the docket's canvas, holding only the drawings the cycle's tasks cite, each under its number from the docket's canvas and as the docket's canvas held it when /cycle-plan last wrote the cycle file. The canvas is part of the cycle file.
+**Canvas.** When a task cites a drawing, the cycle has a canvas of its own, named "<repository> cycle NNN" after the repository's name and linked on the line under the title as "Canvas: " and the link. /cycle-plan makes it from the docket's canvas, holding only the drawings the cycle's tasks cite, each under its number from the docket's canvas and as the docket's canvas held it when /cycle-plan last wrote the cycle file. The canvas is part of the cycle file.
 
 ## A task
 
