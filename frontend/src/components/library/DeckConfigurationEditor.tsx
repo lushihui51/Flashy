@@ -116,6 +116,7 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
       config={configQuery.data}
       contextSubjectId={params.get('subject')}
       contextDeckId={state?.deckId ?? params.get('deck')}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
       returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
@@ -126,8 +127,11 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  /** Where Cancel and a successful Create or Save land. Null means "the deck's own page", which
-   * is only knowable once a deck is chosen. */
+  /** Where Cancel lands. Null means the deck's Configurations tab with a deck chosen, and Your
+   * library with none. */
+  cancelTo: string | null;
+  /** Where a successful Create or Save lands. Null means the saved configuration's deck's
+   * Configurations tab. */
   returnTo: string | null;
 };
 
@@ -136,6 +140,7 @@ function DeckConfigurationEditorBody({
   config,
   contextSubjectId,
   contextDeckId,
+  cancelTo,
   returnTo,
 }: BodyProps) {
   const navigate = useNavigate();
@@ -244,7 +249,7 @@ function DeckConfigurationEditorBody({
         <button
           type="button"
           onClick={() =>
-            navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
+            navigate(cancelTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
           className="text-body font-medium text-(--color-aside)"
         >

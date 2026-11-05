@@ -13,6 +13,8 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { internalReturnTo } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type SubjectFormProps = {
   mode: 'create' | 'edit';
@@ -24,6 +26,9 @@ type SubjectFormProps = {
 export default function SubjectForm({ mode }: SubjectFormProps) {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
+  const { params } = useViewParams();
+  const cancelTo = internalReturnTo(params, 'cancelTo');
+  const returnTo = internalReturnTo(params, 'returnTo');
 
   const subjectQuery = useQuery({
     queryKey: ['subject', subjectId],
@@ -57,8 +62,10 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       mode={mode}
       subjectId={subjectId}
       original={mode === 'edit' ? subjectQuery.data : undefined}
-      onSuccess={(subject) => navigate(`/subjects/${subject.id}`)}
-      onCancel={() => navigate(mode === 'create' ? '/library' : `/subjects/${subjectId}`)}
+      onSuccess={(subject) => navigate(returnTo ?? `/subjects/${subject.id}`)}
+      onCancel={() =>
+        navigate(cancelTo ?? (mode === 'create' ? '/library' : `/subjects/${subjectId}`))
+      }
       onDelete={() => navigate('/library')}
     />
   );

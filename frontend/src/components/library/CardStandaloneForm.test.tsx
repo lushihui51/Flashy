@@ -84,7 +84,7 @@ function LocationProbe() {
   );
 }
 
-function renderForm(initialPath: string | { pathname: string; state?: unknown }) {
+function renderForm(initialPath: string | { pathname: string; search?: string; state?: unknown }) {
   return renderWithProviders(
     <Routes>
       <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
@@ -92,6 +92,7 @@ function renderForm(initialPath: string | { pathname: string; state?: unknown })
       <Route path="/decks/:deckId" element={<LocationProbe />} />
       <Route path="/library" element={<LocationProbe />} />
       <Route path="/decks/new" element={<LocationProbe />} />
+      <Route path="/opener" element={<LocationProbe />} />
     </Routes>,
     [initialPath],
   );
@@ -104,6 +105,67 @@ beforeEach(() => {
 afterEach(() => {
   consoleError.mockRestore();
   server.resetHandlers();
+});
+
+// Each address is asked for alone or not at all, so a landing on the deck's page shows the
+// other address did not stand in for it.
+describe.each([
+  { mode: 'create', pathname: '/cards/new', leaveLabel: 'Create' },
+  { mode: 'edit', pathname: '/cards/c1/edit', leaveLabel: 'Save' },
+])('CardStandaloneForm — return addresses, $mode', ({ pathname, leaveLabel }) => {
+  beforeEach(() => {
+    mockAll();
+    server.use(
+      http.post(`${BASE}/api/cards`, () =>
+        HttpResponse.json(
+          { id: 'new-card', deck_id: 'd1', created_at: '', values: {} },
+          { status: 201 },
+        ),
+      ),
+    );
+  });
+
+  const open = async (search: string) => {
+    renderForm({ pathname, search, state: { deckId: 'd1' } });
+    await screen.findByRole('textbox', { name: 'Front' });
+  };
+
+  it.each([
+    { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', search: '?returnTo=%2Fopener', cancel: '/decks/d1' },
+    { given: 'neither', search: '', cancel: '/decks/d1' },
+  ])('with $given, Cancel lands on $cancel', async ({ search, cancel }) => {
+    const user = userEvent.setup();
+    await open(search);
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(cancel));
+  });
+
+  it.each([
+    { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', save: '/decks/d1' },
+    { given: 'returnTo alone', search: '?returnTo=%2Fopener', save: '/opener' },
+    { given: 'neither', search: '', save: '/decks/d1' },
+  ])(`with $given, ${leaveLabel} lands on $save`, async ({ search, save }) => {
+    const user = userEvent.setup();
+    await open(search);
+
+    await user.click(screen.getByRole('button', { name: leaveLabel }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(save));
+  });
+
+  it('a confirmed Cancel lands on cancelTo', async () => {
+    const user = userEvent.setup();
+    await open('?cancelTo=%2Fopener&returnTo=%2Fother');
+
+    await user.type(screen.getByRole('textbox', { name: 'Front' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/opener'));
+  });
 });
 
 describe('CardStandaloneForm — create mode', () => {
@@ -228,6 +290,17 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('with returnTo alone and no deck chosen, Cancel lands on /library', async () => {
+    mockAll();
+    const user = userEvent.setup();
+    renderForm('/cards/new?returnTo=%2Fopener');
+
+    await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/library'));
   });
 
   it('an unsupported field type renders read-only and does not crash', async () => {

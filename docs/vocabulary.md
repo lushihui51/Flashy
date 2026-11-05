@@ -110,7 +110,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Card | Confirming a card's deletion | "Delete card?" | Edit card | `confirmDeleteOpen` |
 | Configuration | A deck's prompt and answer layout | "deck configuration"; "configuration" in deck context | Deck page; New practice; a practice's row and page | `deck_practice_config`; `DeckPracticeConfig`; `DeckPracticeConfigSummary`; `/api/deck_practice_configs`; `configId`; `config` |
 | Configuration | Adding a configuration to the list in view | "Add configuration" | Deck page's Configurations tab | `AddButton` |
-| Configuration | Leaving New practice to make a configuration | "New configuration…" | New practice's configuration list | `newConfiguration`; `returnTo`; `configurationId` |
+| Configuration | Leaving New practice to make a configuration | "New configuration…" | New practice's configuration list | `newConfiguration`; `cancelTo`; `returnTo`; `configurationId` |
 | Configuration | The page where a configuration is made | "New configuration" | Its heading | `/deck-configurations/new`; `DeckConfigurationEditor` |
 | Configuration | The page where a configuration is changed | "Edit configuration" | Its heading | `/deck-configurations/:configId/edit`; `DeckConfigurationEditor` |
 | Configuration | A configuration's row | "N prompt fields · N answer fields · random draw" | Deck page's Configurations tab | `DeckConfigurationRow` |

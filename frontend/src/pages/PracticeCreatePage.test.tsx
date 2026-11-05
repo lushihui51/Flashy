@@ -752,6 +752,7 @@ describe('PracticeCreatePage', () => {
     expect(path).toBe('/deck-configurations/new');
     expect(params.get('subject')).toBe('s1');
     expect(params.get('deck')).toBe('d1');
+    expect(params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
     expect(params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
 
     await user.click(screen.getByRole('button', { name: 'Finish new config' }));
@@ -772,10 +773,11 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Basics' })); // deck d2
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
 
-    // The draft left with the returnTo, so it comes back with it.
+    // The draft left with both addresses, so it comes back with either.
     const params = new URLSearchParams(
       (screen.getByTestId('new-config-location').textContent ?? '').split('?')[1],
     );
+    expect(params.get('cancelTo')).toBe('/practice/new?config=c1&config=c3');
     expect(params.get('returnTo')).toBe('/practice/new?config=c1&config=c3');
 
     // The stub hands back c2 — Recognition, in Recall's deck d1.
@@ -790,7 +792,7 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
   });
 
-  it('a row’s pencil opens Edit configuration with returnTo set to the page’s full URL (MD-6)', async () => {
+  it('a row’s pencil opens Edit configuration with both addresses set to the page’s full URL (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/practice/new?subject=s1&config=c1&name=Exam');
@@ -800,6 +802,7 @@ describe('PracticeCreatePage', () => {
 
     const landed = currentLocation();
     expect(landed.pathname).toBe('/deck-configurations/c2/edit');
+    expect(landed.params.get('cancelTo')).toBe('/practice/new?subject=s1&config=c1&name=Exam');
     expect(landed.params.get('returnTo')).toBe('/practice/new?subject=s1&config=c1&name=Exam');
   });
 
