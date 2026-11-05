@@ -1,16 +1,15 @@
 import uuid
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 from app.mastery.types import (
-    CardScore,
     FieldMasteryState,
     MasteryUpdate,
     ReviewGroup,
     ReviewSide,
 )
 
-MASTERY_PRIOR = 50.0
+MASTERY_PRIOR = 0.0
 EMA_ALPHA = 0.3
 # Damping on breadth's effect on the effective weight: alpha_eff = 1-(1-alpha)^(n^beta).
 # beta=0 ignores breadth entirely (plain alpha regardless of n); beta=1 is exactly n
@@ -18,6 +17,7 @@ EMA_ALPHA = 0.3
 # sqrt(n) damping, the usual "diminishing evidence" choice, and where this starts.
 EMA_BETA = 0.5
 RATING_SCORES: dict[int, float] = {1: 0.0, 2: 33.0, 3: 67.0, 4: 100.0}
+GOOD_SCORE = RATING_SCORES[3]
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,10 @@ class EmaStrategy:
     alpha: float = EMA_ALPHA
     beta: float = EMA_BETA
     rating_scores: dict[int, float] = field(default_factory=lambda: dict(RATING_SCORES))
+
+    @property
+    def reach(self) -> float:
+        return min(self.alpha * RATING_SCORES[4] / GOOD_SCORE, 1.0)
 
     def prior(self) -> FieldMasteryState:
         return FieldMasteryState(
@@ -89,17 +93,14 @@ class EmaStrategy:
             base, prompt_mastery=blended, prompt_review_count=base.prompt_review_count + 1
         )
 
-    def field_score(self, state: FieldMasteryState | None) -> float | None:
+    def readiness(self, state: FieldMasteryState | None) -> float:
         if state is None:
-            return None
-        return (state.prompt_mastery + state.answer_mastery) / 2
-
-    def card_score(self, field_scores: Sequence[float | None]) -> CardScore:
-        if not field_scores:
-            return CardScore(mastery=self.prior_value, reviewed_field_count=0)
-
-        reviewed_field_count = sum(1 for s in field_scores if s is not None)
-        total = sum(s if s is not None else self.prior_value for s in field_scores)
-        return CardScore(
-            mastery=total / len(field_scores), reviewed_field_count=reviewed_field_count
-        )
+            return 0.0
+        reviewed_sides = []
+        if state.prompt_review_count > 0:
+            reviewed_sides.append(state.prompt_mastery)
+        if state.answer_review_count > 0:
+            reviewed_sides.append(state.answer_mastery)
+        if not reviewed_sides:
+            return 0.0
+        return sum(min(value / GOOD_SCORE, 1.0) for value in reviewed_sides) / len(reviewed_sides)

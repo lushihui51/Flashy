@@ -8,8 +8,8 @@ from app.database_ops.practice_generation import db_fetch_generation_candidates
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState
 
-MASTERY_CEILING = 100.0
-SAMPLING_EPSILON = 1.0
+READINESS_CEILING = 1.0
+SAMPLING_EPSILON = 0.01
 
 
 def _row_state(row) -> FieldMasteryState | None:
@@ -23,22 +23,20 @@ def _row_state(row) -> FieldMasteryState | None:
     )
 
 
-def weighted_low_mastery_sample(
-    candidates: Sequence[tuple[uuid.UUID, float | None]], k: int, rng: random.Random
+def weighted_low_readiness_sample(
+    candidates: Sequence[tuple[uuid.UUID, float]], k: int, rng: random.Random
 ) -> list[uuid.UUID]:
     """Weighted sample of up to k ids from candidates, without replacement, biased
-    toward low mastery — the lower the score, the higher the weight. None (never
-    reviewed) is treated as the lowest possible score: maximal priority, the same
-    "unseen sorts first" idea used for card ordering. The weighting formula lives here,
-    in one place, so it's the only thing that needs tuning."""
+    toward low readiness — the lower the readiness, the higher the weight. The weighting
+    formula lives here, in one place, so it's the only thing that needs tuning."""
     k = min(k, len(candidates))
     if k <= 0:
         return []
 
-    pool = [(id_, (0.0 if score is None else score)) for id_, score in candidates]
+    pool = list(candidates)
     chosen: list[uuid.UUID] = []
     for _ in range(k):
-        weights = [max(MASTERY_CEILING - score, SAMPLING_EPSILON) for _, score in pool]
+        weights = [max(READINESS_CEILING - readiness, SAMPLING_EPSILON) for _, readiness in pool]
         total = sum(weights)
         r = rng.uniform(0, total)
         upto = 0.0
@@ -70,17 +68,17 @@ def resolve_prompts_or_answers(
     and floored at zero, so a card with more forced fields than the drawn count simply
     carries all of them rather than dropping one to make room."""
     rows = db_fetch_generation_candidates(db, card_id, fixed_ids + pool_ids)
-    scores = {row.field_def_id: strategy.field_score(_row_state(row)) for row in rows}
+    readiness = {row.field_def_id: strategy.readiness(_row_state(row)) for row in rows}
 
-    surviving_fixed = [fid for fid in fixed_ids if fid in scores]
-    forced = [pid for pid in pool_ids if pid in scores and pid in forced_pool_ids]
+    surviving_fixed = [fid for fid in fixed_ids if fid in readiness]
+    forced = [pid for pid in pool_ids if pid in readiness and pid in forced_pool_ids]
     forced_set = set(forced)
     surviving_pool = [
-        (pid, scores[pid]) for pid in pool_ids if pid in scores and pid not in forced_set
+        (pid, readiness[pid]) for pid in pool_ids if pid in readiness and pid not in forced_set
     ]
 
     count = rng.choice(pool_counts) if pool_counts else 0
-    sampled_pool = weighted_low_mastery_sample(surviving_pool, max(0, count - len(forced)), rng)
+    sampled_pool = weighted_low_readiness_sample(surviving_pool, max(0, count - len(forced)), rng)
 
     return surviving_fixed + forced + sampled_pool
 

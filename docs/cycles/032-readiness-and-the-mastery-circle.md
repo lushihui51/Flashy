@@ -25,7 +25,7 @@ Judgement: The engineer judges on the live server at 390 wide: Your library's Su
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -45,6 +45,8 @@ None.
 - `app/services/mastery.py`
 - `app/services/practice_run.py`
 - `app/services/practice_generation.py`
+- `app/database_ops/practice_generation.py`
+- `app/database_ops/mastery_log.py`
 - `app/routers/api/card.py`
 - `app/models/card.py`
 - `app/models/practice_run_payloads.py`
@@ -61,6 +63,7 @@ None.
 - `frontend/src/pages/PracticeRunPage.test.tsx`
 - `frontend/src/pages/PracticeDetailsPage.test.tsx`
 - `README.md`
+- `docs/vocabulary.md`
 
 **Details**
 
@@ -168,7 +171,29 @@ README's paragraph "Mastery is a ledger, not a number." must say the new truth i
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The grep, run with `\b` around its alternatives by the engineer's order, prints nothing and exits 1. As written it also matches `rebuild_deck_mastery`, whose name stays because it rebuilds the stored state.
+- `grep -n "^MASTERY_PRIOR\|^GOOD_SCORE" app/mastery/ema.py` prints `MASTERY_PRIOR = 0.0` and `GOOD_SCORE = RATING_SCORES[3]`.
+- The five named pytest files: `155 passed`. `TestReadiness` and `TestReadinessFolds` are among them, 13 tests. `TestBreakdownReadiness` holds the payload test, `test_payload_carries_readiness_within_the_scale_and_no_mastery_key`.
+- On the `pg_dump` copy, `alembic upgrade head` printed `Running upgrade 004a6932a7f5 -> ec9df5054ea7, rebuild mastery from a prior of zero`, and the copy was dropped afterwards. On the dev database, `alembic current` prints `ec9df5054ea7 (head)`. `mastery_log` holds 1684 rows before and after. `SELECT max(answer_mastery), max(prompt_mastery) FROM mastery_log` printed 98.58762 and 97.98215 before, and 97.17525 and 97.37972 after. `alembic check` prints `No new upgrade operations detected.`
+- The named vitest run: 4 files and 58 tests passed.
+- Live, on the practice "Judgement practice" at `/practice/c4ea3fe6-cda6-494d-9ddc-7301578a3230` in headless Chromium at 390 wide, the rows read `holaaa | First try | 45 | +45`, `gracias (T2) | First try | 45 | +45` and `adiósssdd | First try | 45 | +45`, and the first card's sheet reads `Term | 45 | +45` and `Meaning | 45 | +45`. `curl` of its `/breakdown` under `DEV_AUTH_USER_ID` carries `readiness` in 0 to 1 on all 3 cards and every field, and the text `"mastery"` appears nowhere in it. `GET /api/cards/{id}/mastery` returns 404. The screenshots are `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/99c528ec-e4ed-49ff-a1e0-3e78e62670f6/scratchpad/summary.png` and `summary-sheet.png` in the same folder.
+
+Commit checks: full `pytest` 373 passed, with `pg_stat_activity` showing no other connection first; `npx vitest run` 59 files and 588 tests passed; `npm run lint` and `npm run build` clean.
+
+Departures from Details or Files:
+
+- Files gained `app/database_ops/practice_generation.py` and `app/database_ops/mastery_log.py`, whose docstrings named removed functions, and `docs/vocabulary.md`, whose rows "How well a card or field is known" and "A change in mastery" named removed code. The engineer approved each. T3 still replaces the first row.
+- README's paragraph "The random draw favors weak fields." also changed, because "100 minus the field's mastery" stopped being true.
+- `fold_card_readiness` returns 0.0 for an empty list, which its stated interface does not cover: a practice's snapshot can name only fields since deleted, and the retry path still asks for that card.
+- `test_full_fail_requeue_cycle` draws its retry from seed 101 instead of 99, and `test_per_field_bound_excludes_a_different_runs_intervening_write` rates Hard instead of Again in its second run, because an Again from empty now reads 0, the same as never reviewed, and the test could no longer tell the two bounds apart.
+- `SortKey`'s `mastery` value and `MasteryStrategy`'s `mastery`-named state stay: the first is the vocabulary row of the "Mastery" sort, which T3 leaves, and the second is the stored state.
+- ADR 043, ADR 083 and ADR 102 still name `field_score`, `card_score` or `_compute_field_mastery_deltas`. They are records and were not edited.
+
+Read in the code:
+
+- `readiness` in `app/mastery/ema.py` with `weighted_low_readiness_sample` in `app/services/practice_generation.py`. A prompt field whose only review was a failure now reads 0, the same as a field never seen, so it draws at the same weight. In the fixture of `test_full_fail_requeue_cycle`, a pool of three fields, a retry repeats the failed prompt with chance 1 in 3, where it was 57.5 in 257.5, about 22%, under the old prior. The weights are as Details orders, and this is why that test's seed had to change.
 
 ### T2 — Readiness on every subject, deck and card the API returns
 

@@ -258,7 +258,7 @@ class TestPracticeRunHTTPFlow:
 
 class TestPracticeRunAcceptance:
     """Start, rate, fail, requeue — the requeued card is a new row with a different
-    prompt/answer combination and a position consistent with its updated mastery; the
+    prompt/answer combination and a position consistent with its updated readiness; the
     original row stays failed."""
 
     def test_full_fail_requeue_cycle(
@@ -288,7 +288,7 @@ class TestPracticeRunAcceptance:
 
         ratings = {answer_id: 1 for answer_id in original.answers}  # force a fail
         rated, requeued = submit_rating(
-            db, strategy, existing_user.id, original_id, ratings, rng=random.Random(99)
+            db, strategy, existing_user.id, original_id, ratings, rng=random.Random(101)
         )
         db.commit()
 
@@ -304,15 +304,15 @@ class TestPracticeRunAcceptance:
             original_answers,
         )
 
-        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR), so
-        # a forced fail always drops the requeued card's mastery to index 0 — the front
-        # of the mastery order. But only 2 other pending cards remain once the original
+        # Every other card in this fixture is still unreviewed, reading 0, and a forced
+        # fail leaves the requeued card at 0 too, so it sits at index 0 — the front of
+        # the readiness order. But only 2 other pending cards remain once the original
         # is marked failed, so the retry spacing floor (RETRY_SPACING_FLOOR=3) clamps
         # that index up to min(3, len(pending)) = 2: the end of the queue, not the
         # front. This is a hard guarantee of the clamp, not an approximation — assert
         # the guarantee itself (new back of the pending queue), not just "position
         # changed". TestRetrySpacingFloor covers the floor directly with ≥4 pending
-        # cards, where the clamp and the mastery index can disagree either way.
+        # cards, where the clamp and the readiness index can disagree either way.
         assert requeued.position != original_position
         pending_positions = db.exec(
             select(PracticeCard.position).where(
@@ -483,7 +483,7 @@ class TestForcedFailedAnswerFields:
 
 
 class TestRetrySpacingFloor:
-    """RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up, never down
+    """RETRY_SPACING_FLOOR=3 clamps the readiness-ordered insertion index up, never down
     — a retry surfaces only after that many other pending cards have had their turn,
     or at the end of the queue with fewer than that remaining. The "2 pending cards ->
     retry is last" case is already covered by
@@ -627,15 +627,15 @@ class TestRetrySpacingFloor:
         assert len(pending) == 5
         assert pending[3].id == requeued.id  # exactly 3 pending cards ahead of it
 
-    def test_mastery_index_deeper_than_the_floor_wins(self):
+    def test_readiness_index_deeper_than_the_floor_wins(self):
         """Direct test of `_insertion_position`: six pending cards at strictly
-        ascending mastery, a new_score above every one of them (mastery_index=6, well
+        ascending readiness, a new_readiness above every one of them (readiness_index=6, well
         past RETRY_SPACING_FLOOR=3) must land after all six — the clamp only ever
         raises the floor, it never caps a deeper index back down to it (a clamp, not a
         fixed placement)."""
-        pending = [(self._card_at(i * _POSITION_GAP), float(i)) for i in range(6)]
+        pending = [(self._card_at(i * _POSITION_GAP), i / 10) for i in range(6)]
 
-        position = _insertion_position(pending, new_score=100.0)
+        position = _insertion_position(pending, new_readiness=1.0)
 
         assert position > pending[-1][0].position
 
@@ -759,7 +759,7 @@ class TestPositionCollisionFallback:
         card's position, so the requeue must hit db_stage_renumber_pending_practice_cards
         and succeed on the retry. The natural (non-stubbed) insertion formula never
         collides on its own with the gaps a fresh run leaves, so the stub makes the
-        collision deterministic instead of trying to engineer mastery scores precisely
+        collision deterministic instead of trying to engineer readiness precisely
         enough to collide. Five cards, so four stay pending after the fail and the
         requeue takes the enough-cards branch that calls `_insertion_position`."""
         import app.services.practice_run as practice_run_module
@@ -2444,8 +2444,8 @@ def _expected_after(strategy, ratings, shown_prompt_ids=(), prior_states=None):
     return states
 
 
-class TestBreakdownMastery:
-    """GET .../breakdown's mastery and delta fields. Built directly against
+class TestBreakdownReadiness:
+    """GET .../breakdown's readiness and delta fields. Built directly against
     practice_run/practice_card/mastery_log rather than through the generation/rating
     HTTP flow — the delta-semantics contract is specifically about row ordering and
     attribution, which this gives exact control over."""
@@ -2475,7 +2475,7 @@ class TestBreakdownMastery:
         pc = _make_appearance(db, run.id, card_id, answers=[answer_id])
         _rate(db, strategy, existing_user.id, run.id, pc, {answer_id: 4})
 
-        expected_score = strategy.field_score(_expected_after(strategy, {answer_id: 4})[answer_id])
+        expected = strategy.readiness(_expected_after(strategy, {answer_id: 4})[answer_id])
 
         breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
@@ -2484,19 +2484,56 @@ class TestBreakdownMastery:
         # field_def.position ascending, not touched-first.
         assert [f.field_def_id for f in card.fields] == [answer_id, other_id]
 
-        # Reviewed for the first time inside this run: delta is against the prior.
-        assert fields_by_id[answer_id].mastery == pytest.approx(expected_score)
-        assert fields_by_id[answer_id].delta == pytest.approx(expected_score - 50.0)
+        # Reviewed for the first time inside this run: delta is against 0.
+        assert fields_by_id[answer_id].readiness == pytest.approx(expected)
+        assert fields_by_id[answer_id].delta == pytest.approx(expected)
 
-        # Never reviewed by anyone, and untouched by this run: no score, no movement.
-        assert fields_by_id[other_id].mastery is None
+        # Never reviewed by anyone, and untouched by this run: reads 0, no movement.
+        assert fields_by_id[other_id].readiness == 0.0
         assert fields_by_id[other_id].delta == 0.0
 
         # The accepted cost of folding over every active field: the untouched field
         # dilutes the card fold — half the per-field movement here, since one of the
         # two active fields moved.
-        assert card.mastery == pytest.approx((expected_score + 50.0) / 2)
-        assert card.delta == pytest.approx((expected_score - 50.0) / 2)
+        assert card.readiness == pytest.approx(expected / 2)
+        assert card.delta == pytest.approx(expected / 2)
+
+    def test_payload_carries_readiness_within_the_scale_and_no_mastery_key(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        answer = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
+        ).json()
+        other = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "other", "type": "text"}
+        ).json()
+        answer_id = uuid.UUID(answer["id"])
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {answer["id"]: "a", other["id"]: "o"},
+                },
+            ).json()["id"]
+        )
+        run = _make_run(db, existing_user.id)
+        pc = _make_appearance(db, run.id, card_id, answers=[answer_id])
+        _rate(db, strategy, existing_user.id, run.id, pc, {answer_id: 4})
+
+        response = client.get(f"/api/practice_runs/{run.id}/breakdown")
+
+        assert response.status_code == 200, response.text
+        cards = response.json()["cards"]
+        assert cards
+        for card in cards:
+            assert 0 <= card["readiness"] <= 1
+            assert "mastery" not in card
+            assert card["fields"]
+            for field in card["fields"]:
+                assert 0 <= field["readiness"] <= 1
+                assert "mastery" not in field
 
     def test_per_field_bound_excludes_a_different_runs_intervening_write(
         self, db, client, existing_user, existing_deck
@@ -2529,7 +2566,7 @@ class TestBreakdownMastery:
         # A different, concurrently active run touches field B in between.
         run2 = _make_run(db, existing_user.id, status=RunStatus.active)
         pc2 = _make_appearance(db, run2.id, card_id, answers=[b_id])
-        _rate(db, strategy, existing_user.id, run2.id, pc2, {b_id: 1})
+        _rate(db, strategy, existing_user.id, run2.id, pc2, {b_id: 2})
         run2.status = RunStatus.completed
         db.add(run2)
         db.commit()
@@ -2542,20 +2579,20 @@ class TestBreakdownMastery:
         db.add(run1)
         db.commit()
 
-        run2_after_b = _expected_after(strategy, {b_id: 1})
+        run2_after_b = _expected_after(strategy, {b_id: 2})
         run1_after_b = _expected_after(strategy, {b_id: 4}, prior_states=run2_after_b)
-        expected_before = strategy.field_score(run2_after_b[b_id])
-        expected_after = strategy.field_score(run1_after_b[b_id])
+        expected_before = strategy.readiness(run2_after_b[b_id])
+        expected_after = strategy.readiness(run1_after_b[b_id])
 
         breakdown = get_practice_run_breakdown(db, strategy, run1.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
         fields_by_id = {f.field_def_id: f for f in card.fields}
 
-        assert fields_by_id[b_id].mastery == pytest.approx(expected_after)
+        assert fields_by_id[b_id].readiness == pytest.approx(expected_after)
         assert fields_by_id[b_id].delta == pytest.approx(expected_after - expected_before)
         # The wrong answer a single run-wide bound would give: treating field B as if
         # run1 never saw any prior state for it at all.
-        assert fields_by_id[b_id].delta != pytest.approx(expected_after - 50.0)
+        assert fields_by_id[b_id].delta != pytest.approx(expected_after)
 
     def test_deleted_run_attribution_survives_as_before_state(
         self, db, client, existing_user, existing_deck
@@ -2581,7 +2618,7 @@ class TestBreakdownMastery:
         old_run = _make_run(db, existing_user.id)
         old_pc = _make_appearance(db, old_run.id, card_id, answers=[x_id])
         _rate(db, strategy, existing_user.id, old_run.id, old_pc, {x_id: 2})
-        expected_orphaned = strategy.field_score(_expected_after(strategy, {x_id: 2})[x_id])
+        expected_orphaned = strategy.readiness(_expected_after(strategy, {x_id: 2})[x_id])
 
         # Deleting the run cascades its practice_card; mastery_log's row for field_x
         # survives with practice_run_id SET NULL — orphaned, but still real state.
@@ -2601,7 +2638,7 @@ class TestBreakdownMastery:
 
         # field_x: untouched by new_run, and its only history's run is gone — must
         # surface the orphaned row's real value rather than erroring or going missing.
-        assert fields_by_id[x_id].mastery == pytest.approx(expected_orphaned)
+        assert fields_by_id[x_id].readiness == pytest.approx(expected_orphaned)
         assert fields_by_id[x_id].delta == 0.0
 
 

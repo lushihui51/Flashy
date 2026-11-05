@@ -8,7 +8,7 @@ import type { components } from 'src/api/types';
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
 type BreakdownBucket = components['schemas']['BreakdownBucket'];
-type FieldMasteryDelta = components['schemas']['FieldMasteryDelta'];
+type FieldReadinessDelta = components['schemas']['FieldReadinessDelta'];
 
 const BUCKET_LABELS: Record<BreakdownBucket, string> = {
   passed_first_try: 'First try',
@@ -32,22 +32,21 @@ function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
   const sorted = [...cards];
   if (sort === 'gains') sorted.sort((a, b) => b.delta - a.delta);
   else if (sort === 'drops') sorted.sort((a, b) => a.delta - b.delta);
-  else sorted.sort((a, b) => a.mastery - b.mastery);
+  else sorted.sort((a, b) => a.readiness - b.readiness);
   return sorted;
 }
 
-// A rounded integer, "—" for a field that's never been reviewed. Card-level mastery is
-// never null (BreakdownCard.mastery is a plain float), so this only ever takes that
-// branch for a field entry.
-function formatMastery(mastery: number | null): string {
-  return mastery === null ? '—' : String(Math.round(mastery));
+// Readiness runs from 0 to 1; the summary shows it as a whole number from 0 to 100.
+function formatReadiness(readiness: number): string {
+  return String(Math.round(readiness * 100));
 }
 
-// The exact difference rounded to a signed integer, "±0" at zero. Rounding happens
-// first and the sign is read off the rounded value, not the original float — otherwise
-// a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
+// The exact difference, on the same 0 to 100 scale, rounded to a signed integer, "±0" at
+// zero. Rounding happens first and the sign is read off the rounded value, not the
+// original float — otherwise a delta like -0.003 would round to -0 and misprint as "−0"
+// instead of "±0".
 function formatDelta(delta: number): string {
-  const rounded = Math.round(delta);
+  const rounded = Math.round(delta * 100);
   if (rounded === 0) return '±0';
   return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
 }
@@ -123,7 +122,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                 {BUCKET_LABELS[card.bucket]}
               </span>
               <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-                {formatMastery(card.mastery)}
+                {formatReadiness(card.readiness)}
               </span>
               <span className="shrink-0 text-sm font-medium text-(--color-ink)">
                 {formatDelta(card.delta)}
@@ -183,7 +182,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                 </h3>
                 <ul className="flex flex-col gap-2">
                   {selectedCard.fields.map((field) => (
-                    <FieldMasteryRow key={field.field_def_id} field={field} />
+                    <FieldReadinessRow key={field.field_def_id} field={field} />
                   ))}
                 </ul>
               </div>
@@ -198,12 +197,12 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
 /** One entry of the detail sheet's Fields section: every currently active field of the
  * card's deck, not just the ones this run's attempts happened to touch — an untouched
  * field still shows its current mastery, at ±0. */
-function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
+function FieldReadinessRow({ field }: { field: FieldReadinessDelta }) {
   return (
     <li className="flex items-center justify-between gap-3">
       <span className="min-w-0 flex-1 truncate text-sm text-(--color-ink)">{field.name}</span>
       <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-        {formatMastery(field.mastery)}
+        {formatReadiness(field.readiness)}
       </span>
       <span className="shrink-0 text-sm font-medium text-(--color-ink)">
         {formatDelta(field.delta)}

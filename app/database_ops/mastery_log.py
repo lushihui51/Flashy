@@ -90,7 +90,7 @@ def db_stage_append_mastery_log(
 def db_fetch_mastery_read_rows(
     db: Session, card_ids: list[uuid.UUID], field_def_ids: list[uuid.UUID] | None = None
 ) -> list[Row]:
-    """Raw material for card_mastery/deck_mastery. Drives from field_def:
+    """Raw material for card_readiness. Drives from field_def:
     one row per (card, active field def), mastery columns NULL when never reviewed.
     Purely a fetch — no scoring or aggregation happens here; the caller folds scores in
     Python via the strategy.

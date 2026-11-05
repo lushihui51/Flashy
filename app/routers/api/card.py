@@ -14,10 +14,9 @@ from app.database_ops.field_def import db_read_field_defs
 from app.database_ops.subject import db_read_subject
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
-from app.models.card import CardCreate, CardMasteryRead, CardRead, CardUpdate
+from app.models.card import CardCreate, CardRead, CardUpdate
 from app.services.activity import touch
 from app.services.deletion import delete_card as delete_card_service
-from app.services.mastery import card_mastery
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
 
@@ -118,15 +117,6 @@ def update_card(
     touch(db, card, deck, subject)
     updated_card = db_update_card_values(db, card, payload.values)
     return _card_read(updated_card, active_field_ids)
-
-
-@router.get("/{card_id}/mastery", response_model=CardMasteryRead, status_code=200)
-def read_card_mastery(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID):
-    if not db_read_card(db, card_id, current_user.id):
-        raise HTTPException(status_code=404, detail="Card not found")
-    strategy = get_mastery_strategy()
-    score = card_mastery(db, strategy, [card_id])[card_id]
-    return CardMasteryRead(mastery=score.mastery, reviewed_field_count=score.reviewed_field_count)
 
 
 @router.delete("/{card_id}", status_code=204)

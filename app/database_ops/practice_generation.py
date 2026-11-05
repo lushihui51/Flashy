@@ -15,7 +15,7 @@ def db_fetch_generation_candidates(
     (drops ids no longer live) and not blank on this card (drops fields this card left
     unset). LEFT JOIN mastery — a DISTINCT ON subquery of
     mastery_log's latest row per field, scoped to this one card — no ordering or
-    scoring; the caller folds scores in Python via strategy.field_score."""
+    scoring; the caller reads each row through strategy.readiness."""
     if not field_ids:
         return []
     latest_mastery = (

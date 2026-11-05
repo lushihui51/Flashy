@@ -173,23 +173,6 @@ export interface paths {
         patch: operations["update_card_api_cards__card_id__patch"];
         trace?: never;
     };
-    "/api/cards/{card_id}/mastery": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Card Mastery */
-        get: operations["read_card_mastery_api_cards__card_id__mastery_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/deck_practice_configs": {
         parameters: {
             query?: never;
@@ -455,9 +438,9 @@ export interface components {
          * BreakdownCard
          * @description One card's whole outcome chain for the completion breakdown: `attempts` is
          *     chronological, so `attempts[-1]` is the determining attempt that decided `bucket`.
-         *     `mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold
-         *     (`strategy.card_score`) over every active field's after-state score; `delta` is
-         *     that same fold's after-state minus its before-state, exact (the client rounds);
+         *     `readiness`/`delta`/`fields` are the session deltas: `readiness` is the card's
+         *     readiness after the run, from 0 to 1, over every active field; `delta` is that
+         *     figure minus the same fold before the run, exact (the client rounds);
          *     `fields` lists every
          *     currently active field_def of the card's deck, field_def.position ascending —
          *     not just the ones this run's attempts happened to touch.
@@ -474,12 +457,12 @@ export interface components {
             primary_field: components["schemas"]["ResolvedFieldValue"];
             /** Attempts */
             attempts: components["schemas"]["BreakdownAttempt"][];
-            /** Mastery */
-            mastery: number;
+            /** Readiness */
+            readiness: number;
             /** Delta */
             delta: number;
             /** Fields */
-            fields: components["schemas"]["FieldMasteryDelta"][];
+            fields: components["schemas"]["FieldReadinessDelta"][];
         };
         /**
          * CardBatchCreate
@@ -531,17 +514,6 @@ export interface components {
             values: {
                 [key: string]: string;
             };
-        };
-        /**
-         * CardMasteryRead
-         * @description Display-only aggregate — never stored, computed fresh from mastery_log
-         *     via the active MasteryStrategy on every request.
-         */
-        CardMasteryRead: {
-            /** Mastery */
-            mastery: number;
-            /** Reviewed Field Count */
-            reviewed_field_count: number;
         };
         /** CardRead */
         CardRead: {
@@ -923,13 +895,13 @@ export interface components {
             type?: components["schemas"]["FieldType"] | null;
         };
         /**
-         * FieldMasteryDelta
-         * @description One active field's session-delta entry:
-         *     `mastery` is the after-state field score (`strategy.field_score`, the existing
-         *     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
-         *     is always a float, never None — 0.0 for a field this run's card left untouched.
+         * FieldReadinessDelta
+         * @description One active field's session-delta entry: `readiness` is the field's readiness
+         *     after the run, from 0 to 1, and 0 for a field never reviewed. `delta` is that
+         *     readiness minus the field's readiness before the run, 0.0 for a field this run's
+         *     card left untouched.
          */
-        FieldMasteryDelta: {
+        FieldReadinessDelta: {
             /**
              * Field Def Id
              * Format: uuid
@@ -938,8 +910,8 @@ export interface components {
             /** Name */
             name: string;
             type: components["schemas"]["FieldType"];
-            /** Mastery */
-            mastery: number | null;
+            /** Readiness */
+            readiness: number;
             /** Delta */
             delta: number;
         };
@@ -2044,40 +2016,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CardRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_card_mastery_api_cards__card_id__mastery_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                card_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CardMasteryRead"];
                 };
             };
             /** @description Validation Error */

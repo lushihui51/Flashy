@@ -5,7 +5,6 @@ import {
   createCard,
   readCard,
   readCards,
-  readCardMastery,
   updateCard,
   deleteCard,
 } from "src/api/card";
@@ -125,21 +124,6 @@ describe("readCard", () => {
     );
 
     await expect(readCard("nope")).rejects.toThrow("Card not found");
-  });
-});
-
-describe("readCardMastery", () => {
-  it("requests the right id and returns the mastery summary", async () => {
-    server.use(
-      http.get(`${BASE}/api/cards/:card_id/mastery`, () =>
-        HttpResponse.json({ mastery: 62.5, reviewed_field_count: 3 }),
-      ),
-    );
-
-    await expect(readCardMastery("card_42")).resolves.toEqual({
-      mastery: 62.5,
-      reviewed_field_count: 3,
-    });
   });
 });
 
