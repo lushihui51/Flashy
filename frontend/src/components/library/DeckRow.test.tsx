@@ -42,6 +42,18 @@ describe('DeckRow', () => {
     expect(screen.queryByText(/Back/)).not.toBeInTheDocument();
   });
 
+  it('shows its mastery beside a deck with a card', () => {
+    renderWithRouter(<DeckRow deck={{ ...deck, readiness: 0.42 }} />);
+
+    expect(screen.getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+  });
+
+  it('shows no mastery on a deck with no card', () => {
+    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 0, readiness: null }} />);
+
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
   it("links to the deck's page", () => {
     renderWithRouter(<DeckRow deck={deck} />);
 

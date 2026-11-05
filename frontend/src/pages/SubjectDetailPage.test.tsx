@@ -34,7 +34,7 @@ const subject = {
   user_id: 'u1',
   created_at: '',
   deck_count: 1,
-  readiness: 0.5,
+  readiness: 0.5 as number | null,
 };
 const decks = [
   {
@@ -113,6 +113,38 @@ describe('SubjectDetailPage', () => {
 
     await screen.findByRole('heading', { name: 'Math' });
     expect(screen.queryByText('Numbers and shapes')).not.toBeInTheDocument();
+  });
+
+  it('shows the mastery circle after the name in the heading row', async () => {
+    mockSubject({ subjectData: { ...subject, readiness: 0.42 }, decksData: [] });
+    renderAtSubjectRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Math' });
+    expect(heading.nextElementSibling).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
+  });
+
+  it('shows no mastery circle for a subject with no card', async () => {
+    mockSubject({ subjectData: { ...subject, readiness: null }, decksData: [] });
+    renderAtSubjectRoute();
+
+    await screen.findByRole('heading', { name: 'Math' });
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('a deck row shows its mastery, and a deck with no card shows none', async () => {
+    mockSubject({
+      subjectData: { ...subject, readiness: null },
+      decksData: [
+        { ...decks[0]!, readiness: 0.42 },
+        { ...decks[0]!, id: 'd2', name: 'Empty', card_count: 0, readiness: null },
+      ],
+    });
+    renderAtSubjectRoute();
+
+    const withCards = await screen.findByRole('link', { name: /Algebra/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Empty/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
   });
 
   it('breadcrumb links to /library', async () => {

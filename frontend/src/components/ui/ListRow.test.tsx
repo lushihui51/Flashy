@@ -119,6 +119,16 @@ describe('ListRow', () => {
     expect(screen.getByRole('link', { name: 'Geometry' })).toHaveAttribute('href', '/decks/b');
   });
 
+  it('sets `trailing` between the text column and the chevron', () => {
+    renderWithRouter(<ListRow title="Algebra" trailing={<i data-testid="trailing" />} to="/decks/d1" />);
+
+    const row = screen.getByRole('link', { name: 'Algebra' });
+    const trailing = screen.getByTestId('trailing').parentElement!;
+    expect(trailing).toHaveClass('shrink-0');
+    expect(trailing.previousElementSibling).toContainElement(screen.getByText('Algebra'));
+    expect(trailing.nextElementSibling).toBe(row.querySelector('svg'));
+  });
+
   describe('onClick mode (Phase 4)', () => {
     it('renders a button, not a link, and fires the handler on click', async () => {
       const user = userEvent.setup();

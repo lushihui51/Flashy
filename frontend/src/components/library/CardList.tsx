@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import type { components } from 'src/api/types';
 
 type CardListProps = {
   deckName: string;
   /** Sorted by position. The first one leads each card. */
   fieldDefs: components['schemas']['DeckFieldDefRead'][];
-  cards: components['schemas']['CardRead'][];
+  cards: components['schemas']['CardSummary'][];
   /** Where tapping a card goes: the card's edit route. */
   cardHref: (cardId: string) => string;
 };
@@ -19,7 +20,8 @@ function FieldValueText({ value }: { value: string }) {
 }
 
 /** A deck's cards, one block per card, each block a single link to `cardHref`. Every field
- * of `fieldDefs` reads as its label over the card's value, the first one largest. */
+ * of `fieldDefs` reads as its label over the card's value, the first one largest, with the
+ * card's mastery beside it. */
 export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardListProps) {
   const [leadField, ...otherFields] = fieldDefs;
 
@@ -32,11 +34,14 @@ export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardL
             className="tappable flex flex-col rounded-block bg-(--color-surface) px-4 text-(--color-ink)"
           >
             {leadField && (
-              <span className="flex flex-col gap-px py-3">
-                <span className="text-label text-(--color-aside)">{leadField.name}</span>
-                <span className="text-value leading-[1.1] font-bold tracking-[-0.01em] break-words">
-                  <FieldValueText value={card.values[leadField.id] ?? ''} />
+              <span className="flex items-center gap-2.5 py-3">
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <span className="text-label text-(--color-aside)">{leadField.name}</span>
+                  <span className="text-value leading-[1.1] font-bold tracking-[-0.01em] break-words">
+                    <FieldValueText value={card.values[leadField.id] ?? ''} />
+                  </span>
                 </span>
+                <MasteryCircle readiness={card.readiness} size="row" />
               </span>
             )}
             {otherFields.length > 0 && (

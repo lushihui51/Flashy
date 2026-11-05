@@ -7,6 +7,7 @@ import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { isNotFound } from 'src/api/unwrap';
@@ -57,9 +58,12 @@ export default function SubjectDetailPage() {
             <span className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)">
               <SubjectIcon icon={subject.icon} className="size-6.5 text-(--color-ink)" />
             </span>
-            <h1 className="min-w-0 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+            <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
               {subject.name}
             </h1>
+            {subject.readiness !== null && (
+              <MasteryCircle readiness={subject.readiness} size="heading" />
+            )}
           </div>
           {subject.description && (
             <p className="mt-4 text-body leading-normal font-light text-(--color-ink)">

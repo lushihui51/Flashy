@@ -133,7 +133,7 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
   };
 }
 
-/** The row buttons' accessible names include the badge/readiness/delta text alongside
+/** The row buttons' accessible names include the badge, circle and delta text alongside
  * the title (they're all inside the same <button>), so these tests match on the
  * title substring rather than the exact name. */
 function rowTitles() {
@@ -204,13 +204,14 @@ describe('RunBreakdown', () => {
     expect(screen.getByRole('button', { name: /Untitled card/ })).toBeInTheDocument();
   });
 
-  it('a row shows its outcome badge, its readiness as a whole number, and its delta', () => {
+  it('a row shows its outcome badge, its mastery circle with no number, and its delta', () => {
     render(<RunBreakdown breakdown={breakdown()} />);
 
     const row = screen.getByRole('button', { name: /Bonjour/ });
     expect(within(row).getByText('First try')).toBeInTheDocument();
     expect(within(screen.getByRole('button', { name: /Adieu/ })).getByText('Failed')).toBeInTheDocument();
-    expect(within(row).getByText('70')).toBeInTheDocument();
+    expect(within(row).getByRole('img', { name: 'Mastery 70%' })).toBeInTheDocument();
+    expect(within(row).queryByText('70')).not.toBeInTheDocument();
     expect(within(row).getByText('+5')).toBeInTheDocument();
 
     // One case each of the other two signs, from the other rows.
@@ -245,7 +246,12 @@ describe('RunBreakdown', () => {
     // Fields section: every active field, including one never reviewed by anyone.
     expect(within(dialog).getByText('Fields')).toBeInTheDocument();
     expect(within(dialog).getByText('Filler')).toBeInTheDocument();
-    expect(within(dialog).getByText('0')).toBeInTheDocument();
+    const notes = within(dialog).getByText('Notes').closest('li')!;
+    expect(within(notes).getByRole('img', { name: 'Mastery 40%' })).toBeInTheDocument();
+    expect(within(notes).queryByText('40')).not.toBeInTheDocument();
+    const filler = within(dialog).getByText('Filler').closest('li')!;
+    expect(within(filler).getByRole('img', { name: 'Mastery 0%' })).toBeInTheDocument();
+    expect(within(filler).getByText('±0')).toBeInTheDocument();
   });
 
   it('shows no attempt header for a single-attempt card', async () => {

@@ -35,7 +35,7 @@ const deck = {
   name: 'Vocab Deck',
   subject_id: 's1',
   created_at: '',
-  readiness: 0.5,
+  readiness: 0.5 as number | null,
   field_defs: twoFields,
   cards: [
     {
@@ -139,6 +139,42 @@ describe('DeckDetailPage', () => {
     expect(screen.getByText('Bonjour')).toBeInTheDocument();
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('shows the mastery circle directly after the name, before Practice', async () => {
+    mockDeck({ deckData: { ...deck, readiness: 0.42 } });
+    renderAtDeckRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Vocab Deck' });
+    const circle = heading.nextElementSibling!;
+    expect(circle).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
+    expect(
+      circle.compareDocumentPosition(screen.getByRole('button', { name: 'Practice' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(heading).toHaveClass('flex-1');
+  });
+
+  it('shows no mastery circle for a deck with no card', async () => {
+    mockDeck({ deckData: { ...deck, readiness: null, cards: [] } });
+    renderAtDeckRoute();
+
+    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it("shows each card's mastery on its row", async () => {
+    mockDeck({
+      deckData: {
+        ...deck,
+        readiness: 0.2,
+        cards: [{ ...deck.cards[0]!, readiness: 0.42 }],
+      },
+    });
+    renderAtDeckRoute();
+
+    const list = await screen.findByRole('list', { name: 'Cards in Vocab Deck' });
+    expect(within(list).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
   });
 
   it('the breadcrumb renders the subject icon as a real icon (not raw text) and links to the subject page', async () => {

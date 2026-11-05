@@ -327,7 +327,7 @@ Read in the code:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -414,4 +414,36 @@ The screen check, as cycle 031 has it: headless Chromium through playwright-core
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named vitest run: 19 files and 243 tests passed, `MasteryCircle.test.tsx` among them.
+- `grep -c '^| Mastery |' docs/vocabulary.md` prints `1`, and `grep -c "How well a card or field is known\|CardMasteryRead" docs/vocabulary.md` prints `0`.
+- In headless Chromium at 390 wide, the circles on a list's rows equal its rows less those with no card, and no page scrolls sideways:
+  - `/library`, Subjects: 6 rows, 2 with no card, 4 circles.
+  - `/library?tab=decks`: 11 rows, 4 with no card, 7 circles.
+  - CompTIA A+'s page: 3 rows, 1 with no card, 2 circles, 1 at the heading.
+  - The judgement subject's page: 3 rows, 1 with no card, 2 circles, 1 at the heading.
+  - Ports' page, Cards tab: 21 rows, 21 circles, 1 at the heading.
+  - The summary of "Judgement practice": 3 rows, 3 circles. Its first card's sheet: 2 field rows, 2 circles. A row reads `holaaa | First try | +45`, spoken `Mastery 45%`, with no mastery number.
+  - The run page of the judgement's practice: 0 circles.
+- The cycle's judgement, on subject "Cycle 032 T3 judgement 2026-11-05 11:49", holding deck "Practiced" of 3 cards, "Untouched" of 3 cards and "Empty" of none, the practice's first card rated Good and the others left unrated. The rate response was 200 and no page error was raised.
+  - Before: card `Mastery 0%`, deck `Mastery 0%`, subject `Mastery 0%`.
+  - After: card `Mastery 30%`, deck `Mastery 10%`, subject `Mastery 5%`.
+  - "The first card" is the practice's first, "dos". The deck page lists "uno" first, and a practice orders never-reviewed cards in an order of its own, so the script read the card it rated, by its value. All three cards read 0 before.
+- Screenshots, each in `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/7eb9827f-40a6-4475-a6d1-d4018ec2116d/scratchpad/`: `library-subjects.png`, `library-decks.png`, `subject.png`, `subject-judgement.png`, `deck-cards.png`, `deck-after.png`, `summary.png` and `summary-sheet.png`. The drawings' values are illustrative, so the screenshots match them in layout and not in figures.
+
+Commit checks: `npx vitest run` 60 files and 607 tests passed; `npm run lint` and `npm run build` clean. No backend path changed, so `pytest` was not run.
+
+Departures from Details or Files:
+
+- The deck page's Practice and Edit moved off the heading row onto a row of their own, with the classes the subject page's row uses. This is a visible change Details does not name. Details says "before Practice", and drawing 13 draws Practice on its own row. On the heading row the circle left the name about 131 of 358 wide, and "Practiced" broke as "Practice / d"; "Commands" is wider than that room too. No record places Practice on the heading row; cycle 027's drawings did. The circle still comes directly after the name and before Practice, and the name keeps `flex-1`.
+- `ListRow`'s gap stays `gap-3.5` on every row, where drawing 12's deck rows draw 12 wide, because it is one row grammar.
+- The cards' lower grid stays `grid-cols-2`, where drawing 13 draws `1fr auto`, because Details names only the lead line.
+- `SubjectDetailPage.tsx`'s name gained `flex-1`, so the circle sits at the row's right as drawing 12 has it.
+- Tests beyond those Details names: the circle's text, its long arc past half a turn and its two sizes; `ListRow`'s `trailing` placement; `CardList`'s lead line; and the deck rows on a subject's page.
+- The check left two judgement subjects in the dev database, since the first run came before the row moved. Each holds three decks and one practice. Its figures were the same: 30, 10 and 5.
+
+Read in the code:
+
+- `DeckDetailPage.tsx`'s heading and actions rows, for the move above.
+- `DeckRow.tsx` on `/library?tab=decks`: the circle narrows the second line, so a long subject's name now truncates the counts away, as in "Cycle 032 T3 judgement 2026-11-05 11:…". The truncation is `ListRow`'s and was not changed.
