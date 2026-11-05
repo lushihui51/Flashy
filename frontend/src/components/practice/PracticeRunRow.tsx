@@ -22,7 +22,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         className="flex min-w-0 flex-1 flex-col gap-1"
       >
         <span className="flex items-center gap-2">
-          <span className="truncate text-[15px] leading-5 font-semibold text-(--color-ink)">
+          <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
             {session.name}
           </span>
           <PracticeStatusBadge status={session.status} />

@@ -20,14 +20,14 @@ export default function SelectedConfigurationList({
   onRemove,
 }: SelectedConfigurationListProps) {
   return (
-    <ul className="tappable flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)">
+    <ul className="tappable flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
       {configs.map((config) => (
         <li key={config.id} className="flex items-center gap-1.5 pr-1 pl-4">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-3">
-            <span className="truncate text-[15px] leading-5 font-semibold text-(--color-ink)">
+            <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
               {config.name}
             </span>
-            <span className="truncate text-[13px] leading-4 text-(--color-aside)">
+            <span className="truncate text-label leading-4 text-(--color-aside)">
               {config.subject_name} · {config.deck_name}
             </span>
           </div>

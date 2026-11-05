@@ -27,7 +27,7 @@ export default function RatingChip({ fieldName, rating, onSelect }: RatingChipPr
           className={
             tier
               ? `tappable-sm inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold ${tier.blockClass}`
-              : 'inline-flex h-9 shrink-0 items-center rounded-full border-[1.5px] border-dashed border-(--color-ink) bg-(--color-surface) px-3.5 text-sm font-semibold text-(--color-ink)'
+              : 'inline-flex h-9 shrink-0 items-center rounded-full outlined-ink-dashed bg-(--color-surface) px-3.5 text-sm font-semibold text-(--color-ink)'
           }
         >
           {tier ? tier.label : 'Rate'}

@@ -114,9 +114,9 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                 triggerRef.current = event.currentTarget;
                 setSelectedCardId(card.card_id);
               }}
-              className="flex min-h-16 w-full items-center gap-3 py-[14px] text-left"
+              className="flex min-h-16 w-full items-center gap-3 py-3.5 text-left"
             >
-              <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-ink)">
+              <span className="min-w-0 flex-1 truncate text-body leading-5 text-(--color-ink)">
                 {cardTitle(card)}
               </span>
               <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-line) px-2 text-xs text-(--color-aside)">

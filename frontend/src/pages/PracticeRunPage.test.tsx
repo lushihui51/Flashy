@@ -126,8 +126,8 @@ describe('PracticeRunPage', () => {
   });
 
   it.each([
-    ['twelve characters or fewer', 'A'.repeat(12), 'text-[54px]'],
-    ['longer than twelve characters', 'A'.repeat(13), 'text-[26px]'],
+    ['twelve characters or fewer', 'A'.repeat(12), 'text-[3.375rem]'],
+    ['longer than twelve characters', 'A'.repeat(13), 'text-value'],
   ])('sizes a prompt value of %s', async (_name, value, sizeClass) => {
     mockRun(
       runState({

@@ -255,7 +255,7 @@ The API and the Vite dev server are still running from this session for your che
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -330,4 +330,37 @@ The screen check for the Done when below is T1's: headless Chromium through play
 
 **Debrief**
 
-None.
+Evidence, in the Done when's order:
+
+- `npx vitest run src/test/pxLiterals.test.ts` passed, 2 tests. With `h-[46px]` put back on one line of `frontend/src/components/ui/Tabs.tsx` it failed, its report naming `components/ui/Tabs.tsx` and the line, and the line was restored; `git status` shows that file unchanged. Output: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/scan-fail.out`.
+- The whole frontend's `npx vitest run` passed, 59 files, 589 tests, `src/test/stickyOffset.test.ts` and `src/test/theme.test.ts` among them. Output: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/vitest.out`. `npm run lint` and `npm run build` were clean.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/practice.mjs`, output in `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after.out`, printed `38 42 54 42` at 16px and `57 63 81 63` at 24px.
+- Screenshots at 390 wide, 16px then 24px:
+  - Your library: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-library-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-library-24.png`
+  - A deck's page, Cards tab, the first screen: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-deck-cards-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-deck-cards-24.png`; the whole page: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-deck-cards-full-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-deck-cards-full-24.png`
+  - Edit configuration: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-config-edit-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-config-edit-24.png`
+  - The Practice page: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-practice-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-practice-24.png`
+  - The run page with the answers shown: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-run-answers-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-run-answers-24.png`
+- At 16px, against the shots taken before this cycle's changes:
+  - Your library, a deck's page and Edit configuration are byte-identical to T2's `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-library-subjects-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-deck-cards-16.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-config-edit-16.png`. T1's `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/before-library-16.png` differs from Your library in 64 pixels, by at most 2 of 255, on the left corners of blocks; T1's and T2's own comparisons set that shot's successors equal, so this is the renderer's noise.
+  - The Practice page's first screen, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-practice-viewport-16.png`, is byte-identical to T1's `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/39bb9f42-43c8-4e2b-9766-4fcb3eeb279c/scratchpad/before-practice-16.png`.
+  - The run page has no shot from before this cycle. Against this task's own before shots, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/before-*-16.png`, the run page with the answers shown is byte-identical.
+- At 24px, on all five screens, every `tappable` element computes to `border: 1.5px solid rgb(23, 33, 43)`, and no word's rectangle leaves its block. `practice.mjs` counts these on every element: 7, 59, 15, 5 and 2 tappable elements, 0 bad borders, 0 spills. The spill count leaves out text an element clips itself; the clipped words are listed below.
+
+Departures:
+
+- The outline is read in a browser launched with `--force-device-scale-factor=2`. At a real device pixel ratio of 1 Chromium computes a 1.5px border as `1px`, at both 16px and 24px and before this task's edits as well, and Playwright's emulated ratio does not change that. The screenshots stay at ratio 1 to compare with the earlier shots.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/practice.mjs` checks the same at 16px and 24px on seven screens the Done when does not name: the run page's prompt, a long-valued card and the summary, a practice's details active and completed, and New practice with and without a selection.
+  - Their 16px shots are byte-identical to this task's before shots, with two exceptions, each repeated on a second run. New practice differs only in the minutes of its name, which is prefilled from the clock. The run page's prompt differs in 41 pixels, by at most 2 of 255, on block corners that include the search bar, which this task does not touch. A completed practice's details differed in 53 such pixels once and was identical on the second run.
+  - New practice's disabled "Create" computes to `1.5px solid rgb(213, 218, 226)`, the only tappable element not in ink, from its existing `disabled:border-(--color-line)`.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/extra.mjs` answers one run state with a second attempt, to show the Retry badge, which no active practice in the dev database shows. It computes to 9px and 3px of padding at 16px, and 13.5px and 4.5px at 24px. Shots: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-run-retry-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/77b266c9-ff35-4e0b-b0db-37e78700e2dc/scratchpad/after-run-retry-24.png`. No script sent a write.
+
+Seen at a 24px root, for your judgement. This task changed no layout, as its Out of scope requires, and I did not fix any of these:
+
+- Inside B24: the whole page scrolls sideways on every screen checked, 29 from the top bar's "Log in". It is 33 on Edit configuration, where "Save" runs past the edge; 52 on the Practice page, where "Add practice" does; and 65 on New practice with a selection, where "Create" does. On a deck's page "Commands" takes five lines.
+- Not named in B24, and raised here for you to decide whether B24 should hold them:
+  - The Practice page's two filters cut their own words, reading "All subj" and "All deck", inside their blocks.
+  - The Practice page's row titles truncate to a few characters beside the status badge, so rows read "Sep 28, …" and "Sep 22, …" and several look alike.
+  - Your library's subject names truncate the same way, as "CompTI…" and "Cycle 02…".
+
+The scan and the sweep hold nothing to read beyond `frontend/src/test/pxLiterals.test.ts`; every other line changed swaps a value as Details list.

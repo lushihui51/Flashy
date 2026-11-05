@@ -19,11 +19,11 @@ import { usePageTitle } from 'src/lib/pageTitle';
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
 
-const ZONE_CLASS = 'tappable rounded-[20px] bg-(--color-surface) px-[18px] landscape:flex-1';
+const ZONE_CLASS = 'tappable rounded-block bg-(--color-surface) px-4.5 landscape:flex-1';
 const ZONE_HEADING_CLASS =
-  'flex h-[42px] items-center border-b-[1.5px] border-(--color-ink) text-sm font-semibold text-(--color-ink)';
-const ZONE_ROW_CLASS = 'pt-3.5 pb-4 last:pb-[18px]';
-const CARD_ACTION_CLASS = 'mt-2 h-[54px] w-full shrink-0 rounded-2xl text-[17px] font-semibold';
+  'flex h-10.5 items-center ruled-bottom text-sm font-semibold text-(--color-ink)';
+const ZONE_ROW_CLASS = 'pt-3.5 pb-4 last:pb-4.5';
+const CARD_ACTION_CLASS = 'mt-2 h-13.5 w-full shrink-0 rounded-2xl text-action font-semibold';
 
 /** The active-session run surface: the current card as a static two-zone reveal with
  * rating, live progress, and a retry marker. Once `current_card` is null, nothing is
@@ -102,7 +102,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <h2 className="text-[19px] font-bold text-(--color-ink)">Practice complete</h2>
+      <h2 className="text-title font-bold text-(--color-ink)">Practice complete</h2>
 
       {breakdownQuery.isError && (
         <p role="alert" className="text-sm text-(--color-wrong)">
@@ -113,7 +113,7 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
 
       <Link
         to={`/practice/${practiceSessionId}`}
-        className="tappable flex h-[52px] items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-[17px] font-semibold text-(--color-ink)"
+        className="tappable flex h-action items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-action font-semibold text-(--color-ink)"
       >
         Done
       </Link>
@@ -144,7 +144,7 @@ function PracticeCardView({
   return (
     <div className="mt-3.5 flex flex-col gap-3.5">
       {currentCard.attempt > 1 && (
-        <span className="w-fit rounded-[10px] bg-(--color-aside) px-[9px] py-[3px] text-xs font-semibold text-(--color-surface)">
+        <span className="w-fit rounded-tight bg-(--color-aside) px-badge-x py-badge-y text-xs font-semibold text-(--color-surface)">
           Retry
         </span>
       )}
@@ -200,7 +200,7 @@ function PracticeCardView({
             className={`${CARD_ACTION_CLASS} ${
               canSubmit
                 ? 'tappable bg-(--color-main-action) text-(--color-ink)'
-                : 'border-[1.5px] border-(--color-line) bg-(--color-surface) text-(--color-aside)'
+                : 'outlined-line bg-(--color-surface) text-(--color-aside)'
             }`}
           >
             Next card
