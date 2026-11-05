@@ -40,8 +40,8 @@ describe('ListRow', () => {
 
     const rowWith = withSub.querySelector('a')!;
     const rowWithout = withoutSub.querySelector('a')!;
-    expect(rowWith.className).toMatch(/min-h-\[78px\]/);
-    expect(rowWithout.className).toMatch(/min-h-\[78px\]/);
+    expect(rowWith.className).toMatch(/min-h-\[4\.875rem\]/);
+    expect(rowWithout.className).toMatch(/min-h-\[4\.875rem\]/);
   });
 
   it('meta is not truncated (no truncate class) while subtitle is', () => {

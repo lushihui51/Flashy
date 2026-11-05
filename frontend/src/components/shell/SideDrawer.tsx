@@ -52,7 +52,7 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
                     end={end}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `tappable flex h-12 items-center gap-3 rounded-2xl px-4 text-[15px] font-semibold ${
+                      `tappable flex h-12 items-center gap-3 rounded-2xl px-4 text-body font-semibold ${
                         isActive
                           ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)'
                           : 'bg-(--color-surface) text-(--color-ink)'

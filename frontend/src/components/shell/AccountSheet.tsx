@@ -32,7 +32,7 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
         ) : (
           <div
             aria-hidden="true"
-            className="h-14 w-14 rounded-full border-[1.5px] border-(--color-ink) bg-(--color-ground)"
+            className="h-14 w-14 rounded-full outlined-ink bg-(--color-ground)"
           />
         )}
         <div>
@@ -48,7 +48,7 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
       <button
         type="button"
         onClick={handleLogOut}
-        className="tappable h-12 rounded-2xl bg-(--color-surface) text-[15px] font-semibold text-(--color-ink)"
+        className="tappable h-12 rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink)"
       >
         Log out
       </button>

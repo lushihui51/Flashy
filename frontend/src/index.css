@@ -10,6 +10,24 @@
   --color-wrong: #e5484d;
   --color-ground: #f3f4f8;
   --color-surface: #ffffff;
+  --text-label: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-action: 1.0625rem;
+  --text-title: 1.1875rem;
+  --text-value: 1.625rem;
+  --text-page: 1.875rem;
+  --radius-tight: 0.625rem;
+  --radius-field: 0.875rem;
+  --radius-block: 1.25rem;
+  --spacing-field: 2.875rem;
+  --spacing-action: 3.25rem;
+  --spacing-tab: 2.375rem;
+  --spacing-account: 2.375rem;
+  --spacing-icon: 1.125rem;
+  --spacing-icon-lg: 1.375rem;
+  --spacing-icon-sm: 0.9375rem;
+  --spacing-badge-x: 0.5625rem;
+  --spacing-badge-y: 0.1875rem;
 }
 
 @utility tappable {
@@ -23,4 +41,22 @@
 @utility tappable-pressed {
   box-shadow: none !important;
   transform: translateY(2px);
+}
+@utility outlined-ink {
+  border: 1.5px solid var(--color-ink);
+}
+@utility outlined-line {
+  border: 1.5px solid var(--color-line);
+}
+@utility outlined-ink-dashed {
+  border: 1.5px dashed var(--color-ink);
+}
+@utility outlined-reserved {
+  border: 1.5px solid transparent;
+}
+@utility ruled-top {
+  border-top: 1.5px solid var(--color-ink);
+}
+@utility ruled-bottom {
+  border-bottom: 1.5px solid var(--color-ink);
 }

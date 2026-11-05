@@ -26,7 +26,7 @@ export default function Tabs<T extends string>({
           role="tab"
           aria-selected={item.value === value}
           onClick={() => onChange(item.value)}
-          className={`tappable-sm h-[38px] rounded-full px-4 text-sm font-semibold ${
+          className={`tappable-sm h-tab rounded-full px-4 text-sm font-semibold ${
             item.value === value
               ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)'
               : 'bg-(--color-surface) text-(--color-ink)'
