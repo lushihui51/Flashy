@@ -25,7 +25,7 @@ Judgement: The engineer judges on the live server at 390 wide: Your library's Su
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -45,6 +45,8 @@ None.
 - `app/services/mastery.py`
 - `app/services/practice_run.py`
 - `app/services/practice_generation.py`
+- `app/database_ops/practice_generation.py`
+- `app/database_ops/mastery_log.py`
 - `app/routers/api/card.py`
 - `app/models/card.py`
 - `app/models/practice_run_payloads.py`
@@ -61,6 +63,7 @@ None.
 - `frontend/src/pages/PracticeRunPage.test.tsx`
 - `frontend/src/pages/PracticeDetailsPage.test.tsx`
 - `README.md`
+- `docs/vocabulary.md`
 
 **Details**
 
@@ -168,13 +171,35 @@ README's paragraph "Mastery is a ledger, not a number." must say the new truth i
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The grep, run with `\b` around its alternatives by the engineer's order, prints nothing and exits 1. As written it also matches `rebuild_deck_mastery`, whose name stays because it rebuilds the stored state.
+- `grep -n "^MASTERY_PRIOR\|^GOOD_SCORE" app/mastery/ema.py` prints `MASTERY_PRIOR = 0.0` and `GOOD_SCORE = RATING_SCORES[3]`.
+- The five named pytest files: `155 passed`. `TestReadiness` and `TestReadinessFolds` are among them, 13 tests. `TestBreakdownReadiness` holds the payload test, `test_payload_carries_readiness_within_the_scale_and_no_mastery_key`.
+- On the `pg_dump` copy, `alembic upgrade head` printed `Running upgrade 004a6932a7f5 -> ec9df5054ea7, rebuild mastery from a prior of zero`, and the copy was dropped afterwards. On the dev database, `alembic current` prints `ec9df5054ea7 (head)`. `mastery_log` holds 1684 rows before and after. `SELECT max(answer_mastery), max(prompt_mastery) FROM mastery_log` printed 98.58762 and 97.98215 before, and 97.17525 and 97.37972 after. `alembic check` prints `No new upgrade operations detected.`
+- The named vitest run: 4 files and 58 tests passed.
+- Live, on the practice "Judgement practice" at `/practice/c4ea3fe6-cda6-494d-9ddc-7301578a3230` in headless Chromium at 390 wide, the rows read `holaaa | First try | 45 | +45`, `gracias (T2) | First try | 45 | +45` and `adiósssdd | First try | 45 | +45`, and the first card's sheet reads `Term | 45 | +45` and `Meaning | 45 | +45`. `curl` of its `/breakdown` under `DEV_AUTH_USER_ID` carries `readiness` in 0 to 1 on all 3 cards and every field, and the text `"mastery"` appears nowhere in it. `GET /api/cards/{id}/mastery` returns 404. The screenshots are `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/99c528ec-e4ed-49ff-a1e0-3e78e62670f6/scratchpad/summary.png` and `summary-sheet.png` in the same folder.
+
+Commit checks: full `pytest` 373 passed, with `pg_stat_activity` showing no other connection first; `npx vitest run` 59 files and 588 tests passed; `npm run lint` and `npm run build` clean.
+
+Departures from Details or Files:
+
+- Files gained `app/database_ops/practice_generation.py` and `app/database_ops/mastery_log.py`, whose docstrings named removed functions, and `docs/vocabulary.md`, whose rows "How well a card or field is known" and "A change in mastery" named removed code. The engineer approved each. T3 still replaces the first row.
+- README's paragraph "The random draw favors weak fields." also changed, because "100 minus the field's mastery" stopped being true.
+- `fold_card_readiness` returns 0.0 for an empty list, which its stated interface does not cover: a practice's snapshot can name only fields since deleted, and the retry path still asks for that card.
+- `test_full_fail_requeue_cycle` draws its retry from seed 101 instead of 99, and `test_per_field_bound_excludes_a_different_runs_intervening_write` rates Hard instead of Again in its second run, because an Again from empty now reads 0, the same as never reviewed, and the test could no longer tell the two bounds apart.
+- `SortKey`'s `mastery` value and `MasteryStrategy`'s `mastery`-named state stay: the first is the vocabulary row of the "Mastery" sort, which T3 leaves, and the second is the stored state.
+- ADR 043, ADR 083 and ADR 102 still name `field_score`, `card_score` or `_compute_field_mastery_deltas`. They are records and were not edited.
+
+Read in the code:
+
+- `readiness` in `app/mastery/ema.py` with `weighted_low_readiness_sample` in `app/services/practice_generation.py`. A prompt field whose only review was a failure now reads 0, the same as a field never seen, so it draws at the same weight. In the fixture of `test_full_fail_requeue_cycle`, a pool of three fields, a retry repeats the failed prompt with chance 1 in 3, where it was 57.5 in 257.5, about 22%, under the old prior. The weights are as Details orders, and this is why that test's seed had to change.
 
 ### T2 — Readiness on every subject, deck and card the API returns
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -190,12 +215,16 @@ None.
 - `app/models/deck.py`
 - `app/models/card.py`
 - `app/models/deck_payloads.py`
+- `app/database_ops/deck.py`
+- `app/database_ops/subject.py`
+- `app/database_ops/practice_run.py`
 - `app/database_ops/mastery_log.py`
 - `app/services/mastery.py`
 - `app/routers/api/subject.py`
 - `app/routers/api/deck.py`
 - `tests/api_tests/test_subjects.py`
 - `tests/api_tests/test_decks.py`
+- `tests/api_tests/test_deck_batch_edit.py`
 - `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
@@ -264,13 +293,41 @@ The frontend: `npm run gen:api` regenerates the types; every fixture typed as `S
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The five named pytest files: `61 passed`. The four statement-count tests are `TestSubjectReadiness::test_list_runs_a_fixed_number_of_statements`, at most 3 statements; `TestDeckReadiness::test_list_runs_a_fixed_number_of_statements`, at most 4; `TestDeckReadiness::test_detail_runs_a_fixed_number_of_statements`, at most 6; and `TestSubjectReadiness::test_read_carries_deck_count_and_readiness`, at most 3, a bound Details leaves unstated.
+- `grep -c "readiness" frontend/src/api/types.ts` prints `10`. `git diff --stat HEAD -- frontend/src/api/types.ts frontend/src/api/openapi.json` prints `openapi.json | 97` and `types.ts | 55`, 135 insertions and 17 deletions over the two files.
+- Live, by `curl` under `DEV_AUTH_USER_ID`:
+  - `POST /api/decks` made "Cycle 032 T2 check 1793896792" in "CompTIA A+", and it returned `readiness: null` and `cards: []`.
+  - `/api/subjects`: CompTIA A+, 3 decks, `0.3974832464676617`; Cycle 029 T2 judgement 2026-11-04 19:45, 1 deck, `0.3358208955223881`; Web, 0 decks, `null`; Stott Pilates, 1 deck, `null`.
+  - `/api/decks`: Cycle 032 T2 check 1793896792, 0 cards, `null`; Three fields, 4 cards, `0.3358208955223881`; Commands, 54 cards, `0.19068344707020454`; Ports, 21 cards, `0.9292541592039801`; Reformer Repertoire, 0 cards, `null`.
+  - `/api/decks/{id}` for Three fields: the deck reads `0.3358208955223881`, its cards `0.4478`, `0.4478`, `0.4478` and `0.0`, whose average is the deck's figure.
+  - CompTIA A+ is the average over the 75 cards of Commands and Ports, not over the two decks' figures.
+  - The text `mastery` appears nowhere in the three payloads.
+  - No file under `frontend/src` changed but `src/api/openapi.json`, `src/api/types.ts` and test files, so no screen has changed.
+
+Commit checks: full `pytest` 380 passed, with `pg_stat_activity` showing no other connection first; `npx vitest run` 59 files and 588 tests passed; `npm run lint` and `npm run build` clean.
+
+Departures from Details or Files:
+
+- Files gained four paths, each approved by the engineer: `app/database_ops/deck.py`, `app/database_ops/subject.py`, `app/database_ops/practice_run.py` and `tests/api_tests/test_deck_batch_edit.py`.
+- A `db_*` function cannot call the folds and `readiness` is required, so `db_read_*_with_summary` could no longer build a summary. By the engineer's approval, new `SubjectListing` and `DeckListing` hold what the tables give, and `SubjectSummary` and `DeckSummary` extend them with `readiness`. The functions became `db_read_subject_listings` and `db_read_deck_listings`, with a new `db_read_subject_listing` for one subject. The listings appear in no response. T2's Details still reads `db_read_*_with_summary`, since that sentence is the planner's to edit.
+- The new fetch is two functions, `db_fetch_deck_mastery_read_rows` and `db_fetch_subject_mastery_read_rows`, over one private helper, because a single public function would have a service pass an ORM column. `_latest_mastery_subquery` is shared with `db_fetch_mastery_read_rows`, whose rows are unchanged.
+- `test_rename_only_batch_issues_zero_mastery_log_statements` became `test_rename_only_batch_issues_zero_mastery_log_writes`, and it and `test_card_delete_removes_review_rows_and_issues_no_rebuild` count `INSERT` and `DELETE` statements through a local fixture, `mastery_log_writes`, because the `PATCH` response now reads `mastery_log`. `test_delete_below_two_fields_rejected_before_apply_deletion_runs` keeps the broad counter, since its refusal returns before `_deck_detail`.
+- `frontend/src/lib/deckEditorDiff.test.ts` did not change: it holds no fixture of these shapes.
+- `frontend/src/test/subject.test.ts` and `frontend/src/test/deck.test.ts` hold untyped partial responses. `readiness` went on the responses of routes that now return it; `subject.test.ts`'s `POST` and `PATCH` keep `SubjectRead`.
+- `tests/api_tests/test_subjects.py` gained two tests Details does not name: `test_a_subject_with_no_deck_reads_null` and `test_folds_over_cards_each_once_not_over_decks`.
+- The check's deck stays in the dev database, as AGENTS.md orders, so CompTIA A+ now holds 3 decks.
+
+Read in the code:
+
+- `_fold_collections` in `app/services/mastery.py` with `_fetch_collection_mastery_read_rows` in `app/database_ops/mastery_log.py`: the whole of the new read, the fetch computing nothing and the service only translating and folding.
 
 ### T3 — The circle on every row and heading
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -357,4 +414,36 @@ The screen check, as cycle 031 has it: headless Chromium through playwright-core
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The named vitest run: 19 files and 243 tests passed, `MasteryCircle.test.tsx` among them.
+- `grep -c '^| Mastery |' docs/vocabulary.md` prints `1`, and `grep -c "How well a card or field is known\|CardMasteryRead" docs/vocabulary.md` prints `0`.
+- In headless Chromium at 390 wide, the circles on a list's rows equal its rows less those with no card, and no page scrolls sideways:
+  - `/library`, Subjects: 6 rows, 2 with no card, 4 circles.
+  - `/library?tab=decks`: 11 rows, 4 with no card, 7 circles.
+  - CompTIA A+'s page: 3 rows, 1 with no card, 2 circles, 1 at the heading.
+  - The judgement subject's page: 3 rows, 1 with no card, 2 circles, 1 at the heading.
+  - Ports' page, Cards tab: 21 rows, 21 circles, 1 at the heading.
+  - The summary of "Judgement practice": 3 rows, 3 circles. Its first card's sheet: 2 field rows, 2 circles. A row reads `holaaa | First try | +45`, spoken `Mastery 45%`, with no mastery number.
+  - The run page of the judgement's practice: 0 circles.
+- The cycle's judgement, on subject "Cycle 032 T3 judgement 2026-11-05 11:49", holding deck "Practiced" of 3 cards, "Untouched" of 3 cards and "Empty" of none, the practice's first card rated Good and the others left unrated. The rate response was 200 and no page error was raised.
+  - Before: card `Mastery 0%`, deck `Mastery 0%`, subject `Mastery 0%`.
+  - After: card `Mastery 30%`, deck `Mastery 10%`, subject `Mastery 5%`.
+  - "The first card" is the practice's first, "dos". The deck page lists "uno" first, and a practice orders never-reviewed cards in an order of its own, so the script read the card it rated, by its value. All three cards read 0 before.
+- Screenshots, each in `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/7eb9827f-40a6-4475-a6d1-d4018ec2116d/scratchpad/`: `library-subjects.png`, `library-decks.png`, `subject.png`, `subject-judgement.png`, `deck-cards.png`, `deck-after.png`, `summary.png` and `summary-sheet.png`. The drawings' values are illustrative, so the screenshots match them in layout and not in figures.
+
+Commit checks: `npx vitest run` 60 files and 607 tests passed; `npm run lint` and `npm run build` clean. No backend path changed, so `pytest` was not run.
+
+Departures from Details or Files:
+
+- The deck page's Practice and Edit moved off the heading row onto a row of their own, with the classes the subject page's row uses. This is a visible change Details does not name. Details says "before Practice", and drawing 13 draws Practice on its own row. On the heading row the circle left the name about 131 of 358 wide, and "Practiced" broke as "Practice / d"; "Commands" is wider than that room too. No record places Practice on the heading row; cycle 027's drawings did. The circle still comes directly after the name and before Practice, and the name keeps `flex-1`.
+- `ListRow`'s gap stays `gap-3.5` on every row, where drawing 12's deck rows draw 12 wide, because it is one row grammar.
+- The cards' lower grid stays `grid-cols-2`, where drawing 13 draws `1fr auto`, because Details names only the lead line.
+- `SubjectDetailPage.tsx`'s name gained `flex-1`, so the circle sits at the row's right as drawing 12 has it.
+- Tests beyond those Details names: the circle's text, its long arc past half a turn and its two sizes; `ListRow`'s `trailing` placement; `CardList`'s lead line; and the deck rows on a subject's page.
+- The check left two judgement subjects in the dev database, since the first run came before the row moved. Each holds three decks and one practice. Its figures were the same: 30, 10 and 5.
+
+Read in the code:
+
+- `DeckDetailPage.tsx`'s heading and actions rows, for the move above.
+- `DeckRow.tsx` on `/library?tab=decks`: the circle narrows the second line, so a long subject's name now truncates the counts away, as in "Cycle 032 T3 judgement 2026-11-05 11:…". The truncation is `ListRow`'s and was not changed.

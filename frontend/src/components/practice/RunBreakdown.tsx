@@ -3,12 +3,13 @@ import { ChevronRight } from 'lucide-react';
 import FieldValue from 'src/components/practice/FieldValue';
 import { RATING_TIERS } from 'src/components/practice/ratingTiers';
 import BottomSheet from 'src/components/ui/BottomSheet';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import type { components } from 'src/api/types';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
 type BreakdownBucket = components['schemas']['BreakdownBucket'];
-type FieldMasteryDelta = components['schemas']['FieldMasteryDelta'];
+type FieldReadinessDelta = components['schemas']['FieldReadinessDelta'];
 
 const BUCKET_LABELS: Record<BreakdownBucket, string> = {
   passed_first_try: 'First try',
@@ -32,22 +33,16 @@ function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
   const sorted = [...cards];
   if (sort === 'gains') sorted.sort((a, b) => b.delta - a.delta);
   else if (sort === 'drops') sorted.sort((a, b) => a.delta - b.delta);
-  else sorted.sort((a, b) => a.mastery - b.mastery);
+  else sorted.sort((a, b) => a.readiness - b.readiness);
   return sorted;
 }
 
-// A rounded integer, "—" for a field that's never been reviewed. Card-level mastery is
-// never null (BreakdownCard.mastery is a plain float), so this only ever takes that
-// branch for a field entry.
-function formatMastery(mastery: number | null): string {
-  return mastery === null ? '—' : String(Math.round(mastery));
-}
-
-// The exact difference rounded to a signed integer, "±0" at zero. Rounding happens
-// first and the sign is read off the rounded value, not the original float — otherwise
-// a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
+// The exact difference between two readinesses, on a 0 to 100 scale, rounded to a signed integer, "±0" at
+// zero. Rounding happens first and the sign is read off the rounded value, not the
+// original float — otherwise a delta like -0.003 would round to -0 and misprint as "−0"
+// instead of "±0".
 function formatDelta(delta: number): string {
-  const rounded = Math.round(delta);
+  const rounded = Math.round(delta * 100);
   if (rounded === 0) return '±0';
   return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
 }
@@ -122,9 +117,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
               <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-line) px-2 text-xs text-(--color-aside)">
                 {BUCKET_LABELS[card.bucket]}
               </span>
-              <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-                {formatMastery(card.mastery)}
-              </span>
+              <MasteryCircle readiness={card.readiness} size="row" />
               <span className="shrink-0 text-sm font-medium text-(--color-ink)">
                 {formatDelta(card.delta)}
               </span>
@@ -183,7 +176,7 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
                 </h3>
                 <ul className="flex flex-col gap-2">
                   {selectedCard.fields.map((field) => (
-                    <FieldMasteryRow key={field.field_def_id} field={field} />
+                    <FieldReadinessRow key={field.field_def_id} field={field} />
                   ))}
                 </ul>
               </div>
@@ -198,13 +191,11 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
 /** One entry of the detail sheet's Fields section: every currently active field of the
  * card's deck, not just the ones this run's attempts happened to touch — an untouched
  * field still shows its current mastery, at ±0. */
-function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
+function FieldReadinessRow({ field }: { field: FieldReadinessDelta }) {
   return (
     <li className="flex items-center justify-between gap-3">
       <span className="min-w-0 flex-1 truncate text-sm text-(--color-ink)">{field.name}</span>
-      <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-        {formatMastery(field.mastery)}
-      </span>
+      <MasteryCircle readiness={field.readiness} size="row" />
       <span className="shrink-0 text-sm font-medium text-(--color-ink)">
         {formatDelta(field.delta)}
       </span>

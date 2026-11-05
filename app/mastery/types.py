@@ -46,9 +46,3 @@ class MasteryUpdate:
     side: ReviewSide
     target_score: float
     breadth: int
-
-
-@dataclass(frozen=True)
-class CardScore:
-    mastery: float
-    reviewed_field_count: int

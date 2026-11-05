@@ -17,6 +17,7 @@ const cards = [
     created_at: '',
     last_activity_at: '',
     values: { f1: 'Bonjour', f2: 'Hello' },
+    readiness: 0.42,
   },
   {
     id: 'c2',
@@ -24,6 +25,7 @@ const cards = [
     created_at: '',
     last_activity_at: '',
     values: { f1: '', f2: 'Salut' },
+    readiness: 0,
   },
 ];
 
@@ -117,11 +119,22 @@ describe('CardList', () => {
           created_at: '',
           last_activity_at: '',
           values: { f1: 'Bonjour' },
+          readiness: 0,
         },
       ],
     });
 
     expect(screen.getByRole('link')).toHaveTextContent(/^FrontBonjour$/);
+  });
+
+  it("shows each card's mastery on its lead line, an empty circle for a card never practiced", () => {
+    renderList();
+
+    const [first, second] = screen.getAllByRole('link');
+    const circle = within(first!).getByRole('img', { name: 'Mastery 42%' });
+    expect(circle.parentElement).toContainElement(within(first!).getByText('Bonjour'));
+    expect(circle.parentElement).not.toContainElement(within(first!).getByText('Hello'));
+    expect(within(second!).getByRole('img', { name: 'Mastery 0%' })).toBeInTheDocument();
   });
 
   it('renders every field for a deck with many fields', () => {
@@ -133,7 +146,9 @@ describe('CardList', () => {
     }));
     renderList({
       fieldDefs: manyFields,
-      cards: [{ id: 'c1', deck_id: 'd1', created_at: '', last_activity_at: '', values: {} }],
+      cards: [
+        { id: 'c1', deck_id: 'd1', created_at: '', last_activity_at: '', values: {}, readiness: 0 },
+      ],
     });
 
     const card = screen.getByRole('link');

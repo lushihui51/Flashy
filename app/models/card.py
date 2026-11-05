@@ -35,13 +35,12 @@ class CardRead(CardBase):
     values: dict[uuid.UUID, str]
 
 
+class CardSummary(CardRead):
+    """A card as a deck's page lists it."""
+
+    # 0 to 1; 0 for a card never reviewed.
+    readiness: float
+
+
 class CardUpdate(AppModel):
     values: dict[uuid.UUID, str]
-
-
-class CardMasteryRead(AppModel):
-    """Display-only aggregate — never stored, computed fresh from mastery_log
-    via the active MasteryStrategy on every request."""
-
-    mastery: float
-    reviewed_field_count: int

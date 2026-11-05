@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { useLocation } from 'react-router-dom';
@@ -28,6 +28,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 2,
+    readiness: 0.5 as number | null,
   },
   {
     id: 's2',
@@ -37,6 +38,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 const decks = [
@@ -46,6 +48,7 @@ const decks = [
     name: 'Algebra',
     created_at: '',
     card_count: 3,
+    readiness: 0.5,
     field_names: ['Term', 'Definition'],
   },
   {
@@ -54,6 +57,7 @@ const decks = [
     name: 'Cells',
     created_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Front'],
   },
 ];
@@ -222,6 +226,31 @@ describe('LibraryPage', () => {
     await screen.findByText('Math');
     expect(screen.getByText('2 decks')).toBeInTheDocument();
     expect(screen.getByText('1 deck')).toBeInTheDocument();
+  });
+
+  it('a subject row shows its mastery, and a subject with no card shows none', async () => {
+    mockLibrary({
+      subjectsData: [
+        { ...subjects[0]!, readiness: 0.42 },
+        { ...subjects[1]!, readiness: null },
+      ],
+    });
+    renderWithProviders(<LibraryPage />);
+
+    const withCards = await screen.findByRole('link', { name: /Math/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Bio/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('a deck row shows its mastery, and a deck with no card shows none', async () => {
+    mockLibrary({ decksData: [{ ...decks[0]!, readiness: 0.42 }, decks[1]!] });
+    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+
+    const withCards = await screen.findByRole('link', { name: /Algebra/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Cells/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
   });
 
   it('a failed subjects load says so instead of rendering an empty list', async () => {

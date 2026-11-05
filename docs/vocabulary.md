@@ -172,11 +172,11 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
 | Run | Rating a card that is no longer current | "This is not the current card." | Run page | `not_current_card` |
+| Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `PracticeRunBreakdown`; `/api/practice_runs/{practice_run_id}/breakdown`; `RunBreakdown`; `practice_run_breakdown` |
 | Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
 | Summary | Sorting the cards | "Sort", spoken; "Gains first"; "Drops first"; "Mastery" | Run page; a practice's page | `SortKey`; `gains`; `drops`; `mastery` |
-| Summary | How well a card or field is known | "Mastery"; a whole number; "—" when never reviewed | Summary | `mastery`; `CardMasteryRead`; `mastery_log`; `/api/cards/{card_id}/mastery` |
-| Summary | A change in mastery | "+N"; "−N"; "±0" | Summary | `delta`; `FieldMasteryDelta` |
+| Summary | A change in mastery | "+N"; "−N"; "±0" | Summary | `delta`; `FieldReadinessDelta` |
 | Summary | A card's outcome | "First try"; "One retry"; "2+ retries"; "Failed" | Summary | `BreakdownBucket`; `passed_first_try`; `passed_after_one_fail`; `passed_after_many_fails`; `still_failed` |
 | Failure | The device is offline | "You're offline. Flashy will reconnect automatically." | A banner at the top of every page | `ConnectionStatus`; `offline`; `useConnectionStatus`; `ConnectionBanner` |
 | Failure | Flashy cannot be reached | "Can't reach Flashy. Check your connection; retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `unreachable`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |

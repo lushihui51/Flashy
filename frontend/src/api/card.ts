@@ -21,6 +21,3 @@ export const updateCard = async (cardId: string, payload: components['schemas'][
 
 export const deleteCard = async (cardId: string) =>
   unwrapVoid(await client.DELETE('/api/cards/{card_id}', { params: { path: { card_id: cardId } } }));
-
-export const readCardMastery = async (cardId: string) =>
-  unwrap(await client.GET('/api/cards/{card_id}/mastery', { params: { path: { card_id: cardId } } }));

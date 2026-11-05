@@ -19,6 +19,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -34,6 +35,8 @@ const mathSubject = {
   user_id: 'u1',
   created_at: '',
   last_activity_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 
 const deckDetail = {
@@ -42,6 +45,7 @@ const deckDetail = {
   subject_id: 's1',
   created_at: '',
   last_activity_at: '',
+  readiness: 0.5,
   field_defs: [
     { id: 'front-id', name: 'Front', type: 'text', position: 0 },
     { id: 'back-id', name: 'Back', type: 'text', position: 1 },
@@ -52,6 +56,7 @@ const deckDetail = {
       deck_id: 'd1',
       created_at: '',
       values: { 'front-id': 'Bonjour', 'back-id': 'Hello' },
+      readiness: 0.5,
     },
   ],
 };

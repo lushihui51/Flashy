@@ -36,6 +36,7 @@ from app.database_ops.practice_run import (
     db_read_practice_run,
     db_update_practice_run_status,
 )
+from app.mastery.readiness import fold_card_readiness
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.field_def import FieldDef
@@ -47,7 +48,7 @@ from app.models.practice_run_payloads import (
     BreakdownBucket,
     BreakdownCard,
     CurrentRunCard,
-    FieldMasteryDelta,
+    FieldReadinessDelta,
     PracticeRunState,
     PracticeRunBreakdown,
     RatedFieldValue,
@@ -56,7 +57,7 @@ from app.models.practice_run_payloads import (
 )
 from app.refusals import Refusal
 from app.services.deck_practice_config import validate_deck_practice_config
-from app.services.mastery import card_mastery, record_review_group
+from app.services.mastery import card_readiness, record_review_group
 from app.services.practice_generation import generate_practice_card_fields
 
 _ARRAY_FIELDS = (
@@ -70,8 +71,8 @@ _ARRAY_FIELDS = (
 
 _POSITION_GAP = 1000
 # A retry may not surface until this many other pending cards have had their turn,
-# clamping the mastery-ordered insertion point rather than replacing it — a card whose
-# mastery already puts it deeper than the floor stays at its deeper slot (ADR 037).
+# clamping the readiness-ordered insertion point rather than replacing it — a card whose
+# readiness already puts it deeper than the floor stays at its deeper slot (ADR 037).
 # Must stay >= 1: _insertion_position always reads a predecessor.
 RETRY_SPACING_FLOOR = 3
 
@@ -164,7 +165,7 @@ def _snapshot_and_generate_deck(
 ) -> int:
     """One deck's worth of session-start work: cut an immutable practice_deck snapshot
     from `array_values` (already validated by the caller), then generate its
-    practice_cards ordered unseen-first-then-ascending-mastery with sparse positions
+    practice_cards ordered unseen-first-then-ascending-readiness with sparse positions
     starting at `next_position`. Returns the position to continue from for
     the next deck. Shared by start_practice_run (fed from a live
     deck_practice_config) and the re-run path (fed from a completed session's
@@ -187,10 +188,10 @@ def _snapshot_and_generate_deck(
 
     card_ids = db_read_card_ids_for_deck(db, deck_id)
     field_ids = _config_field_ids(practice_deck)
-    scores = card_mastery(db, strategy, card_ids, field_ids)
+    readiness = card_readiness(db, strategy, card_ids, field_ids)
     ordered_card_ids = sorted(
         card_ids,
-        key=lambda cid: (scores[cid].reviewed_field_count != 0, scores[cid].mastery),
+        key=lambda cid: (readiness[cid].reviewed, readiness[cid].readiness),
     )
 
     for card_id in ordered_card_ids:
@@ -234,7 +235,7 @@ def start_practice_run(
 ) -> PracticeRun:
     """One explicit transaction: the session, one practice_deck per config (a
     revalidated, immutable snapshot), and the generated practice_cards, ordered
-    unseen-first-then-ascending-mastery per deck with sparse positions. `name` is
+    unseen-first-then-ascending-readiness per deck with sparse positions. `name` is
     stored verbatim; the client formats it. Raises
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
@@ -564,13 +565,13 @@ def _row_to_field_state(row) -> FieldMasteryState | None:
     )
 
 
-def _compute_field_mastery_deltas(
+def _compute_field_readiness_deltas(
     db: Session,
     strategy: MasteryStrategy,
     practice_run_id: uuid.UUID,
     domain: list[tuple[uuid.UUID, uuid.UUID]],
-) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]]:
-    """{(card_id, field_def_id): (before_score, after_score, delta)} for every pair in
+) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float, float, float]]:
+    """{(card_id, field_def_id): (before, after, delta)} of readiness for every pair in
     `domain`, under the breakdown's delta semantics for a run R:
 
     - The domain is every card in R's breakdown × every active field of that card's
@@ -580,21 +581,18 @@ def _compute_field_mastery_deltas(
     - bound(c, f) is the earliest reviewed_at of attributed(c, f) when it is
       non-empty, else first(R).
     - before(c, f) is the pair's latest row with reviewed_at < bound(c, f); absent
-      means never reviewed, score None.
+      means never reviewed, readiness 0.
     - after(c, f) is the latest row of attributed(c, f) when it is non-empty, else
       before(c, f).
-    - A score is `strategy.field_score`. A pair first reviewed inside R has delta =
-      after score − prior score, matching what the card fold sees; otherwise delta =
-      after score − before score. Exact floats, never rounded here.
+    - before and after are each `strategy.readiness` of the state selected, and delta
+      is after − before. Exact floats, never rounded here.
     - If R has no rows at all, before = after = the pair's overall latest row and
       every delta is 0.
 
-    The caller's card-level mastery and delta are `strategy.card_score` over the
-    domain's before scores and after scores respectively. Reads only R's own rows
-    plus one bounded before-lookup covering every pair at once — never a history
-    replay — so the statement count against mastery_log is fixed at 2 regardless of
-    len(domain)."""
-    prior_score = strategy.field_score(strategy.prior())
+    The caller's card-level readiness and delta are `fold_card_readiness` over the
+    domain's befores and afters respectively. Reads only R's own rows plus one bounded
+    before-lookup covering every pair at once — never a history replay — so the
+    statement count against mastery_log is fixed at 2 regardless of len(domain)."""
     run_rows = db_fetch_run_mastery_log_rows(db, practice_run_id)
 
     if not run_rows:
@@ -604,11 +602,11 @@ def _compute_field_mastery_deltas(
         # every delta is 0.
         card_ids = list({card_id for card_id, _ in domain})
         read_rows = db_fetch_mastery_read_rows(db, card_ids)
-        score_by_pair = {
-            (row.card_id, row.field_def_id): strategy.field_score(_row_to_field_state(row))
+        readiness_by_pair = {
+            (row.card_id, row.field_def_id): strategy.readiness(_row_to_field_state(row))
             for row in read_rows
         }
-        return {pair: (score_by_pair.get(pair), score_by_pair.get(pair), 0.0) for pair in domain}
+        return {pair: (readiness_by_pair[pair], readiness_by_pair[pair], 0.0) for pair in domain}
 
     attributed_by_pair: dict[tuple[uuid.UUID, uuid.UUID], list] = defaultdict(list)
     for row in run_rows:
@@ -634,20 +632,16 @@ def _compute_field_mastery_deltas(
 
     before_state_by_pair = db_fetch_mastery_before_bound(db, bounds)
 
-    result: dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]] = {}
+    result: dict[tuple[uuid.UUID, uuid.UUID], tuple[float, float, float]] = {}
     for pair in domain:
         before_state = before_state_by_pair.get(pair)
         # Untouched by this run: after == before by construction, not a fallback —
         # this run contributed no movement to this pair, so its "after" is whatever
         # the field already was.
         after_state = after_state_by_pair.get(pair, before_state)
-        before_score = strategy.field_score(before_state)
-        after_score = strategy.field_score(after_state)
-        if after_score is None:
-            delta = 0.0
-        else:
-            delta = after_score - (before_score if before_score is not None else prior_score)
-        result[pair] = (before_score, after_score, delta)
+        before = strategy.readiness(before_state)
+        after = strategy.readiness(after_state)
+        result[pair] = (before, after, after - before)
     return result
 
 
@@ -655,7 +649,7 @@ def get_practice_run_breakdown(
     db: Session, strategy: MasteryStrategy, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunBreakdown | None:
     """The whole `GET .../breakdown` payload: every card's full resolved, rated attempt
-    history, grouped into the completion-time buckets, plus each card's mastery/delta
+    history, grouped into the completion-time buckets, plus each card's readiness/delta
     and its per-field detail. None for an unknown or foreign session (the router 404s). Raises
     RunActiveError if the session hasn't completed yet (the router 409s) — the bucket
     refinement and terminal-only attempts below only make sense once nothing is
@@ -679,7 +673,7 @@ def get_practice_run_breakdown(
     deck_id_by_card: dict[uuid.UUID, uuid.UUID] = {}
 
     counts = dict.fromkeys(BreakdownBucket, 0)
-    # Built in two passes: this one resolves everything but the mastery/delta fields
+    # Built in two passes: this one resolves everything but the readiness/delta fields
     # (which need every card's active-field domain gathered first, so the delta
     # computation below can read mastery_log in one fixed-size batch instead of once
     # per card).
@@ -697,7 +691,7 @@ def get_practice_run_breakdown(
                 fd.id: fd for fd in db_read_field_defs(db, deck_id, user_id)
             }
             # db_read_field_defs is position-sorted; the primary field is index 0, the
-            # mastery domain is every entry.
+            # readiness domain is every entry.
             active_field_defs_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)
             primary_field_by_deck[deck_id] = active_field_defs_by_deck[deck_id][0]
         field_defs_by_id = field_defs_by_deck[deck_id]
@@ -737,31 +731,31 @@ def get_practice_run_breakdown(
         for card_id, deck_id in deck_id_by_card.items()
         for fd in active_field_defs_by_deck[deck_id]
     ]
-    field_deltas = _compute_field_mastery_deltas(db, strategy, practice_run_id, domain)
+    field_deltas = _compute_field_readiness_deltas(db, strategy, practice_run_id, domain)
 
     breakdown_cards = []
     for raw in raw_cards:
         card_id = raw["card_id"]
         active_fields = active_field_defs_by_deck[deck_id_by_card[card_id]]
         fields = []
-        before_scores = []
-        after_scores = []
+        befores = []
+        afters = []
         for fd in active_fields:
-            before_score, after_score, delta = field_deltas[(card_id, fd.id)]
-            before_scores.append(before_score)
-            after_scores.append(after_score)
+            before, after, delta = field_deltas[(card_id, fd.id)]
+            befores.append(before)
+            afters.append(after)
             fields.append(
-                FieldMasteryDelta(
-                    field_def_id=fd.id, name=fd.name, type=fd.type, mastery=after_score, delta=delta
+                FieldReadinessDelta(
+                    field_def_id=fd.id, name=fd.name, type=fd.type, readiness=after, delta=delta
                 )
             )
-        card_before = strategy.card_score(before_scores)
-        card_after = strategy.card_score(after_scores)
+        card_before = fold_card_readiness(befores)
+        card_after = fold_card_readiness(afters)
         breakdown_cards.append(
             BreakdownCard(
                 **raw,
-                mastery=card_after.mastery,
-                delta=card_after.mastery - card_before.mastery,
+                readiness=card_after,
+                delta=card_after - card_before,
                 fields=fields,
             )
         )
@@ -787,23 +781,23 @@ def _end_of_queue_position(run_max_position: int) -> int:
     return run_max_position + _POSITION_GAP // 2
 
 
-def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:
+def _insertion_position(pending: list[tuple[PracticeCard, float]], new_readiness: float) -> int:
     """pending: a run's pending cards in position order, each paired with its current
-    mastery score; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
+    readiness; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
     `_end_of_queue_position` instead). Four steps:
 
-    1. `mastery_index`, the count of pending cards whose score is strictly below
-       `new_score`, is where the ascending-mastery order alone would insert.
+    1. `readiness_index`, the count of pending cards whose readiness is strictly below
+       `new_readiness`, is where the ascending-readiness order alone would insert.
     2. The index is clamped up to at least RETRY_SPACING_FLOOR: a clamp, not a
-       fixed placement, so a card whose mastery already puts it deeper stays at that
+       fixed placement, so a card whose readiness already puts it deeper stays at that
        deeper slot.
     3. With no successor at the resulting index, the retry goes 500 above the last
        pending card.
     4. Otherwise it takes the midpoint between its predecessor and successor. A
        predecessor always exists because RETRY_SPACING_FLOOR >= 1."""
     assert len(pending) >= RETRY_SPACING_FLOOR
-    mastery_index = sum(1 for _, score in pending if score < new_score)
-    final_index = max(mastery_index, RETRY_SPACING_FLOOR)
+    readiness_index = sum(1 for _, readiness in pending if readiness < new_readiness)
+    final_index = max(readiness_index, RETRY_SPACING_FLOOR)
 
     if final_index == len(pending):
         return pending[-1][0].position + _POSITION_GAP // 2
@@ -819,7 +813,7 @@ def _requeue_failed_card(
     failed_field_ids: Sequence[uuid.UUID] = (),
 ) -> PracticeCard | None:
     """Inserts a fresh practice_card row for the same card_id — never mutates
-    old_card, which stays 'failed'. Position reflects the card's mastery *after* this
+    old_card, which stays 'failed'. Position reflects the card's readiness *after* this
     submission's blend, so a badly-missed card resurfaces sooner, when at least
     RETRY_SPACING_FLOOR cards are pending; with fewer, the retry goes to the end of the
     queue. `failed_field_ids` (the answer fields rated "Again") are forced into the new
@@ -866,12 +860,12 @@ def _requeue_failed_card(
             assert run_max is not None, "the row just rated exists in this transaction"
             position = _end_of_queue_position(run_max)
         else:
-            scores = card_mastery(
+            readiness = card_readiness(
                 db, strategy, [c.card_id for c in pending] + [old_card.card_id], field_ids
             )
             position = _insertion_position(
-                [(c, scores[c.card_id].mastery) for c in pending],
-                scores[old_card.card_id].mastery,
+                [(c, readiness[c.card_id].readiness) for c in pending],
+                readiness[old_card.card_id].readiness,
             )
 
         new_card = db_try_stage_create_practice_card(

@@ -21,6 +21,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -31,6 +32,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -42,6 +44,7 @@ const decks = [
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
   {
@@ -51,6 +54,7 @@ const decks = [
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
 ];
@@ -63,6 +67,7 @@ const deckDetail = {
   subject_id: 's1',
   created_at: '',
   last_activity_at: '',
+  readiness: null,
   field_defs: [
     { id: 'f1', name: 'Term', type: 'text', position: 0 },
     { id: 'f2', name: 'Meaning', type: 'text', position: 1 },

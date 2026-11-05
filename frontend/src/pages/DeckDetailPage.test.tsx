@@ -35,6 +35,7 @@ const deck = {
   name: 'Vocab Deck',
   subject_id: 's1',
   created_at: '',
+  readiness: 0.5 as number | null,
   field_defs: twoFields,
   cards: [
     {
@@ -42,6 +43,7 @@ const deck = {
       deck_id: 'd1',
       created_at: '',
       values: { f1: 'Bonjour', f2: 'Hello' } as Record<string, string>,
+      readiness: 0.5,
     },
   ],
 };
@@ -52,6 +54,8 @@ const subject = {
   description: '',
   user_id: 'u1',
   created_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 
 function configuration(overrides: Record<string, unknown> = {}) {
@@ -137,6 +141,42 @@ describe('DeckDetailPage', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  it('shows the mastery circle directly after the name, before Practice', async () => {
+    mockDeck({ deckData: { ...deck, readiness: 0.42 } });
+    renderAtDeckRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Vocab Deck' });
+    const circle = heading.nextElementSibling!;
+    expect(circle).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
+    expect(
+      circle.compareDocumentPosition(screen.getByRole('button', { name: 'Practice' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(heading).toHaveClass('flex-1');
+  });
+
+  it('shows no mastery circle for a deck with no card', async () => {
+    mockDeck({ deckData: { ...deck, readiness: null, cards: [] } });
+    renderAtDeckRoute();
+
+    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it("shows each card's mastery on its row", async () => {
+    mockDeck({
+      deckData: {
+        ...deck,
+        readiness: 0.2,
+        cards: [{ ...deck.cards[0]!, readiness: 0.42 }],
+      },
+    });
+    renderAtDeckRoute();
+
+    const list = await screen.findByRole('list', { name: 'Cards in Vocab Deck' });
+    expect(within(list).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+  });
+
   it('the breadcrumb renders the subject icon as a real icon (not raw text) and links to the subject page', async () => {
     mockDeck();
     renderAtDeckRoute();
@@ -202,7 +242,7 @@ describe('DeckDetailPage', () => {
         deckData: {
           ...deck,
           field_defs: [twoFields[0]!],
-          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' } }],
+          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' }, readiness: 0.5 }],
         },
       });
       renderAtDeckRoute();
@@ -328,6 +368,7 @@ describe('DeckDetailPage', () => {
             deck_id: 'd1',
             created_at: '',
             values: Object.fromEntries(manyFields.map((f) => [f.id, `v-${f.id}`])),
+            readiness: 0.5,
           },
         ],
       },

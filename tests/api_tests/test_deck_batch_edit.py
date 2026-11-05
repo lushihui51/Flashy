@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import desc
+from sqlalchemy import desc, event
 from sqlmodel import select
 
 from app.mastery.ema import EmaStrategy
@@ -19,6 +19,22 @@ from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import record_review_group
+
+
+@pytest.fixture
+def mastery_log_writes(db):
+    """Every INSERT and DELETE naming mastery_log, for a test that an edit rebuilds no
+    mastery; a PATCH's response reads the table for its readiness either way."""
+    writes: list[str] = []
+
+    def _record(conn, cursor, statement, *args):
+        if "mastery_log" in statement and statement.lstrip().startswith(("INSERT", "DELETE")):
+            writes.append(statement)
+
+    engine = db.get_bind()
+    event.listen(engine, "before_cursor_execute", _record)
+    yield writes
+    event.remove(engine, "before_cursor_execute", _record)
 
 
 def _field_defs(**overrides):
@@ -132,17 +148,17 @@ class TestFieldDefsUpdateAlone:
         assert updated["name"] == "Renamed"
         assert updated["type"] == "text"
 
-    def test_rename_only_batch_issues_zero_mastery_log_statements(
-        self, client, existing_deck, existing_field_defs, mastery_log_statement_counter
+    def test_rename_only_batch_issues_zero_mastery_log_writes(
+        self, client, existing_deck, existing_field_defs, mastery_log_writes
     ):
         field_id = existing_field_defs[0]["id"]
-        mastery_log_statement_counter.reset()
+        mastery_log_writes.clear()
         response = client.patch(
             f"/api/decks/{existing_deck['id']}",
             json={"field_defs": _field_defs(update=[{"id": field_id, "name": "Renamed"}])},
         )
         assert response.status_code == 200, response.text
-        assert mastery_log_statement_counter.count == 0
+        assert mastery_log_writes == []
 
 
 class TestFieldDefsDeleteAlone:
@@ -638,7 +654,7 @@ class TestCardsDeleteAlone:
         existing_user,
         existing_deck,
         existing_field_defs,
-        mastery_log_statement_counter,
+        mastery_log_writes,
     ):
         """A card delete's review rows go with it, same as a direct
         DELETE /api/cards/{id}; unlike a field delete, no deck rebuild ever follows
@@ -667,13 +683,13 @@ class TestCardsDeleteAlone:
         db.commit()
         assert db.exec(select(ReviewLog).where(ReviewLog.card_id == card_id)).first() is not None
 
-        mastery_log_statement_counter.reset()
+        mastery_log_writes.clear()
         response = client.patch(
             f"/api/decks/{existing_deck['id']}",
             json={"cards": _cards(delete=[card["id"]])},
         )
         assert response.status_code == 200, response.text
-        assert mastery_log_statement_counter.count == 0
+        assert mastery_log_writes == []
 
         assert db.exec(select(ReviewLog).where(ReviewLog.card_id == card_id)).first() is None
 

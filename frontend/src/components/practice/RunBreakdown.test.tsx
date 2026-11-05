@@ -33,11 +33,11 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
-        mastery: 70,
-        delta: 5,
+        readiness: 0.7,
+        delta: 0.05,
         fields: [
-          { field_def_id: 'front1', name: 'Front', type: 'text', mastery: 65, delta: 5 },
-          { field_def_id: 'back1', name: 'Back', type: 'text', mastery: 75, delta: 5 },
+          { field_def_id: 'front1', name: 'Front', type: 'text', readiness: 0.65, delta: 0.05 },
+          { field_def_id: 'back1', name: 'Back', type: 'text', readiness: 0.75, delta: 0.05 },
         ],
       },
       {
@@ -77,14 +77,14 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
-        mastery: 40,
-        delta: -10,
+        readiness: 0.4,
+        delta: -0.1,
         // Named distinctly from the attempts section's own "Front"/"Back" labels so
         // this card's Fields section entries don't collide with those assertions.
         fields: [
-          { field_def_id: 'notes2', name: 'Notes', type: 'text', mastery: 40, delta: -10 },
-          // Never reviewed by anyone — the sheet's Fields section renders "—", not 0.
-          { field_def_id: 'filler2', name: 'Filler', type: 'text', mastery: null, delta: 0 },
+          { field_def_id: 'notes2', name: 'Notes', type: 'text', readiness: 0.4, delta: -0.1 },
+          // Never reviewed by anyone — the sheet's Fields section reads 0.
+          { field_def_id: 'filler2', name: 'Filler', type: 'text', readiness: 0, delta: 0 },
         ],
       },
       {
@@ -104,9 +104,9 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
-        mastery: 50,
+        readiness: 0.5,
         delta: 0,
-        fields: [{ field_def_id: 'front3', name: 'Front', type: 'text', mastery: 50, delta: 0 }],
+        fields: [{ field_def_id: 'front3', name: 'Front', type: 'text', readiness: 0.5, delta: 0 }],
       },
       {
         card_id: 'card4',
@@ -124,16 +124,16 @@ function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBr
             ],
           },
         ],
-        mastery: 60,
-        delta: 20,
-        fields: [{ field_def_id: 'front4', name: 'Front', type: 'text', mastery: 60, delta: 20 }],
+        readiness: 0.6,
+        delta: 0.2,
+        fields: [{ field_def_id: 'front4', name: 'Front', type: 'text', readiness: 0.6, delta: 0.2 }],
       },
     ],
     ...overrides,
   };
 }
 
-/** The row buttons' accessible names include the badge/mastery/delta text alongside
+/** The row buttons' accessible names include the badge, circle and delta text alongside
  * the title (they're all inside the same <button>), so these tests match on the
  * title substring rather than the exact name. */
 function rowTitles() {
@@ -182,7 +182,7 @@ describe('RunBreakdown', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Mastery' }));
 
-    // Masteries: card2 40, card3 50, card4 60, card1 70.
+    // Readiness: card2 0.4, card3 0.5, card4 0.6, card1 0.7.
     const titles = rowTitles();
     expect(titles[0]).toContain('Bonsoir');
     expect(titles[1]).toContain('Untitled card');
@@ -204,13 +204,14 @@ describe('RunBreakdown', () => {
     expect(screen.getByRole('button', { name: /Untitled card/ })).toBeInTheDocument();
   });
 
-  it('a row shows its outcome badge, rounded mastery, and delta rendering', () => {
+  it('a row shows its outcome badge, its mastery circle with no number, and its delta', () => {
     render(<RunBreakdown breakdown={breakdown()} />);
 
     const row = screen.getByRole('button', { name: /Bonjour/ });
     expect(within(row).getByText('First try')).toBeInTheDocument();
     expect(within(screen.getByRole('button', { name: /Adieu/ })).getByText('Failed')).toBeInTheDocument();
-    expect(within(row).getByText('70')).toBeInTheDocument();
+    expect(within(row).getByRole('img', { name: 'Mastery 70%' })).toBeInTheDocument();
+    expect(within(row).queryByText('70')).not.toBeInTheDocument();
     expect(within(row).getByText('+5')).toBeInTheDocument();
 
     // One case each of the other two signs, from the other rows.
@@ -245,7 +246,12 @@ describe('RunBreakdown', () => {
     // Fields section: every active field, including one never reviewed by anyone.
     expect(within(dialog).getByText('Fields')).toBeInTheDocument();
     expect(within(dialog).getByText('Filler')).toBeInTheDocument();
-    expect(within(dialog).getByText('—')).toBeInTheDocument();
+    const notes = within(dialog).getByText('Notes').closest('li')!;
+    expect(within(notes).getByRole('img', { name: 'Mastery 40%' })).toBeInTheDocument();
+    expect(within(notes).queryByText('40')).not.toBeInTheDocument();
+    const filler = within(dialog).getByText('Filler').closest('li')!;
+    expect(within(filler).getByRole('img', { name: 'Mastery 0%' })).toBeInTheDocument();
+    expect(within(filler).getByText('±0')).toBeInTheDocument();
   });
 
   it('shows no attempt header for a single-attempt card', async () => {

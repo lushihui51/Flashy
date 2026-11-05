@@ -6,7 +6,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, col, func, select
 
 from app.models.card import Card
-from app.models.deck import Deck, DeckSummary
+from app.models.deck import Deck, DeckListing
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
 
@@ -52,9 +52,9 @@ def db_read_decks(
     return list(db.exec(query).all())
 
 
-def db_read_decks_with_summary(
+def db_read_deck_listings(
     db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
-) -> list[DeckSummary]:
+) -> list[DeckListing]:
     """Same decks as db_read_decks, plus each one's card_count and field_names
     (position order, active fields only) — via two grouped queries regardless of how
     many decks there are, never one query per deck."""
@@ -81,7 +81,7 @@ def db_read_decks_with_summary(
         field_names_by_deck[deck_id].append(name)
 
     return [
-        DeckSummary(
+        DeckListing(
             **deck.model_dump(),
             card_count=card_counts.get(deck.id, 0),
             field_names=field_names_by_deck.get(deck.id, []),

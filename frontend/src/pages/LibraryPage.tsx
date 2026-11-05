@@ -6,6 +6,7 @@ import { readDecks } from 'src/api/deck';
 import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import AddButton from 'src/components/ui/AddButton';
 import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
@@ -106,6 +107,11 @@ export default function LibraryPage() {
                     title={subject.name}
                     subtitle={subject.description || undefined}
                     meta={pluralize(subject.deck_count, 'deck')}
+                    trailing={
+                      subject.readiness !== null ? (
+                        <MasteryCircle readiness={subject.readiness} size="row" />
+                      ) : undefined
+                    }
                     to={`/subjects/${subject.id}`}
                   />
                 </li>

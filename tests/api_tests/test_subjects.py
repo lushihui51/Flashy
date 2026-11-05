@@ -1,12 +1,21 @@
+import uuid
+from datetime import UTC, datetime
+
 from sqlalchemy import event
 
-from app.database_ops.subject import db_read_subjects_with_summary
+from app.database_ops.subject import db_read_subject_listings
+from app.mastery.config import get_mastery_strategy
+from app.mastery.types import ReviewGroup
+from app.models.card import Card
+from app.models.deck import Deck
+from app.models.field_def import FieldDef, FieldType
 from app.models.subject import Subject
+from app.services.mastery import apply_rating
 
 
 class TestSubjectSummaryQueryBounds:
     def test_query_count_does_not_scale_with_subject_count(self, db, existing_user):
-        """db_read_subjects_with_summary must use a grouped aggregate query, never one
+        """db_read_subject_listings must use a grouped aggregate query, never one
         query per subject — proven directly by counting statements."""
         user_id = existing_user.id  # read before commit expires the ORM object below
         for i in range(5):
@@ -21,13 +30,121 @@ class TestSubjectSummaryQueryBounds:
 
         event.listen(engine, "before_cursor_execute", _record)
         try:
-            summaries = db_read_subjects_with_summary(db, user_id)
+            summaries = db_read_subject_listings(db, user_id)
         finally:
             event.remove(engine, "before_cursor_execute", _record)
 
         assert len(summaries) == 5
         # subjects + grouped deck-count = 2, regardless of subject count.
         assert len(statements) <= 2, statements
+
+
+def _deck_with_cards(db, subject_id, name, card_count):
+    """A deck of one field and that many cards, returning the field's and the cards' ids."""
+    deck = Deck(subject_id=subject_id, name=name)
+    db.add(deck)
+    db.flush()
+    field = FieldDef(deck_id=deck.id, name="Front", type=FieldType.text, position=0)
+    cards = [Card(deck_id=deck.id) for _ in range(card_count)]
+    db.add(field)
+    db.add_all(cards)
+    db.flush()
+    return field.id, [card.id for card in cards]
+
+
+def _rate_good(db, card_id, field_id):
+    apply_rating(
+        db,
+        get_mastery_strategy(),
+        ReviewGroup(
+            review_group_id=uuid.uuid4(),
+            card_id=card_id,
+            reviewed_at=datetime.now(UTC),
+            ratings=((field_id, 3),),
+            shown_prompt_ids=(),
+        ),
+        None,
+    )
+
+
+class TestSubjectReadiness:
+    def test_list_runs_a_fixed_number_of_statements(self, client, db, existing_user):
+        user_id = existing_user.id  # read before commit expires the ORM object below
+        for i in range(5):
+            subject = Subject(user_id=user_id, name=f"Subject {i}")
+            db.add(subject)
+            db.flush()
+            _deck_with_cards(db, subject.id, "Deck", 2)
+        empty = Subject(user_id=user_id, name="No cards")
+        db.add(empty)
+        db.flush()
+        _deck_with_cards(db, empty.id, "Empty deck", 0)
+        db.commit()
+        empty_id = str(empty.id)
+        db.refresh(existing_user)
+
+        engine = db.get_bind()
+        statements: list[str] = []
+
+        def _record(conn, cursor, statement, *args):
+            statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", _record)
+        try:
+            response = client.get("/api/subjects")
+        finally:
+            event.remove(engine, "before_cursor_execute", _record)
+
+        assert response.status_code == 200
+        by_id = {row["id"]: row for row in response.json()}
+        assert len(by_id) == 6
+        assert by_id[empty_id]["readiness"] is None
+        assert [row["readiness"] for key, row in by_id.items() if key != empty_id] == [0.0] * 5
+        # subjects + grouped deck-count + the one fold over every subject.
+        assert len(statements) <= 3, statements
+
+    def test_a_subject_with_no_deck_reads_null(self, client, existing_subject):
+        assert client.get("/api/subjects").json()[0]["readiness"] is None
+
+    def test_read_carries_deck_count_and_readiness(
+        self, client, db, existing_user, existing_subject
+    ):
+        subject_id = uuid.UUID(existing_subject["id"])
+        _deck_with_cards(db, subject_id, "Deck", 1)
+        db.commit()
+        db.refresh(existing_user)
+
+        engine = db.get_bind()
+        statements: list[str] = []
+
+        def _record(conn, cursor, statement, *args):
+            statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", _record)
+        try:
+            response = client.get(f"/api/subjects/{subject_id}")
+        finally:
+            event.remove(engine, "before_cursor_execute", _record)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["deck_count"] == 1
+        assert data["readiness"] == 0.0
+        # subject + grouped deck-count + the one fold.
+        assert len(statements) <= 3, statements
+
+    def test_folds_over_cards_each_once_not_over_decks(self, client, db, existing_subject):
+        """A one-card deck at 0.3 beside a three-card deck at 0 reads 0.075, over four cards;
+        an average of the decks' figures would read 0.15."""
+        subject_id = uuid.UUID(existing_subject["id"])
+        field_id, [card_id] = _deck_with_cards(db, subject_id, "Small", 1)
+        _deck_with_cards(db, subject_id, "Large", 3)
+        _rate_good(db, card_id, field_id)
+        db.commit()
+
+        data = client.get(f"/api/subjects/{subject_id}").json()
+
+        assert abs(data["readiness"] - 0.3 / 4) < 1e-9
 
 
 class TestSubjectsCRUD:

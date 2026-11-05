@@ -204,7 +204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
+                  "$ref": "#/components/schemas/SubjectSummary"
                 }
               }
             }
@@ -1611,81 +1611,6 @@
         }
       }
     },
-    "/api/cards/{card_id}/mastery": {
-      "get": {
-        "tags": [
-          "Cards"
-        ],
-        "summary": "Read Card Mastery",
-        "operationId": "read_card_mastery_api_cards__card_id__mastery_get",
-        "parameters": [
-          {
-            "name": "card_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Card Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CardMasteryRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/deck_practice_configs": {
       "post": {
         "tags": [
@@ -2957,9 +2882,9 @@
             "type": "array",
             "title": "Attempts"
           },
-          "mastery": {
+          "readiness": {
             "type": "number",
-            "title": "Mastery"
+            "title": "Readiness"
           },
           "delta": {
             "type": "number",
@@ -2967,7 +2892,7 @@
           },
           "fields": {
             "items": {
-              "$ref": "#/components/schemas/FieldMasteryDelta"
+              "$ref": "#/components/schemas/FieldReadinessDelta"
             },
             "type": "array",
             "title": "Fields"
@@ -2980,12 +2905,12 @@
           "attempt_count",
           "primary_field",
           "attempts",
-          "mastery",
+          "readiness",
           "delta",
           "fields"
         ],
         "title": "BreakdownCard",
-        "description": "One card's whole outcome chain for the completion breakdown: `attempts` is\nchronological, so `attempts[-1]` is the determining attempt that decided `bucket`.\n`mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold\n(`strategy.card_score`) over every active field's after-state score; `delta` is\nthat same fold's after-state minus its before-state, exact (the client rounds);\n`fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
+        "description": "One card's whole outcome chain for the completion breakdown: `attempts` is\nchronological, so `attempts[-1]` is the determining attempt that decided `bucket`.\n`readiness`/`delta`/`fields` are the session deltas: `readiness` is the card's\nreadiness after the run, from 0 to 1, over every active field; `delta` is that\nfigure minus the same fold before the run, exact (the client rounds);\n`fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
       },
       "CardBatchCreate": {
         "properties": {
@@ -3090,25 +3015,6 @@
         ],
         "title": "CardCreate"
       },
-      "CardMasteryRead": {
-        "properties": {
-          "mastery": {
-            "type": "number",
-            "title": "Mastery"
-          },
-          "reviewed_field_count": {
-            "type": "integer",
-            "title": "Reviewed Field Count"
-          }
-        },
-        "type": "object",
-        "required": [
-          "mastery",
-          "reviewed_field_count"
-        ],
-        "title": "CardMasteryRead",
-        "description": "Display-only aggregate \u2014 never stored, computed fresh from mastery_log\nvia the active MasteryStrategy on every request."
-      },
       "CardRead": {
         "properties": {
           "deck_id": {
@@ -3151,6 +3057,55 @@
           "values"
         ],
         "title": "CardRead"
+      },
+      "CardSummary": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "readiness": {
+            "type": "number",
+            "title": "Readiness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "id",
+          "created_at",
+          "last_activity_at",
+          "values",
+          "readiness"
+        ],
+        "title": "CardSummary",
+        "description": "A card as a deck's page lists it."
       },
       "CardUpdate": {
         "properties": {
@@ -3315,6 +3270,17 @@
             "format": "date-time",
             "title": "Last Activity At"
           },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
+          },
           "field_defs": {
             "items": {
               "$ref": "#/components/schemas/DeckFieldDefRead"
@@ -3324,7 +3290,7 @@
           },
           "cards": {
             "items": {
-              "$ref": "#/components/schemas/CardRead"
+              "$ref": "#/components/schemas/CardSummary"
             },
             "type": "array",
             "title": "Cards"
@@ -3337,6 +3303,7 @@
           "subject_id",
           "created_at",
           "last_activity_at",
+          "readiness",
           "field_defs",
           "cards"
         ],
@@ -3777,6 +3744,17 @@
             },
             "type": "array",
             "title": "Field Names"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
           }
         },
         "type": "object",
@@ -3787,10 +3765,11 @@
           "created_at",
           "last_activity_at",
           "card_count",
-          "field_names"
+          "field_names",
+          "readiness"
         ],
         "title": "DeckSummary",
-        "description": "DeckRead plus preview data for a list row \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
+        "description": "A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck\nreads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,\nwhich already includes everything here except card_count and field_names."
       },
       "DeletionImpactRead": {
         "properties": {
@@ -4013,7 +3992,7 @@
         "type": "object",
         "title": "FieldDefUpdate"
       },
-      "FieldMasteryDelta": {
+      "FieldReadinessDelta": {
         "properties": {
           "field_def_id": {
             "type": "string",
@@ -4027,16 +4006,9 @@
           "type": {
             "$ref": "#/components/schemas/FieldType"
           },
-          "mastery": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mastery"
+          "readiness": {
+            "type": "number",
+            "title": "Readiness"
           },
           "delta": {
             "type": "number",
@@ -4048,11 +4020,11 @@
           "field_def_id",
           "name",
           "type",
-          "mastery",
+          "readiness",
           "delta"
         ],
-        "title": "FieldMasteryDelta",
-        "description": "One active field's session-delta entry:\n`mastery` is the after-state field score (`strategy.field_score`, the existing\n(prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`\nis always a float, never None \u2014 0.0 for a field this run's card left untouched."
+        "title": "FieldReadinessDelta",
+        "description": "One active field's session-delta entry: `readiness` is the field's readiness\nafter the run, from 0 to 1, and 0 for a field never reviewed. `delta` is that\nreadiness minus the field's readiness before the run, 0.0 for a field this run's\ncard left untouched."
       },
       "FieldType": {
         "type": "string",
@@ -4634,6 +4606,17 @@
           "deck_count": {
             "type": "integer",
             "title": "Deck Count"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
           }
         },
         "type": "object",
@@ -4643,10 +4626,11 @@
           "user_id",
           "created_at",
           "last_activity_at",
-          "deck_count"
+          "deck_count",
+          "readiness"
         ],
         "title": "SubjectSummary",
-        "description": "SubjectRead plus a deck count for a library list row. Only\n`GET /api/subjects` returns this \u2014 the subject detail page derives its own deck/\ncard counts from the (separately-fetched, already-enriched) deck list instead of\nneeding this here too."
+        "description": "A subject as a library row and its own page show it."
       },
       "SubjectUpdate": {
         "properties": {

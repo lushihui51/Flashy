@@ -14,6 +14,8 @@ type ListRowBaseProps = {
   subtitle?: string;
   /** On its own line under the subtitle, never truncated. */
   meta?: string;
+  /** Sits between the text column and the chevron, at its own width. */
+  trailing?: ReactNode;
 };
 
 /** Exactly one of `to` (navigates, renders a Link) or `onClick` (renders a button — for
@@ -25,7 +27,15 @@ type ListRowProps = ListRowBaseProps &
  * a block holding identity, shape and size, chevron last. Whichever element
  * it renders as is a single natively keyboard-reachable, Enter-activated target, so
  * the chevron never needs its own focus stop. */
-export default function ListRow({ leading, title, subtitle, meta, to, onClick }: ListRowProps) {
+export default function ListRow({
+  leading,
+  title,
+  subtitle,
+  meta,
+  trailing,
+  to,
+  onClick,
+}: ListRowProps) {
   const content = (
     <>
       {leading && <span className="shrink-0">{leading}</span>}
@@ -40,6 +50,7 @@ export default function ListRow({ leading, title, subtitle, meta, to, onClick }:
         )}
         {meta && <span className="block text-label leading-4 text-(--color-aside)">{meta}</span>}
       </span>
+      {trailing && <span className="shrink-0">{trailing}</span>}
       <ChevronRight aria-hidden="true" className="h-5 w-5 shrink-0 text-(--color-ink)" />
     </>
   );

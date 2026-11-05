@@ -11,6 +11,7 @@ import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
@@ -144,25 +145,29 @@ export default function DeckDetailPage() {
         ]}
       />
 
-      <div className="mt-3.5 flex items-center gap-2.5">
+      <div className="mt-3.5 flex items-center gap-3">
         <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
           {deck.name}
         </h1>
+        {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="heading" />}
+      </div>
+
+      <div className="mt-3.5 flex items-center gap-2.5">
         <button
           type="button"
           // Both params, not just the deck: two decks in different subjects can share a
           // name, so the subject is what makes the filtered list unambiguous on arrival.
           onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
-          className="tappable flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-(--color-main-action) px-3.5 text-action font-semibold text-(--color-ink)"
+          className="tappable flex h-action flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
         >
-          <Play aria-hidden="true" fill="currentColor" className="h-3.5 w-3.5" />
+          <Play aria-hidden="true" fill="currentColor" className="size-icon-sm" />
           Practice
         </button>
         <button
           type="button"
           aria-label="Edit deck"
           onClick={() => navigate(`/decks/${deck.id}/edit`)}
-          className="tappable flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
+          className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
           <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
         </button>

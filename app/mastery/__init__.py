@@ -2,7 +2,6 @@ from app.mastery.config import get_mastery_strategy
 from app.mastery.ema import EmaStrategy
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import (
-    CardScore,
     FieldMasteryState,
     MasteryUpdate,
     ReviewGroup,
@@ -10,7 +9,6 @@ from app.mastery.types import (
 )
 
 __all__ = [
-    "CardScore",
     "EmaStrategy",
     "FieldMasteryState",
     "MasteryStrategy",

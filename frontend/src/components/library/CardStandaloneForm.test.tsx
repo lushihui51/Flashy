@@ -17,6 +17,7 @@ const decks = [
     name: 'French Vocab',
     created_at: '',
     card_count: 1,
+    readiness: 0.5,
     field_names: ['Front', 'Back'],
   },
   {
@@ -25,6 +26,7 @@ const decks = [
     name: 'Spanish Vocab',
     created_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Word'],
   },
 ];
@@ -34,6 +36,7 @@ const deckD1 = {
   name: 'French Vocab',
   subject_id: 's1',
   created_at: '',
+  readiness: null,
   field_defs: [
     { id: 'f1', name: 'Front', type: 'text', position: 0 },
     { id: 'f2', name: 'Back', type: 'text', position: 1 },
@@ -45,6 +48,7 @@ const deckD2 = {
   name: 'Spanish Vocab',
   subject_id: 's1',
   created_at: '',
+  readiness: null,
   field_defs: [{ id: 'g1', name: 'Word', type: 'text', position: 0 }],
   cards: [],
 };
