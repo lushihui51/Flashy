@@ -92,7 +92,7 @@ def db_read_practice_runs_with_decks(
 ) -> list[PracticeRunSummary]:
     """The user's sessions, newest first, each with the decks it snapshotted — two
     queries regardless of how many sessions there are, never one per session (the same
-    shape as db_read_decks_with_summary).
+    shape as db_read_deck_listings).
 
     `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
     matches if *any* of its snapshots points at a matching deck. A run left with no

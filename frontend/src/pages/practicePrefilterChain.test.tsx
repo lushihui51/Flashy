@@ -32,6 +32,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -42,6 +43,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -53,6 +55,7 @@ const initialDeckSummaries = [
     created_at: '',
     last_activity_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Term', 'Meaning'],
   },
   {
@@ -62,6 +65,7 @@ const initialDeckSummaries = [
     created_at: '',
     last_activity_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Note', 'Tune'],
   },
 ];
@@ -73,6 +77,7 @@ const initialDeckDetails: Record<string, object> = {
     subject_id: 's1',
     created_at: '',
     last_activity_at: '',
+    readiness: null,
     field_defs: [
       { id: 'f1', name: 'Term', type: 'text', position: 0 },
       { id: 'f2', name: 'Meaning', type: 'text', position: 1 },
@@ -85,6 +90,7 @@ const initialDeckDetails: Record<string, object> = {
     subject_id: 's2',
     created_at: '',
     last_activity_at: '',
+    readiness: null,
     field_defs: [
       { id: 'f3', name: 'Note', type: 'text', position: 0 },
       { id: 'f4', name: 'Tune', type: 'text', position: 1 },
@@ -208,6 +214,7 @@ function mockLibrary() {
         subject_id: body.subject_id,
         created_at: '',
         last_activity_at: '',
+        readiness: null,
         field_defs: body.field_defs.map((field, index) => ({
           id: `nf${index + 1}`,
           name: field.name,
@@ -224,6 +231,7 @@ function mockLibrary() {
         created_at: '',
         last_activity_at: '',
         card_count: 0,
+        readiness: null,
         field_names: body.field_defs.map((field) => field.name),
       });
       return HttpResponse.json(detail, { status: 201 });

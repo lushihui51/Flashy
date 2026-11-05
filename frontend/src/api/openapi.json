@@ -204,7 +204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
+                  "$ref": "#/components/schemas/SubjectSummary"
                 }
               }
             }
@@ -3058,6 +3058,55 @@
         ],
         "title": "CardRead"
       },
+      "CardSummary": {
+        "properties": {
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "readiness": {
+            "type": "number",
+            "title": "Readiness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deck_id",
+          "id",
+          "created_at",
+          "last_activity_at",
+          "values",
+          "readiness"
+        ],
+        "title": "CardSummary",
+        "description": "A card as a deck's page lists it."
+      },
       "CardUpdate": {
         "properties": {
           "values": {
@@ -3221,6 +3270,17 @@
             "format": "date-time",
             "title": "Last Activity At"
           },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
+          },
           "field_defs": {
             "items": {
               "$ref": "#/components/schemas/DeckFieldDefRead"
@@ -3230,7 +3290,7 @@
           },
           "cards": {
             "items": {
-              "$ref": "#/components/schemas/CardRead"
+              "$ref": "#/components/schemas/CardSummary"
             },
             "type": "array",
             "title": "Cards"
@@ -3243,6 +3303,7 @@
           "subject_id",
           "created_at",
           "last_activity_at",
+          "readiness",
           "field_defs",
           "cards"
         ],
@@ -3683,6 +3744,17 @@
             },
             "type": "array",
             "title": "Field Names"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
           }
         },
         "type": "object",
@@ -3693,10 +3765,11 @@
           "created_at",
           "last_activity_at",
           "card_count",
-          "field_names"
+          "field_names",
+          "readiness"
         ],
         "title": "DeckSummary",
-        "description": "DeckRead plus preview data for a list row \u2014 card_count and\nfield_names (position order, active fields only). Only `GET /api/decks` returns\nthis; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the\nricher `DeckDetail` instead, which already includes everything here except these\ntwo list-row-only fields."
+        "description": "A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck\nreads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,\nwhich already includes everything here except card_count and field_names."
       },
       "DeletionImpactRead": {
         "properties": {
@@ -4533,6 +4606,17 @@
           "deck_count": {
             "type": "integer",
             "title": "Deck Count"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
           }
         },
         "type": "object",
@@ -4542,10 +4626,11 @@
           "user_id",
           "created_at",
           "last_activity_at",
-          "deck_count"
+          "deck_count",
+          "readiness"
         ],
         "title": "SubjectSummary",
-        "description": "SubjectRead plus a deck count for a library list row. Only\n`GET /api/subjects` returns this \u2014 the subject detail page derives its own deck/\ncard counts from the (separately-fetched, already-enriched) deck list instead of\nneeding this here too."
+        "description": "A subject as a library row and its own page show it."
       },
       "SubjectUpdate": {
         "properties": {

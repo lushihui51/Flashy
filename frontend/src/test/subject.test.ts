@@ -52,13 +52,15 @@ describe("readSubject", () => {
     const id = crypto.randomUUID();
     server.use(
       http.get(`${BASE}/api/subjects/:subject_id`, ({ params }) =>
-        HttpResponse.json({ id: params.subject_id, name: "Chemistry" }),
+        HttpResponse.json({ id: params.subject_id, name: "Chemistry", deck_count: 0, readiness: null }),
       ),
     );
 
     await expect(readSubject(id)).resolves.toEqual({
       id,
       name: "Chemistry",
+      deck_count: 0,
+      readiness: null,
     });
   });
 

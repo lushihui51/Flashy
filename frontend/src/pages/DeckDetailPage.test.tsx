@@ -35,6 +35,7 @@ const deck = {
   name: 'Vocab Deck',
   subject_id: 's1',
   created_at: '',
+  readiness: 0.5,
   field_defs: twoFields,
   cards: [
     {
@@ -42,6 +43,7 @@ const deck = {
       deck_id: 'd1',
       created_at: '',
       values: { f1: 'Bonjour', f2: 'Hello' } as Record<string, string>,
+      readiness: 0.5,
     },
   ],
 };
@@ -52,6 +54,8 @@ const subject = {
   description: '',
   user_id: 'u1',
   created_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 
 function configuration(overrides: Record<string, unknown> = {}) {
@@ -202,7 +206,7 @@ describe('DeckDetailPage', () => {
         deckData: {
           ...deck,
           field_defs: [twoFields[0]!],
-          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' } }],
+          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' }, readiness: 0.5 }],
         },
       });
       renderAtDeckRoute();
@@ -328,6 +332,7 @@ describe('DeckDetailPage', () => {
             deck_id: 'd1',
             created_at: '',
             values: Object.fromEntries(manyFields.map((f) => [f.id, `v-${f.id}`])),
+            readiness: 0.5,
           },
         ],
       },

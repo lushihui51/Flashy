@@ -199,7 +199,7 @@ Read in the code:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -215,12 +215,16 @@ Read in the code:
 - `app/models/deck.py`
 - `app/models/card.py`
 - `app/models/deck_payloads.py`
+- `app/database_ops/deck.py`
+- `app/database_ops/subject.py`
+- `app/database_ops/practice_run.py`
 - `app/database_ops/mastery_log.py`
 - `app/services/mastery.py`
 - `app/routers/api/subject.py`
 - `app/routers/api/deck.py`
 - `tests/api_tests/test_subjects.py`
 - `tests/api_tests/test_decks.py`
+- `tests/api_tests/test_deck_batch_edit.py`
 - `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
@@ -289,7 +293,35 @@ The frontend: `npm run gen:api` regenerates the types; every fixture typed as `S
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The five named pytest files: `61 passed`. The four statement-count tests are `TestSubjectReadiness::test_list_runs_a_fixed_number_of_statements`, at most 3 statements; `TestDeckReadiness::test_list_runs_a_fixed_number_of_statements`, at most 4; `TestDeckReadiness::test_detail_runs_a_fixed_number_of_statements`, at most 6; and `TestSubjectReadiness::test_read_carries_deck_count_and_readiness`, at most 3, a bound Details leaves unstated.
+- `grep -c "readiness" frontend/src/api/types.ts` prints `10`. `git diff --stat HEAD -- frontend/src/api/types.ts frontend/src/api/openapi.json` prints `openapi.json | 97` and `types.ts | 55`, 135 insertions and 17 deletions over the two files.
+- Live, by `curl` under `DEV_AUTH_USER_ID`:
+  - `POST /api/decks` made "Cycle 032 T2 check 1793896792" in "CompTIA A+", and it returned `readiness: null` and `cards: []`.
+  - `/api/subjects`: CompTIA A+, 3 decks, `0.3974832464676617`; Cycle 029 T2 judgement 2026-11-04 19:45, 1 deck, `0.3358208955223881`; Web, 0 decks, `null`; Stott Pilates, 1 deck, `null`.
+  - `/api/decks`: Cycle 032 T2 check 1793896792, 0 cards, `null`; Three fields, 4 cards, `0.3358208955223881`; Commands, 54 cards, `0.19068344707020454`; Ports, 21 cards, `0.9292541592039801`; Reformer Repertoire, 0 cards, `null`.
+  - `/api/decks/{id}` for Three fields: the deck reads `0.3358208955223881`, its cards `0.4478`, `0.4478`, `0.4478` and `0.0`, whose average is the deck's figure.
+  - CompTIA A+ is the average over the 75 cards of Commands and Ports, not over the two decks' figures.
+  - The text `mastery` appears nowhere in the three payloads.
+  - No file under `frontend/src` changed but `src/api/openapi.json`, `src/api/types.ts` and test files, so no screen has changed.
+
+Commit checks: full `pytest` 380 passed, with `pg_stat_activity` showing no other connection first; `npx vitest run` 59 files and 588 tests passed; `npm run lint` and `npm run build` clean.
+
+Departures from Details or Files:
+
+- Files gained four paths, each approved by the engineer: `app/database_ops/deck.py`, `app/database_ops/subject.py`, `app/database_ops/practice_run.py` and `tests/api_tests/test_deck_batch_edit.py`.
+- A `db_*` function cannot call the folds and `readiness` is required, so `db_read_*_with_summary` could no longer build a summary. By the engineer's approval, new `SubjectListing` and `DeckListing` hold what the tables give, and `SubjectSummary` and `DeckSummary` extend them with `readiness`. The functions became `db_read_subject_listings` and `db_read_deck_listings`, with a new `db_read_subject_listing` for one subject. The listings appear in no response. T2's Details still reads `db_read_*_with_summary`, since that sentence is the planner's to edit.
+- The new fetch is two functions, `db_fetch_deck_mastery_read_rows` and `db_fetch_subject_mastery_read_rows`, over one private helper, because a single public function would have a service pass an ORM column. `_latest_mastery_subquery` is shared with `db_fetch_mastery_read_rows`, whose rows are unchanged.
+- `test_rename_only_batch_issues_zero_mastery_log_statements` became `test_rename_only_batch_issues_zero_mastery_log_writes`, and it and `test_card_delete_removes_review_rows_and_issues_no_rebuild` count `INSERT` and `DELETE` statements through a local fixture, `mastery_log_writes`, because the `PATCH` response now reads `mastery_log`. `test_delete_below_two_fields_rejected_before_apply_deletion_runs` keeps the broad counter, since its refusal returns before `_deck_detail`.
+- `frontend/src/lib/deckEditorDiff.test.ts` did not change: it holds no fixture of these shapes.
+- `frontend/src/test/subject.test.ts` and `frontend/src/test/deck.test.ts` hold untyped partial responses. `readiness` went on the responses of routes that now return it; `subject.test.ts`'s `POST` and `PATCH` keep `SubjectRead`.
+- `tests/api_tests/test_subjects.py` gained two tests Details does not name: `test_a_subject_with_no_deck_reads_null` and `test_folds_over_cards_each_once_not_over_decks`.
+- The check's deck stays in the dev database, as AGENTS.md orders, so CompTIA A+ now holds 3 decks.
+
+Read in the code:
+
+- `_fold_collections` in `app/services/mastery.py` with `_fetch_collection_mastery_read_rows` in `app/database_ops/mastery_log.py`: the whole of the new read, the fetch computing nothing and the service only translating and folding.
 
 ### T3 — The circle on every row and heading
 

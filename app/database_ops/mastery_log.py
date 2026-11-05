@@ -1,7 +1,20 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Row, Uuid, column, delete, desc, insert, text, values
+from sqlalchemy import (
+    ColumnElement,
+    DateTime,
+    Row,
+    Subquery,
+    Uuid,
+    column,
+    delete,
+    desc,
+    insert,
+    text,
+    values,
+)
+from sqlalchemy.orm import InstrumentedAttribute
 from sqlmodel import Session, col, select
 
 from app.mastery.types import FieldMasteryState
@@ -87,6 +100,24 @@ def db_stage_append_mastery_log(
     db.execute(insert(MasteryLog).values(rows))
 
 
+def _latest_mastery_subquery(*conditions: ColumnElement[bool]) -> Subquery:
+    """mastery_log's latest row per (card, field) among the rows `conditions` select."""
+    return (
+        select(
+            MasteryLog.card_id,
+            MasteryLog.field_def_id,
+            MasteryLog.prompt_mastery,
+            MasteryLog.answer_mastery,
+            MasteryLog.prompt_review_count,
+            MasteryLog.answer_review_count,
+        )
+        .where(*conditions)
+        .distinct(MasteryLog.card_id, MasteryLog.field_def_id)
+        .order_by(MasteryLog.card_id, MasteryLog.field_def_id, desc(MasteryLog.reviewed_at))
+        .subquery()
+    )
+
+
 def db_fetch_mastery_read_rows(
     db: Session, card_ids: list[uuid.UUID], field_def_ids: list[uuid.UUID] | None = None
 ) -> list[Row]:
@@ -100,21 +131,10 @@ def db_fetch_mastery_read_rows(
     history replay."""
     if not card_ids:
         return []
-    latest_query = select(
-        MasteryLog.card_id,
-        MasteryLog.field_def_id,
-        MasteryLog.prompt_mastery,
-        MasteryLog.answer_mastery,
-        MasteryLog.prompt_review_count,
-        MasteryLog.answer_review_count,
-    ).where(col(MasteryLog.card_id).in_(card_ids))
+    conditions = [col(MasteryLog.card_id).in_(card_ids)]
     if field_def_ids is not None:
-        latest_query = latest_query.where(col(MasteryLog.field_def_id).in_(field_def_ids))
-    latest_mastery = (
-        latest_query.distinct(MasteryLog.card_id, MasteryLog.field_def_id)
-        .order_by(MasteryLog.card_id, MasteryLog.field_def_id, desc(MasteryLog.reviewed_at))
-        .subquery()
-    )
+        conditions.append(col(MasteryLog.field_def_id).in_(field_def_ids))
+    latest_mastery = _latest_mastery_subquery(*conditions)
 
     query = (
         select(
@@ -138,6 +158,53 @@ def db_fetch_mastery_read_rows(
     if field_def_ids is not None:
         query = query.where(col(FieldDef.id).in_(field_def_ids))
     return list(db.exec(query).all())
+
+
+def _fetch_collection_mastery_read_rows(
+    db: Session, owner_id: InstrumentedAttribute[uuid.UUID], owner_ids: list[uuid.UUID]
+) -> list[Row]:
+    if not owner_ids:
+        return []
+    owned_card_ids = (
+        select(Card.id).join(Deck, Deck.id == Card.deck_id).where(col(owner_id).in_(owner_ids))
+    )
+    latest_mastery = _latest_mastery_subquery(col(MasteryLog.card_id).in_(owned_card_ids))
+    query = (
+        select(
+            owner_id.label("owner_id"),
+            Card.id.label("card_id"),
+            FieldDef.id.label("field_def_id"),
+            latest_mastery.c.prompt_mastery,
+            latest_mastery.c.answer_mastery,
+            latest_mastery.c.prompt_review_count,
+            latest_mastery.c.answer_review_count,
+        )
+        .select_from(Card)
+        .join(Deck, Deck.id == Card.deck_id)
+        .join(FieldDef, FieldDef.deck_id == Card.deck_id)
+        .outerjoin(
+            latest_mastery,
+            (latest_mastery.c.card_id == Card.id)
+            & (latest_mastery.c.field_def_id == FieldDef.id),
+        )
+        .where(col(owner_id).in_(owner_ids))
+    )
+    return list(db.exec(query).all())
+
+
+def db_fetch_deck_mastery_read_rows(db: Session, deck_ids: list[uuid.UUID]) -> list[Row]:
+    """Raw material for deck_readiness: one row per (card, field of its deck) over these
+    decks, `owner_id` being the deck's id and the mastery columns NULL when never
+    reviewed. A deck with no card has no row. One statement whatever the count."""
+    return _fetch_collection_mastery_read_rows(db, Deck.id, deck_ids)
+
+
+def db_fetch_subject_mastery_read_rows(db: Session, subject_ids: list[uuid.UUID]) -> list[Row]:
+    """Raw material for subject_readiness: one row per (card, field of its deck) over
+    these subjects' decks, `owner_id` being the subject's id and the mastery columns NULL
+    when never reviewed. A subject whose decks hold no card has no row. One statement
+    whatever the count."""
+    return _fetch_collection_mastery_read_rows(db, Deck.subject_id, subject_ids)
 
 
 def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:

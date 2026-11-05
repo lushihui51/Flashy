@@ -130,6 +130,7 @@ describe('deckDetailToEditorState', () => {
     subject_id: 'subject-1',
     created_at: '',
     last_activity_at: '',
+    readiness: 0.5,
     field_defs: [
       { id: 'back-id', name: 'Back', type: 'text', position: 1 },
       { id: 'front-id', name: 'Front', type: 'text', position: 0 },
@@ -141,6 +142,7 @@ describe('deckDetailToEditorState', () => {
         created_at: '',
         last_activity_at: '',
         values: { 'front-id': 'Bonjour', 'back-id': 'Hello' },
+        readiness: 0.5,
       },
     ],
   };

@@ -11,6 +11,7 @@ const deck = {
   created_at: '',
   last_activity_at: '',
   card_count: 6,
+  readiness: 0.5,
   field_names: ['Front', 'Back'],
 };
 
@@ -29,7 +30,7 @@ describe('DeckRow', () => {
   });
 
   it('counts one card and one field in the singular', () => {
-    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, field_names: ['Front'] }} />);
+    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />);
 
     expect(screen.getByText('1 card · 1 field')).toBeInTheDocument();
   });

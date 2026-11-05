@@ -542,6 +542,38 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * CardSummary
+         * @description A card as a deck's page lists it.
+         */
+        CardSummary: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
+            /** Readiness */
+            readiness: number;
+        };
         /** CardUpdate */
         CardUpdate: {
             /** Values */
@@ -619,10 +651,12 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Readiness */
+            readiness: number | null;
             /** Field Defs */
             field_defs: components["schemas"]["DeckFieldDefRead"][];
             /** Cards */
-            cards: components["schemas"]["CardRead"][];
+            cards: components["schemas"]["CardSummary"][];
         };
         /** DeckFieldDefRead */
         DeckFieldDefRead: {
@@ -766,11 +800,9 @@ export interface components {
         };
         /**
          * DeckSummary
-         * @description DeckRead plus preview data for a list row — card_count and
-         *     field_names (position order, active fields only). Only `GET /api/decks` returns
-         *     this; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the
-         *     richer `DeckDetail` instead, which already includes everything here except these
-         *     two list-row-only fields.
+         * @description A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck
+         *     reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,
+         *     which already includes everything here except card_count and field_names.
          */
         DeckSummary: {
             /**
@@ -799,6 +831,8 @@ export interface components {
             card_count: number;
             /** Field Names */
             field_names: string[];
+            /** Readiness */
+            readiness: number | null;
         };
         /**
          * DeletionImpactRead
@@ -1223,10 +1257,7 @@ export interface components {
         };
         /**
          * SubjectSummary
-         * @description SubjectRead plus a deck count for a library list row. Only
-         *     `GET /api/subjects` returns this — the subject detail page derives its own deck/
-         *     card counts from the (separately-fetched, already-enriched) deck list instead of
-         *     needing this here too.
+         * @description A subject as a library row and its own page show it.
          */
         SubjectSummary: {
             /** Name */
@@ -1263,6 +1294,8 @@ export interface components {
             last_activity_at: string;
             /** Deck Count */
             deck_count: number;
+            /** Readiness */
+            readiness: number | null;
         };
         /** SubjectUpdate */
         SubjectUpdate: {
@@ -1383,7 +1416,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubjectRead"];
+                    "application/json": components["schemas"]["SubjectSummary"];
                 };
             };
             /** @description Validation Error */

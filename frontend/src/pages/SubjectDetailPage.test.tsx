@@ -33,6 +33,8 @@ const subject = {
   description: 'Numbers and shapes',
   user_id: 'u1',
   created_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 const decks = [
   {
@@ -41,6 +43,7 @@ const decks = [
     name: 'Algebra',
     created_at: '',
     card_count: 6,
+    readiness: 0.5 as number | null,
     field_names: ['Front', 'Back'],
   },
 ];
@@ -142,8 +145,8 @@ describe('SubjectDetailPage', () => {
     it('reads plural counts for multiple decks, summed cards', async () => {
       mockSubject({
         decksData: [
-          { id: 'd1', subject_id: 's1', name: 'Algebra', created_at: '', card_count: 6, field_names: [] },
-          { id: 'd2', subject_id: 's1', name: 'Geometry', created_at: '', card_count: 3, field_names: [] },
+          { id: 'd1', subject_id: 's1', name: 'Algebra', created_at: '', card_count: 6, readiness: 0.5, field_names: [] },
+          { id: 'd2', subject_id: 's1', name: 'Geometry', created_at: '', card_count: 3, readiness: 0.5, field_names: [] },
         ],
       });
       renderAtSubjectRoute();
@@ -163,7 +166,7 @@ describe('SubjectDetailPage', () => {
     it('reads "0 cards · 1 field" for a deck with zero cards and one field', async () => {
       mockSubject({
         decksData: [
-          { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, field_names: ['Front'] },
+          { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, readiness: null, field_names: ['Front'] },
         ],
       });
       renderAtSubjectRoute();
@@ -180,6 +183,7 @@ describe('SubjectDetailPage', () => {
             name: 'Solo',
             created_at: '',
             card_count: 1,
+            readiness: 0.5,
             field_names: ['Front', 'Back'],
           },
         ],
@@ -198,6 +202,7 @@ describe('SubjectDetailPage', () => {
             name: 'Algebra',
             created_at: '',
             card_count: 2,
+            readiness: 0.5,
             field_names: ['Front', 'Back', 'Notes', 'Extra'],
           },
         ],
@@ -308,6 +313,7 @@ describe('SubjectDetailPage', () => {
         name: `Deck ${i}`,
         created_at: '',
         card_count: i,
+        readiness: null,
         field_names: [],
       })),
     });

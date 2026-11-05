@@ -47,13 +47,17 @@ class SubjectRead(SubjectBase):
     last_activity_at: datetime
 
 
-class SubjectSummary(SubjectRead):
-    """SubjectRead plus a deck count for a library list row. Only
-    `GET /api/subjects` returns this — the subject detail page derives its own deck/
-    card counts from the (separately-fetched, already-enriched) deck list instead of
-    needing this here too."""
+class SubjectListing(SubjectRead):
+    """SubjectRead plus its deck count: what the tables give for a subject."""
 
     deck_count: int
+
+
+class SubjectSummary(SubjectListing):
+    """A subject as a library row and its own page show it."""
+
+    # 0 to 1, over every card of the subject's decks; None when those decks hold no card.
+    readiness: float | None
 
 
 class SubjectUpdate(AppModel):

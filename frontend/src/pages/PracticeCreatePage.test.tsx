@@ -31,6 +31,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -41,6 +42,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -52,6 +54,7 @@ const decks = [
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
   {
@@ -61,6 +64,7 @@ const decks = [
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
 ];

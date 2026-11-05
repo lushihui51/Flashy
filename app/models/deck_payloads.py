@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlmodel import Field
 
 from app.models.base import AppModel
-from app.models.card import CardRead
+from app.models.card import CardSummary
 from app.models.field_def import FieldDefCreate, FieldType
 
 DeckFieldOrderKey = str
@@ -96,5 +96,7 @@ class DeckDetail(AppModel):
     subject_id: uuid.UUID
     created_at: datetime
     last_activity_at: datetime
+    # 0 to 1, over the deck's cards; None with no card.
+    readiness: float | None
     field_defs: list[DeckFieldDefRead]
-    cards: list[CardRead]
+    cards: list[CardSummary]

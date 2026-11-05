@@ -28,6 +28,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 2,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -37,6 +38,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 const decks = [
@@ -46,6 +48,7 @@ const decks = [
     name: 'Algebra',
     created_at: '',
     card_count: 3,
+    readiness: 0.5,
     field_names: ['Term', 'Definition'],
   },
   {
@@ -54,6 +57,7 @@ const decks = [
     name: 'Cells',
     created_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Front'],
   },
 ];

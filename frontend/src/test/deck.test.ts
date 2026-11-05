@@ -19,7 +19,7 @@ describe('createDeck', () => {
       http.post(`${BASE}/api/decks`, async ({ request }) => {
         sentBody = await request.json();
         return HttpResponse.json(
-          { id: '00000000-0000-0000-0000-000000000302', ...payload },
+          { id: '00000000-0000-0000-0000-000000000302', readiness: null, ...payload },
           { status: 201 },
         );
       }),
@@ -29,6 +29,7 @@ describe('createDeck', () => {
     expect(sentBody).toEqual(payload);
     expect(created).toEqual({
       id: '00000000-0000-0000-0000-000000000302',
+      readiness: null,
       ...payload,
     });
   });
@@ -63,6 +64,7 @@ describe('readDeck', () => {
           id: params.deck_id,
           subject_id: '00000000-0000-0000-0000-000000000301',
           name: 'Chemistry Deck',
+          readiness: null,
         }),
       ),
     );
@@ -71,6 +73,7 @@ describe('readDeck', () => {
       id: 'deck_42',
       subject_id: '00000000-0000-0000-0000-000000000301',
       name: 'Chemistry Deck',
+      readiness: null,
     });
   });
 
@@ -99,6 +102,7 @@ describe('updateDeck', () => {
           id: params.deck_id,
           subject_id: '00000000-0000-0000-0000-000000000301',
           name: 'Updated Deck',
+          readiness: null,
         });
       }),
     );
@@ -109,6 +113,7 @@ describe('updateDeck', () => {
       id: 'deck_7',
       subject_id: '00000000-0000-0000-0000-000000000301',
       name: 'Updated Deck',
+      readiness: null,
     });
   });
 });
