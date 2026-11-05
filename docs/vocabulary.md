@@ -184,7 +184,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Failure | An action that could not reach Flashy | "Couldn't reach Flashy. Check your connection and try again." | Beside the control that failed | `failureSentence`; `CONNECTION_FAILED_MESSAGE` |
 | Failure | An action Flashy had trouble with | "Flashy is having trouble right now. Try again in a moment." | Beside the control that failed | `ApiError`; `unwrap`; `failureSentence`; `SERVER_TROUBLE_MESSAGE` |
 | Failure | An action while Flashy is temporarily unavailable | "Flashy is temporarily unavailable." | Not shown yet | `database_unavailable` |
-| Failure | A thing that is gone | "<Thing> not found." | In place of a thing that is gone; beside the control that failed | `ApiError`; `unwrap`; `isNotFound`; `failureSentence` |
-| Failure | A thing that will not load | "Could not load this <thing>." | Edit subject; subject page; Edit deck; deck page; Edit card; Edit configuration; a practice's page; run page | `isError` |
+| Failure | A thing that is gone | "<Thing> not found." | In place of a thing that is gone; beside the control that failed; the whole content of the page, for an address that leads to no page | `ApiError`; `unwrap`; `isNotFound`; `failureSentence`; `NotFoundPage` |
+| Failure | A thing that will not load | "Could not load this <thing>." | Edit subject; subject page; Edit deck; deck page; Edit card; Edit configuration; a practice's page; run page; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |
 | Failure | A list that will not load | "Could not load <things>." | Library; deck page's Configurations tab; Practice page; New practice | `isError` |
 | Failure | Any other failed action | "Something went wrong." | Beside the control that failed | `ApiError`; `ApiDetailError`; `detail.code`; `unwrap`; `failureSentence`; `SOMETHING_WENT_WRONG` |
