@@ -37,13 +37,14 @@ This is the floor, not a ceiling: read anything in the repository you need.
 
 ## Before you start
 
-Check these five things, and if any fails, stop with the reason and touch nothing:
+Check these four things, and if any fails, stop with the reason and touch nothing:
 
 - The task's Status is not started.
 - Every task in the task's Dependencies is done.
 - Every path in Files exists unless marked new, and no path marked new exists.
 - No path in Files carries uncommitted changes from a peer.
-- No drawing the task cites contradicts the rest of the cycle file.
+
+Then check that no drawing the task cites contradicts the rest of the cycle file. If one does, the file is wrong, and it's a block.
 
 ## How you work
 

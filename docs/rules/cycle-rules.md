@@ -38,7 +38,7 @@
 
 **Files.** Every path the task may create or change, exact, from the repository root, marked new where it does not exist yet; a generated file counts. A path not listed is not touched.
 
-**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is written out as a constraint. A drawing cited from the cycle's canvas, by its number, is a constraint on everything it shows, except what a constraint in the same Details says the task does not build. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
+**Details.** A sentence is one of two kinds, told apart by its wording: a constraint, "must" or "never", which the builder keeps; or guidance, the best way the planner knows, which the builder may depart from. A lesser decision placed here is written out as a constraint. A drawing cited from the cycle's canvas, by its number, is a constraint on everything it shows, except what the task's Out of scope names. An interface is written as code. A constraint that a record decided names the record; never restate its reasons. Never restate what the code shows; name the file or symbol to read instead.
 
 **Out of scope.** What a builder would be tempted to add here and must not, one line each, with where it belongs: another task by number, a later cycle, an unsettled decision, or never.
 
