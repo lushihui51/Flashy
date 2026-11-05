@@ -57,3 +57,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: drawing 1 has a bar at the foot on New practice, and `StickyPageRow` in `frontend/src/components/ui/StickyPageRow.tsx` holds the row on New practice and on the subject, deck, card and configuration forms, so moving it on one page means moving it on all five.
   - Owner: /product-decide
   - Drawings: 1
+- B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
+  - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
+  - Owner: /product-decide
