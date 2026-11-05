@@ -21,7 +21,7 @@ Judgement: The engineer judges in headless Chromium against the dev server at 39
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -66,4 +66,33 @@ Tests: `SubjectForm.test.tsx` and `CardStandaloneForm.test.tsx` assert the headi
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+1. The grep printed `frontend/src/components/library/SubjectForm.tsx:2` and `frontend/src/components/library/CardStandaloneForm.tsx:3`. The card form's third line is the closing tag; the subject form's use is one self-closed line of contents.
+2. `npx vitest run src/components/library src/components/ui/StickyPageRow.test.tsx src/test/stickyOffset.test.ts`: 11 files passed, 183 tests passed. The new tests are `SubjectForm — the heading row`, `CardStandaloneForm — the heading row`, and `the New subject overlay keeps its heading row in flow, not sticky` in `DeckEditor.test.tsx`.
+3. The script, against `localhost:5173` at 390 wide, on the deck "Commands", which has 12 fields. Every page scrolled at the first height, 300, so no run lowered it:
+
+```
+Edit card    | banner none  | height 300 | scrollY 1055 | header bottom 114 | row top 114 | within 1px true
+Edit card    | banner shown | height 300 | scrollY 1113 | header bottom 172 | row top 172 | within 1px true
+New card     | banner none  | height 300 | scrollY 1014 | header bottom 114 | row top 114 | within 1px true
+New card     | banner shown | height 300 | scrollY 1072 | header bottom 172 | row top 172 | within 1px true
+New subject  | banner none  | height 300 | scrollY 219  | header bottom 114 | row top 114 | within 1px true
+New subject  | banner shown | height 300 | scrollY 277  | header bottom 172 | row top 172 | within 1px true
+Edit subject | banner none  | height 300 | scrollY 283  | header bottom 114 | row top 114 | within 1px true
+Edit subject | banner shown | height 300 | scrollY 341  | header bottom 172 | row top 172 | within 1px true
+```
+
+The header's bottom is 172 with the banner and 114 without on all four pages. No run overflowed sideways, and the script recorded no page errors.
+
+4. The screenshot is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/9a35f9d7-3f72-423b-b70e-d9d859109dd5/scratchpad/edit-card-last-field-banner-390.png`, at 390 by 844 with the banner showing, scrolled to the page's bottom with the last field on screen. There the header's bottom and the row's top are both 172, and Cancel and Save are visible. At rest at the top of the page, the row's top is 188.
+
+The script also read the overlay in the browser: the "New subject" row in `/decks/new` has `position: static` and no `data-reveal-clear`.
+
+The cycle's judgement that the deck, configuration and New practice forms read as before rests on the diff, not on a browser check: `DeckEditor.tsx` gains only `stickyRow={false}` on the overlay's body, and no file of the configuration or New practice forms changed.
+
+Departures:
+
+- On `/cards/new` the script typed the deck's name into the picker before clicking the option with the mouse, because the picker shows only its first `PICKER_MAX_ITEMS` decks and "Commands" was not among them.
+
+To read in the code: nothing beyond `rowContents` in `SubjectFormBody`, which holds the row's children so both branches of `stickyRow` render the same ones.

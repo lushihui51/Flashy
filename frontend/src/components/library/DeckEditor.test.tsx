@@ -250,6 +250,24 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByPlaceholderText('Subject')).toHaveValue('Math');
   });
 
+  it('the New subject overlay keeps its heading row in flow, not sticky', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+      </Routes>,
+      ['/decks/new'],
+    );
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    const heading = within(dialog).getByRole('heading', { name: 'New subject' });
+    expect(heading.closest('[data-reveal-clear]')).toBeNull();
+  });
+
   it('creating a subject in the overlay selects it immediately, without waiting for a refetch', async () => {
     mockSubjects();
     server.use(

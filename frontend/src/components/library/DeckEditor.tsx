@@ -671,6 +671,7 @@ function DeckEditorBody({
           mode="create"
           subjectId={undefined}
           original={undefined}
+          stickyRow={false}
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);

@@ -7,6 +7,7 @@ import { readDeck, readDecks } from 'src/api/deck';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import StickyPageRow from 'src/components/ui/StickyPageRow';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -226,7 +227,7 @@ function CardStandaloneFormBody({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between gap-2">
+      <StickyPageRow>
         <button
           type="button"
           onClick={handleCancel}
@@ -245,7 +246,7 @@ function CardStandaloneFormBody({
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
-      </div>
+      </StickyPageRow>
 
       {formError && (
         <p role="alert" className="text-sm text-(--color-wrong)">

@@ -125,6 +125,19 @@ describe.each([
   },
 );
 
+describe('SubjectForm — the heading row', () => {
+  it.each([
+    { path: '/subjects/new', heading: 'New subject' },
+    { path: '/subjects/s1/edit', heading: 'Edit subject' },
+  ])('$heading holds its row in the sticky row', async ({ path, heading }) => {
+    server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
+    renderForm(path);
+
+    const title = await screen.findByRole('heading', { name: heading });
+    expect(title.parentElement).toHaveAttribute('data-reveal-clear');
+  });
+});
+
 describe('SubjectForm — create mode', () => {
   it('blocks submit with an empty name and does not call the API', async () => {
     let createCalled = false;

@@ -168,6 +168,19 @@ describe.each([
   });
 });
 
+describe('CardStandaloneForm — the heading row', () => {
+  it.each([
+    { path: '/cards/new', heading: 'New card' },
+    { path: '/cards/c1/edit', heading: 'Edit card' },
+  ])('$heading holds its row in the sticky row', async ({ path, heading }) => {
+    mockAll();
+    renderForm(path);
+
+    const title = await screen.findByRole('heading', { name: heading });
+    expect(title.parentElement).toHaveAttribute('data-reveal-clear');
+  });
+});
+
 describe('CardStandaloneForm — create mode', () => {
   it('with no decks yet, the picker still offers "New deck…" and leads to deck creation', async () => {
     server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.json([])));
