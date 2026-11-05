@@ -33,9 +33,9 @@ export default function PracticeFilterBar({
   const selectedSubject = subjects.find((subject) => subject.id === subjectId) ?? null;
   const selectedDeck = decks.find((deck) => deck.id === deckId) ?? null;
 
-  // The picker's input is a form field's height wherever it stands; a filter sits 4px shorter.
+  // The picker's input is a form field's height wherever it stands; a filter sits 0.25rem shorter.
   return (
-    <div className="flex gap-2.5 [&_input]:h-[42px]" data-testid="practice-filters">
+    <div className="flex gap-2.5 [&_input]:h-10.5" data-testid="practice-filters">
       <div className="min-w-0 flex-1">
         <PickerCombobox<SubjectOption>
           purpose="filter"

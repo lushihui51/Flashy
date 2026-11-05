@@ -20,8 +20,8 @@ function textValueClass(value: string, zone: FieldValueProps['zone']) {
   if (zone === 'answer') return 'text-xl leading-[1.25] font-semibold';
   if (zone === 'prompt') {
     return value.length <= LONGEST_LARGE_PROMPT
-      ? 'text-[54px] leading-none font-bold tracking-[-0.02em]'
-      : 'text-[26px] leading-[1.1] font-bold tracking-[-0.01em]';
+      ? 'text-[3.375rem] leading-none font-bold tracking-[-0.02em]'
+      : 'text-value leading-[1.1] font-bold tracking-[-0.01em]';
   }
   return 'text-lg font-semibold';
 }
@@ -41,14 +41,14 @@ export default function FieldValue({ field, labeled, hidden, zone }: FieldValueP
       {labeled && (
         <div
           className={
-            zone ? 'text-[13px] text-(--color-aside)' : 'text-xs font-medium text-(--color-aside)'
+            zone ? 'text-label text-(--color-aside)' : 'text-xs font-medium text-(--color-aside)'
           }
         >
           {field.name}
         </div>
       )}
       {hidden ? (
-        <p className="flex h-[34px] w-full items-center rounded-[10px] bg-(--color-hidden) px-3 text-sm font-semibold text-(--color-ink)">
+        <p className="flex h-8.5 w-full items-center rounded-tight bg-(--color-hidden) px-3 text-sm font-semibold text-(--color-ink)">
           Hidden
         </p>
       ) : field.type === 'text' ? (

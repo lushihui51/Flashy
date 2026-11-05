@@ -9,7 +9,7 @@ export default function Logo({ className }: LogoProps) {
     <Link
       to="/"
       aria-label="Flashy home"
-      className={`whitespace-nowrap text-[21px] font-bold tracking-[-0.01em] text-(--color-ink) ${className ?? ''}`}
+      className={`whitespace-nowrap text-[1.3125rem] font-bold tracking-[-0.01em] text-(--color-ink) ${className ?? ''}`}
     >
       <svg
         viewBox="-2 -2 53 74"

@@ -46,7 +46,7 @@ A card's pass or fail is decided in `submit_rating` in `app/services/practice_ru
 
 We will keep all mastery arithmetic under `app/mastery/`, and never in SQL, a SQLModel expression or a trigger, in any phase. The database stores mastery state and never computes it: the persistence layer writes only values a strategy has already computed, and no statement carries a blending, scoring or aggregation expression. We will serialize concurrent writes with a lock rather than fold them into an atomic SQL expression.
 
-We will make `MasteryStrategy` the interface, with the strategy in use one implementation of it. An implementation owns three things: the stored state, which the code calls mastery; the arithmetic that blends a review into it; and the translation of one field's state, or `None` for a field never reviewed, into the field's readiness, how likely the user is to recall the field now, from 0 to 1. Each implementation keeps its constants in its own module, where no other code can compute with them.
+We will make `MasteryStrategy` the interface, with the strategy in use one implementation of it. An implementation owns four things: the stored state, which the code calls mastery; the arithmetic that blends a review into it; the translation of a field's mastery, or `None` for a field never reviewed, into its readiness, how likely the user is to recall the field now, from 0 to 1; and its reach, the furthest one rating can move a side's readiness, exposed as a read-only property. Each implementation keeps its constants in its own module, where no other code can compute with them.
 
 We will fold readiness above the field in one module that belongs to no strategy, `app/mastery/readiness.py`. A card's readiness is the average over every field of its deck, a field never reviewed counting 0. A deck's is the average over its cards, and a subject's the average over every card in its decks, each card once; the fold takes a flat list of cards' readiness and never decks' figures. A deck or a subject with no card has no readiness. We will compute readiness on read and store none of it.
 
@@ -94,7 +94,7 @@ Rejected because existing callers would keep computing on the strategy's scale.
 
 **Positive**
 
-- The developer adding a strategy writes its own translation to readiness, with no requirement on how its own numbers read, and nothing outside `app/mastery/` changes.
+- The developer adding a strategy writes its own translation to readiness and states its own reach, with no requirement on how its own numbers read, and nothing outside `app/mastery/` changes.
 - The developer outside `app/mastery/` has one mastery figure to read, and cannot read a strategy's scale by mistake.
 - The developer replacing a strategy leaves the averaging behind every circle unchanged, since the folds belong to no strategy.
 - The developer cannot build a subject's readiness from its decks' figures by accident.

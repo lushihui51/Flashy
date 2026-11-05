@@ -10,7 +10,7 @@ type CardListProps = {
   cardHref: (cardId: string) => string;
 };
 
-// About what fits half a phone-width card at 15px; a longer value takes the whole width
+// About what fits half a phone-width card at `text-body`; a longer value takes the whole width
 // so it does not wrap into a narrow column.
 const HALF_WIDTH_CHARACTERS = 18;
 
@@ -29,18 +29,18 @@ export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardL
         <li key={card.id}>
           <Link
             to={cardHref(card.id)}
-            className="tappable flex flex-col rounded-[20px] bg-(--color-surface) px-4 text-(--color-ink)"
+            className="tappable flex flex-col rounded-block bg-(--color-surface) px-4 text-(--color-ink)"
           >
             {leadField && (
               <span className="flex flex-col gap-px py-3">
-                <span className="text-[13px] text-(--color-aside)">{leadField.name}</span>
-                <span className="text-[26px] leading-[1.1] font-bold tracking-[-0.01em] break-words">
+                <span className="text-label text-(--color-aside)">{leadField.name}</span>
+                <span className="text-value leading-[1.1] font-bold tracking-[-0.01em] break-words">
                   <FieldValueText value={card.values[leadField.id] ?? ''} />
                 </span>
               </span>
             )}
             {otherFields.length > 0 && (
-              <span className="grid grid-cols-2 gap-x-4 gap-y-2.5 border-t-[1.5px] border-(--color-ink) pt-3 pb-3.5">
+              <span className="grid grid-cols-2 gap-x-4 gap-y-2.5 ruled-top pt-3 pb-3.5">
                 {otherFields.map((fieldDef) => {
                   const value = card.values[fieldDef.id] ?? '';
                   return (
@@ -50,8 +50,8 @@ export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardL
                         value.length > HALF_WIDTH_CHARACTERS ? 'col-span-2' : ''
                       }`}
                     >
-                      <span className="text-[13px] text-(--color-aside)">{fieldDef.name}</span>
-                      <span className="text-[15px] leading-[1.35] font-medium break-words">
+                      <span className="text-label text-(--color-aside)">{fieldDef.name}</span>
+                      <span className="text-body leading-[1.35] font-medium break-words">
                         <FieldValueText value={value} />
                       </span>
                     </span>

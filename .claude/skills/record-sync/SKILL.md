@@ -26,6 +26,7 @@ Give me one thing to answer per turn: one proposed edit, one hand-off, or the do
 - `docs/rules/record-rules.md`, for what a live site is and what Status holds.
 - `docs/rules/comment-rules.md`, `docs/rules/agents-rules.md` and `docs/rules/backlog-rules.md`, for the form a citation takes in each kind of file.
 - For each site the guard lists: the record it cites, every record that record's Status names, each in full, and the code or line at the site.
+- `docs/vocabulary.md`: the row of each concept you write, for its words and code names.
 - Nothing else without my explicit permission.
 
 ## What you do

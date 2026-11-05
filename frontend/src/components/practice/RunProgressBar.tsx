@@ -26,12 +26,12 @@ export default function RunProgressBar({ progress }: RunProgressBarProps) {
   );
 
   return (
-    <div role="img" aria-label={ariaLabel} className="flex h-2 w-full gap-[3px]">
+    <div role="img" aria-label={ariaLabel} className="flex h-2 w-full gap-0.75">
       {total > 0 &&
         SEGMENTS.filter((segment) => progress[segment.key] > 0).map((segment) => (
           <div
             key={segment.key}
-            className={`rounded-[4px] ${segment.colorClass}`}
+            className={`rounded-sm ${segment.colorClass}`}
             style={{ width: `${(progress[segment.key] / total) * 100}%` }}
           />
         ))}

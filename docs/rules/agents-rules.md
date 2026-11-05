@@ -10,7 +10,7 @@
 
 - Project: where things live, what the product is, and who the product's users are.
 - Commands: the commands an agent cannot guess.
-- Hard rules: the acts that are never done, an agent will stop and ask.
+- Hard rules: the acts never done or always done; an agent who would break one stops and asks.
 - Conventions: the default judgment calls, an agent who departs from one says so and why.
 
 **Line.** One bullet is a statement and two optional sub-lines under it, `Reason:` and `Guard:`.

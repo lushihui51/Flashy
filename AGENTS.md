@@ -51,13 +51,15 @@
 - Raise a finding that must outlive the session to the engineer; never fix it in passing.
   - Reason: a lasting decision needs the engineer's approval
 - Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
+- After the engineer orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
+  - Reason: one standing approval, given once a conversation
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
 - Never mark deferred work in code; raise it to the engineer as a question for docs/backlog.md.
   - Reason: the backlog is a kept question's one home
 - Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
   - Reason: PDR 001, ADR 069
-- Name a concept in code by the name docs/vocabulary.md's Code column gives it, and change a code name there first, then in every file.
+- Write a concept the user meets in the words its docs/vocabulary.md row gives and name code by the row's Code cell, in every file you write; change a name there first.
   - Reason: ADR 069
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070
@@ -74,10 +76,10 @@
 - Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
   - Reason: ADR 018
   - Guard: tests/api_tests/test_activity_tracking.py
-- Carry a round-trip return address as the ?returnTo= URL parameter, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
-  - Reason: ADR 024
-- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no error boundary, cache handler or toast.
-  - Reason: PDR 002, ADR 063
+- Carry a form's return addresses as the ?cancelTo= and ?returnTo= URL parameters, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
+  - Reason: ADR 103
+- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no cache handler or toast, and App.tsx's route for a page that cannot be shown is the one error boundary.
+  - Reason: PDR 031, ADR 063, ADR 104
 - Carry a rename through every tracked file and path, quoted literals and generated files included; only an occurrence with a different meaning stays.
   - Reason: one word per concept, history included
 

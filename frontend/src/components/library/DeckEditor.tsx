@@ -41,10 +41,12 @@ type SubjectRead = components['schemas']['SubjectRead'];
  * than any of them so none needs reshaping to pass through. */
 type SubjectItem = { id: string; name: string; icon?: string | null };
 
+// Centres a control's h-9 box on the field name input beside it, in a row aligned to its bottom.
+const FIELD_ICON_MARGIN = 'my-1.25';
 const FIELD_ICON_BUTTON =
-  'my-[5px] flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[1.5px] border-transparent text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)';
+  `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
 const FIELD_TYPE_SELECT =
-  'h-[46px] shrink-0 appearance-none rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
+  'h-field shrink-0 appearance-none rounded-field outlined-line bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
 
 type FieldsSectionProps = {
   fields: EditorField[];
@@ -77,10 +79,10 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   return (
     <section className="mt-6">
       <h2 className="text-sm font-medium text-(--color-aside)">Fields</h2>
-      <p className="text-[13px] text-(--color-aside)">
+      <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface) px-3">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
@@ -92,7 +94,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                       aria-label="Field name"
                       value={field.name}
                       disabled
-                      className="h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
+                      className="h-field w-full rounded-field outlined-line bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
                     />
                   </div>
                   <select
@@ -113,7 +115,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     disabled
                     className={FIELD_ICON_BUTTON}
                   >
-                    <ArrowUp aria-hidden="true" className="h-[18px] w-[18px]" />
+                    <ArrowUp aria-hidden="true" className="size-icon" />
                   </button>
                   <button
                     type="button"
@@ -121,10 +123,10 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                     disabled
                     className={FIELD_ICON_BUTTON}
                   >
-                    <ArrowDown aria-hidden="true" className="h-[18px] w-[18px]" />
+                    <ArrowDown aria-hidden="true" className="size-icon" />
                   </button>
-                  <span className="my-[5px] flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)">
-                    <X aria-hidden="true" className="h-[18px] w-[18px]" />
+                  <span className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}>
+                    <X aria-hidden="true" className="size-icon" />
                   </span>
                 </div>
               </li>
@@ -147,13 +149,13 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
             <li key={field.key}>
               <div className="flex items-end gap-1 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  {index === primaryIndex && <span className="text-[13px] text-(--color-aside)">Primary</span>}
+                  {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
                   <input
                     type="text"
                     aria-label="Field name"
                     value={field.name}
                     onChange={(e) => onRename(field.key, e.target.value)}
-                    className="h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3 text-base text-(--color-ink)"
+                    className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
                   />
                 </div>
 
@@ -177,7 +179,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   onClick={() => onMove(field.key, index - 1)}
                   className={FIELD_ICON_BUTTON}
                 >
-                  <ArrowUp aria-hidden="true" className="h-[18px] w-[18px]" />
+                  <ArrowUp aria-hidden="true" className="size-icon" />
                 </button>
                 <button
                   type="button"
@@ -186,7 +188,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   onClick={() => onMove(field.key, index + 1)}
                   className={FIELD_ICON_BUTTON}
                 >
-                  <ArrowDown aria-hidden="true" className="h-[18px] w-[18px]" />
+                  <ArrowDown aria-hidden="true" className="size-icon" />
                 </button>
 
                 <button
@@ -197,7 +199,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   onClick={() => onRemove(field.key)}
                   className={FIELD_ICON_BUTTON}
                 >
-                  <X aria-hidden="true" className="h-[18px] w-[18px]" />
+                  <X aria-hidden="true" className="size-icon" />
                 </button>
               </div>
               {error && <p className="pb-3 text-sm text-(--color-wrong)">{error}</p>}
@@ -208,7 +210,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <button
         type="button"
         onClick={onAdd}
-        className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
+        className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
       >
         <Plus aria-hidden="true" className="h-4 w-4" />
         Add field
@@ -574,11 +576,11 @@ function DeckEditorBody({
         <button
           type="button"
           onClick={showDone ? goBack : handleCancel}
-          className={showDone ? 'tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-surface) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]' : 'text-[15px] font-medium text-(--color-aside)'}
+          className={showDone ? 'tappable-sm h-10 shrink-0 rounded-field bg-(--color-surface) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]' : 'text-body font-medium text-(--color-aside)'}
         >
           {showDone ? 'Done' : 'Cancel'}
         </button>
-        <h1 className="text-[19px] font-bold text-(--color-ink)">
+        <h1 className="text-title font-bold text-(--color-ink)">
           {mode === 'edit' ? 'Edit deck' : 'New deck'}
         </h1>
         <div className="flex items-center gap-2">
@@ -587,7 +589,7 @@ function DeckEditorBody({
               type="button"
               onClick={handleUndo}
               disabled={!canUndo}
-              className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-surface) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+              className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-surface) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
             >
               Undo
             </button>
@@ -596,7 +598,7 @@ function DeckEditorBody({
             type="button"
             onClick={() => void handleSaveClick()}
             disabled={!canSave || checkingSaveImpact}
-            className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+            className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
           >
             {/* Reverts the instant a new edit re-dirties the form, not just after the
                 2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
@@ -613,12 +615,12 @@ function DeckEditorBody({
 
       <div className="mt-4 flex flex-col gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-(--color-aside)">Deck name</span>
+          <span className="text-label text-(--color-aside)">Deck name</span>
           <input
             type="text"
             value={state.name}
             onChange={(e) => dispatch({ type: 'SET_NAME', name: e.target.value })}
-            className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
         </label>
         <PickerCombobox<SubjectItem>

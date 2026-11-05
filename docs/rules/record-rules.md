@@ -16,9 +16,9 @@
 
 ## Supersession
 
-**All or nothing.** A record is only ever fully active, fully superseded or fully deprecated. A later record that changes any part of its Decision restates the whole decision and supersedes it. A later record that changes none of it leaves it untouched. A record that has not reached main is edited in place instead of superseded.
+**All or nothing.** A record is only ever fully active, fully superseded or fully deprecated. A later record that changes any part of its Decision, or makes one decision with it by Grouping, restates the whole decision and supersedes it; one that does neither leaves it untouched. A record that has not reached main is edited in place instead of superseded.
 
-**The replacing record.** When a record's decision changes, what replaces it is triaged as a new decision. It becomes one record, several records, or no record. Significance is judged on the decision as it now stands, never on the size of the change. A superseding record states what was replaced and why.
+**The replacing record.** When a record is superseded, what replaces it is triaged as a new decision. It becomes one record, several records, or no record. Significance is judged on the decision as it now stands, never on the size of the change. A superseding record states what was replaced and why.
 
 **The old record.** The old record is marked Superseded by the record or records that replace it, or Deprecated when none does. A superseded or deprecated record stays in its folder with its Status pointer.
 

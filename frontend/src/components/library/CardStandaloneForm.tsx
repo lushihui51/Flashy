@@ -223,18 +223,18 @@ function CardStandaloneFormBody({
         <button
           type="button"
           onClick={handleCancel}
-          className="text-[15px] font-medium text-(--color-aside)"
+          className="text-body font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-[19px] font-bold text-(--color-ink)">
+        <h1 className="text-title font-bold text-(--color-ink)">
           {mode === 'create' ? 'New card' : 'Edit card'}
         </h1>
         <button
           type="submit"
           form={formId}
           disabled={!canSubmit}
-          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
@@ -249,8 +249,8 @@ function CardStandaloneFormBody({
       <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
         {deckLocked ? (
           <div className="flex items-baseline gap-2.5">
-            <span className="text-[13px] text-(--color-aside)">Deck</span>
-            <span className="text-[15px] font-semibold text-(--color-ink)">
+            <span className="text-label text-(--color-aside)">Deck</span>
+            <span className="text-body font-semibold text-(--color-ink)">
               {selectedDeck?.name ?? ''}
             </span>
           </div>

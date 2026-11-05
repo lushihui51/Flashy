@@ -158,7 +158,7 @@ export default function PickerCombobox<T extends PickerItem>({
         e.preventDefault();
         chooseIndex(actionIndex);
       }}
-      className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[15px] font-semibold text-(--color-ink) ${
+      className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body font-semibold text-(--color-ink) ${
         highlighted === actionIndex ? 'bg-(--color-ground)' : ''
       }`}
     >
@@ -195,7 +195,7 @@ export default function PickerCombobox<T extends PickerItem>({
         onBlur={() => setOpen(false)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`h-[46px] w-full rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
+        className={`h-field w-full rounded-field outlined-line bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
           filtering ? 'pr-9 pl-3.5' : 'px-3.5'
         }`}
       />
@@ -209,7 +209,7 @@ export default function PickerCombobox<T extends PickerItem>({
         <ul
           id={listboxId}
           role="listbox"
-          className="tappable absolute z-10 mt-1 w-full divide-y divide-(--color-line) overflow-hidden rounded-[14px] bg-(--color-surface)"
+          className="tappable absolute z-10 mt-1 w-full divide-y divide-(--color-line) overflow-hidden rounded-field bg-(--color-surface)"
         >
           {/* The action row: first when it clears a filter, last when it creates. Same
               markup either way, so both are one keyboard cycle and one click path. */}
@@ -228,7 +228,7 @@ export default function PickerCombobox<T extends PickerItem>({
                 e.preventDefault();
                 chooseIndex(index + firstItemIndex);
               }}
-              className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-[15px] text-(--color-ink) ${
+              className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-(--color-ink) ${
                 index + firstItemIndex === highlighted ? 'bg-(--color-ground)' : ''
               }`}
             >

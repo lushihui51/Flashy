@@ -23,14 +23,14 @@ export default function Breadcrumb({ places }: BreadcrumbProps): ReactNode {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="inline-flex items-center gap-1.5 text-[15px] font-medium text-(--color-aside)"
+      className="inline-flex items-center gap-1.5 text-body font-medium text-(--color-aside)"
     >
       {hasEarlierPage() && (
         <button
           type="button"
           aria-label="Back"
           onClick={() => navigate(-1)}
-          // A 44px hit area, pulled back by the negative margins so the icon sits at the
+          // An h-11 hit area, pulled back by the negative margins so the icon sits at the
           // row's left edge and the row keeps the height of its text.
           className="-my-3.5 -ml-3.5 flex h-11 w-11 shrink-0 items-center justify-center"
         >

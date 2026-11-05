@@ -48,15 +48,6 @@
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
   - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 024) is the only change the user sees.
   - Owner: /product-decide
-- B20. Are text and the heights around it sized in a unit that scales from one root size, rather than in pixels?
-  - Reason: `frontend/src` sets sizes in pixels, such as `text-[15px]` and `h-[46px]`, beside `rem` utilities, such as `text-sm` and `h-10`, so a larger default font size in the browser scales only part of a screen.
-  - Owner: /code-decide
-- B21. When the user presses Cancel on the new deck form they reached from a subject's page, do they return to that subject's page?
-  - Reason: `SubjectDetailPage` in `frontend/src/pages/SubjectDetailPage.tsx` opens the form with the subject in router state and no `returnTo`, and `goBack` in `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` goes to `returnTo` or else `/library`, so Cancel lands on Your library. `returnTo` also decides where Create goes, so passing it would send a new deck back to the subject's page instead of the deck's own.
-  - Owner: /product-decide
-- B22. What does the user see when they open an address that leads to no page, and when a page fails while drawing?
-  - Reason: Under the data router (ADR 089), both show React Router's default error screen, in its own words and outside `AppShell`, which meets neither the rule that a screen shows only words `docs/vocabulary.md` gives nor the rule that a failure renders inline with no error boundary (PDR 002, ADR 063). ADR 089 sets no `errorElement`, and `App.tsx` holds no catch-all route.
-  - Owner: /product-decide
-- B23. Do Cancel and Save stay on screen while the user scrolls the card and subject forms, as they do on the deck, configuration and New practice forms?
-  - Reason: `CardStandaloneForm` in `frontend/src/components/library/CardStandaloneForm.tsx` and `SubjectForm` in `frontend/src/components/library/SubjectForm.tsx` hold their row in the page's flow, so it scrolls away, while `DeckEditor`, `DeckConfigurationEditor` and `PracticeCreatePage` hold theirs in `StickyPageRow`.
+- B24. When the browser's text size makes a row's contents wider than the screen, the top bar's items, a row of tabs, a page's heading beside its buttons, a field's row on Edit deck, the Practice page's two filters or a list row's title beside what stands next to it, does the row wrap, scroll sideways on its own, or shrink what it holds, and how small may what it holds become?
+  - Reason: PDR 030 has everything grow with the browser's text size; at a 24px root on a 390-wide screen the top bar's "Log in", the Practice page's "Completed" tab and a deck's "Add configuration" run past the edge, and the whole page scrolls sideways; a deck's heading breaks inside its word, "Commands" taking five lines, Edit deck's field name inputs narrow to about one character, the Practice page's two filters cut their own words to "All subj" and "All deck", and a row's title truncates to a few characters, "Sep 28, …" on the Practice page, where several rows then look alike, and "CompTI…" on Your library.
   - Owner: /product-decide

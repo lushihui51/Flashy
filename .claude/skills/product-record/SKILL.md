@@ -31,14 +31,14 @@ Give me one thing to answer per turn: one question, the triage table, one PDR's 
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - `docs/rules/record-rules.md`: treat it as your Gospel; it governs everything you propose to me.
 - Every active PDR, as the examples of what has earned a PDR.
-- The user-facing vocabulary in `docs/vocabulary.md`. Those are the words the user sees, so they are the words of every PDR.
+- `docs/vocabulary.md`: the row of each concept you write, for its words.
 - Nothing else without my explicit permission.
 
 ## What you do
 
 ### 1. The triage
 
-First, propose one triage for every Product decision on the docket, as a table: one row per proposed PDR or lesser decision. Each row names the decisions it groups and why it is, or is not, significant per record-rules.md.
+First, propose one triage for every Product decision on the docket, as a table: one row per proposed PDR or lesser decision. Each row names the decisions it groups, the active record they make one decision with, if any, and why it is, or is not, significant per record-rules.md.
 
 In addition, talk about each grouping or split you considered and did not propose, and why.
 
@@ -69,7 +69,7 @@ Propose which active PDRs it contradicts or extends. Those are the affected PDRs
 
 Once I have approved the affected PDRs, propose your decision on each one's fate and your reasoning. Nothing is decided until I say so. The PDR in question can be:
 
-- Untouched, when no new decision changes its Decision
+- Untouched, when no new decision changes its Decision or makes one decision with it
 - Edited in place, when it has not reached main
 - Superseded by the proposed PDR
 - Superseded by a new PDR

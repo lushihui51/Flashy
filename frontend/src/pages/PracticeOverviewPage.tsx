@@ -87,8 +87,8 @@ export default function PracticeOverviewPage() {
     listStart,
   };
   const tabTargets = {
-    // The whole tablist rather than the pressed tab, whose pressed look sits 2px lower than
-    // the others: at the band's top it would leave them under the header.
+    // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
+    // others by the press travel: at the band's top it would leave them under the header.
     control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
     listStart,
   };
@@ -120,7 +120,7 @@ export default function PracticeOverviewPage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
           Practice
         </h1>
         <AddButton
@@ -159,7 +159,7 @@ export default function PracticeOverviewPage() {
           ref={sessionsQuery.isPlaceholderData ? undefined : emptyRef}
           className="flex flex-col items-start gap-3 py-8"
         >
-          <p className="text-[15px] text-(--color-aside)">
+          <p className="text-body text-(--color-aside)">
             {filtered ? 'No practices match these filters.' : 'No practices yet.'}
           </p>
           {/* No Add practice button here — the header's is always on screen. */}
@@ -167,7 +167,7 @@ export default function PracticeOverviewPage() {
             <button
               type="button"
               onClick={() => changeView(new URLSearchParams(), filterTargets)}
-              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
+              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
             >
               Clear filters
             </button>
@@ -179,7 +179,7 @@ export default function PracticeOverviewPage() {
         sessions.length > 0 && (
           <ul
             ref={sessionsQuery.isPlaceholderData ? undefined : listRef}
-            className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)"
+            className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)"
           >
             {sessions.map((session) => (
               <li key={session.id}>

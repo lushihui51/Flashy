@@ -271,20 +271,20 @@ export default function PracticeCreatePage() {
         <button
           type="button"
           onClick={cancel}
-          className="text-[15px] font-medium text-(--color-aside)"
+          className="text-body font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-[19px] font-bold text-(--color-ink)">New practice</h1>
+        <h1 className="text-title font-bold text-(--color-ink)">New practice</h1>
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
-            <span className="text-[13px] text-(--color-aside)">{selectedCount} selected</span>
+            <span className="text-label text-(--color-aside)">{selectedCount} selected</span>
           )}
           <button
             type="button"
             disabled={!canCreate}
             onClick={submit}
-            className="tappable-sm h-10 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+            className="tappable-sm h-10 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
           >
             Create
           </button>
@@ -292,7 +292,7 @@ export default function PracticeCreatePage() {
       </StickyPageRow>
 
       <div className="mt-3 flex flex-col gap-1.5">
-        <label htmlFor={nameInputId} className="text-[13px] text-(--color-aside)">
+        <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
           Name
         </label>
         <input
@@ -300,7 +300,7 @@ export default function PracticeCreatePage() {
           type="text"
           value={name}
           onChange={(event) => changeName(event.target.value)}
-          className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
+          className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
         />
         {nameMissing && (
           <p className="text-sm text-(--color-aside)">Give this practice a name to create it.</p>
@@ -308,11 +308,11 @@ export default function PracticeCreatePage() {
       </div>
 
       <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1.5">
-        <h2 id={selectedHeadingId} className="text-[13px] text-(--color-aside)">
+        <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
           Selected
         </h2>
         {selectedCount === 0 ? (
-          <p className="text-[15px] text-(--color-aside)">
+          <p className="text-body text-(--color-aside)">
             Select at least one configuration to practice.
           </p>
         ) : allConfigsQuery.isError ? (
@@ -365,7 +365,7 @@ export default function PracticeCreatePage() {
           ref={configsQuery.isPlaceholderData ? undefined : emptyRef}
           className="flex flex-col items-start gap-3 py-8"
         >
-          <p className="text-[15px] text-(--color-aside)">
+          <p className="text-body text-(--color-aside)">
             {filtered ? 'No configurations match these filters.' : 'No configurations yet.'}
           </p>
           {/* No New configuration… button here — the toolbar's is always on screen. */}
@@ -373,7 +373,7 @@ export default function PracticeCreatePage() {
             <button
               type="button"
               onClick={() => setFilters({ subjectId: null, deckId: null })}
-              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-[15px] font-semibold text-(--color-ink)"
+              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
             >
               Clear filters
             </button>

@@ -49,12 +49,12 @@ export default function ConfirmDialog({
         />
         <Dialog.Content
           aria-describedby={undefined}
-          className="tappable fixed inset-x-5 top-1/2 z-80 flex -translate-y-1/2 flex-col gap-3.5 rounded-[20px] bg-(--color-surface) p-5 focus:outline-none"
+          className="tappable fixed inset-x-5 top-1/2 z-80 flex -translate-y-1/2 flex-col gap-3.5 rounded-block bg-(--color-surface) p-5 focus:outline-none"
         >
-          <Dialog.Title className="text-[19px] font-bold text-(--color-ink)">
+          <Dialog.Title className="text-title font-bold text-(--color-ink)">
             {title}
           </Dialog.Title>
-          <Dialog.Description className="text-[15px] leading-normal font-light text-(--color-ink)">
+          <Dialog.Description className="text-body leading-normal font-light text-(--color-ink)">
             {description}
           </Dialog.Description>
           {children}

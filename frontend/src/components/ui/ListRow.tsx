@@ -29,26 +29,25 @@ export default function ListRow({ leading, title, subtitle, meta, to, onClick }:
   const content = (
     <>
       {leading && <span className="shrink-0">{leading}</span>}
-      <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-        <span className="block truncate text-[19px] leading-6 font-semibold text-(--color-ink)">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.75">
+        <span className="block truncate text-title leading-6 font-semibold text-(--color-ink)">
           {title}
         </span>
         {subtitle && (
-          <span className="block truncate text-[13px] leading-4 text-(--color-aside)">
+          <span className="block truncate text-label leading-4 text-(--color-aside)">
             {subtitle}
           </span>
         )}
-        {meta && <span className="block text-[13px] leading-4 text-(--color-aside)">{meta}</span>}
+        {meta && <span className="block text-label leading-4 text-(--color-aside)">{meta}</span>}
       </span>
       <ChevronRight aria-hidden="true" className="h-5 w-5 shrink-0 text-(--color-ink)" />
     </>
   );
 
-  // 78px = 3px outline + 32px padding + 24px title line + 3px gap + 16px second line:
-  // the two-line case's exact height, so a title-only row is floored up to match it
-  // instead of rendering visibly shorter.
+  // The min-height is a two-line row's height at the default text size, so a title-only
+  // row is floored up to match it instead of rendering visibly shorter.
   const blockClass =
-    'tappable flex min-h-[78px] items-center gap-3.5 rounded-[20px] bg-(--color-surface) p-4';
+    'tappable flex min-h-[4.875rem] items-center gap-3.5 rounded-block bg-(--color-surface) p-4';
 
   if (onClick) {
     return (

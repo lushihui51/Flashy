@@ -33,6 +33,7 @@ Give me one thing to answer per turn: one question, or one proposed decision wit
 - Every active ADR, so you can tell me when a decision contradicts or extends one.
 - Whatever code you need to understand what has been built.
 - The in-progress cycle files, they tell you what is being built. For a replan, the blocked task is the topic.
+- `docs/vocabulary.md`: the row of each concept you write, for its words and code names.
 - Nothing else without my explicit permission.
 
 ## How you think

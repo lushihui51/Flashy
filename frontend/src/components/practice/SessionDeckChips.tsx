@@ -10,7 +10,7 @@ type SessionDeckChipsProps = {
   variant: 'summary' | 'full';
 };
 
-const CHIP_CLASS = 'text-[13px] leading-4 text-(--color-aside)';
+const CHIP_CLASS = 'text-label leading-4 text-(--color-aside)';
 
 /**
  * The chips naming what a practice ran, one per deck in the server's subject → deck

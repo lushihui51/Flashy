@@ -30,7 +30,7 @@ Facts about how the app is used and what the user needs come from me. Never inve
   awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($(0),5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$(0); next} part=="**Status**"{s=$(0); sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $(0); part=""}' docs/cycles/*.md
   ````
   The command writes `$(0)` for awk's `$0`, because the skill loader substitutes `$0` with an argument.
-- The user-facing vocabulary in `docs/vocabulary.md`. Those are the words the user sees, so they are the words of every decision here.
+- `docs/vocabulary.md`: the row of each concept you write, for its words.
 - Nothing else without my explicit permission.
 
 ## How you think

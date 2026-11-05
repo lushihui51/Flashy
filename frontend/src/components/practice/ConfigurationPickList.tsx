@@ -38,10 +38,10 @@ export default function ConfigurationPickList({
       {groups.map((group) => (
         <fieldset
           key={group.deckId}
-          className="tappable min-w-0 rounded-[20px] bg-(--color-surface)"
+          className="tappable min-w-0 rounded-block bg-(--color-surface)"
         >
           {/* Floated, or the browser cuts the legend into the fieldset's top outline. */}
-          <legend className="float-left w-full px-4 pt-3 pb-2 text-[15px] leading-5 font-semibold text-(--color-ink)">
+          <legend className="float-left w-full px-4 pt-3 pb-2 text-body leading-5 font-semibold text-(--color-ink)">
             {group.subjectName} · {group.deckName}
           </legend>
           <div className="clear-both flex flex-col divide-y divide-(--color-line)">
@@ -65,11 +65,11 @@ export default function ConfigurationPickList({
                       />
                       <span
                         aria-hidden="true"
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] border-(--color-ink) bg-(--color-surface) text-transparent peer-checked:bg-(--color-ink) peer-checked:text-(--color-surface) peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-(--color-ink)"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md outlined-ink bg-(--color-surface) text-transparent peer-checked:bg-(--color-ink) peer-checked:text-(--color-surface) peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-(--color-ink)"
                       >
                         <Check strokeWidth={3} className="h-4 w-4" />
                       </span>
-                      <span className="text-[15px] text-(--color-ink)">{config.name}</span>
+                      <span className="text-body text-(--color-ink)">{config.name}</span>
                     </label>
                     <button
                       type="button"

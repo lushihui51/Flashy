@@ -27,7 +27,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
     return (
       <div
         aria-hidden="true"
-        className="h-[38px] w-[38px] shrink-0 rounded-full bg-(--color-ground)"
+        className="size-account shrink-0 rounded-full bg-(--color-ground)"
       />
     );
   }
@@ -53,7 +53,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       type="button"
       onClick={onAvatarClick}
       aria-label={`Account menu for ${name}`}
-      className="h-[38px] w-[38px] shrink-0 overflow-hidden rounded-full border-[1.5px] border-(--color-ink) bg-(--color-surface)"
+      className="size-account shrink-0 overflow-hidden rounded-full outlined-ink bg-(--color-surface)"
     >
       {user.imageUrl ? (
         <img src={user.imageUrl} alt={name} className="h-full w-full object-cover" />

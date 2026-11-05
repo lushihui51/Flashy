@@ -23,7 +23,7 @@ export default function TopBar({
   createButtonRef,
 }: TopBarProps) {
   return (
-    <div className="flex h-[58px] w-full items-center gap-2 bg-(--color-ground) px-4">
+    <div className="flex h-14.5 w-full items-center gap-2 bg-(--color-ground) px-4">
       <button
         ref={menuButtonRef}
         type="button"
@@ -38,7 +38,7 @@ export default function TopBar({
         style={{ pointerEvents: 'auto' }}
         className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-ink)"
       >
-        <Menu aria-hidden="true" className="h-[22px] w-[22px]" />
+        <Menu aria-hidden="true" className="size-icon-lg" />
       </button>
 
       <Logo />
@@ -53,7 +53,7 @@ export default function TopBar({
           aria-label="New"
           className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-ink)"
         >
-          <Plus aria-hidden="true" className="h-[22px] w-[22px]" />
+          <Plus aria-hidden="true" className="size-icon-lg" />
         </button>
 
         <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">

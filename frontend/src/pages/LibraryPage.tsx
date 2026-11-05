@@ -27,7 +27,7 @@ function isTab(value: string | null): value is Tab {
 function EmptyState({ copy, ref }: { copy: string; ref?: Ref<HTMLDivElement> }) {
   return (
     <div ref={ref} className="py-8">
-      <p className="text-[15px] text-(--color-aside)">{copy}</p>
+      <p className="text-body text-(--color-aside)">{copy}</p>
     </div>
   );
 }
@@ -52,8 +52,8 @@ export default function LibraryPage() {
     if (next === 'subjects') nextParams.delete('tab');
     else nextParams.set('tab', next);
     changeView(nextParams, {
-      // The whole tablist rather than the pressed tab, whose pressed look sits 2px lower than
-      // the others: at the band's top it would leave them under the header.
+      // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
+      // others by the press travel: at the band's top it would leave them under the header.
       control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
       listStart: () => listRef.current ?? emptyRef.current ?? failureRef.current,
     });
@@ -66,7 +66,7 @@ export default function LibraryPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
         Your library
       </h1>
 
@@ -77,7 +77,7 @@ export default function LibraryPage() {
       {tab === 'subjects' ? (
         <section aria-label="Subjects">
           <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-[15px] font-medium text-(--color-aside)">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
             <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
@@ -96,10 +96,10 @@ export default function LibraryPage() {
                 <li key={subject.id}>
                   <ListRow
                     leading={
-                      <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] border-[1.5px] border-(--color-ink)">
+                      <span className="flex size-field items-center justify-center rounded-field outlined-ink">
                         <SubjectIcon
                           icon={subject.icon}
-                          className="h-[22px] w-[22px] text-(--color-ink)"
+                          className="size-icon-lg text-(--color-ink)"
                         />
                       </span>
                     }
@@ -116,7 +116,7 @@ export default function LibraryPage() {
       ) : (
         <section aria-label="Decks">
           <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-[15px] font-medium text-(--color-aside)">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
             <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
