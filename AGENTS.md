@@ -57,7 +57,7 @@
   - Reason: the backlog is a kept question's one home
 - Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
   - Reason: PDR 001, ADR 069
-- Name a concept in code by the name docs/vocabulary.md's Code column gives it, and change a code name there first, then in every file.
+- Write a concept the user meets in the words its docs/vocabulary.md row gives and name code by the row's Code cell, in every file you write; change a name there first.
   - Reason: ADR 069
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070

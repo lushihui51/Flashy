@@ -27,7 +27,7 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 - `docs/rules/backlog-rules.md`, then `docs/backlog.md` in full.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
 - The records the docket lists, in full.
-- `docs/vocabulary.md`, for the rows the docket changes.
+- `docs/vocabulary.md`: the rows the docket changes, and the row of each concept you write, for its words and code names.
 - Whatever code you need.
 - Nothing else without my explicit permission.
 

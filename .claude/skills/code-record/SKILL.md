@@ -32,6 +32,7 @@ Give me one thing to answer per turn: one question, the triage table, one ADR's 
 - `docs/rules/record-rules.md`: treat it as your Gospel; it governs everything you propose to me.
 - Every active ADR, as the examples of what has earned an ADR.
 - The PDRs the docket lists, for the behaviour an ADR states in its Context.
+- `docs/vocabulary.md`: the row of each concept you write, for its words and code names.
 - Nothing else without my explicit permission.
 
 ## What you do

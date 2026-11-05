@@ -31,7 +31,7 @@ Give me one thing to answer per turn: one question, the triage table, one PDR's 
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - `docs/rules/record-rules.md`: treat it as your Gospel; it governs everything you propose to me.
 - Every active PDR, as the examples of what has earned a PDR.
-- The user-facing vocabulary in `docs/vocabulary.md`. Those are the words the user sees, so they are the words of every PDR.
+- `docs/vocabulary.md`: the row of each concept you write, for its words.
 - Nothing else without my explicit permission.
 
 ## What you do

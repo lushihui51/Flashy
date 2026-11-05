@@ -30,6 +30,7 @@ Before your first edit, in this order:
 - The cycle file in full: the Goal, the Records (each in full), and every task.
 - `docs/rules/comment-rules.md`, so you know when, where and how to write comments.
 - `docs/rules/vocabulary-rules.md`, when the task's Files lists `docs/vocabulary.md`, so you know how to write its rows.
+- `docs/vocabulary.md`: the row of each concept you write, for its words and code names.
 - Every file the task's Files lists, if it already exists.
 
 This is the floor, not a ceiling: read anything in the repository you need.
