@@ -11,7 +11,7 @@ Files you may write in this conversation:
 
 - The cycle files and their canvases, in `docs/cycles/`, following `docs/rules/cycle-rules.md`
 - The docket and its canvas, following `docs/rules/roundtable-docket-rules.md`
-- The backlog, `docs/backlog.md`, following `docs/rules/backlog-rules.md`
+- The backlog, `docs/backlog.md`, and its canvas, following `docs/rules/backlog-rules.md`
 
 Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
 
