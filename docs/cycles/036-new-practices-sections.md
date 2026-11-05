@@ -20,7 +20,7 @@ Judgement: The engineer judges on the live server at 390 wide: New practice matc
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -62,4 +62,17 @@ Tests, in `PracticeCreatePage.test.tsx`, with the page's `precedes` helper: the 
 
 **Debrief**
 
-None.
+Attempted: I moved the Selected `section` to the end of `PracticeCreatePage`'s JSX and added the three order tests. Every Done-when line held: the two test files passed, the filter and first-row tops stayed 281.5 and 460.5 through three ticks and one removal at 390 wide, Selected's top was below the last group's bottom, and "3 selected" sat beside Create. I raised the drawing's differences only after building, not before.
+
+Found: drawing 23, now lettered 23A, is a constraint, and the page the Details keep differs from it in six things, shown in 23B:
+
+- Cancel, the count and Create sit in the sticky row, where 23A has a bar at the foot.
+- The "New configuration…" row is there, where 23A has none.
+- Each deck's name sits inside its block, where 23A has it above.
+- The ticks are square, where 23A's are round.
+- Each row in Selected has two lines, where 23A's have one.
+- Selected sits 12px below the list, where 23A's sections are 16px apart.
+
+The Done-when line also asks for three ticks across two decks, and `toggleConfig` allows one tick per deck, so three ticks need three decks.
+
+Why the file cannot settle it: the Details keep the sticky row and the "New configuration…" row, the Goal's scope limits the cycle to the order, and the cited drawing says otherwise. The engineer agreed to 23B. The file must cite 23B and name three decks before the task can be built.
