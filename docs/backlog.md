@@ -48,3 +48,6 @@
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
   - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 024) is the only change the user sees.
   - Owner: /product-decide
+- B24. When the browser's text size makes a row wider than the screen, the top bar's items or a row of tabs, does the row wrap, scroll sideways on its own, or shrink what it holds?
+  - Reason: PDR 030 has everything grow with the browser's text size; at a 24px root on a 390-wide screen the top bar's "Log in" and the Practice page's "Completed" tab run past the edge, and the whole page scrolls sideways.
+  - Owner: /product-decide
