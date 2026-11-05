@@ -341,12 +341,13 @@ describe('practice pre-filter chains', () => {
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
     expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
 
-    // New practice → the builder: subject param and returnTo both ride along, and the
+    // New practice → the builder: subject param and both addresses ride along, and the
     // context subject's decks sort first in the picker.
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s2');
+    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s2');
     expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s2');
 
     await user.click(await screen.findByPlaceholderText('Deck'));
@@ -390,6 +391,7 @@ describe('practice pre-filter chains', () => {
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s1');
     expect(builder.params.get('deck')).toBe('d1');
+    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
     expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
 
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
@@ -407,12 +409,18 @@ describe('practice pre-filter chains', () => {
     await screen.findByRole('region', { name: 'Not used' });
     const builderLocation = currentLocation().full;
 
-    // Builder → "New deck…": the deck editor's returnTo is the builder's exact
-    // location — context params and the builder's own nested returnTo included.
+    // Builder → "New deck…": each of the deck editor's addresses is the builder's exact
+    // location — context params and the builder's own nested addresses included.
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
     expect(currentLocation().pathname).toBe('/decks/new');
+    expect(currentLocation().params.get('cancelTo')).toBe(builderLocation);
     expect(currentLocation().params.get('returnTo')).toBe(builderLocation);
+    for (const address of ['cancelTo', 'returnTo']) {
+      const nested = new URLSearchParams(currentLocation().params.get(address)!.split('?')[1]);
+      expect(nested.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
+      expect(nested.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+    }
 
     // Cancel in the deck editor → back on the builder, nothing dropped.
     await screen.findByDisplayValue('Term');
@@ -421,6 +429,7 @@ describe('practice pre-filter chains', () => {
     const backOnBuilder = currentLocation();
     expect(backOnBuilder.params.get('subject')).toBe('s1');
     expect(backOnBuilder.params.get('deck')).toBe('d1');
+    expect(backOnBuilder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
     expect(backOnBuilder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Alpha Deck'));
@@ -499,6 +508,8 @@ describe('practice pre-filter chains', () => {
     // Edit → Cancel: back on exactly the draft left behind.
     await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
     expect(currentLocation().pathname).toBe('/deck-configurations/c3/edit');
+    expect(currentLocation().params.get('cancelTo')).toBe(draft);
+    expect(currentLocation().params.get('returnTo')).toBe(draft);
     await screen.findByRole('region', { name: 'Not used' });
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 

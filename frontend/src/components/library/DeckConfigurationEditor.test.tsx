@@ -122,11 +122,16 @@ function StateProbe() {
   );
 }
 
-// returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
+// Both addresses ride the URL, not state — decoded via URLSearchParams.get(), never
 // compared as an encoded string literal.
 function ReturnToProbe() {
   const { params } = useViewParams();
-  return <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>;
+  return (
+    <>
+      <span data-testid="cancel-to">{params.get('cancelTo') ?? ''}</span>
+      <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>
+    </>
+  );
 }
 
 function renderCreate(path = '/deck-configurations/new') {
@@ -176,6 +181,121 @@ beforeEach(() => {
 afterEach(() => {
   consoleError.mockRestore();
   server.resetHandlers();
+});
+
+function mockConfig(config = savedConfig) {
+  server.use(http.get(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(config)));
+}
+
+/** The landing route's path and search, for a landing on a deck's Configurations tab. */
+function FullLocationProbe() {
+  const location = useLocation();
+  return <span data-testid="full-location">{`${location.pathname}${location.search}`}</span>;
+}
+
+function renderAddressed(path: string) {
+  return renderWithProviders(
+    <Routes>
+      <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+      <Route
+        path="/deck-configurations/:configId/edit"
+        element={<DeckConfigurationEditor mode="edit" />}
+      />
+      <Route path="/decks/:deckId" element={<FullLocationProbe />} />
+      <Route path="/library" element={<FullLocationProbe />} />
+      <Route path="/opener" element={<FullLocationProbe />} />
+    </Routes>,
+    [path],
+  );
+}
+
+// Each address is asked for alone or not at all, so a landing on the default shows the
+// other address did not stand in for it.
+describe('DeckConfigurationEditor — return addresses', () => {
+  const TAB = '/decks/d1?tab=configurations';
+
+  it.each([
+    { given: 'cancelTo alone', search: '&cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', search: '&returnTo=%2Fopener', cancel: TAB },
+    { given: 'neither', search: '', cancel: TAB },
+  ])('create with $given: Cancel lands on $cancel', async ({ search, cancel }) => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/new?deck=d1${search}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(cancel);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', search: '&cancelTo=%2Fopener', create: TAB },
+    { given: 'returnTo alone', search: '&returnTo=%2Fopener', create: '/opener' },
+    { given: 'neither', search: '', create: TAB },
+  ])('create with $given: Create lands on $create', async ({ search, create }) => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json(savedConfig, { status: 201 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/new?deck=d1${search}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(create);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', full: '?cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', full: '?returnTo=%2Fopener', cancel: TAB },
+    { given: 'neither', full: '', cancel: TAB },
+  ])('edit with $given: Cancel lands on $cancel', async ({ full, cancel }) => {
+    mockLibrary();
+    mockConfig();
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/c1/edit${full}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(cancel);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', full: '?cancelTo=%2Fopener', save: TAB },
+    { given: 'returnTo alone', full: '?returnTo=%2Fopener', save: '/opener' },
+    { given: 'neither', full: '', save: TAB },
+  ])('edit with $given: Save lands on $save', async ({ full, save }) => {
+    mockLibrary();
+    mockConfig();
+    server.use(
+      http.patch(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(savedConfig)),
+    );
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/c1/edit${full}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(save);
+  });
+
+  it('with returnTo alone and no deck chosen, Cancel lands on /library', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderAddressed('/deck-configurations/new?returnTo=%2Fopener');
+    await screen.findByPlaceholderText('Deck');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe('/library');
+  });
 });
 
 describe('DeckConfigurationEditor — create', () => {
@@ -250,6 +370,9 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(
+      '/deck-configurations/new?subject=s1',
+    );
     expect(screen.getByTestId('return-to')).toHaveTextContent(
       '/deck-configurations/new?subject=s1',
     );
@@ -277,9 +400,10 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // Decoded via URLSearchParams.get(): the deck editor's own returnTo is the
+    // Decoded via URLSearchParams.get(): each of the deck editor's addresses is the
     // builder's exact location, nested returnTo and all — nothing was dropped, and
     // nothing had to be hand-encoded or forwarded explicitly to make that true.
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(builderPath);
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
 
@@ -570,10 +694,6 @@ describe('DeckConfigurationEditor — create', () => {
 });
 
 describe('DeckConfigurationEditor — edit', () => {
-  function mockConfig(config = savedConfig) {
-    server.use(http.get(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(config)));
-  }
-
   it('pre-populates the name and every row from the saved config', async () => {
     mockLibrary();
     mockConfig();

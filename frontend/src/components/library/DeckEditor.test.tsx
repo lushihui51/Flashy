@@ -69,14 +69,14 @@ function mockEditDeck(data: typeof deckDetail = deckDetail) {
   );
 }
 
-function renderEditDeck(deckId = 'd1') {
+function renderEditDeck(deckId = 'd1', search = '') {
   return renderWithProviders(
     <Routes>
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
       <Route path="/decks/:deckId" element={<LocationProbe />} />
       <Route path="/subjects/:subjectId" element={<LocationProbe />} />
     </Routes>,
-    [`/decks/${deckId}/edit`],
+    [`/decks/${deckId}/edit${search}`],
   );
 }
 
@@ -304,7 +304,7 @@ describe('DeckEditor — create mode', () => {
     ).toBeInTheDocument();
   });
 
-  it('opened via a "New deck…" round-trip: Create navigates back to returnTo with the new deck id', async () => {
+  it('opened via a "New deck…" round-trip: Create navigates to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(
       http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
@@ -315,8 +315,8 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      // returnTo rides the URL, not state.
-      ['/decks/new?returnTo=%2Fcards%2Fnew'],
+      // Both addresses ride the URL, not state; a different cancelTo shows Create ignores it.
+      ['/decks/new?cancelTo=%2Flibrary&returnTo=%2Fcards%2Fnew'],
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
@@ -331,7 +331,7 @@ describe('DeckEditor — create mode', () => {
     );
   });
 
-  it('opened via a "New deck…" round-trip: Cancel with no changes navigates back to returnTo with no state', async () => {
+  it('opened via a "New deck…" round-trip: Cancel with no changes navigates to cancelTo with no state', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
@@ -339,7 +339,8 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      ['/decks/new?returnTo=%2Fcards%2Fnew'],
+      // A different returnTo shows Cancel ignores it.
+      ['/decks/new?cancelTo=%2Fcards%2Fnew&returnTo=%2Flibrary'],
     );
 
     await screen.findByDisplayValue('Term');
@@ -349,21 +350,77 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
   });
 
-  it('a non-internal returnTo is treated as absent — Cancel falls back to /library', async () => {
+  it('a confirmed Cancel navigates to cancelTo', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
       <Routes>
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
-        <Route path="/library" element={<LocationProbe />} />
+        <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      ['/decks/new?returnTo=https%3A%2F%2Fevil.com'],
+      ['/decks/new?cancelTo=%2Fcards%2Fnew'],
     );
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
+  });
+
+  it('with returnTo alone, Cancel lands on /library — returnTo never stands in for cancelTo', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor('/decks/new?returnTo=%2Fcards%2Fnew');
 
     await screen.findByDisplayValue('Term');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('with cancelTo alone, Create lands on the new deck — cancelTo never stands in for returnTo', async () => {
+    mockSubjects();
+    server.use(
+      http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
+    );
+    const user = userEvent.setup();
+    renderEditor('/decks/new?cancelTo=%2Fsubjects%2Fs1');
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+  });
+
+  it('a non-internal cancelTo is treated as absent — Cancel falls back to /library', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor('/decks/new?cancelTo=https%3A%2F%2Fevil.com');
+
+    await screen.findByDisplayValue('Term');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('a non-internal returnTo is treated as absent — Create falls back to the new deck', async () => {
+    mockSubjects();
+    server.use(
+      http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
+    );
+    const user = userEvent.setup();
+    renderEditor('/decks/new?returnTo=https%3A%2F%2Fevil.com');
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
   });
 
   it('saves name, subject and fields — no cards field at all — and lands on the new deck', async () => {
@@ -516,6 +573,52 @@ describe('DeckEditor — edit mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(await screen.findByText('Discard this deck?')).toBeInTheDocument();
+  });
+
+  it('a confirmed Cancel goes to cancelTo, ignoring returnTo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1&returnTo=%2Fdecks%2Fother');
+
+    await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+  });
+
+  it('with returnTo alone, a confirmed Cancel lands on the deck’s page', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?returnTo=%2Fsubjects%2Fs1');
+
+    await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+  });
+
+  it('Done goes to returnTo, ignoring cancelTo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fdecks%2Fother&returnTo=%2Fsubjects%2Fs1');
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+  });
+
+  it('with cancelTo alone, Done lands on the deck’s page', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1');
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
   it('Undo reverts a mix of edits (rename + added field + field removal) in one click', async () => {

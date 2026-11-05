@@ -11,6 +11,8 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -23,6 +25,7 @@ type LocationState = { deckId?: string } | null;
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
+  const { params } = useViewParams();
 
   const cardQuery = useQuery({
     queryKey: ['card', cardId],
@@ -61,6 +64,8 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
       cardId={cardId}
       original={mode === 'edit' ? cardQuery.data : undefined}
       initialDeckId={initialDeckId}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -70,6 +75,8 @@ type CardStandaloneFormBodyProps = {
   cardId: string | undefined;
   original: components['schemas']['CardRead'] | undefined;
   initialDeckId: string | null;
+  cancelTo: string | null;
+  returnTo: string | null;
 };
 
 function CardStandaloneFormBody({
@@ -77,6 +84,8 @@ function CardStandaloneFormBody({
   cardId,
   original,
   initialDeckId,
+  cancelTo,
+  returnTo,
 }: CardStandaloneFormBodyProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -128,14 +137,14 @@ function CardStandaloneFormBody({
 
   const canSubmit = deckId !== null && !!deckQuery.data && !submitting;
 
-  const goBack = () => (deckId ? navigate(`/decks/${deckId}`) : navigate('/library'));
+  const leaveByCancel = () => navigate(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
 
   const handleCancel = () => {
     if (dirty) {
       setConfirmCancelOpen(true);
       return;
     }
-    goBack();
+    leaveByCancel();
   };
 
   const handleDeckChange = (newDeckId: string) => {
@@ -150,9 +159,7 @@ function CardStandaloneFormBody({
   };
 
   const goToCreateDeck = () => {
-    // returnTo rides the URL, not router state.
-    const params = new URLSearchParams();
-    params.set('returnTo', `${location.pathname}${location.search}`);
+    const params = returnAddressParams(location, 'cancelTo', 'returnTo');
     navigate({ pathname: '/decks/new', search: params.toString() });
   };
 
@@ -191,7 +198,7 @@ function CardStandaloneFormBody({
         }
       }
       await invalidateAfterWrite(deckId, deckQuery.data.subject_id);
-      navigate(`/decks/${deckId}`);
+      navigate(returnTo ?? `/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
@@ -293,7 +300,7 @@ function CardStandaloneFormBody({
         title="Discard this card?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        onConfirm={goBack}
+        onConfirm={leaveByCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
 

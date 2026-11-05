@@ -20,7 +20,7 @@ Judgement: The engineer judges on the live server: from a subject's page, "Add d
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -90,13 +90,44 @@ Nothing else in these files changes: the forms' words, their rows and their save
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The six named test files passed: `Test Files  6 passed (6)`, `Tests  137 passed (137)`.
+- The grep printed three lines, each naming its key:
+  - `frontend/src/components/library/DeckConfigurationEditor.tsx:119:      returnTo={internalReturnTo(params, 'returnTo')}`
+  - `frontend/src/components/library/DeckEditor.tsx:281:      cancelTo={internalReturnTo(params, 'cancelTo')}`
+  - `frontend/src/components/library/DeckEditor.tsx:282:      returnTo={internalReturnTo(params, 'returnTo')}`
+- Headless Chromium against `localhost:5173`, clicks by mouse, the deck name typed from the keyboard, printed:
+  - `Add deck opens: /decks/new?cancelTo=%2Fsubjects%2F8ab3a83d-5131-4b98-af18-beb5d4c73d36`
+  - `  cancelTo = /subjects/8ab3a83d-5131-4b98-af18-beb5d4c73d36 | returnTo = null`
+  - `Add deck then Cancel lands on: /subjects/8ab3a83d-5131-4b98-af18-beb5d4c73d36`
+  - `Add deck, name typed, Create lands on: /decks/0c53b87c-ea15-4d1b-8a2c-7e45abeb0ae0`
+  - `New deck… from /cards/new lands on: /decks/new?cancelTo=%2Fcards%2Fnew&returnTo=%2Fcards%2Fnew`
+  - `  cancelTo decodes to /cards/new | returnTo decodes to /cards/new`
+  - `Cancel lands on: /cards/new`
+  - `/decks/new?returnTo=%2Fcards%2Fnew then Cancel lands on: /library`
+
+Checks over the whole frontend: `npx vitest run` passed, 60 files and 627 tests; `npm run lint` and `npm run build` exited 0, the build printing its chunk-size warning.
+
+Departures from Details and Files: none. The guidance's helper is `returnAddressParams(location, ...keys)` in `frontend/src/lib/returnTo.ts`, returning a new `URLSearchParams`; T2's openers can set their `subject` and `deck` on what it returns.
+
+Beyond what Details lists:
+
+- `ReturnAddressKey` carries an interface comment saying what each key means.
+- `DeckEditor.test.tsx` also covers `cancelTo` alone with Create landing on the new deck, a confirmed Cancel in both modes, and both addresses in edit mode.
+- `returnTo.test.ts` also covers the helper.
+
+Until T2, `DeckConfigurationEditor`'s own Cancel still goes to `returnTo`, and New practice's openers still pass `returnTo` alone, so that round trip behaves as before.
+
+The browser check left its deck, named "Cycle 033 T1 check" and a timestamp, in the dev database under the subject "Cycle 032 T3 judgement 2026-11-05 11:49".
+
+Read in the code: `leaveByCancel` and `leaveByDone` in `DeckEditorBody` in `frontend/src/components/library/DeckEditor.tsx`, which replace the one `goBack` and are where the two addresses part. No opener passes an address to `/decks/{id}/edit` yet, so its landings are unchanged on the live server and covered only by tests.
 
 ### T2 — The other forms and New practice's openers
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -147,4 +178,46 @@ The vocabulary, in `docs/vocabulary.md`: the row "Leaving New practice to make a
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run` over the whole frontend passed: `Test Files  60 passed (60)`, `Tests  669 passed (669)`.
+- `grep -rnE "get\('(returnTo|cancelTo)'\)" frontend/src --include=*.tsx --include=*.ts | grep -v "\.test\."` printed nothing: the guard itself reads `searchParams.get(key)`, which the pattern does not match, and no other file reads either parameter. `grep -rnE "state: \{[^}]*(returnTo|cancelTo)" frontend/src` printed nothing.
+- `grep -c "cancelTo" docs/vocabulary.md` printed `1`.
+- Headless Chromium against `localhost:5173`, clicks by mouse, names and values typed from the keyboard. Subject `8ab3a83d-5131-4b98-af18-beb5d4c73d36` is `{S}` below, and addresses are printed decoded:
+  - `Add deck opens: /decks/new?cancelTo=/subjects/{S}`
+  - `Add deck then Cancel lands on: /subjects/{S}`
+  - `Add deck then Create lands on: /decks/fc7b96c1-62e8-4b5a-823e-d4c5cddd1ef5`
+  - `New deck… from /cards/new opens: /decks/new?cancelTo=/cards/new&returnTo=/cards/new`
+  - `New deck… then Cancel lands on: /cards/new`
+  - `New deck… then Create lands on: /cards/new`, with `deck shown as chosen: Cycle 033 T2 picker 2026-11-05T17:10:00.714Z`
+  - `New configuration… opens: /deck-configurations/new?cancelTo=/practice/new?subject={S}&returnTo=/practice/new?subject={S}&subject={S}`
+  - `New configuration… then Cancel lands on: /practice/new?subject={S}`
+  - `New configuration… then Create lands on: /practice/new?subject={S}&config=5f49a043-ab5d-4a57-ab80-dcdfe48290dd`, with Selected holding one row, `Term → Definition`, the configuration just created
+  - `Pencil then Cancel lands on: /practice/new?subject={S}&config=5f49a043-ab5d-4a57-ab80-dcdfe48290dd&name=T2+draft`, with `same as draft: true; Name box: T2 draft` and one row in Selected
+  - `New deck… from /deck-configurations/new opens: /decks/new?cancelTo=/deck-configurations/new&returnTo=/deck-configurations/new`
+  - `New deck… then Cancel lands on: /deck-configurations/new`
+  - `/decks/new direct then Cancel lands on: /library`
+  - `/decks/{id}/edit, clean, Done lands on: /decks/fc7b96c1-62e8-4b5a-823e-d4c5cddd1ef5`
+  - `/decks/{id}/edit, name changed, Cancel then Discard lands on: /decks/fc7b96c1-62e8-4b5a-823e-d4c5cddd1ef5`
+  - `/subjects/new then Cancel lands on: /library`
+  - `/cards/new direct, deck chosen, value typed, Create lands on: /decks/fc7b96c1-62e8-4b5a-823e-d4c5cddd1ef5`
+
+The browser check took two runs. The first stopped at `/decks/{id}/edit`, where the script looked for a Cancel that a clean edit form does not show, and it also read the Name box before New practice had rendered, printing the edit form's name. The second run covered the pencil again and everything after the stop, reading the Name box once New practice's heading was on screen. The pencil's line and the last four lines above come from the second run, and all the others from the first.
+
+Checks over the whole frontend: `npx vitest run` as above; `npm run lint` and `npm run build` exited 0, the build printing its chunk-size warning.
+
+Departures from Details and Files:
+
+- Done when says `/decks/{id}/edit` then Cancel, but that form's exit reads "Done" while nothing is unsaved and "Cancel" only once something is, so the check drives both. Neither reads the other's address, as T1 built it; nothing changed here.
+- `returnAddressParams` from T1 builds both openers in `PracticeCreatePage.tsx`, as T1's Debrief offered, so `subject` and `deck` now follow the addresses in the URL rather than preceding them. Every test decodes the parameters, and none reads their order.
+- `mockConfig` in `DeckConfigurationEditor.test.tsx` moved out of the edit `describe` to the module, so the new return-address tests can use it.
+
+Beyond what Details lists:
+
+- `goBack` in `CardStandaloneForm.tsx` is now `leaveByCancel`, the name `DeckEditor.tsx` uses, since it no longer serves anything but Cancel.
+- The subject and card forms' tests also cover a confirmed Cancel landing on `cancelTo`.
+- Each form's new tests run in create and edit mode, so every case Details names is asserted in both.
+
+The browser check left in the dev database, under the subject "Cycle 032 T3 judgement 2026-11-05 11:49": the decks "Cycle 033 T2 check 2026-11-05T17:10:00.714Z" and "Cycle 033 T2 picker 2026-11-05T17:10:00.714Z", the configuration "Term → Definition" on the first, and one card with Term "T2 value" on the first.
+
+Read in the code: nothing needs it for the landings above. No opener passes an address to the subject form or the card form yet, so `cancelTo` and `returnTo` on those two routes are reached on the live server only by a typed URL, and are covered by `SubjectForm.test.tsx` and `CardStandaloneForm.test.tsx`.

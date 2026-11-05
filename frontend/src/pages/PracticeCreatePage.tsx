@@ -14,6 +14,7 @@ import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { MISSING_CONFIGURATION_MESSAGE } from 'src/lib/practiceCopy';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
   readSelectedConfigIds,
@@ -216,12 +217,11 @@ export default function PracticeCreatePage() {
   };
 
   const newConfiguration = () => {
-    const builderParams = new URLSearchParams();
+    // Both addresses ride the URL, not router state: they have to survive a further forward
+    // if the builder itself opens "New deck…" before coming back here.
+    const builderParams = returnAddressParams(location, 'cancelTo', 'returnTo');
     if (subjectId) builderParams.set('subject', subjectId);
     if (deckId) builderParams.set('deck', deckId);
-    // returnTo rides the URL, not router state — it has to survive a further forward if
-    // the builder itself opens "New deck…" before coming back here.
-    builderParams.set('returnTo', `${location.pathname}${location.search}`);
     navigate({ pathname: '/deck-configurations/new', search: builderParams.toString() });
   };
 
@@ -233,11 +233,11 @@ export default function PracticeCreatePage() {
       ),
     );
 
-  // The draft rides this page's URL, so a returnTo of the full location brings it back
-  // intact. An edit's Save hands back no result, so nothing gets auto-selected.
+  // The draft rides this page's URL, so addresses of the full location bring it back intact
+  // after Cancel and after Save. An edit's Save hands back no result, so nothing gets
+  // auto-selected.
   const editConfiguration = (configId: string) => {
-    const builderParams = new URLSearchParams();
-    builderParams.set('returnTo', `${location.pathname}${location.search}`);
+    const builderParams = returnAddressParams(location, 'cancelTo', 'returnTo');
     navigate({
       pathname: `/deck-configurations/${configId}/edit`,
       search: builderParams.toString(),

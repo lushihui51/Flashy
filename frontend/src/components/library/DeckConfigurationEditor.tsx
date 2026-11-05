@@ -24,7 +24,7 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
-import { internalReturnTo } from 'src/lib/returnTo';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -116,7 +116,8 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
       config={configQuery.data}
       contextSubjectId={params.get('subject')}
       contextDeckId={state?.deckId ?? params.get('deck')}
-      returnTo={internalReturnTo(params)}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -126,8 +127,11 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  /** Where Cancel and a successful Create or Save land. Null means "the deck's own page", which
-   * is only knowable once a deck is chosen. */
+  /** Where Cancel lands. Null means the deck's Configurations tab with a deck chosen, and Your
+   * library with none. */
+  cancelTo: string | null;
+  /** Where a successful Create or Save lands. Null means the saved configuration's deck's
+   * Configurations tab. */
   returnTo: string | null;
 };
 
@@ -136,6 +140,7 @@ function DeckConfigurationEditorBody({
   config,
   contextSubjectId,
   contextDeckId,
+  cancelTo,
   returnTo,
 }: BodyProps) {
   const navigate = useNavigate();
@@ -244,7 +249,7 @@ function DeckConfigurationEditorBody({
         <button
           type="button"
           onClick={() =>
-            navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
+            navigate(cancelTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
           className="text-body font-medium text-(--color-aside)"
         >
@@ -287,12 +292,11 @@ function DeckConfigurationEditorBody({
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              // returnTo itself rides the URL, not state: this page's own full
-              // location already contains whatever returnTo it was opened with, so a
-              // nested round trip survives with nothing extra to forward by hand.
+              // Both addresses ride the URL, not state: this page's own full location
+              // already contains whatever addresses it was opened with, so a nested
+              // round trip survives with nothing extra to forward by hand.
               onSelectCreate={() => {
-                const params = new URLSearchParams();
-                params.set('returnTo', `${location.pathname}${location.search}`);
+                const params = returnAddressParams(location, 'cancelTo', 'returnTo');
                 navigate({ pathname: '/decks/new', search: params.toString() });
               }}
               createLabel="New deck…"

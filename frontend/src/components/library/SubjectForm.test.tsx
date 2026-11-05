@@ -31,6 +31,7 @@ function renderForm(initialPath: string) {
       <Route path="/subjects/:subjectId/edit" element={<SubjectForm mode="edit" />} />
       <Route path="/subjects/:subjectId" element={<LocationProbe />} />
       <Route path="/library" element={<LocationProbe />} />
+      <Route path="/opener" element={<LocationProbe />} />
     </Routes>,
     [initialPath],
   );
@@ -44,6 +45,85 @@ afterEach(() => {
   consoleError.mockRestore();
   server.resetHandlers();
 });
+
+// Each address is asked for alone or not at all, so a landing on the default shows the
+// other address did not stand in for it.
+describe.each([
+  {
+    mode: 'create',
+    path: '/subjects/new',
+    leaveLabel: 'Create',
+    cancelDefault: '/library',
+    saveDefault: '/subjects/s2',
+  },
+  {
+    mode: 'edit',
+    path: '/subjects/s1/edit',
+    leaveLabel: 'Save',
+    cancelDefault: '/subjects/s1',
+    saveDefault: '/subjects/s1',
+  },
+])(
+  'SubjectForm — return addresses, $mode',
+  ({ mode, path, leaveLabel, cancelDefault, saveDefault }) => {
+    beforeEach(() => {
+      server.use(
+        http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)),
+        http.post(`${BASE}/api/subjects`, () =>
+          HttpResponse.json({ ...subject, id: 's2', name: 'Chemistry' }, { status: 201 }),
+        ),
+      );
+    });
+
+    const open = async (search: string) => {
+      renderForm(`${path}${search}`);
+      await screen.findByRole('button', { name: leaveLabel });
+    };
+
+    const leaveBySaving = async (user: ReturnType<typeof userEvent.setup>) => {
+      if (mode === 'create')
+        await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+      await user.click(screen.getByRole('button', { name: leaveLabel }));
+    };
+
+    it.each([
+      { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', cancel: '/opener' },
+      { given: 'returnTo alone', search: '?returnTo=%2Fopener', cancel: cancelDefault },
+      { given: 'neither', search: '', cancel: cancelDefault },
+    ])('with $given, Cancel lands on $cancel', async ({ search, cancel }) => {
+      const user = userEvent.setup();
+      await open(search);
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(cancel));
+    });
+
+    it.each([
+      { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', save: saveDefault },
+      { given: 'returnTo alone', search: '?returnTo=%2Fopener', save: '/opener' },
+      { given: 'neither', search: '', save: saveDefault },
+    ])(`with $given, ${leaveLabel} lands on $save`, async ({ search, save }) => {
+      const user = userEvent.setup();
+      await open(search);
+
+      await leaveBySaving(user);
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(save));
+    });
+
+    it('a confirmed Cancel lands on cancelTo', async () => {
+      const user = userEvent.setup();
+      await open('?cancelTo=%2Fopener&returnTo=%2Fother');
+
+      await user.type(screen.getByRole('textbox', { name: 'Name' }), 'x');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/opener'));
+    });
+  },
+);
 
 describe('SubjectForm — create mode', () => {
   it('blocks submit with an empty name and does not call the API', async () => {

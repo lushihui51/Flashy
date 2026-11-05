@@ -278,9 +278,8 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       deck={mode === 'edit' ? deckQuery.data : undefined}
       subject={mode === 'edit' ? subjectQuery.data : undefined}
       contextualSubject={createLocationState?.subject ?? null}
-      // returnTo rides the URL, not state — create mode only; an edit is never entered
-      // via a "New deck…" round-trip.
-      returnTo={mode === 'create' ? internalReturnTo(params) : null}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -291,6 +290,7 @@ type DeckEditorBodyProps = {
   deck: DeckDetail | undefined;
   subject: SubjectRead | undefined;
   contextualSubject: { id: string; name: string; icon: string } | null;
+  cancelTo: string | null;
   returnTo: string | null;
 };
 
@@ -336,6 +336,7 @@ function DeckEditorBody({
   deck,
   subject,
   contextualSubject,
+  cancelTo,
   returnTo,
 }: DeckEditorBodyProps) {
   const navigate = useNavigate();
@@ -381,17 +382,16 @@ function DeckEditorBody({
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
-  // Create mode opened via the card form's "New deck…" round-trip → both Create and
-  // Cancel go back to wherever that picker lives. Edit mode always returns to the
-  // deck's own detail page — there's no round-trip to return to.
-  const goBack = () => navigate(mode === 'edit' ? `/decks/${deckId}` : (returnTo ?? '/library'));
+  const leaveByCancel = () =>
+    navigate(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
+  const leaveByDone = () => navigate(returnTo ?? `/decks/${deckId}`);
 
   const handleCancel = () => {
     if (state.dirty) {
       setConfirmCancelOpen(true);
       return;
     }
-    goBack();
+    leaveByCancel();
   };
 
   // The single global Undo — discards every uncommitted change (renames, reorders,
@@ -575,7 +575,7 @@ function DeckEditorBody({
       <StickyPageRow>
         <button
           type="button"
-          onClick={showDone ? goBack : handleCancel}
+          onClick={showDone ? leaveByDone : handleCancel}
           className={showDone ? 'tappable-sm h-10 shrink-0 rounded-field bg-(--color-surface) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]' : 'text-body font-medium text-(--color-aside)'}
         >
           {showDone ? 'Done' : 'Cancel'}
@@ -686,7 +686,7 @@ function DeckEditorBody({
         title="Discard this deck?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        onConfirm={goBack}
+        onConfirm={leaveByCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
 
