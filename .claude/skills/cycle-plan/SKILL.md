@@ -78,7 +78,7 @@ Once I approve the outline, draft the tasks in full, one per turn, in build orde
 
 For each task, read the files in its Files first for context.
 
-- Details: every lesser decision the outline placed here, and, for every live site placed here, the constraint that the task changes the code at its symbol to follow what replaced the record it cites and removes the old reference; whether the changed code carries a comment, and whether that comment cites a record, stays the builder's verdict by `docs/rules/comment-rules.md`. Guidance only where you have read the code and know the best way.
+- Details: every lesser decision the outline placed here, and, for every live site placed here, the constraint that the task changes the code at its symbol to follow what replaced the record it cites and removes the old reference; whether the changed code carries a comment, and whether that comment cites a record, stays the builder's verdict by `docs/rules/comment-rules.md`. For each drawing the task cites, compare everything it shows with the code; for each difference the task does not build, write a constraint saying so. Guidance only where you have read the code and know the best way.
 - Done when: where the builder cannot observe a behaviour the outcome needs, write the nearest evidence it can produce, and tell me.
 
 #### Cycle file
