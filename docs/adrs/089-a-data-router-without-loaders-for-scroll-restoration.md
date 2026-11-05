@@ -32,7 +32,7 @@ ADR 053 kept declarative mode and rejected the data router for its loaders, at t
 
 ## Decision
 
-We will route with React Router's data router: `App.tsx` builds it with `createBrowserRouter(createRoutesFromElements(...))` from one route tree and mounts it with `<RouterProvider>`, and `AppShell` renders `<ScrollRestoration>`. The router maps URLs to components, carries navigation state and restores scroll positions, nothing more.
+We will route with React Router's data router: `App.tsx` builds it with `createBrowserRouter(createRoutesFromElements(...))` from one route tree and mounts it with `<RouterProvider>`, and `AppShell` renders `<ScrollRestoration>`. The router maps URLs to components, carries navigation state, restores scroll positions and catches a page that throws while rendering, nothing more.
 
 We will use no route loader or action: every fetch and mutation belongs to the page that renders it.
 
