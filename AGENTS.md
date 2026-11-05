@@ -74,10 +74,10 @@
 - Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
   - Reason: ADR 018
   - Guard: tests/api_tests/test_activity_tracking.py
-- Carry a round-trip return address as the ?returnTo= URL parameter, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
-  - Reason: ADR 024
-- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no error boundary, cache handler or toast.
-  - Reason: PDR 002, ADR 063
+- Carry a form's return addresses as the ?cancelTo= and ?returnTo= URL parameters, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
+  - Reason: ADR 103
+- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no cache handler or toast, and App.tsx's route for a page that cannot be shown is the one error boundary.
+  - Reason: PDR 031, ADR 063, ADR 104
 - Carry a rename through every tracked file and path, quoted literals and generated files included; only an occurrence with a different meaning stays.
   - Reason: one word per concept, history included
 
