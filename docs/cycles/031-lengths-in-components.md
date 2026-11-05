@@ -165,7 +165,7 @@ Read `SearchBar.tsx`: it is the one place this task changes structure rather tha
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -222,7 +222,34 @@ The screen check for the Done when below is T1's: headless Chromium through play
 
 **Debrief**
 
-None.
+Evidence, in the Done when's order:
+
+- The grep over `components/library` and the three pages printed nothing.
+- `npx vitest run src/components/library src/pages/LibraryPage.test.tsx src/pages/SubjectDetailPage.test.tsx src/pages/DeckDetailPage.test.tsx src/lib/viewParams.test.tsx` passed: 13 files, 189 tests. The whole frontend's `npx vitest run` passed, 58 files, 587 tests; `npm run lint` and `npm run build` were clean.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/oneline.mjs`, output in `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/oneline.out`, printed `31.5 48 28.59 46` at 16px and `47.25 72 42.89 69` at 24px, each within 1px of the expected `32 48 29 46` and `48 72 43 69`. The script answers the deck's response with the name "A", because no deck in the dev database has a name that fits one line at 24px. Nothing is written to the database.
+- Screenshots at 390 wide, 16px then 24px:
+  - Your library, Subjects tab: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-library-subjects-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-library-subjects-24.png`
+  - A subject's page: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-subject-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-subject-24.png`
+  - A deck's page, Cards tab, the first screen only: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-cards-viewport-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-cards-viewport-24.png`. The whole-page shots `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-cards-16.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-cards-24.png` run to 54 cards.
+  - Edit configuration: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-config-edit-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-config-edit-24.png`
+- The shots taken before the first edit, for T3's comparison, are `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-library-subjects-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-subject-16.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-deck-cards-16.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before-config-edit-16.png`.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/library.mjs` also shot the Decks tab, the Configurations tab, Edit deck, New deck, New subject, Edit subject, New card, Edit card and New configuration. All thirteen screens at 16px are byte-identical before and after, with one exception on the first run: the Configurations tab differed in 16 pixels, by at most 2 of 255, on a tab's left corner. Three further runs of that screen were byte-identical to the before shot, so the difference does not come from this change.
+
+Departures:
+
+- `DeckEditor.tsx`'s shared constant is `FIELD_ICON_MARGIN`, holding only `my-1.25`, with an implementation comment saying what the margin is for.
+- `my-1.25` is written as Details order, but it is half the difference between `h-field` and `h-9`, so it is a number that stands for other elements' sizes, which ADR 101 forbids. It stays correct at every text size because all three are in rem.
+
+Seen at a 24px root, for your judgement. This task changed no layout, as its Out of scope requires, and I did not fix any of these:
+
+- Edit deck: each field's name input shrinks to about one character, so a field's name cannot be read or edited in practice (`/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-edit-24.png`). At 16px the row fits.
+- A deck's page: the heading breaks inside its word, "Commands" taking five lines at about two characters each, because the Practice and edit buttons keep their width (`/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after-deck-configurations-24.png`).
+- The whole page's sideways scroll, 29 on every library screen before this task because of the top bar, grew to 77 on the Configurations tab, where "Add configuration" runs past the edge, 63 on Edit deck, 54 on New configuration and 33 on Edit configuration. Output: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/before.out`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/41eab2da-508e-40d1-9b3a-ffce2fb28e49/scratchpad/after.out`.
+- `docs/backlog.md`'s B24 holds all three, on the engineer's order.
+
+Read `DeckEditor.tsx`'s `FIELD_ICON_MARGIN`: it is the one place this task adds a constant rather than swapping a value.
+
+The API and the Vite dev server are still running from this session for your check on `localhost:5173`.
 
 ### T3 — The practice's components and pages, and the scan
 

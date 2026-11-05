@@ -110,8 +110,8 @@ export default function DeckDetailPage() {
     if (next === 'cards') nextParams.delete('tab');
     else nextParams.set('tab', next);
     changeView(nextParams, {
-      // The whole tablist rather than the pressed tab, whose pressed look sits 2px lower than
-      // the others: at the band's top it would leave them under the header.
+      // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
+      // others by the press travel: at the band's top it would leave them under the header.
       control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
       listStart: () =>
         cardsRef.current?.querySelector('ul') ??
@@ -137,7 +137,7 @@ export default function DeckDetailPage() {
                 {
                   label: subject.name,
                   to: `/subjects/${subject.id}`,
-                  icon: <SubjectIcon icon={subject.icon} className="h-[15px] w-[15px]" />,
+                  icon: <SubjectIcon icon={subject.icon} className="size-icon-sm" />,
                 },
               ]
             : []),
@@ -145,7 +145,7 @@ export default function DeckDetailPage() {
       />
 
       <div className="mt-3.5 flex items-center gap-2.5">
-        <h1 className="min-w-0 flex-1 break-words text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
           {deck.name}
         </h1>
         <button
@@ -153,7 +153,7 @@ export default function DeckDetailPage() {
           // Both params, not just the deck: two decks in different subjects can share a
           // name, so the subject is what makes the filtered list unambiguous on arrival.
           onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
-          className="tappable flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-(--color-main-action) px-3.5 text-[17px] font-semibold text-(--color-ink)"
+          className="tappable flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-(--color-main-action) px-3.5 text-action font-semibold text-(--color-ink)"
         >
           <Play aria-hidden="true" fill="currentColor" className="h-3.5 w-3.5" />
           Practice
@@ -164,7 +164,7 @@ export default function DeckDetailPage() {
           onClick={() => navigate(`/decks/${deck.id}/edit`)}
           className="tappable flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
-          <Pencil aria-hidden="true" className="h-[18px] w-[18px] text-(--color-ink)" />
+          <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
         </button>
       </div>
 
@@ -179,7 +179,7 @@ export default function DeckDetailPage() {
           {/* Inside the tab, and labeled: a control whose meaning depends on which tab
               is open has no business sitting in the page header. */}
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-medium text-(--color-aside)">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
             </h2>
             <AddButton label="Add card" onClick={addCard} />
@@ -196,14 +196,14 @@ export default function DeckDetailPage() {
           )}
           {deck.cards.length === 0 && (
             <div ref={emptyRef} className="py-8">
-              <p className="text-[15px] text-(--color-aside)">No cards in this deck yet.</p>
+              <p className="text-body text-(--color-aside)">No cards in this deck yet.</p>
             </div>
           )}
         </div>
       ) : (
         <section aria-label="Configurations" className="mt-3.5">
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-medium text-(--color-aside)">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {configurationsQuery.data
                 ? pluralize(configurations.length, 'configuration')
                 : 'Configurations'}
@@ -219,13 +219,13 @@ export default function DeckDetailPage() {
 
           {configurationsQuery.data && configurations.length === 0 && (
             <div ref={emptyRef} className="py-8">
-              <p className="text-[15px] text-(--color-aside)">No configurations yet.</p>
+              <p className="text-body text-(--color-aside)">No configurations yet.</p>
             </div>
           )}
           {configurations.length > 0 && (
             <ul
               ref={configurationsRef}
-              className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-[20px] bg-(--color-surface)"
+              className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)"
             >
               {configurations.map((configuration) => (
                 <li key={configuration.id}>

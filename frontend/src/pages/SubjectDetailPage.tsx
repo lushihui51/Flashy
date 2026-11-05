@@ -54,15 +54,15 @@ export default function SubjectDetailPage() {
       {subject && (
         <>
           <div className="mt-4 flex items-center gap-3">
-            <span className="tappable flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)">
-              <SubjectIcon icon={subject.icon} className="h-[26px] w-[26px] text-(--color-ink)" />
+            <span className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)">
+              <SubjectIcon icon={subject.icon} className="size-6.5 text-(--color-ink)" />
             </span>
-            <h1 className="min-w-0 break-words text-[30px] leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+            <h1 className="min-w-0 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
               {subject.name}
             </h1>
           </div>
           {subject.description && (
-            <p className="mt-4 text-[15px] leading-normal font-light text-(--color-ink)">
+            <p className="mt-4 text-body leading-normal font-light text-(--color-ink)">
               {subject.description}
             </p>
           )}
@@ -75,18 +75,18 @@ export default function SubjectDetailPage() {
           // Deep-links into the overview with this subject already filtered — the filters
           // live in the URL precisely so an entry point is just the right link.
           onClick={() => navigate(`/practice?subject=${subjectId!}`)}
-          className="tappable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-[17px] font-semibold text-(--color-ink)"
+          className="tappable flex h-action flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
         >
-          <Play aria-hidden="true" fill="currentColor" className="h-[15px] w-[15px]" />
+          <Play aria-hidden="true" fill="currentColor" className="size-icon-sm" />
           Practice
         </button>
         <button
           type="button"
           aria-label="Edit subject"
           onClick={() => navigate(`/subjects/${subjectId}/edit`)}
-          className="tappable flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
+          className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
-          <Pencil aria-hidden="true" className="h-[18px] w-[18px] text-(--color-ink)" />
+          <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
         </button>
       </div>
 
@@ -94,14 +94,14 @@ export default function SubjectDetailPage() {
         {/* The add control sits with the collection it adds to, carrying this
             subject so the deck form opens with it preselected. */}
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-medium text-(--color-aside)">
+          <h2 className="text-body font-medium text-(--color-aside)">
             {decks ? `${pluralize(decks.length, 'deck')} · ${pluralize(totalCards, 'card')}` : 'Decks'}
           </h2>
           <AddButton label="Add deck" onClick={addDeck} />
         </div>
         {decks && decks.length === 0 ? (
           // No button here — the row's above is the one add control.
-          <p className="py-8 text-[15px] text-(--color-aside)">No decks yet.</p>
+          <p className="py-8 text-body text-(--color-aside)">No decks yet.</p>
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
             {(decks ?? []).map((deck) => (

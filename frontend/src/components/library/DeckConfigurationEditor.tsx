@@ -246,11 +246,11 @@ function DeckConfigurationEditorBody({
           onClick={() =>
             navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
           }
-          className="text-[15px] font-medium text-(--color-aside)"
+          className="text-body font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-[19px] font-bold text-(--color-ink)">
+        <h1 className="text-title font-bold text-(--color-ink)">
           {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
         </h1>
         <button
@@ -261,7 +261,7 @@ function DeckConfigurationEditorBody({
             setSaveError(null);
             saveMutation.mutate();
           }}
-          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>
@@ -273,9 +273,9 @@ function DeckConfigurationEditorBody({
         <div
           className={mode === 'edit' ? 'flex items-baseline gap-2.5' : 'flex flex-col gap-1.5'}
         >
-          <span className="text-[13px] text-(--color-aside)">Deck</span>
+          <span className="text-label text-(--color-aside)">Deck</span>
           {mode === 'edit' ? (
-            <span className="text-[15px] font-semibold text-(--color-ink)">
+            <span className="text-body font-semibold text-(--color-ink)">
               {selectedDeck
                 ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
                 : (deck?.name ?? '')}
@@ -308,7 +308,7 @@ function DeckConfigurationEditorBody({
 
         {deckId && (
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={nameInputId} className="text-[13px] text-(--color-aside)">
+            <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
               Name
             </label>
             <input
@@ -321,7 +321,7 @@ function DeckConfigurationEditorBody({
               }}
               aria-invalid={nameError !== null}
               aria-describedby={nameError ? `${nameInputId}-error` : undefined}
-              className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
             {nameError && (
               <span

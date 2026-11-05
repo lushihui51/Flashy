@@ -69,7 +69,7 @@ export default function FieldAssignmentBoard({
         triggerRef.current = event.currentTarget;
         setActiveFieldId(fieldId);
       }}
-      className="tappable-sm h-[38px] max-w-full truncate rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
+      className="tappable-sm h-tab max-w-full truncate rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
     >
       {nameById.get(fieldId) ?? fieldId}
     </button>
@@ -92,7 +92,7 @@ export default function FieldAssignmentBoard({
     const size = fieldsIn(state, slot).length;
     if (size === 0) return null;
     return (
-      <fieldset className="flex basis-full flex-wrap items-center gap-1.5 text-[13px] text-(--color-aside)">
+      <fieldset className="flex basis-full flex-wrap items-center gap-1.5 text-label text-(--color-aside)">
         <legend className="sr-only">{RANDOM_DRAW_LEGEND[slot]}</legend>
         <span>Each card shows</span>
         {Array.from({ length: size }, (_, i) => i + 1).map((count) => {
@@ -100,7 +100,7 @@ export default function FieldAssignmentBoard({
           return (
             <label
               key={count}
-              className={`tappable-sm relative flex h-[30px] w-8 cursor-pointer items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`}
+              className={`tappable-sm relative flex h-7.5 w-8 cursor-pointer items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`}
             >
               <input
                 type="checkbox"
@@ -124,20 +124,20 @@ export default function FieldAssignmentBoard({
       <section
         key={side}
         aria-label={side === 'prompt' ? 'Prompt side' : 'Answer side'}
-        className="tappable flex flex-col rounded-[20px] bg-(--color-surface) px-4"
+        className="tappable flex flex-col rounded-block bg-(--color-surface) px-4"
       >
-        <h2 className="flex h-10 items-center border-b-[1.5px] border-(--color-ink) text-sm font-semibold text-(--color-ink)">
+        <h2 className="flex h-10 items-center ruled-bottom text-sm font-semibold text-(--color-ink)">
           {side === 'prompt' ? 'Prompt side' : 'Answer side'}
         </h2>
         <section aria-label={SLOT_LABELS[alwaysSlot]} className="flex flex-col gap-2 pt-2.5 pb-3">
-          <h3 className="text-[13px] text-(--color-aside)">Always shown</h3>
+          <h3 className="text-label text-(--color-aside)">Always shown</h3>
           {area(alwaysSlot, 'None yet.')}
         </section>
         <section
           aria-label={SLOT_LABELS[randomSlot]}
           className="flex flex-col gap-2 border-t border-(--color-line) pt-2.5 pb-3"
         >
-          <h3 className="text-[13px] text-(--color-aside)">Random draw</h3>
+          <h3 className="text-label text-(--color-aside)">Random draw</h3>
           {area(randomSlot, 'None yet.')}
           {frequencyRow(randomSlot)}
         </section>
@@ -152,7 +152,7 @@ export default function FieldAssignmentBoard({
     <div className="flex flex-col gap-4">
       <section
         aria-label={SLOT_LABELS.unassigned}
-        className="flex flex-col gap-2 rounded-[20px] border-[1.5px] border-dashed border-(--color-ink) px-4 pt-3 pb-3.5"
+        className="flex flex-col gap-2 rounded-block outlined-ink-dashed px-4 pt-3 pb-3.5"
       >
         <h2 className="text-sm font-semibold text-(--color-ink)">{SLOT_LABELS.unassigned}</h2>
         {area('unassigned', 'Every field is assigned.')}

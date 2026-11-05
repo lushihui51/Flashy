@@ -26,13 +26,13 @@ export default function CardFieldsForm({ fieldDefs, values, onChange }: CardFiel
         const supported = isSupportedFieldType(field.type);
         return (
           <label key={field.key} className="flex flex-col gap-1.5">
-            <span className="text-[13px] text-(--color-aside)">{field.name}</span>
+            <span className="text-label text-(--color-aside)">{field.name}</span>
             <input
               type="text"
               value={values[field.key] ?? ''}
               onChange={(e) => onChange(field.key, e.target.value)}
               readOnly={!supported}
-              className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside) read-only:bg-(--color-ground) read-only:text-(--color-aside)"
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside) read-only:bg-(--color-ground) read-only:text-(--color-aside)"
             />
             {!supported && (
               <span className="text-sm text-(--color-aside)">

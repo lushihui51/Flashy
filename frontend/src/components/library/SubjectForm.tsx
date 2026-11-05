@@ -199,11 +199,11 @@ export function SubjectFormBody({
         <button
           type="button"
           onClick={handleCancel}
-          className="text-[15px] font-medium text-(--color-aside)"
+          className="text-body font-medium text-(--color-aside)"
         >
           Cancel
         </button>
-        <h1 className="text-[19px] font-bold text-(--color-ink)">
+        <h1 className="text-title font-bold text-(--color-ink)">
           {mode === 'create' ? 'New subject' : 'Edit subject'}
         </h1>
         {/* A blank name reads as not pressable yet, but stays pressable: pressing it is how
@@ -213,7 +213,7 @@ export function SubjectFormBody({
           form={formId}
           disabled={submitting}
           aria-disabled={name.trim() === '' || undefined}
-          className="tappable-sm h-10 shrink-0 rounded-[14px] bg-(--color-main-action) px-4 text-[15px] font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+          className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>
@@ -227,12 +227,12 @@ export function SubjectFormBody({
 
       <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-(--color-aside)">Name</span>
+          <span className="text-label text-(--color-aside)">Name</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-[46px] rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
           {nameError && (
             <span role="alert" className="text-sm text-(--color-wrong)">
@@ -242,18 +242,18 @@ export function SubjectFormBody({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-(--color-aside)">Description</span>
+          <span className="text-label text-(--color-aside)">Description</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="rounded-[14px] border-[1.5px] border-(--color-line) bg-(--color-surface) px-3.5 py-2.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            className="rounded-field outlined-line bg-(--color-surface) px-3.5 py-2.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
         </label>
 
         <div className="flex flex-col gap-1.5">
           {/* Hidden from screen readers: the button's own name already says "Icon". */}
-          <span aria-hidden="true" className="text-[13px] text-(--color-aside)">
+          <span aria-hidden="true" className="text-label text-(--color-aside)">
             Icon
           </span>
           <button
@@ -261,7 +261,7 @@ export function SubjectFormBody({
             type="button"
             aria-label={`Icon: ${subjectIconName(icon)}`}
             onClick={() => setIconPickerOpen(true)}
-            className="tappable flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)"
+            className="tappable flex size-action items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)"
           >
             <SubjectIcon icon={icon} className="h-6 w-6" />
           </button>
