@@ -21,7 +21,7 @@ Judgement: The engineer judges in headless Chromium against the dev server at 39
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -140,7 +140,7 @@ The screen check, PDR 030, for the Done when below: in headless Chromium through
 - `grep -nE "[0-9]px" frontend/src/index.css` prints exactly eleven lines, all inside `@utility` blocks: the two borders, two shadows and one press travel of the `tappable` utilities, and the six new utilities' widths.
 - `grep -rnE "[0-9]px" frontend/src/components/ui frontend/src/components/shell --include=*.tsx | grep -v "\.test\."` prints nothing.
 - `cd frontend && npx vitest run src/components/ui src/components/shell src/test/theme.test.ts` passes.
-- A script in headless Chromium, as Details describe, opens `/library` and prints the `getBoundingClientRect().height` of the top bar's row, the search bar's outlined element, the first `role="tab"`, the first subject row and the "Log in" button, at a 16px root and at a 24px root; at 16px it prints `58 46 38 78 44` and at 24px `87 69 57 117 66`, and the script's output is the evidence.
+- A script in headless Chromium, as Details describe, opens `/library` and prints the `getBoundingClientRect().height` of the top bar's row, the search bar's outlined element, the first `role="tab"`, the first subject row and the "Log in" button, at a 16px root and at a 24px root; at 16px it prints `58 46 38 80 44` and at 24px `87 69 57 117 66`, and the script's output is the evidence. The subject row is 80, not `ListRow`'s minimum of 78, because its icon box in `LibraryPage.tsx`, 46px until T2 converts it, sets the row's height with the padding and the outline; at 24px that box is still 46px, so the minimum, 117, holds until T2.
 - Screenshots at 390 wide of Your library with the menu open, of the account sheet, and of a delete confirm from the Practice page, each at 16px and at 24px, saved in the session scratchpad and named in the Debrief, for the engineer to set side by side.
 
 **Debrief**
