@@ -294,6 +294,19 @@ describe('SubjectDetailPage', () => {
     );
   });
 
+  it('Add deck passes this page as cancelTo and no returnTo', async () => {
+    mockSubject();
+    const user = userEvent.setup();
+    renderAtSubjectRoute(<LocationProbe />, '/subjects/s1?from=here');
+
+    await screen.findByRole('heading', { name: 'Math' });
+    await user.click(screen.getByRole('button', { name: 'Add deck' }));
+
+    const params = new URLSearchParams(screen.getByTestId('location').dataset.search);
+    expect(params.get('cancelTo')).toBe('/subjects/s1?from=here');
+    expect(params.has('returnTo')).toBe(false);
+  });
+
   it('Practice opens the overview pre-filtered to this subject', async () => {
     mockSubject();
     const user = userEvent.setup();

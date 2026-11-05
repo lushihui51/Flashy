@@ -24,7 +24,7 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
-import { internalReturnTo } from 'src/lib/returnTo';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -116,7 +116,7 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
       config={configQuery.data}
       contextSubjectId={params.get('subject')}
       contextDeckId={state?.deckId ?? params.get('deck')}
-      returnTo={internalReturnTo(params)}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -287,12 +287,11 @@ function DeckConfigurationEditorBody({
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              // returnTo itself rides the URL, not state: this page's own full
-              // location already contains whatever returnTo it was opened with, so a
-              // nested round trip survives with nothing extra to forward by hand.
+              // Both addresses ride the URL, not state: this page's own full location
+              // already contains whatever addresses it was opened with, so a nested
+              // round trip survives with nothing extra to forward by hand.
               onSelectCreate={() => {
-                const params = new URLSearchParams();
-                params.set('returnTo', `${location.pathname}${location.search}`);
+                const params = returnAddressParams(location, 'cancelTo', 'returnTo');
                 navigate({ pathname: '/decks/new', search: params.toString() });
               }}
               createLabel="New deck…"

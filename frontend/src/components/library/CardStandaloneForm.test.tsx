@@ -115,12 +115,13 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // returnTo rides the URL, not state — decoded via URLSearchParams, not compared as
-    // an encoded string literal.
+    // Both addresses ride the URL, not state — decoded via URLSearchParams, not compared
+    // as an encoded string literal.
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
     const locationEl = screen.getByTestId('location');
     const params = new URLSearchParams(locationEl.dataset.search);
+    expect(params.get('cancelTo')).toBe('/cards/new');
     expect(params.get('returnTo')).toBe('/cards/new');
   });
 

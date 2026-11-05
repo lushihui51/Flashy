@@ -122,11 +122,16 @@ function StateProbe() {
   );
 }
 
-// returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
+// Both addresses ride the URL, not state — decoded via URLSearchParams.get(), never
 // compared as an encoded string literal.
 function ReturnToProbe() {
   const { params } = useViewParams();
-  return <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>;
+  return (
+    <>
+      <span data-testid="cancel-to">{params.get('cancelTo') ?? ''}</span>
+      <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>
+    </>
+  );
 }
 
 function renderCreate(path = '/deck-configurations/new') {
@@ -250,6 +255,9 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(
+      '/deck-configurations/new?subject=s1',
+    );
     expect(screen.getByTestId('return-to')).toHaveTextContent(
       '/deck-configurations/new?subject=s1',
     );
@@ -277,9 +285,10 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // Decoded via URLSearchParams.get(): the deck editor's own returnTo is the
+    // Decoded via URLSearchParams.get(): each of the deck editor's addresses is the
     // builder's exact location, nested returnTo and all — nothing was dropped, and
     // nothing had to be hand-encoded or forwarded explicitly to make that true.
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(builderPath);
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
 

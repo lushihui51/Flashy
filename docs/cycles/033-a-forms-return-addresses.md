@@ -20,7 +20,7 @@ Judgement: The engineer judges on the live server: from a subject's page, "Add d
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -90,7 +90,38 @@ Nothing else in these files changes: the forms' words, their rows and their save
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The six named test files passed: `Test Files  6 passed (6)`, `Tests  137 passed (137)`.
+- The grep printed three lines, each naming its key:
+  - `frontend/src/components/library/DeckConfigurationEditor.tsx:119:      returnTo={internalReturnTo(params, 'returnTo')}`
+  - `frontend/src/components/library/DeckEditor.tsx:281:      cancelTo={internalReturnTo(params, 'cancelTo')}`
+  - `frontend/src/components/library/DeckEditor.tsx:282:      returnTo={internalReturnTo(params, 'returnTo')}`
+- Headless Chromium against `localhost:5173`, clicks by mouse, the deck name typed from the keyboard, printed:
+  - `Add deck opens: /decks/new?cancelTo=%2Fsubjects%2F8ab3a83d-5131-4b98-af18-beb5d4c73d36`
+  - `  cancelTo = /subjects/8ab3a83d-5131-4b98-af18-beb5d4c73d36 | returnTo = null`
+  - `Add deck then Cancel lands on: /subjects/8ab3a83d-5131-4b98-af18-beb5d4c73d36`
+  - `Add deck, name typed, Create lands on: /decks/0c53b87c-ea15-4d1b-8a2c-7e45abeb0ae0`
+  - `New deck… from /cards/new lands on: /decks/new?cancelTo=%2Fcards%2Fnew&returnTo=%2Fcards%2Fnew`
+  - `  cancelTo decodes to /cards/new | returnTo decodes to /cards/new`
+  - `Cancel lands on: /cards/new`
+  - `/decks/new?returnTo=%2Fcards%2Fnew then Cancel lands on: /library`
+
+Checks over the whole frontend: `npx vitest run` passed, 60 files and 627 tests; `npm run lint` and `npm run build` exited 0, the build printing its chunk-size warning.
+
+Departures from Details and Files: none. The guidance's helper is `returnAddressParams(location, ...keys)` in `frontend/src/lib/returnTo.ts`, returning a new `URLSearchParams`; T2's openers can set their `subject` and `deck` on what it returns.
+
+Beyond what Details lists:
+
+- `ReturnAddressKey` carries an interface comment saying what each key means.
+- `DeckEditor.test.tsx` also covers `cancelTo` alone with Create landing on the new deck, a confirmed Cancel in both modes, and both addresses in edit mode.
+- `returnTo.test.ts` also covers the helper.
+
+Until T2, `DeckConfigurationEditor`'s own Cancel still goes to `returnTo`, and New practice's openers still pass `returnTo` alone, so that round trip behaves as before.
+
+The browser check left its deck, named "Cycle 033 T1 check" and a timestamp, in the dev database under the subject "Cycle 032 T3 judgement 2026-11-05 11:49".
+
+Read in the code: `leaveByCancel` and `leaveByDone` in `DeckEditorBody` in `frontend/src/components/library/DeckEditor.tsx`, which replace the one `goBack` and are where the two addresses part. No opener passes an address to `/decks/{id}/edit` yet, so its landings are unchanged on the live server and covered only by tests.
 
 ### T2 — The other forms and New practice's openers
 

@@ -1,13 +1,29 @@
-/**
- * `returnTo` rides the URL, never router state — state doesn't survive a round trip
- * forwarded through an intermediate page. The param is user-editable (typed,
- * bookmarked, shared), so a value that isn't an app-internal path is treated as absent
- * rather than navigated to: react-router would otherwise try to route a full external
- * URL as an app path and land on a confusing dead page.
- */
-export function internalReturnTo(searchParams: URLSearchParams): string | null {
-  const value = searchParams.get('returnTo');
+/** `cancelTo` is the page a form's Cancel returns to, `returnTo` the page its Create or
+ * Save returns to. Neither stands in for the other. */
+export type ReturnAddressKey = 'cancelTo' | 'returnTo';
+
+/** The named return address, when it is an app-internal path: it starts with `/` and
+ * not with `//`. Null when absent, empty or anything else. */
+export function internalReturnTo(
+  searchParams: URLSearchParams,
+  key: ReturnAddressKey,
+): string | null {
+  const value = searchParams.get(key);
   if (!value) return null;
+  // The parameter is user-editable, and react-router would route a full external URL as
+  // an app path, landing on a dead page.
   if (!value.startsWith('/') || value.startsWith('//')) return null;
   return value;
+}
+
+/** Search params for opening a form that comes back to `location` under each of `keys`.
+ * The location's own search rides inside the value, so an address it already carries
+ * survives the round trip. */
+export function returnAddressParams(
+  location: { pathname: string; search: string },
+  ...keys: ReturnAddressKey[]
+): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of keys) params.set(key, `${location.pathname}${location.search}`);
+  return params;
 }

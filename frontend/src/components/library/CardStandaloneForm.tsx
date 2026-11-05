@@ -11,6 +11,7 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -150,9 +151,7 @@ function CardStandaloneFormBody({
   };
 
   const goToCreateDeck = () => {
-    // returnTo rides the URL, not router state.
-    const params = new URLSearchParams();
-    params.set('returnTo', `${location.pathname}${location.search}`);
+    const params = returnAddressParams(location, 'cancelTo', 'returnTo');
     navigate({ pathname: '/decks/new', search: params.toString() });
   };
 

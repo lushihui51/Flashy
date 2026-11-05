@@ -407,12 +407,16 @@ describe('practice pre-filter chains', () => {
     await screen.findByRole('region', { name: 'Not used' });
     const builderLocation = currentLocation().full;
 
-    // Builder → "New deck…": the deck editor's returnTo is the builder's exact
+    // Builder → "New deck…": each of the deck editor's addresses is the builder's exact
     // location — context params and the builder's own nested returnTo included.
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
     expect(currentLocation().pathname).toBe('/decks/new');
+    expect(currentLocation().params.get('cancelTo')).toBe(builderLocation);
     expect(currentLocation().params.get('returnTo')).toBe(builderLocation);
+    expect(
+      new URLSearchParams(currentLocation().params.get('cancelTo')!.split('?')[1]).get('returnTo'),
+    ).toBe('/practice/new?subject=s1&deck=d1');
 
     // Cancel in the deck editor → back on the builder, nothing dropped.
     await screen.findByDisplayValue('Term');

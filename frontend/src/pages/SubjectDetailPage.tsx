@@ -1,5 +1,5 @@
 import { Pencil, Play } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubject } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
@@ -10,11 +10,13 @@ import Breadcrumb from 'src/components/ui/Breadcrumb';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { isNotFound } from 'src/api/unwrap';
 
 export default function SubjectDetailPage() {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const subjectQuery = useQuery({
     queryKey: ['subject', subjectId],
@@ -46,7 +48,12 @@ export default function SubjectDetailPage() {
   const decks = decksQuery.data;
   const totalCards = (decks ?? []).reduce((sum, deck) => sum + deck.card_count, 0);
   const newDeckState = subject ? { subject: { id: subject.id, name: subject.name, icon: subject.icon } } : undefined;
-  const addDeck = () => navigate('/decks/new', { state: newDeckState });
+  // Cancel comes back here, and with no `returnTo` Create lands on the new deck.
+  const addDeck = () =>
+    navigate(
+      { pathname: '/decks/new', search: returnAddressParams(location, 'cancelTo').toString() },
+      { state: newDeckState },
+    );
 
   return (
     <div className="p-4">
