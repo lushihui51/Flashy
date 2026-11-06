@@ -23,6 +23,7 @@ from app.models.deck_payloads import (
 from app.refusals import Refusal
 from app.services.deck_batch_edit import DeckBatchEditValidationError, apply_deck_batch_edit
 from app.services.deck_create import DeckCreateValidationError, create_deck_atomic
+from app.services.deck_listing import deck_summaries
 from app.services.deletion import delete_deck as delete_deck_service
 from app.services.mastery import card_readiness, deck_readiness
 
@@ -86,8 +87,7 @@ def read_decks(
     db: SessionDep, current_user: CurrentUserDep, subject_id: uuid.UUID | None = None
 ):
     listings = db_read_deck_listings(db, current_user.id, subject_id)
-    readiness = deck_readiness(db, get_mastery_strategy(), [row.id for row in listings])
-    return [DeckSummary(**row.model_dump(), readiness=readiness[row.id]) for row in listings]
+    return deck_summaries(db, get_mastery_strategy(), listings)
 
 
 @router.get("/{deck_id}", response_model=DeckDetail, status_code=200)

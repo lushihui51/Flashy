@@ -26,7 +26,7 @@ Judgement: The engineer judges on the live server at 390 wide, signed in as a us
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -40,6 +40,7 @@ None.
 
 - `alembic/versions/<revision>_first_practice_at_on_app_user.py` (new, its revision id from `alembic revision`)
 - `app/models/app_user.py`
+- `app/models/deck.py`
 - `app/models/home_payloads.py` (new)
 - `app/database_ops/app_user.py`
 - `app/database_ops/home.py` (new)
@@ -130,7 +131,28 @@ with `frontend/src/test/home.test.ts` reading it through MSW.
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `uv run alembic heads` prints `50c257346dae (head)`, and `uv run alembic current` prints the same. The dry run on a `pg_dump` copy of the dev database upgraded, downgraded (the column gone) and upgraded again; the copy's one user was backfilled with their earliest `practice_run.created_at`. The copy is dropped, and the migration is applied to the dev database, one user with one stamp.
+- The named `pytest` files: `161 passed`.
+- `grep -c "db_stage_set_first_practice_at" app/services/practice_run.py` prints `3`.
+- `npm run gen:api` cannot be checked against a commit before the commit. It rewrites `src/api` byte-identically on a second run, checked by hash, and the two generated files go in the task's commit.
+- `npx vitest run src/test/home.test.ts`: 1 file and 2 tests passed.
+
+Checks for the commit: full `pytest`, with no other connection to the test database, `419 passed`; `npx vitest run` over the whole frontend, 69 files and 812 tests passed; `npm run lint` and `npm run build` both exit 0.
+
+With the three stamp calls removed, the four tests of `TestFirstPracticeStamp` fail, the refused rerun's through its helper's check that a stamp exists to clear; with the calls restored they pass.
+
+Departures and additions:
+
+- `app/services/practice_run.py` imports the module, `from app.database_ops import app_user as app_user_ops`, where every other import there names the function. A named import is a fourth line holding the name, and the Done-when grep would print `4`.
+- `app/models/deck.py` joined Files with the engineer's go-ahead: `DeckSummary`'s docstring said only `GET /api/decks` returns it, which `GET /api/home` made false.
+- Beyond the tests Details names: `test_a_refused_rerun_leaves_a_null` in `test_practice_run.py`, and the statement-count test also counts every statement, since the three named tables would miss a per-row read of `practice_card`.
+- In `test_home.py` and `TestFirstPracticeStamp`, the tests reload the user before each read, because the test client hands the route a row loaded earlier in another session. A request in the running app reads its user fresh.
+
+To read in the code:
+
+- `db_read_recent_deck_ids` in `app/database_ops/practice_run.py`: as Details groups it, every deck of a completed practice takes that practice's newest rating, whichever deck the rated card is in. The decks of one practice therefore tie, and deck id orders them.
 
 ### T2 — Home
 

@@ -196,6 +196,16 @@ class TestForeignResourcesAreNotFound:
 
         assert client.get("/api/subjects").json() == []
         assert client.get("/api/decks", params={"subject_id": deck_id}).json() == []
+        assert client.get("/api/home").json() == {
+            "steps": {
+                "has_subject": False,
+                "has_deck": False,
+                "has_card": False,
+                "has_configuration": False,
+            },
+            "active_practices": [],
+            "recent_decks": [],
+        }
 
 
 class TestOwnerStillHasAccess:

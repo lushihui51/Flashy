@@ -38,10 +38,13 @@ def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
 
 
 def db_read_deck_listings(
-    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
+    db: Session,
+    user_id: uuid.UUID,
+    subject_id: uuid.UUID | None = None,
+    deck_ids: Collection[uuid.UUID] | None = None,
 ) -> list[DeckListing]:
-    """The user's decks, of one subject when subject_id is given, most recently active
-    first, each with its subject's name, card_count and field_names (position order,
+    """The user's decks, of one subject when subject_id is given and among deck_ids when
+    those are given, most recently active first, each with its subject's name, card_count and field_names (position order,
     active fields only) — via two grouped queries regardless of how many decks there
     are, never one query per deck."""
     # Recency order, server-side — the frontend never sorts this list.
@@ -52,16 +55,18 @@ def db_read_deck_listings(
     )
     if subject_id is not None:
         query = query.where(Deck.subject_id == subject_id)
+    if deck_ids is not None:
+        query = query.where(col(Deck.id).in_(deck_ids))
     query = query.order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
     rows = db.exec(query).all()
     if not rows:
         return []
-    deck_ids = [deck.id for deck, _ in rows]
+    listed_ids = [deck.id for deck, _ in rows]
 
     card_counts = dict(
         db.exec(
             select(Card.deck_id, func.count())
-            .where(col(Card.deck_id).in_(deck_ids))
+            .where(col(Card.deck_id).in_(listed_ids))
             .group_by(col(Card.deck_id))
         ).all()
     )
@@ -69,7 +74,7 @@ def db_read_deck_listings(
     field_names_by_deck: dict[uuid.UUID, list[str]] = defaultdict(list)
     field_rows = db.exec(
         select(FieldDef.deck_id, FieldDef.name)
-        .where(col(FieldDef.deck_id).in_(deck_ids))
+        .where(col(FieldDef.deck_id).in_(listed_ids))
         .order_by(col(FieldDef.deck_id), col(FieldDef.position))
     ).all()
     for deck_id, name in field_rows:

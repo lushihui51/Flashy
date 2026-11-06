@@ -106,6 +106,23 @@ def db_read_practice_cards_for_run(
     )
 
 
+def db_read_practice_cards_for_runs(
+    db: Session, run_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, list[PracticeCard]]:
+    """db_read_practice_cards_for_run over several runs in one statement, keyed by run; a
+    run with no row has no entry. Unscoped by user likewise."""
+    if not run_ids:
+        return {}
+    cards_by_run: dict[uuid.UUID, list[PracticeCard]] = {}
+    for card in db.exec(
+        select(PracticeCard)
+        .where(col(PracticeCard.practice_run_id).in_(run_ids))
+        .order_by(PracticeCard.created_at)
+    ).all():
+        cards_by_run.setdefault(card.practice_run_id, []).append(card)
+    return cards_by_run
+
+
 def db_read_pending_practice_cards(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:

@@ -2864,6 +2864,71 @@
         }
       }
     },
+    "/api/home": {
+      "get": {
+        "tags": [
+          "Home"
+        ],
+        "summary": "Read Home",
+        "operationId": "read_home_api_home_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3846,7 +3911,7 @@
           "readiness"
         ],
         "title": "DeckSummary",
-        "description": "A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck\nreads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,\nwhich already includes everything here except the subject's name, card_count and\nfield_names."
+        "description": "A deck as a list row shows it. The single-deck reads\n(`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which\nalready includes everything here except the subject's name, card_count and\nfield_names."
       },
       "DeletionImpactRead": {
         "properties": {
@@ -4141,6 +4206,117 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HomeActivePractice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeRunDeckSummary"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/RunProgress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "status",
+          "created_at",
+          "decks",
+          "progress"
+        ],
+        "title": "HomeActivePractice"
+      },
+      "HomeRead": {
+        "properties": {
+          "steps": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeSteps"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_practices": {
+            "items": {
+              "$ref": "#/components/schemas/HomeActivePractice"
+            },
+            "type": "array",
+            "title": "Active Practices"
+          },
+          "recent_decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckSummary"
+            },
+            "type": "array",
+            "title": "Recent Decks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "steps",
+          "active_practices",
+          "recent_decks"
+        ],
+        "title": "HomeRead"
+      },
+      "HomeSteps": {
+        "properties": {
+          "has_subject": {
+            "type": "boolean",
+            "title": "Has Subject"
+          },
+          "has_deck": {
+            "type": "boolean",
+            "title": "Has Deck"
+          },
+          "has_card": {
+            "type": "boolean",
+            "title": "Has Card"
+          },
+          "has_configuration": {
+            "type": "boolean",
+            "title": "Has Configuration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_subject",
+          "has_deck",
+          "has_card",
+          "has_configuration"
+        ],
+        "title": "HomeSteps",
+        "description": "Whether each of the first four things exists; the fifth, a practice, never does\nwhile the steps show."
       },
       "PracticeCardRead": {
         "properties": {

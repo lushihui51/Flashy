@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from sqlmodel import Session
 
+from app.database_ops import app_user as app_user_ops
 from app.database_ops.card import (
     db_read_card,
     db_read_card_ids_for_deck,
@@ -44,6 +45,7 @@ from app.database_ops.practice_run import (
 from app.mastery.readiness import classify_change, fold_card_readiness
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
+from app.models.base import utcnow
 from app.models.field_def import FieldDef
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
@@ -268,7 +270,7 @@ def start_practice_run(
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
     validates against its deck's live fields, `no_cards` when generation produced
-    nothing across all of them."""
+    nothing across all of them. Stamps the user's first practice while it is unset."""
     rng = rng or random.Random()
 
     configs = []
@@ -336,6 +338,7 @@ def start_practice_run(
             "no_cards", "generation produced no practice cards across the selected decks"
         )
 
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     db.refresh(session)
     return session
@@ -362,7 +365,8 @@ def rerun_practice_run(
     hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
     RerunError('no_cards') if the survivors generated nothing. A plain
     create: the original run is never touched, so there is nothing to order against a
-    delete — one explicit commit at the end, same shape as start_practice_run."""
+    delete — one explicit commit at the end, same shape as start_practice_run, which
+    stamps the user's first practice the same way."""
     rng = rng or random.Random()
 
     session = db_read_practice_run(db, practice_run_id, user_id)
@@ -420,6 +424,7 @@ def rerun_practice_run(
             "no_cards", "generation produced no practice cards across the surviving decks"
         )
 
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     db.refresh(new_session)
     return new_session
@@ -437,7 +442,8 @@ def start_chosen_cards_run(
     """A new practice of exactly `card_ids`, each asked through the snapshot its deck had in
     the completed practice `practice_run_id`. Raises LookupError for an unknown or foreign
     practice, ValueError when `card_ids` is empty or names a card the practice did not
-    hold, and ChosenCardsError for the three coded refusals."""
+    hold, and ChosenCardsError for the three coded refusals. Stamps the user's first
+    practice while it is unset."""
     rng = rng or random.Random()
 
     session = db_read_practice_run(db, practice_run_id, user_id)
@@ -498,6 +504,7 @@ def start_chosen_cards_run(
             "no_cards", "generation produced no practice cards from the chosen cards"
         )
 
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     db.refresh(new_session)
     return new_session
