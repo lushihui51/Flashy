@@ -22,7 +22,9 @@ After a tab or filter change, the new list's first two rows are to be on screen 
 
 `AppShell`'s header is sticky, so content starts at the header's bottom edge, not at the top of the viewport, and the header grows when `ConnectionBanner` shows.
 
-Every form holds Cancel and Create or Save in a bar fixed to the viewport's foot, which always carries `data-reveal-clear` (ADR 100). An element fixed at the foot has `top: auto`, which parses to 0.
+Every form holds Cancel and Create or Save in a bar fixed to the viewport's foot, which always carries `data-reveal-clear` (ADR 100).
+
+A browser reports a stuck element's computed insets as it resolved them. In Chromium an element fixed with `bottom: 0` reports `bottom` as `0px` and `top` as the offset the browser worked out, a number, while a sticky element with a `top` reports its `top` as set and `bottom` as `auto`.
 
 A sticky element not yet stuck sits below its stuck place, by any distance on a page where it sits further down.
 
@@ -50,7 +52,7 @@ A form calls `reveal` when the user taps a Create or Save that is not ready, and
 
 `revealDelta` is a pure function of the band in view, its top and its bottom, the control's rect, and the rects of the list's first two rows, or of the whole list when it is shorter. It returns the smallest scroll that puts all of them in view, 0 when they already are, and keeps the control in view first when they do not all fit. Node unit tests pin it.
 
-We will mark every stuck element a reveal must clear, at either edge, with `data-reveal-clear`, the one mark. A reveal reads only the marked elements on the page it runs on, and reads each one's side from its computed position: one with a numeric `top` raises the band's top to its stuck bottom, its `top` plus its height, taking the greatest; one with a numeric `bottom` lowers the band's bottom to its rect's top, taking the least.
+We will mark every stuck element a reveal must clear, at either edge, with `data-reveal-clear`, the one mark. A reveal reads only the marked elements on the page it runs on, and reads each one's side from its computed position, `bottom` first: one with a numeric `bottom` lowers the band's bottom to its rect's top, taking the least; any other, whose `bottom` is `auto`, raises the band's top to its stuck bottom, its `top` plus its height, taking the greatest.
 
 ## Alternatives considered
 
@@ -85,6 +87,10 @@ Rejected because it puts the band's top wherever an element not yet stuck happen
 ### A second mark for an element stuck at the foot
 
 Rejected because the next developer must know it, and can put it on the wrong side with no error.
+
+### The side read from `top` first
+
+Rejected because an element fixed at the foot reports a numeric `top` too, so the bar would be read as a header stuck near the bottom of the screen.
 
 ### The viewport's bottom as the band's bottom
 

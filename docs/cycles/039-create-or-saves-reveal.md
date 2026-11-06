@@ -4,9 +4,9 @@
 
 Outcome: When the user taps Create or Save while a sentence about one part of the form is off screen, the page moves just far enough to bring the first such part and its sentence on screen, clear of the header and of the bar; a Create or Save that is not ready stays pressable and reads not ready, and a refusal that names one part of the form, a subject's, a deck's or a configuration's name already taken, renders beside the Name input rather than in the bar.
 
-Scope: The cycle covers `reveal` on the one hook for a page's URL search params, which scrolls the control and its sentence into the band between the header and the bar and writes nothing; every form's Create or Save kept pressable while not ready, reading not ready through `aria-disabled`, with `disabled` only while a request is in flight; each form calling `reveal` on a tap that is not ready, for the first part in document order whose sentence shows, and on a refusal that names one part; and the three refusals that name the Name input rendering beside it on New subject, Edit subject, New deck, Edit deck, New configuration and Edit configuration. It leaves out every sentence's words and where each sentence already sits, so a form with no sentence for a not-ready state, New card before a deck is chosen, moves nowhere on the tap; the bar itself, cycle 38's; and every other refusal, which stays the bar's sentence.
+Scope: The cycle covers `reveal` on the one hook for a page's URL search params, which scrolls the control and its sentence into the band between the header and the bar and writes nothing; every form's Create or Save kept pressable while not ready, reading not ready through `aria-disabled`, with `disabled` only while a request is in flight; each form calling `reveal` on a tap that is not ready, for the first part in document order whose sentence shows, and on a refusal that names one part; and the three refusals that name the Name input rendering beside it on New subject, Edit subject, New deck, Edit deck, New configuration and Edit configuration. It leaves out every sentence's words, but one new sentence for New card with no deck chosen, and where each sentence already sits; the bar itself, cycle 38's; and every other refusal, which stays the bar's sentence.
 
-Judgement: The engineer judges on the live server at 390 wide: on New practice with no configuration ticked, scrolled so "Select at least one configuration to practice." is above the screen, tapping Create brings that sentence and the Selected heading on screen below the header with nothing of them behind the bar, and tapping again moves the page by nothing; with the name cleared, tapping Create brings "Give this practice a name to create it." and the Name input on screen first; on New subject with a blank name, tapping Create shows "Name is required." under the Name input and brings it on screen when it was off screen; on New deck with a name already taken, Create puts "A deck with this name already exists." under the Deck name input, not in the bar, and brings it on screen; with the connection cut, Create on the same form still puts its sentence in the bar; the reveal's arithmetic is pinned by unit tests, and lint still refuses any other import of React Router's search params.
+Judgement: The engineer judges on the live server at 390 wide: on New practice with no configuration ticked, scrolled so "Select at least one configuration to practice." is above the screen, tapping Create brings that sentence and the Selected heading on screen below the header with nothing of them behind the bar, and tapping again moves the page by nothing; with the name cleared, tapping Create brings "Give this practice a name to create it." and the Name input on screen first; on New subject with a blank name, tapping Create shows "Name is required." under the Name input and brings it on screen when it was off screen; on New card with no deck chosen, tapping Create shows "Choose a deck to create a card." under the Deck picker; on New deck with a name already taken, Create puts "A deck with this name already exists." under the Deck name input, not in the bar, and brings it on screen; with the connection cut, Create on the same form still puts its sentence in the bar; the reveal's arithmetic is pinned by unit tests, and lint still refuses any other import of React Router's search params.
 
 ## Records
 
@@ -95,6 +95,7 @@ On New subject, Edit subject, New deck, Edit deck, New card and Edit card, Creat
 - `frontend/src/components/library/DeckEditor.test.tsx`
 - `frontend/src/components/library/CardStandaloneForm.tsx`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `docs/vocabulary.md`
 
 **Details**
 
@@ -114,13 +115,18 @@ New deck and Edit deck, in `DeckEditor.tsx`:
 
 New card and Edit card, in `CardStandaloneForm.tsx`:
 
-- Create or Save must be `aria-disabled` while `!canSubmit` and `disabled` only while `submitting`. No sentence shows for a card with no deck chosen or whose deck's fields are still loading, so a tap then submits nothing and moves nothing; `handleSubmit`'s early return stays.
+- Create or Save must be `aria-disabled` while `!canSubmit` and `disabled` only while `submitting`. On a tap of Create while `deckId` is null, the form must set a new `deckError` state and render it under the Deck picker as a `<span role="alert">` in `text-sm text-(--color-wrong)` reading "Choose a deck to create a card.", cleared when a deck is chosen, and call `reveal` with the picker's element as the control and the sentence as its row; `handleSubmit`'s early return stays. While a chosen deck's fields are still loading, no sentence shows and the tap moves nothing.
+- `docs/vocabulary.md` gains one row, after the row for "Delete card", exactly:
 
-Tests: in `SubjectForm.test.tsx`, a blank-name Create renders "Name is required." inside the Name input's label and calls `window.scrollBy` once, through a `vi.spyOn(window, 'scrollBy')`; a `subject_name_taken` refusal renders its sentence inside the label and not inside `[data-testid="form-bar"]`, and `scrollBy` is called once; a 500 renders in the bar and `scrollBy` is not called. In `DeckEditor.test.tsx`, Save on Edit deck with a blank field name is pressable, `aria-disabled="true"`, and a click calls `scrollBy` once; a `deck_name_taken` refusal renders under the Deck name input with `role="alert"` and not in the bar. In `CardStandaloneForm.test.tsx`, Create with no deck chosen is `aria-disabled="true"` and not `disabled`, and a click posts nothing.
+```
+| Card | A card's deck left unchosen | "Choose a deck to create a card." | New card | `deckError` |
+```
+
+Tests: in `SubjectForm.test.tsx`, a blank-name Create renders "Name is required." inside the Name input's label and calls `window.scrollBy` once, through a `vi.spyOn(window, 'scrollBy')`; a `subject_name_taken` refusal renders its sentence inside the label and not inside `[data-testid="form-bar"]`, and `scrollBy` is called once; a 500 renders in the bar and `scrollBy` is not called. In `DeckEditor.test.tsx`, Save on Edit deck with a blank field name is pressable, `aria-disabled="true"`, and a click calls `scrollBy` once; a `deck_name_taken` refusal renders under the Deck name input with `role="alert"` and not in the bar. In `CardStandaloneForm.test.tsx`, Create with no deck chosen is `aria-disabled="true"` and not `disabled`, and a click posts nothing, renders "Choose a deck to create a card." under the Deck picker with `role="alert"`, and calls `scrollBy` once.
 
 **Out of scope**
 
-- A sentence for New card when Create is tapped before a deck is chosen: an unsettled decision, raised to the engineer.
+- New card's sentence shown before the tap, as New practice shows its hints: never; it appears on the tap, as "Name is required." does.
 - A sentence for Edit deck's Save when nothing has changed: never; the greyed Save says it.
 - Moving "Name is required." or a field's error from where it sits: never here.
 - New configuration, Edit configuration and New practice: T3.
@@ -185,6 +191,7 @@ Tests: in `DeckConfigurationEditor.test.tsx`, Create with a blank name on a chos
   - On `/subjects/new` at a viewport height of 300, with the name blank and the page scrolled to the bottom, a click on Create renders "Name is required." under the Name input with its bottom at or above the bar's top.
   - On `/decks/new` with a name a deck already has and two fields, a click on Create renders "A deck with this name already exists." under the Deck name input and not inside `[data-testid="form-bar"]`; with `POST /api/decks` aborted through `page.route`, a click on Create renders "Couldn't reach Flashy. Check your connection and try again." inside the bar.
   - On `/decks/{id}/edit` with the deck "Commands", twelve fields, the last field's name cleared and the page scrolled to the top, a click on Save leaves that field's input top at or below the header's bottom and "Name is required." at or above the bar's top.
+  - On `/cards/new` with no deck chosen, a click on Create renders "Choose a deck to create a card." under the Deck picker and posts nothing.
 - A screenshot of `/decks/new` with the taken name's sentence under the input at 390 by 844, saved in the session scratchpad and named in the Debrief.
 
 **Debrief**
