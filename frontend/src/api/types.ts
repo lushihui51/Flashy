@@ -404,6 +404,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Home */
+        get: operations["read_home_api_home_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -810,9 +827,9 @@ export interface components {
         };
         /**
          * DeckSummary
-         * @description A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck
-         *     reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,
-         *     which already includes everything here except the subject's name, card_count and
+         * @description A deck as a list row shows it. The single-deck reads
+         *     (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which
+         *     already includes everything here except the subject's name, card_count and
          *     field_names.
          */
         DeckSummary: {
@@ -979,6 +996,53 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HomeActivePractice */
+        HomeActivePractice: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decks */
+            decks: components["schemas"]["PracticeRunDeckSummary"][];
+            progress: components["schemas"]["RunProgress"];
+        };
+        /** HomeRead */
+        HomeRead: {
+            steps: components["schemas"]["HomeSteps"] | null;
+            /** Active Practices */
+            active_practices: components["schemas"]["HomeActivePractice"][];
+            /** Recent Decks */
+            recent_decks: components["schemas"]["DeckSummary"][];
+        };
+        /**
+         * HomeSteps
+         * @description Whether each of the first four things exists; the fifth, a practice, never does
+         *     while the steps show.
+         */
+        HomeSteps: {
+            /** Has Subject */
+            has_subject: boolean;
+            /** Has Deck */
+            has_deck: boolean;
+            /** Has Card */
+            has_card: boolean;
+            /** Has Configuration */
+            has_configuration: boolean;
         };
         /** PracticeCardRead */
         PracticeCardRead: {
@@ -2603,6 +2667,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RatingSubmissionResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_home_api_home_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeRead"];
                 };
             };
             /** @description Validation Error */

@@ -3504,3 +3504,77 @@ class TestConfigurationLabel:
         assert res.status_code == 200, res.text
         run = next(r for r in res.json() if r["id"] == created["id"])
         assert [d["configuration_name"] for d in run["decks"]] == ["Config A", "Config B"]
+
+
+class TestFirstPracticeStamp:
+    """Every path that creates a practice stamps the user's first practice while it is
+    null, and leaves a stamp already there alone."""
+
+    @staticmethod
+    def _stamp(db, user):
+        db.refresh(user)
+        return user.first_practice_at
+
+    @staticmethod
+    def _clear_stamp(db, user):
+        # Reloaded first: this row is stale, and assigning the None it still holds would
+        # write nothing.
+        db.refresh(user)
+        assert user.first_practice_at is not None
+        user.first_practice_at = None
+        db.add(user)
+        db.commit()
+
+    def test_start_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        assert self._stamp(db, existing_user) is None
+
+        _start(client, "First", [session_config["id"]])
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        _start(client, "Second", [session_config["id"]])
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_rerun_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+
+        assert _rerun(client, run["id"], "Rerun").status_code == 201
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        assert _rerun(client, run["id"], "Rerun again").status_code == 201
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_chosen_cards_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+
+        assert _chosen(client, run["id"], "Chosen", session_cards[:1]).status_code == 201
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        assert _chosen(client, run["id"], "Chosen again", session_cards[:1]).status_code == 201
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_a_refused_rerun_leaves_a_null(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+        for card_id in session_cards:
+            assert client.delete(f"/api/cards/{card_id}").status_code == 204
+
+        res = _rerun(client, run["id"], "Rerun")
+
+        assert res.json()["detail"]["code"] == "no_cards"
+        assert self._stamp(db, existing_user) is None

@@ -26,7 +26,7 @@ Judgement: The engineer judges on the live server at 390 wide, signed in as a us
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -40,6 +40,7 @@ None.
 
 - `alembic/versions/<revision>_first_practice_at_on_app_user.py` (new, its revision id from `alembic revision`)
 - `app/models/app_user.py`
+- `app/models/deck.py`
 - `app/models/home_payloads.py` (new)
 - `app/database_ops/app_user.py`
 - `app/database_ops/home.py` (new)
@@ -130,13 +131,34 @@ with `frontend/src/test/home.test.ts` reading it through MSW.
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `uv run alembic heads` prints `50c257346dae (head)`, and `uv run alembic current` prints the same. The dry run on a `pg_dump` copy of the dev database upgraded, downgraded (the column gone) and upgraded again; the copy's one user was backfilled with their earliest `practice_run.created_at`. The copy is dropped, and the migration is applied to the dev database, one user with one stamp.
+- The named `pytest` files: `161 passed`.
+- `grep -c "db_stage_set_first_practice_at" app/services/practice_run.py` prints `3`.
+- `npm run gen:api` cannot be checked against a commit before the commit. It rewrites `src/api` byte-identically on a second run, checked by hash, and the two generated files go in the task's commit.
+- `npx vitest run src/test/home.test.ts`: 1 file and 2 tests passed.
+
+Checks for the commit: full `pytest`, with no other connection to the test database, `419 passed`; `npx vitest run` over the whole frontend, 69 files and 812 tests passed; `npm run lint` and `npm run build` both exit 0.
+
+With the three stamp calls removed, the four tests of `TestFirstPracticeStamp` fail, the refused rerun's through its helper's check that a stamp exists to clear; with the calls restored they pass.
+
+Departures and additions:
+
+- `app/services/practice_run.py` imports the module, `from app.database_ops import app_user as app_user_ops`, where every other import there names the function. A named import is a fourth line holding the name, and the Done-when grep would print `4`.
+- `app/models/deck.py` joined Files with the engineer's go-ahead: `DeckSummary`'s docstring said only `GET /api/decks` returns it, which `GET /api/home` made false.
+- Beyond the tests Details names: `test_a_refused_rerun_leaves_a_null` in `test_practice_run.py`, and the statement-count test also counts every statement, since the three named tables would miss a per-row read of `practice_card`.
+- In `test_home.py` and `TestFirstPracticeStamp`, the tests reload the user before each read, because the test client hands the route a row loaded earlier in another session. A request in the running app reads its user fresh.
+
+To read in the code:
+
+- `db_read_recent_deck_ids` in `app/database_ops/practice_run.py`: as Details groups it, every deck of a completed practice takes that practice's newest rating, whichever deck the rated card is in. The decks of one practice therefore tie, and deck id orders them.
 
 ### T2 — Home
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -200,4 +222,36 @@ Drawings 9 and 10 show no circle on the "Recently practiced" rows; PDR 023 and t
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `npx vitest run src/pages/HomePage.test.tsx src/pages/placeholderPages.test.tsx`: 1 file and 13 tests passed. The second path no longer exists; see the first departure.
+- `grep -rn "Coming soon" frontend/src docs/vocabulary.md` prints nothing.
+- `grep -c "Home" docs/vocabulary.md` prints `13`.
+- Live server at 390 wide, in headless Chromium through playwright-core, driven by mouse, as a new user with no practice, every line observed in Home's accessibility tree or computed style:
+  - "Your first practice", "0 of 5", "New subject" yellow.
+  - A subject made from the top bar's New: ticked and struck, "1 of 5", "New deck" yellow.
+  - A deck and a card made from the top bar's New, and a configuration made from Home's own "New configuration" step: "4 of 5", "New practice" yellow. The top bar's New has no row for a configuration, as `CreateSheet` states, so "the same way" cannot hold for that one.
+  - A practice made on New practice: it shows under "Home" with its progress bar and a yellow "Start practice" linking to its run page, no steps.
+  - That practice finished through its run page: "Recently practiced" lists its deck with its circle and a yellow "Practice" linking to `/practice?subject=<subject_id>&deck=<id>`, then "New practice" in white.
+  - Three further practices, started by `POST /api/practice_runs` rather than the form: Home lists "Fourth", "Third", "Second" and no count, and the deck's "Practice" is white.
+  - The one subject deleted by `DELETE /api/subjects/{subject_id}`: no steps, and "New practice" alone.
+  - With three active practices and a recent deck, no text on Home matched "ago", "due", "yesterday", "today", "last", "streak" or "day". The practice names in this check were typed; see the last point below.
+
+The new user was `DEV_AUTH_USER_ID=user_check_043_t2_a` on a second backend at port 8001, with the browser's `/api` requests forwarded to it from localhost:5173. The backend at port 8000 was left alone. The user's row stays in the dev database, with no subject; nothing was deleted as cleanup.
+
+From the cycle's Judgement, `GET /api/home`'s statement count for one practice against five: `uv run pytest tests/api_tests/test_home.py -k statement` passes, the test T1 wrote.
+
+Checks for the commit: `npx vitest run` over the whole frontend, 69 files and 823 tests passed; `npm run lint` and `npm run build` both exit 0.
+
+Departures and additions:
+
+- `frontend/src/pages/placeholderPages.test.tsx` is deleted rather than edited: both its tests were Home's, and vitest fails a file with no test. Its heading and tab-title checks move to `HomePage.test.tsx`.
+- The yellow "Practice" takes drawing 10's shape, `tappable` and `rounded-2xl`, where the white one is the `tappable-sm` `rounded-full` pill of Details.
+- On failure Home draws the sentence alone, without its heading, as `SubjectDetailPage` does.
+- The test's "no text" check spells its pattern in lowercase with the `i` flag, so the Done-when grep for "Coming soon" stays empty.
+- `docs/vocabulary.md` beyond Details: Where gains "Home" on the rows "A deck's row", "A practice that can still be continued", "Going on with an active practice", "The practice's progress", "How ready the user is" and "Practicing a deck", since Home now shows their words.
+
+To read or look at:
+
+- "Recently practiced" at 390 wide: the circle Details adds to rows the drawings show without one leaves the subject line little room, so a short one truncates, as "Networking · 1 card · 2 fie…". It truncates without overflow, and the page's width stays 390 with long names, but the counts are the first thing lost.
+- A practice left with its suggested name shows that name on Home, a date and time, as drawing 9 draws it. Details says nothing on Home may say when anything happened; this task keeps the name as the drawing has it.

@@ -38,9 +38,9 @@ class DeckListing(DeckRead):
 
 
 class DeckSummary(DeckListing):
-    """A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck
-    reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,
-    which already includes everything here except the subject's name, card_count and
+    """A deck as a list row shows it. The single-deck reads
+    (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which
+    already includes everything here except the subject's name, card_count and
     field_names."""
 
     # 0 to 1, over the deck's cards; None with no card.

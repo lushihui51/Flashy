@@ -1,11 +1,15 @@
 """Persistence for the `app_user` table — the authenticated user, keyed by
-`clerk_user_id`, and the root of every ownership chain. These are the only three
+`clerk_user_id`, and the root of every ownership chain. These are the only
 operations the table has: the row is created lazily on first sight of a Clerk id, its
-timezone is kept in step with the `X-Timezone` header, and nothing else ever
-writes it. Unlike every other module here the reads are not ownership-scoped, because
+timezone is kept in step with the `X-Timezone` header, its first practice is stamped
+once, and nothing else ever writes it. Unlike every other module here the reads are not ownership-scoped, because
 this table *is* the ownership scope."""
 
-from sqlmodel import Session, select
+import uuid
+from datetime import datetime
+
+from sqlalchemy import update
+from sqlmodel import Session, col, select
 
 from app.models.app_user import AppUser
 
@@ -32,3 +36,14 @@ def db_update_app_user_timezone(db: Session, user: AppUser, timezone: str) -> Ap
     db.commit()
     db.refresh(user)
     return user
+
+
+def db_stage_set_first_practice_at(db: Session, user_id: uuid.UUID, at: datetime) -> None:
+    """Stamps the user's first practice, leaving a stamp already there untouched. No
+    commit: the caller's transaction is the practice's own, so a refused practice leaves
+    it unwritten."""
+    db.execute(
+        update(AppUser)
+        .where(col(AppUser.id) == user_id, col(AppUser.first_practice_at).is_(None))
+        .values(first_practice_at=at)
+    )
