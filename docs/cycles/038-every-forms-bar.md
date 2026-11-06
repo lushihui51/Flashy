@@ -212,7 +212,7 @@ For the engineer, outside this task's Files:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -229,6 +229,8 @@ New practice renders Cancel and Create in the bar with "N selected" on its own l
 - `frontend/src/pages/PracticeCreatePage.test.tsx`
 - `frontend/src/components/ui/StickyPageRow.tsx` (deleted)
 - `frontend/src/components/ui/StickyPageRow.test.tsx` (deleted)
+- `frontend/src/components/shell/AppShell.tsx`
+- `docs/vocabulary.md`
 
 **Details**
 
@@ -265,4 +267,42 @@ Tests, in `PracticeCreatePage.test.tsx`: the test that a failure renders as a ba
 
 **Debrief**
 
-None.
+Evidence:
+
+- `grep -rn "StickyPageRow" frontend/src` prints nothing.
+- `cd frontend && npx vitest run` passes: 61 files, 694 tests. `npm run lint` and `npm run build` are clean.
+- The cycle's judgement, in headless Chromium against `localhost:5173`, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development`, at 390 by 844, by mouse, unless a line says otherwise:
+  - All nine routes: the bar's bottom equals `innerHeight`, and the `h1`'s top is below the header's bottom. The first heading and the bar's buttons are, in order: New subject, Cancel, Create; Edit subject, Cancel, Save; New deck, Cancel, Create; Edit deck, Done, Undo, Save; New card, Cancel, Create; Edit card, Cancel, Save; New configuration, Cancel, Create; Edit configuration, Cancel, Save; New practice, Cancel, Create.
+  - Edit card for a card of "Commands", 12 fields, scrolled to the end: the bar's bottom equals `innerHeight`, the last field's bottom is 667 against the bar's top of 763, and the `h1`'s bottom is -421.5 against the header's 114.
+  - `/subjects/new`: `document.body.scrollHeight` is 844, `innerHeight` is 844, and the bar's bottom equals `innerHeight`.
+  - `/decks/new`, Subject picker, then "New subject…": the dialog named "New subject" opens, and its bar's bottom is 844 and holds Cancel, Create.
+  - `/api/health` aborted: the banner reads "Can't reach Flashy. Check your connection; retrying automatically." On `/library`, the side menu's first item has its top at 184 against the header's bottom of 172.
+  - `/practice/new`, one configuration ticked in each of three decks: "3 selected" is in the bar, its bottom 768 against Create's top of 776. With `POST /api/practice_runs` aborted, a click on Create puts "Couldn't reach Flashy. Check your connection and try again." in the bar, its bottom 740.5 against "3 selected"'s top of 748.5. The bar grows from 108.5 to 156.5 and the spacer grows with it.
+  - `/decks/{id}/edit`: Done, Undo, Save; after typing one letter, Cancel, Undo, Save; after a click on Save, Done, Undo, "Saved ✓"; after 2.5 seconds, Done, Undo, Save. The script renamed the deck back to "Commands" and saved, and the API reads "Commands".
+  - Filter change on `/practice/new`: this line's starting state cannot be reached at 390 by 844, and it was checked at 390 by 480 instead. See Departures.
+  - No page errors. Nothing else was written to the dev database, since both Creates were aborted.
+- Screenshots at 390 by 844: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-practice-three.png`, for drawing 32; `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-new-card-failed.png`, for drawing 35; `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-edit-deck-saved.png`, for drawing 38; `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-overlay.png`, New subject open over New deck.
+
+Beyond the Done when:
+
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-practice-failed.png`, for drawing 34, is New practice scrolled to Selected after the aborted Create.
+- `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/fd2a6f83-c2c4-4ae2-8c6a-7f1e1d28f51d/scratchpad/shot-banner-menu.png` is the side menu with the banner showing.
+- The browser checks ran before the two comment and vocabulary edits below and were not repeated after them; neither changes behaviour.
+
+Departures:
+
+- From the Done when: at 390 by 844 with `scrollY` 0, the first configuration row's top is 404 and the bar's top is 763, so no scroll puts the row below the bar. At 844, choosing a subject leaves `scrollY` at 0, the first two rows' bottoms at 448 and 501, and the filter's top at 261 against the header's 114; nothing needed to move. At 390 by 480, the bar's top is 399 and the row's top is 404, so the state exists: choosing a subject scrolls by 107, the first two rows' bottoms land at 341 and 394, and the filter's top lands at 154. The reveal therefore clears the bar, but the engineer's judgement at 390 wide will not see it move at full height.
+- From guidance: the Name block under the heading starts at `mt-4`, where it was `mt-3`, matching T2's gap under the heading.
+
+Tests beyond the Details:
+
+- `PracticeCreatePage.test.tsx`: the failed Create stands above the count, and the count above Cancel and Create; with nothing selected, the bar shows no count; the heading comes before Name and sits outside the bar; a selection that vanished shows its sentence in the bar.
+
+Outside the original Files, with the engineer's approval:
+
+- `frontend/src/components/shell/AppShell.tsx`: the comment on the `useLayoutEffect` now names the side menu, the one remaining user of `--app-header-height`.
+- `docs/vocabulary.md`: "N selected" now reads "above Cancel and Create".
+
+For the engineer, outside this task's Files:
+
+- T2's finding stands and shows in `shot-overlay.png`: New subject over New deck insets its fields by twice the page's padding.

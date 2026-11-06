@@ -31,8 +31,8 @@ export default function AppShell() {
     enabled: isCreateSheetOpen && !!isSignedIn,
   });
 
-  // A page's sticky row stops at this variable, so it follows the header as the connection
-  // banner comes and goes, and is written before the first paint so no frame draws a row
+  // The side menu starts at this variable, so it follows the header as the connection
+  // banner comes and goes, and is written before the first paint so no frame draws the menu
   // with it unset.
   useLayoutEffect(() => {
     const header = headerRef.current;
