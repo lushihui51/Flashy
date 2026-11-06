@@ -125,16 +125,40 @@ describe.each([
   },
 );
 
-describe('SubjectForm — the heading row', () => {
+describe('SubjectForm — the heading and the bar', () => {
   it.each([
-    { path: '/subjects/new', heading: 'New subject' },
-    { path: '/subjects/s1/edit', heading: 'Edit subject' },
-  ])('$heading holds its row in the sticky row', async ({ path, heading }) => {
-    server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
-    renderForm(path);
+    { path: '/subjects/new', heading: 'New subject', leaveLabel: 'Create' },
+    { path: '/subjects/s1/edit', heading: 'Edit subject', leaveLabel: 'Save' },
+  ])(
+    '$heading has its heading outside the bar, and Cancel and $leaveLabel in it',
+    async ({ path, heading, leaveLabel }) => {
+      server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
+      renderForm(path);
 
-    const title = await screen.findByRole('heading', { name: heading });
-    expect(title.parentElement).toHaveAttribute('data-reveal-clear');
+      const title = await screen.findByRole('heading', { name: heading });
+      expect(title.closest('[data-reveal-clear]')).toBeNull();
+      const bar = within(screen.getByTestId('form-bar'));
+      expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(bar.getByRole('button', { name: leaveLabel })).toBeInTheDocument();
+    },
+  );
+
+  it('a failed Create puts its sentence in the bar', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
   });
 });
 

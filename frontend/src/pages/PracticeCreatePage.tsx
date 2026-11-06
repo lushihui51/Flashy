@@ -10,6 +10,7 @@ import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import ConfigurationPickList from 'src/components/practice/ConfigurationPickList';
 import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
+import FormBar from 'src/components/ui/FormBar';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
@@ -23,7 +24,6 @@ import {
   withSelectedConfigIds,
 } from 'src/lib/practiceSelection';
 import { useViewParams } from 'src/lib/viewParams';
-import StickyPageRow from 'src/components/ui/StickyPageRow';
 
 type RowError = { configId: string; sentence: string };
 
@@ -165,7 +165,7 @@ export default function PracticeCreatePage() {
       navigate(`/practice/${session.id}`);
     },
     // The code decides only where the sentence renders: against the offending row for
-    // `stale_config`, above the list for everything else.
+    // `stale_config`, in the bar for everything else.
     onError: (error: Error) => {
       const sentence = failureSentence(error, 'Deck configuration not found.');
       if (error instanceof ApiDetailError) {
@@ -267,31 +267,11 @@ export default function PracticeCreatePage() {
 
   return (
     <div className="p-4">
-      <StickyPageRow>
-        <button
-          type="button"
-          onClick={cancel}
-          className="text-body font-medium text-(--color-aside)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-title font-bold text-(--color-ink)">New practice</h1>
-        <div className="flex items-center gap-2">
-          {selectedCount > 0 && (
-            <span className="text-label text-(--color-aside)">{selectedCount} selected</span>
-          )}
-          <button
-            type="button"
-            disabled={!canCreate}
-            onClick={submit}
-            className="tappable-sm h-10 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-          >
-            Create
-          </button>
-        </div>
-      </StickyPageRow>
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        New practice
+      </h1>
 
-      <div className="mt-3 flex flex-col gap-1.5">
+      <div className="mt-4 flex flex-col gap-1.5">
         <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
           Name
         </label>
@@ -324,18 +304,6 @@ export default function PracticeCreatePage() {
       {configsQuery.isError && (
         <p ref={failureRef} role="alert" className="text-sm text-(--color-wrong)">
           Could not load configurations.
-        </p>
-      )}
-
-      {topError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
-          {topError}
-        </p>
-      )}
-
-      {saveError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
-          {saveError}
         </p>
       )}
 
@@ -401,6 +369,27 @@ export default function PracticeCreatePage() {
           )
         )}
       </section>
+
+      <FormBar
+        sentence={saveError ?? topError}
+        count={selectedCount > 0 ? `${selectedCount} selected` : null}
+      >
+        <button
+          type="button"
+          onClick={cancel}
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!canCreate}
+          onClick={submit}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+        >
+          Create
+        </button>
+      </FormBar>
     </div>
   );
 }

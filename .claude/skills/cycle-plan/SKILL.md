@@ -13,13 +13,14 @@ Files you may write in this conversation:
 - The docket and its canvas, following `docs/rules/roundtable-docket-rules.md`
 - The backlog, `docs/backlog.md`, and its canvas, following `docs/rules/backlog-rules.md`
 
-Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
+Give me one thing to answer per turn: one question, an outcome, the build order, a Title and Goal, the Records, the decomposition, one task in full, a cycle file in full, or the re-read's edits, for me to approve or change.
 
 ## Terms
 
 - "The builder" is the agent who uses the cycle file to write code.
 - "The docket" is the roundtable docket whose path I give.
-- "Main" is the project's main branch on github.
+- "The docket's branch" is the branch `docs/rules/roundtable-docket-rules.md` gives a docket.
+- "The builder's seat" is reading a cycle file with only it, AGENTS.md, the code and the cycle files it waits for, and nothing from this conversation, asking where the builder would have to guess, and what the file says of the code or a drawing that is not so.
 
 ## What you read
 
@@ -34,21 +35,21 @@ Give me one thing to answer per turn: one question, an outcome, a Title and Goal
 ## How you work
 
 - The only legitimate decisions to act on are the records the docket lists and its lesser decisions. If something you propose depends on an unsettled decision, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
-- If a task would be written differently by the answer to an open question, its cycle waits for the question's owner: raise it to me, and plan the other outcomes.
-- For a docket opened for a blocked task, every done task stays as it stands, and the blocked task's Status goes back to not started.
-- Before the outcomes, name each cycle not yet merged whose canvas holds a drawing the docket's canvas has since changed.
+- If a task would be written differently by the answer to an open question, its cycle is not planned until the question's owner answers: raise it to me, and plan the other outcomes.
+- For a docket reopened for a blocked task, every done task stays as it stands, and the blocked task's Status goes back to not started.
+- Before the outcomes, name each cycle not yet complete whose canvas holds a drawing the docket's canvas has since changed.
 
 ## What you do
 
 ### 1. Outcomes
 
-Extract the implied outcomes from the docket's records, lesser decisions and live sites, against what is on main. Each outcome describes something I would merge to main for, with an observable acceptance. Show me the outcomes one by one, each with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
+Extract the implied outcomes from the docket's records, lesser decisions and live sites, against what is on the docket's branch. Each outcome describes something worth a cycle of its own, with an observable acceptance. Show me the outcomes one by one, each with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
 
-When all outcomes are approved, filter out ones that depend on another to proceed. Show them to me one by one with the outcome they depend on, and ask for my explicit go-ahead. Once I confirm, their items stay on the docket for a later /cycle-plan, and they are no longer part of this conversation.
+When all outcomes are approved, propose one build order over them and every cycle not yet complete: each after every one whose work it uses or whose file it shares, naming what it uses. Each cycle's Waits for line carries its place in the order, a new cycle's when its file is written and an earlier cycle's at the re-read.
 
 ### 2. Cycle files
 
-Take the remaining outcomes one at a time through the steps below to build the cycle files. Ask for my explicit confirmation before moving to the next step.
+Take the outcomes one at a time, in the build order, through the steps below to build the cycle files. Ask for my explicit confirmation before moving to the next step.
 
 #### Title and Goal
 
@@ -86,12 +87,16 @@ For each task, read the files in its Files first for context.
 
 Once every task in a cycle has been approved by me, draft the cycle file in full. Use everything we've decided for this cycle.
 
-Before showing me a draft, take the builder's seat and ask yourself: with only the draft, AGENTS.md and the code, and nothing from this conversation, where would I have to guess? Either fix it or raise it to me.
+Before showing me a draft, take the builder's seat on it; fix what you find or raise it to me.
 
 Once I have approved the draft, it is final: write it to `docs/cycles/`, with its canvas where `docs/rules/cycle-rules.md` calls for one, commit it, and move to the next outcome.
 
+### 3. The re-read
+
+When the last cycle file is committed, take the builder's seat on every cycle file not yet complete, this conversation's and earlier runs', and bring each cycle's canvas to the docket's canvas. Show me the edits as one set, old text and new text with a line of reason each; make them on my approval and commit each amended file as `docs/rules/cycle-rules.md` defines the planner's amendment.
+
 ## Ending
 
-When the last cycle file is committed, show me the docket edit and the backlog edit, then make them and commit them. Then one of two endings. If an approved outcome waits for a cycle not yet merged, its items and every open question stay, and the docket is left as one a later /cycle-plan runs. Otherwise the docket is finished: the backlog edit takes in every open question left, unless I drop it, and the commit deletes the docket and its canvas. Then stop.
+After the re-read, show me the docket edit and the backlog edit, then make them and commit them. Then one of two endings. If an approved outcome is held by an open question, its items and every open question stay, and the docket is left as one a later /cycle-plan runs. Otherwise the docket is finished: the backlog edit takes in every open question left, unless I drop it, and the docket's every section reads "None." Then stop.
 
 Docket for this conversation: $ARGUMENTS

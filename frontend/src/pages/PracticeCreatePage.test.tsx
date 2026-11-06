@@ -258,7 +258,7 @@ describe('PracticeCreatePage', () => {
     expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
-    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('2 selected')).toBeInTheDocument();
   });
 
   it('Create stays disabled with each unmet condition shown by its own hint, mirroring the builder’s Save', async () => {
@@ -333,7 +333,7 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
     await user.click(screen.getByRole('checkbox', { name: 'Listening' }));
-    expect(screen.getByText('3 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('3 selected')).toBeInTheDocument();
 
     const [firstGroup] = screen.getAllByRole('group');
     expect(precedes(screen.getByPlaceholderText('All subjects'), firstGroup!)).toBe(true);
@@ -514,7 +514,7 @@ describe('PracticeCreatePage', () => {
     expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
     await waitFor(() => expect(currentLocation().params.getAll('config')).toEqual(['c1']));
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
-    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('1 selected')).toBeInTheDocument();
     const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole('listitem');
     expect(items).toHaveLength(1);
     expect(items[0]).toHaveTextContent('Recall');
@@ -526,7 +526,9 @@ describe('PracticeCreatePage', () => {
     renderCreate('/practice/new?config=gone');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
-    expect(await screen.findByText(MISSING_CONFIGURATION_MESSAGE)).toBeInTheDocument();
+    expect(
+      await within(screen.getByTestId('form-bar')).findByText(MISSING_CONFIGURATION_MESSAGE),
+    ).toBeInTheDocument();
     await waitFor(() => expect(currentLocation().params.has('config')).toBe(false));
     expect(screen.queryByText(/\d+ selected/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
@@ -589,7 +591,7 @@ describe('PracticeCreatePage', () => {
     expect(sent!.deck_practice_config_ids).toEqual(['c1']);
   });
 
-  it('duplicate_deck and any other error render as a banner above the configuration list', async () => {
+  it('duplicate_deck and any other error render inside the bar', async () => {
     mockLibrary();
     server.use(
       http.post(`${BASE}/api/practice_runs`, () =>
@@ -605,7 +607,52 @@ describe('PracticeCreatePage', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Something went wrong.');
-    expect(precedes(alert, screen.getByRole('checkbox', { name: 'Recall' }))).toBe(true);
+    expect(screen.getByTestId('form-bar')).toContainElement(alert);
+  });
+
+  it('a failed Create stands above the count, and the count above the buttons, in the bar', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/practice_runs`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 400 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = screen.getByTestId('form-bar');
+    const alert = await within(bar).findByRole('alert');
+    const count = within(bar).getByText('1 selected');
+    expect(precedes(alert, count)).toBe(true);
+    expect(precedes(count, within(bar).getByRole('button', { name: 'Cancel' }))).toBe(true);
+    expect(
+      precedes(
+        within(bar).getByRole('button', { name: 'Cancel' }),
+        within(bar).getByRole('button', { name: 'Create' }),
+      ),
+    ).toBe(true);
+  });
+
+  it('with nothing selected, the bar shows no count', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    expect(within(screen.getByTestId('form-bar')).queryByText(/selected/)).not.toBeInTheDocument();
+  });
+
+  it('the heading is the first thing on the page and stays outside the bar', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    const heading = screen.getByRole('heading', { level: 1, name: 'New practice' });
+    expect(heading.closest('[data-reveal-clear]')).toBeNull();
+    expect(precedes(heading, screen.getByLabelText('Name'))).toBe(true);
   });
 
   it('no configurations at all shows the true-empty state with a New configuration… button', async () => {
@@ -662,7 +709,7 @@ describe('PracticeCreatePage', () => {
     );
     const selected = screen.getByRole('region', { name: 'Selected' });
     expect(within(selected).getByText('Recall')).toBeInTheDocument();
-    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('1 selected')).toBeInTheDocument();
   });
 
   it("Selected lists every selection in the configurations' order, with its deck and subject", async () => {
@@ -816,7 +863,7 @@ describe('PracticeCreatePage', () => {
     );
     expect(screen.getByRole('checkbox', { name: 'Basics' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
-    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('2 selected')).toBeInTheDocument();
     expect(currentLocation().params.getAll('config')).toEqual(['c3', 'c2']);
   });
 
@@ -929,6 +976,6 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().params.getAll('config')).toEqual(['c1']);
     const selected = screen.getByRole('region', { name: 'Selected' });
     expect(within(selected).getByText('Recall')).toBeInTheDocument();
-    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    expect(within(screen.getByTestId('form-bar')).getByText('1 selected')).toBeInTheDocument();
   });
 });

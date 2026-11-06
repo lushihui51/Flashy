@@ -139,7 +139,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | Adding a practice to the list in view | "Add practice" | Practice page's header | `PracticeOverviewPage` |
 | Practice | The page where a practice is made | "New practice" | Its heading | `/practice/new`; `PracticeCreatePage`; `PracticeRunCreate` |
 | Practice | A new practice's name | the moment the page opened, as "Aug 24, 2026, 9:00 AM" | New practice | `name`; `formatDateTime` |
-| Practice | The chosen configurations | "Selected"; "N selected", beside Create; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids`; `selectedCount` |
+| Practice | The chosen configurations | "Selected"; "N selected", above Cancel and Create; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids`; `selectedCount` |
 | Practice | A practice's own page | its name, its date and time beneath | A practice's page | `/practice/:practiceSessionId`; `PracticeDetailsPage` |
 | Practice | Narrowing practices by state | "Practice status", spoken; "All"; "Active"; "Completed" | Practice page | `RunStatus`; `status`; `StatusTab` |
 | Practice | A practice that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page | `active` |

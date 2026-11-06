@@ -5,7 +5,7 @@ import { Trash2 } from 'lucide-react';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import StickyPageRow from 'src/components/ui/StickyPageRow';
+import FormBar from 'src/components/ui/FormBar';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
@@ -63,7 +63,6 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       mode={mode}
       subjectId={subjectId}
       original={mode === 'edit' ? subjectQuery.data : undefined}
-      stickyRow
       onSuccess={(subject) => navigate(returnTo ?? `/subjects/${subject.id}`)}
       onCancel={() =>
         navigate(cancelTo ?? (mode === 'create' ? '/library' : `/subjects/${subjectId}`))
@@ -77,9 +76,6 @@ export type SubjectFormBodyProps = {
   mode: 'create' | 'edit';
   subjectId: string | undefined;
   original: components['schemas']['SubjectRead'] | undefined;
-  /** True where the form sits under the app's header, so that its row of Cancel, heading and
-   * Create or Save stops below the header; false in an overlay, where no header covers the row. */
-  stickyRow: boolean;
   /** Create succeeded, or edit was saved (possibly a no-op save with nothing
    * changed) — either way, the subject to treat as "the current one" now. */
   onSuccess: (subject: components['schemas']['SubjectRead']) => void;
@@ -98,7 +94,6 @@ export function SubjectFormBody({
   mode,
   subjectId,
   original,
-  stickyRow,
   onSuccess,
   onCancel,
   onDelete,
@@ -206,45 +201,11 @@ export function SubjectFormBody({
     }
   };
 
-  const rowContents = (
-    <>
-      <button
-        type="button"
-        onClick={handleCancel}
-        className="text-body font-medium text-(--color-aside)"
-      >
-        Cancel
-      </button>
-      <h1 className="text-title font-bold text-(--color-ink)">
-        {mode === 'create' ? 'New subject' : 'Edit subject'}
-      </h1>
-      {/* A blank name reads as not pressable yet, but stays pressable: pressing it is how
-          "Name is required." appears. */}
-      <button
-        type="submit"
-        form={formId}
-        disabled={submitting}
-        aria-disabled={name.trim() === '' || undefined}
-        className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
-      >
-        {mode === 'create' ? 'Create' : 'Save'}
-      </button>
-    </>
-  );
-
   return (
     <div className="flex flex-col gap-4 p-4">
-      {stickyRow ? (
-        <StickyPageRow>{rowContents}</StickyPageRow>
-      ) : (
-        <div className="flex items-center justify-between gap-2">{rowContents}</div>
-      )}
-
-      {formError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
-          {formError}
-        </p>
-      )}
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'create' ? 'New subject' : 'Edit subject'}
+      </h1>
 
       <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
@@ -300,6 +261,23 @@ export function SubjectFormBody({
           Delete subject
         </button>
       )}
+
+      <FormBar sentence={formError}>
+        <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
+          Cancel
+        </button>
+        {/* A blank name reads as not pressable yet, but stays pressable: pressing it is how
+            "Name is required." appears. */}
+        <button
+          type="submit"
+          form={formId}
+          disabled={submitting}
+          aria-disabled={name.trim() === '' || undefined}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </button>
+      </FormBar>
 
       <SubjectIconPicker
         open={iconPickerOpen}
