@@ -6,7 +6,7 @@ Canvas: https://claude.ai/artifact/KVE41kmrFPufVvcaGyCqbf
 
 Outcome: A completed practice's summary, on the run page when nothing is left and on the practice's own page from then on, lists every card once with its circle and its kind of change, counts the cards of each kind, narrows the list to the kinds chosen, orders it by mastery, gains or drops, and opens a card as the fields the practice showed or asked, each with its value, its own circle and change and one mark per attempt, with a key that names every mark.
 
-Scope: The cycle covers the breakdown read, which returns every card and each field the practice showed or asked with its readiness, its kind of change and its signed change, sorted into the five kinds under `app/mastery/`, in a fixed number of statements, and nothing of buckets, attempt counts or passing; the mark components, one inline SVG each, for the circle at the summary's two sizes, the change badge, a prompt field's mark, an answer field's mark and the key's "i"; the summary's counts, its "Order by" and its rows on both pages, with the chosen kinds and the order in the page's URL; the sheet a row opens, with the key; and the vocabulary's words for all of it. It leaves out "Re-run" and "Practice these" on the summary and "Done" turning white, which are the next cycle's; "Edit card" on the sheet, a later cycle's; and the circle on the library, subject and deck pages, which the branch already has.
+Scope: The cycle covers the breakdown read, which returns every card and each field the practice showed or asked with its readiness, its kind of change and its signed change, sorted into the five kinds under `app/mastery/`, in a fixed number of statements, and nothing of buckets, attempt counts or passing; the mark components, one inline SVG each, for the circle at the summary's two sizes, the change badge, a prompt field's mark, an answer field's mark and the key's "i"; the summary's counts, its "Order by" and its rows on both pages, with the chosen kinds and the order in the page's URL; the sheet a row opens, with the key; and the vocabulary's words for all of it. It leaves out "Re-run" and "Practice these" on the summary and "Done" turning white, cycle 041's; "Edit card" on the sheet, cycle 044's; and the circle on the library, subject and deck pages, which the branch already has.
 
 Judgement: The engineer judges on the live server at 390 wide, on a completed practice that holds a card rated Again and retried, at `/practice/{id}/run` and at `/practice/{id}`: both show the five counts under their badges, "Order by:" with Mastery, Gains and Drops as blocks with Mastery pressed in, and one row per card with its name, its circle and its badge, as drawings 14 and 15; tapping "down" and "down a lot" narrows the list to their cards, with the counts still on screen, and tapping them again shows every card; Gains puts the card that rose most first and Drops the card that fell most; no row shows a number, an attempt count, "Failed" or "First try"; tapping the retried card's row opens its sheet as drawing 16, its fields under Prompt and Answer, each with one mark per attempt, so that a field rated Again then Good shows a red dot then an ink ring with a dot; the "i" opens the key as drawing 17, dimming the rest of the sheet, and closes on a second tap or a tap on the dimming; going back from the sheet with the browser closes it; and the breakdown's statement count against `card`, `field_def` and `mastery_log` is pinned the same for a small and a large practice.
 
@@ -273,7 +273,7 @@ The pages:
 
 - The sheet a row opens, and the `card` param: T3.
 - "Re-run" beside "Done", "Practice these" under the counts and "Done" turning white: cycle 041.
-- "Edit card" on the sheet: a later cycle.
+- "Edit card" on the sheet: cycle 044.
 - A sentence for a list narrowed to nothing: an unsettled decision; none is drawn.
 - A kind read from the rating alone, or bands in the frontend: never, ADR 102.
 - The bands as amounts of readiness: never, ADR 102.
@@ -339,7 +339,7 @@ A row on the summary opens the card as a sheet showing its name, its circle and 
 
 **Out of scope**
 
-- "Edit card" under the record card, which drawing 16 shows: a later cycle.
+- "Edit card" under the record card, which drawing 16 shows: cycle 044.
 - A field the practice never showed or asked: never, PDR 025.
 - A count of attempts or a passed or failed word on the sheet: never, PDR 025.
 - The key always shown: never, PDR 025.
