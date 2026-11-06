@@ -115,7 +115,7 @@ New deck and Edit deck, in `DeckEditor.tsx`:
 
 New card and Edit card, in `CardStandaloneForm.tsx`:
 
-- Create or Save must be `aria-disabled` while `!canSubmit` and `disabled` only while `submitting`. On a tap of Create while `deckId` is null, the form must set a new `deckError` state and render it under the Deck picker as a `<span role="alert">` in `text-sm text-(--color-wrong)` reading "Choose a deck to create a card.", cleared when a deck is chosen, and call `reveal` with the picker's element as the control and the sentence as its row; `handleSubmit`'s early return stays. While a chosen deck's fields are still loading, no sentence shows and the tap moves nothing.
+- Create or Save must be `aria-disabled` while `!canSubmit` and `disabled` only while `submitting`. On a tap of Create while `deckId` is null, the form must set a new `deckError` state and render it under the Deck picker as a `<span role="alert">` in `text-sm text-(--color-wrong)` reading "Choose a deck to create a card.", cleared when a deck is chosen, and call `reveal` with the picker's element as the control and the sentence as its row, both before `handleSubmit`'s early return, which stays. While a chosen deck's fields are still loading, no sentence shows and the tap moves nothing.
 - `docs/vocabulary.md` gains one row, after the row for "Delete card", exactly:
 
 ```
@@ -167,7 +167,7 @@ On New configuration, Edit configuration and New practice, Create or Save stays 
 New configuration and Edit configuration, in `DeckConfigurationEditor.tsx`, ADR 097:
 
 - Create or Save must be `aria-disabled` while `!canSave` and `disabled` only while `saveMutation.isPending`.
-- On a tap while not ready with a deck chosen, the form must call `reveal` for the hint `<p>` below the board: with the Name input as the control when the hint is the blank-name sentence, and the board's root element as the control when it is `validationError`. With no deck chosen no sentence shows, and the tap does nothing.
+- On a tap while not ready with a deck chosen, the form must call `reveal` for the hint `<p>` below the board: with the Name input as the control when the hint is the blank-name sentence, and the `div` wrapping `FieldAssignmentBoard` as the control when it is `validationError`. With no deck chosen no sentence shows, and the tap does nothing.
 - On a `configuration_name_taken` refusal, which already renders in `nameError` beside the Name input, the form must call `reveal` for it.
 
 New practice, in `PracticeCreatePage.tsx`:
@@ -184,7 +184,7 @@ Tests: in `DeckConfigurationEditor.test.tsx`, Create with a blank name on a chos
 
 **Done when**
 
-- `cd frontend && npx vitest run` passes over the whole frontend, and `npm run lint` passes with `useSearchParams` still refused outside `src/lib/viewParams.ts`.
+- `cd frontend && npx vitest run` passes over the whole frontend, and `grep -rl "useSearchParams" frontend/src --include=*.ts --include=*.tsx` prints `frontend/src/lib/viewParams.ts` alone.
 - The cycle's judgement, in headless Chromium against `localhost:5173`, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development`, at 390 by 844, by mouse. The script prints each check and its output is the evidence:
   - On `/practice/new` with configurations in three or more decks and nothing ticked, scrolled so that the Selected heading's `getBoundingClientRect().top` is below `innerHeight`, a click on Create leaves the Selected heading's top at or below the header's bottom and the hint's bottom at or above the bar's top; a second click leaves `window.scrollY` unchanged.
   - On `/practice/new` with the Name input cleared and the page scrolled to the bottom, a click on Create leaves the Name input's top at or below the header's bottom and "Give this practice a name to create it." on screen.
