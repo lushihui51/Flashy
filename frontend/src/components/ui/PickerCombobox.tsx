@@ -1,5 +1,7 @@
-import { useId, useState, type ReactNode, type RefObject } from 'react';
-import { ChevronDown, Plus, X } from 'lucide-react';
+import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import Scrim from 'src/components/ui/Scrim';
 import { PICKER_MAX_ITEMS } from 'src/lib/pickerConfig';
 
 export type PickerItem = { id: string; name: string };
@@ -50,7 +52,11 @@ type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
  * filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y" footer when there's more, and
  * one always-present action row — "New X…" when picking a value, "All X" when narrowing
  * by one (see PurposeProps). What that row *does*, and how the items were fetched,
- * belong to the caller: nothing here reaches for data. */
+ * belong to the caller: nothing here reaches for data.
+ *
+ * While the list is open it is a panel pointing at the input, the rest of the screen is
+ * dimmed, the page cannot scroll, and a tap on the dimming closes the list and acts on
+ * nothing beneath it. */
 export default function PickerCombobox<T extends PickerItem>({
   items,
   selected,
@@ -67,6 +73,7 @@ export default function PickerCombobox<T extends PickerItem>({
   inputRef,
 }: PickerComboboxProps<T>) {
   const listboxId = useId();
+  const controlRef = useRef<HTMLDivElement>(null);
 
   const [query, setQuery] = useState(selected?.name ?? '');
   const [open, setOpen] = useState(false);
@@ -150,103 +157,143 @@ export default function PickerCombobox<T extends PickerItem>({
     );
   }
 
+  const clearChosen = filtering && selected === null;
   const actionRow = (
     <li
       role="option"
       aria-selected={highlighted === actionIndex}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        chooseIndex(actionIndex);
-      }}
-      className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body font-semibold text-(--color-ink) ${
-        highlighted === actionIndex ? 'bg-(--color-ground)' : ''
-      }`}
+      onMouseEnter={() => setHighlighted(actionIndex)}
+      onMouseDown={() => chooseIndex(actionIndex)}
+      className={rowClassName(highlighted === actionIndex)}
     >
-      {filtering ? (
-        <X aria-hidden="true" className="h-4 w-4 shrink-0" />
-      ) : (
-        <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
-      )}
-      {filtering ? clearLabel : createLabel}
+      <ChosenMark chosen={clearChosen} />
+      <span className="min-w-0 truncate">{filtering ? clearLabel : createLabel}</span>
     </li>
   );
 
   return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        type="text"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-autocomplete="list"
-        value={query}
-        disabled={disabled}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          setHighlighted(0);
-        }}
-        onFocus={() => setOpen(true)}
-        // A click on an *already*-focused input fires no new focus event (selecting
-        // an option deliberately keeps focus in place, see onMouseDown below) —
-        // onClick is what actually reopens the list in that case.
-        onClick={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className={`h-field w-full rounded-field outlined-line bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
-          filtering ? 'pr-9 pl-3.5' : 'px-3.5'
-        }`}
-      />
-      {filtering && (
-        <ChevronDown
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 h-4 w-4 text-(--color-ink)"
-        />
-      )}
-      {open && (
-        <ul
-          id={listboxId}
-          role="listbox"
-          className="tappable absolute z-10 mt-1 w-full divide-y divide-(--color-line) overflow-hidden rounded-field bg-(--color-surface)"
-        >
-          {/* The action row: first when it clears a filter, last when it creates. Same
-              markup either way, so both are one keyboard cycle and one click path. */}
-          {filtering && actionRow}
-          {shown.map((item, index) => (
-            // The handler lives on the li itself (the element `getByRole('option')`
-            // resolves to), not a nested button — nesting it would put the handler
-            // outside the click's dispatch path when the li is the direct target.
-            // onMouseDown (not onClick) fires before the input's onBlur closes the
-            // list, so the click still lands on the option.
-            <li
-              key={item.id}
-              role="option"
-              aria-selected={index + firstItemIndex === highlighted}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                chooseIndex(index + firstItemIndex);
-              }}
-              className={`flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-(--color-ink) ${
-                index + firstItemIndex === highlighted ? 'bg-(--color-ground)' : ''
-              }`}
-            >
-              {renderLeading?.(item)}
-              <span className="truncate">{item.name}</span>
-            </li>
-          ))}
-          {hasMore && (
-            <li
-              aria-hidden="true"
-              className="px-3 py-2 text-xs text-(--color-aside)"
-            >
-              Showing {shown.length} of {matches.length} · type to narrow
-            </li>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Anchor asChild>
+        <div ref={controlRef} className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            value={query}
+            disabled={disabled}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+              setHighlighted(0);
+            }}
+            onFocus={() => setOpen(true)}
+            // A click on an *already*-focused input fires no new focus event (a press in the
+            // panel or on the dimming deliberately keeps focus in place) — onClick is what
+            // actually reopens the list in that case.
+            onClick={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className={`h-field w-full rounded-field bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
+              open ? 'outlined-ink' : 'outlined-line'
+            } ${filtering || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
+          />
+          {open ? (
+            <ChevronUp aria-hidden="true" className={chevronClassName(filtering)} />
+          ) : (
+            filtering && <ChevronDown aria-hidden="true" className={chevronClassName(filtering)} />
           )}
-          {!filtering && actionRow}
-        </ul>
-      )}
-    </div>
+        </div>
+      </Popover.Anchor>
+      <Popover.Portal>
+        {/* One element, since the portal takes a single child; it starts no stacking context,
+            so the panel's z-60 stands above the scrim's z-50. */}
+        <div>
+          <Scrim anchor={controlRef} onDismiss={() => setOpen(false)} />
+          <Popover.Content
+            // The input keeps focus while the list is open, so this is no dialog of its own.
+            role="presentation"
+            side="bottom"
+            align="start"
+            sideOffset={14}
+            collisionPadding={16}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => {
+              // The input is the panel's own control: pressing or focusing it closes nothing.
+              if (controlRef.current?.contains(e.target as Node)) e.preventDefault();
+            }}
+            // A press anywhere in the panel leaves focus in the input, so the user keeps typing.
+            onMouseDown={(e) => e.preventDefault()}
+            className="tappable z-60 flex max-h-(--radix-popover-content-available-height) w-65 flex-col rounded-[1.125rem] bg-(--color-surface) p-1.5"
+          >
+            <Popover.Arrow asChild>
+              {/* Radix turns this element to whichever side the panel took, 180° when it opens
+                  below, so -135° reads as 45° there with the outline facing the control.
+                  Absolute, because Radix adds a measured arrow's height to sideOffset; centred
+                  on the panel's edge so its lower half hides the panel's own outline. */}
+              <span className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 -rotate-135 rounded-tl-[0.1875rem] bg-(--color-surface) outlined-pointer" />
+            </Popover.Arrow>
+            {/* Scrolls inside the panel, since the page beneath is locked and a list on a short
+                screen would otherwise leave its last rows out of reach. */}
+            <ul id={listboxId} role="listbox" className="min-h-0 overflow-y-auto">
+              {/* The action row: first when it clears a filter, last when it creates. Same
+                  markup either way, so both are one keyboard cycle and one click path. */}
+              {filtering && actionRow}
+              {shown.map((item, index) => (
+                // The handler lives on the li itself (the element `getByRole('option')`
+                // resolves to), not a nested button — nesting it would put the handler
+                // outside the click's dispatch path when the li is the direct target.
+                <li
+                  key={item.id}
+                  role="option"
+                  aria-selected={index + firstItemIndex === highlighted}
+                  onMouseEnter={() => setHighlighted(index + firstItemIndex)}
+                  onMouseDown={() => chooseIndex(index + firstItemIndex)}
+                  className={rowClassName(index + firstItemIndex === highlighted)}
+                >
+                  <ChosenMark chosen={selected?.id === item.id} />
+                  {renderLeading?.(item)}
+                  <span className="min-w-0 truncate">{item.name}</span>
+                </li>
+              ))}
+              {hasMore && (
+                <li aria-hidden="true" className="px-3 py-2 text-xs text-(--color-aside)">
+                  Showing {shown.length} of {matches.length} · type to narrow
+                </li>
+              )}
+              {!filtering && shown.length > 0 && (
+                <li aria-hidden="true" className="mx-2 my-1 border-t border-(--color-line)" />
+              )}
+              {!filtering && actionRow}
+            </ul>
+          </Popover.Content>
+        </div>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function rowClassName(highlighted: boolean) {
+  return `flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-base font-semibold text-(--color-ink) ${
+    highlighted ? 'bg-(--color-ground)' : ''
+  }`;
+}
+
+function chevronClassName(filtering: boolean) {
+  return `pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-(--color-ink) ${
+    filtering ? 'h-4 w-4' : 'size-icon'
+  }`;
+}
+
+/** A row's opening mark: a check when `chosen`, otherwise a blank of its width, so every
+ * row's words line up. */
+function ChosenMark({ chosen }: { chosen: boolean }) {
+  return chosen ? (
+    <Check aria-hidden="true" strokeWidth={2.4} className="size-icon shrink-0" />
+  ) : (
+    <span aria-hidden="true" className="size-icon shrink-0" />
   );
 }
