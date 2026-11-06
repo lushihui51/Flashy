@@ -106,14 +106,15 @@ Every filter's and picker's list opens as a Radix Popover panel pointing at its 
 
 **Details**
 
-The mechanism, ADR 098 and LPD12, in `PickerCombobox.tsx`:
+The mechanism, ADR 098, in `PickerCombobox.tsx`:
 
+- While any list of choices is open, a filter's or a picker's, the list must open as its own panel pointing at the control that opened it; everything else on the page must be dimmed and stay readable; a tap on the dimmed page must close the list and change nothing.
 - The list must be a `@radix-ui/react-popover`, never the absolutely placed box closed on blur it is today: `Popover.Root` controlled by the component's `open`, `Popover.Anchor` around the input, and `Popover.Portal` holding, in this order, `<Scrim anchor={…} onDismiss={close} />` and `Popover.Content` with the list, so the scrim lies in the popover's portal beneath the panel.
 - The popover is non-modal: `Popover.Content` prevents its open and close auto-focus, so focus stays in the input and the user keeps typing while the list is open; a focus moving outside, as Tab does, closes the list through Radix's own dismiss. `onBlur` closes nothing any more.
 - Escape, choosing an item, choosing the action row and a pointerdown on the scrim each close the list; the arrow keys and Enter keep their behaviour; the `inputRef` prop and the deck form's return of focus to it stay.
 - `PICKER_MAX_ITEMS`, the "Showing N of N · type to narrow" footer, the `purpose` variants and every word stay as they are.
 
-The panel's look, LPD12, drawings 24 and 25:
+The panel's look, drawings 24 and 25:
 
 - The panel is a `tappable` block in surface with `rounded-[1.125rem]` corners and `p-1.5` padding, `w-65` wide, `side="bottom"`, `align="start"`, `sideOffset={14}` and `collisionPadding={16}`, flipping above the control when the screen below is short. Its press shadow is `tappable`'s, 3px, where the drawings have 4px: a shadow's offset lives only in `index.css` utilities, ADR 101, and the one difference stays.
 - It carries a pointer at the control through `Popover.Arrow asChild` wrapping a `size-3.5` square in surface rotated 45°, outlined on its top and left by a new `index.css` utility, exactly:
