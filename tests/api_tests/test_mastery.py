@@ -16,7 +16,12 @@ from app.database_ops.review_log import (
     db_stage_create_review_logs,
 )
 from app.mastery.ema import EmaStrategy
-from app.mastery.readiness import fold_card_readiness, fold_collection_readiness
+from app.mastery.readiness import (
+    ChangeKind,
+    classify_change,
+    fold_card_readiness,
+    fold_collection_readiness,
+)
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
 from app.models.card import Card
 from app.models.mastery_log import MasteryLog
@@ -191,6 +196,38 @@ class TestReadinessFolds:
 
     def test_collection_with_no_card_has_none(self):
         assert fold_collection_readiness([]) is None
+
+
+class TestClassifyChange:
+    REACH = 0.45
+    JUST_BELOW = 1e-9
+
+    def test_up_a_lot_starts_at_six_tenths_of_the_reach(self):
+        assert classify_change(0.6 * self.REACH, self.REACH) is ChangeKind.up_a_lot
+
+    def test_just_below_six_tenths_is_up(self):
+        assert classify_change(0.6 * self.REACH - self.JUST_BELOW, self.REACH) is ChangeKind.up
+
+    def test_up_starts_at_one_tenth_of_the_reach(self):
+        assert classify_change(0.1 * self.REACH, self.REACH) is ChangeKind.up
+
+    def test_just_below_one_tenth_is_no_change(self):
+        delta = 0.1 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.no_change
+
+    def test_no_change_starts_at_minus_one_tenth_of_the_reach(self):
+        assert classify_change(-0.1 * self.REACH, self.REACH) is ChangeKind.no_change
+
+    def test_just_below_minus_one_tenth_is_down(self):
+        delta = -0.1 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.down
+
+    def test_down_starts_at_minus_six_tenths_of_the_reach(self):
+        assert classify_change(-0.6 * self.REACH, self.REACH) is ChangeKind.down
+
+    def test_just_below_minus_six_tenths_is_down_a_lot(self):
+        delta = -0.6 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.down_a_lot
 
 
 class TestBreadthNotIndependentUpdates:

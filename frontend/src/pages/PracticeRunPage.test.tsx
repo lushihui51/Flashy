@@ -39,21 +39,13 @@ function mockRun(data: Record<string, unknown> | null = runState()) {
 function breakdownState(overrides: Record<string, unknown> = {}) {
   return {
     total_cards: 1,
-    passed_first_try: 1,
-    passed_after_one_fail: 0,
-    passed_after_many_fails: 0,
-    still_failed: 0,
     cards: [
       {
         card_id: 'card1',
-        bucket: 'passed_first_try',
-        attempt_count: 1,
         primary_field: { field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' },
         attempts: [
           {
             practice_card_id: 'pc1',
-            status: 'passed',
-            created_at: '2026-01-01T00:00:00Z',
             prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' }],
             answers: [
               { field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
@@ -62,9 +54,26 @@ function breakdownState(overrides: Record<string, unknown> = {}) {
         ],
         readiness: 0.65,
         delta: 0.15,
+        change: 'up',
         fields: [
-          { field_def_id: 'front', name: 'Front', type: 'text', readiness: 0.6, delta: 0.1 },
-          { field_def_id: 'back', name: 'Back', type: 'text', readiness: 0.7, delta: 0.2 },
+          {
+            field_def_id: 'front',
+            name: 'Front',
+            type: 'text',
+            side: 'prompt',
+            readiness: 0.6,
+            delta: 0.1,
+            change: 'up',
+          },
+          {
+            field_def_id: 'back',
+            name: 'Back',
+            type: 'text',
+            side: 'answer',
+            readiness: 0.7,
+            delta: 0.2,
+            change: 'up',
+          },
         ],
       },
     ],
@@ -229,7 +238,10 @@ describe('PracticeRunPage', () => {
     const user = userEvent.setup();
     renderRun('ps1');
 
-    expect(await screen.findByRole('heading', { name: 'Practice complete' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
     const done = screen.getByRole('link', { name: 'Done' });
 
     await user.click(done);
@@ -237,7 +249,7 @@ describe('PracticeRunPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
   });
 
-  it('swaps to the completion breakdown (T8) once nothing is pending', async () => {
+  it('swaps to the summary once nothing is pending', async () => {
     mockRun(runState({ session_status: 'completed', current_card: null }));
     mockBreakdown();
     renderRun('ps1');

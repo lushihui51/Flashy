@@ -1,269 +1,386 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router-dom';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
+import { renderWithProviders } from 'src/test/testUtils';
 import type { components } from 'src/api/types';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
+type BreakdownCard = components['schemas']['BreakdownCard'];
 
-// Deltas are distinct across every card, and cover all three sign cases (+5, −10, ±0,
-// +20) so a single fixture can drive every ordering/formatting test.
-function breakdown(overrides: Partial<PracticeRunBreakdown> = {}): PracticeRunBreakdown {
+function card(
+  id: string,
+  name: string,
+  readiness: number,
+  delta: number,
+  change: BreakdownCard['change'],
+): BreakdownCard {
   return {
-    total_cards: 4,
-    passed_first_try: 1,
-    passed_after_one_fail: 1,
-    passed_after_many_fails: 1,
-    still_failed: 1,
-    cards: [
-      {
-        card_id: 'card1',
-        bucket: 'passed_first_try',
-        attempt_count: 1,
-        primary_field: { field_def_id: 'front1', name: 'Front', type: 'text', value: 'Bonjour' },
-        attempts: [
-          {
-            practice_card_id: 'pc1',
-            status: 'passed',
-            created_at: '2026-01-01T00:00:00Z',
-            prompts: [{ field_def_id: 'front1', name: 'Front', type: 'text', value: 'Bonjour' }],
-            answers: [
-              { field_def_id: 'back1', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
-            ],
-          },
-        ],
-        readiness: 0.7,
-        delta: 0.05,
-        fields: [
-          { field_def_id: 'front1', name: 'Front', type: 'text', readiness: 0.65, delta: 0.05 },
-          { field_def_id: 'back1', name: 'Back', type: 'text', readiness: 0.75, delta: 0.05 },
-        ],
-      },
-      {
-        card_id: 'card2',
-        bucket: 'passed_after_one_fail',
-        attempt_count: 2,
-        primary_field: { field_def_id: 'front2', name: 'Front', type: 'text', value: 'Bonsoir' },
-        attempts: [
-          {
-            practice_card_id: 'pc2a',
-            status: 'failed',
-            created_at: '2026-01-01T00:00:00Z',
-            prompts: [{ field_def_id: 'front2', name: 'Front', type: 'text', value: 'Bonsoir' }],
-            answers: [
-              {
-                field_def_id: 'back2',
-                name: 'Back',
-                type: 'text',
-                value: 'Good evening',
-                rating: 1,
-              },
-            ],
-          },
-          {
-            practice_card_id: 'pc2b',
-            status: 'passed',
-            created_at: '2026-01-02T00:00:00Z',
-            prompts: [{ field_def_id: 'front2', name: 'Front', type: 'text', value: 'Bonsoir' }],
-            answers: [
-              {
-                field_def_id: 'back2',
-                name: 'Back',
-                type: 'text',
-                value: 'Good evening',
-                rating: 3,
-              },
-            ],
-          },
-        ],
-        readiness: 0.4,
-        delta: -0.1,
-        // Named distinctly from the attempts section's own "Front"/"Back" labels so
-        // this card's Fields section entries don't collide with those assertions.
-        fields: [
-          { field_def_id: 'notes2', name: 'Notes', type: 'text', readiness: 0.4, delta: -0.1 },
-          // Never reviewed by anyone — the sheet's Fields section reads 0.
-          { field_def_id: 'filler2', name: 'Filler', type: 'text', readiness: 0, delta: 0 },
-        ],
-      },
-      {
-        card_id: 'card3',
-        bucket: 'passed_after_many_fails',
-        attempt_count: 1,
-        // A blank primary field — triggers the "Untitled card" fallback copy.
-        primary_field: { field_def_id: 'front3', name: 'Front', type: 'text', value: '' },
-        attempts: [
-          {
-            practice_card_id: 'pc3',
-            status: 'passed',
-            created_at: '2026-01-03T00:00:00Z',
-            prompts: [{ field_def_id: 'front3', name: 'Front', type: 'text', value: '' }],
-            answers: [
-              { field_def_id: 'back3', name: 'Back', type: 'text', value: 'Whatever', rating: 2 },
-            ],
-          },
-        ],
-        readiness: 0.5,
-        delta: 0,
-        fields: [{ field_def_id: 'front3', name: 'Front', type: 'text', readiness: 0.5, delta: 0 }],
-      },
-      {
-        card_id: 'card4',
-        bucket: 'still_failed',
-        attempt_count: 1,
-        primary_field: { field_def_id: 'front4', name: 'Front', type: 'text', value: 'Adieu' },
-        attempts: [
-          {
-            practice_card_id: 'pc4',
-            status: 'failed',
-            created_at: '2026-01-01T00:00:00Z',
-            prompts: [{ field_def_id: 'front4', name: 'Front', type: 'text', value: 'Adieu' }],
-            answers: [
-              { field_def_id: 'back4', name: 'Back', type: 'text', value: 'Farewell', rating: 1 },
-            ],
-          },
-        ],
-        readiness: 0.6,
-        delta: 0.2,
-        fields: [{ field_def_id: 'front4', name: 'Front', type: 'text', readiness: 0.6, delta: 0.2 }],
-      },
-    ],
-    ...overrides,
+    card_id: id,
+    primary_field: { field_def_id: `front-${id}`, name: 'Front', type: 'text', value: name },
+    readiness,
+    delta,
+    change,
+    fields: [],
+    attempts: [],
   };
 }
 
-/** The row buttons' accessible names include the badge, circle and delta text alongside
- * the title (they're all inside the same <button>), so these tests match on the
- * title substring rather than the exact name. */
-function rowTitles() {
-  return screen
-    .getAllByRole('button', { name: /Bonjour|Bonsoir|Adieu|Untitled card/ })
-    .map((el) => el.textContent);
+// Readiness and delta order the cards differently, and every kind but up a lot has a card.
+function breakdown(): PracticeRunBreakdown {
+  return {
+    total_cards: 5,
+    cards: [
+      card('c1', 'Bonjour', 0.7, 0.2, 'up'),
+      card('c2', 'Bonsoir', 0.2, -0.3, 'down_a_lot'),
+      card('c3', '', 0.5, 0, 'no_change'),
+      card('c4', 'Adieu', 0.6, -0.1, 'down'),
+      card('c5', 'Salut', 0.9, 0.2, 'up'),
+    ],
+  };
+}
+
+// Two attempts: the second leaves OS unshown and retries Meaning; Example is rated only the first
+// time; Filler is listed but no attempt names it.
+function retriedCard(): BreakdownCard {
+  const field = (id: string, name: string, side: 'prompt' | 'answer') => ({
+    field_def_id: id,
+    name,
+    type: 'text' as const,
+    side,
+    readiness: 0.5,
+    delta: 0.1,
+    change: 'up' as const,
+  });
+  const value = (id: string, name: string, text: string) => ({
+    field_def_id: id,
+    name,
+    type: 'text' as const,
+    value: text,
+  });
+  return {
+    ...card('c9', 'chmod', 0.58, -0.2, 'down'),
+    fields: [
+      field('front', 'Command', 'prompt'),
+      field('os', 'OS', 'prompt'),
+      field('meaning', 'Meaning', 'answer'),
+      field('example', 'Example', 'answer'),
+      field('filler', 'Filler', 'answer'),
+    ],
+    attempts: [
+      {
+        practice_card_id: 'a1',
+        prompts: [value('front', 'Command', 'chmod'), value('os', 'OS', 'Linux')],
+        answers: [
+          { ...value('meaning', 'Meaning', 'Change permissions'), rating: 1 },
+          { ...value('example', 'Example', 'chmod +x'), rating: 4 },
+        ],
+      },
+      {
+        practice_card_id: 'a2',
+        prompts: [value('front', 'Command', 'chmod')],
+        answers: [{ ...value('meaning', 'Meaning', 'Change permissions'), rating: 3 }],
+      },
+    ],
+  };
+}
+
+function LocationProbe() {
+  const { search } = useLocation();
+  return <div data-testid="search">{search}</div>;
+}
+
+function renderBreakdown(entry = '/') {
+  return renderWithProviders(
+    <>
+      <RunBreakdown breakdown={breakdown()} />
+      <LocationProbe />
+    </>,
+    [entry],
+  );
+}
+
+function renderSheet(entry = '/?card=c9') {
+  return renderWithProviders(
+    <>
+      <RunBreakdown breakdown={{ total_cards: 1, cards: [retriedCard()] }} />
+      <LocationProbe />
+    </>,
+    [entry],
+  );
+}
+
+// Each mark in `marks`, as its circles' radius, fill and stroke.
+function drawnMarks(marks: Element) {
+  return Array.from(marks.querySelectorAll('svg')).map((mark) =>
+    Array.from(mark.querySelectorAll('circle')).map((circle) => ({
+      r: circle.getAttribute('r'),
+      fill: circle.getAttribute('fill'),
+      stroke: circle.getAttribute('stroke'),
+    })),
+  );
+}
+
+function rowNames() {
+  return within(screen.getByRole('list'))
+    .queryAllByRole('button')
+    .map((row) => row.textContent);
 }
 
 describe('RunBreakdown', () => {
-  it('shows the counts line', () => {
-    render(<RunBreakdown breakdown={breakdown()} />);
-    expect(screen.getByText('4 cards practiced')).toBeInTheDocument();
+  it('orders by readiness ascending by default, with Mastery pressed in', () => {
+    renderBreakdown();
+
+    expect(screen.getByRole('radiogroup', { name: 'Order by' })).toHaveTextContent('Order by:');
+    expect(screen.getByRole('radio', { name: 'Mastery' })).toHaveAttribute('aria-checked', 'true');
+    expect(rowNames()).toEqual(['Bonsoir', 'Untitled card', 'Adieu', 'Bonjour', 'Salut']);
   });
 
-  it('defaults to delta descending (Gains first)', () => {
-    render(<RunBreakdown breakdown={breakdown()} />);
-
-    expect(screen.getByRole('radio', { name: 'Gains first' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
-    // Deltas: card4 +20, card1 +5, card3 ±0, card2 −10.
-    const titles = rowTitles();
-    expect(titles[0]).toContain('Adieu');
-    expect(titles[1]).toContain('Bonjour');
-    expect(titles[2]).toContain('Untitled card');
-    expect(titles[3]).toContain('Bonsoir');
-  });
-
-  it('Drops first sorts delta ascending', async () => {
+  it('Gains orders by delta descending, ties keeping the payload order', async () => {
     const user = userEvent.setup();
-    render(<RunBreakdown breakdown={breakdown()} />);
+    renderBreakdown();
 
-    await user.click(screen.getByRole('radio', { name: 'Drops first' }));
+    await user.click(screen.getByRole('radio', { name: 'Gains' }));
 
-    const titles = rowTitles();
-    expect(titles[0]).toContain('Bonsoir'); // −10
-    expect(titles[1]).toContain('Untitled card'); // ±0
-    expect(titles[2]).toContain('Bonjour'); // +5
-    expect(titles[3]).toContain('Adieu'); // +20
+    expect(rowNames()).toEqual(['Bonjour', 'Salut', 'Untitled card', 'Adieu', 'Bonsoir']);
+    expect(screen.getByRole('radio', { name: 'Gains' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('Mastery sorts ascending — weakest first', async () => {
+  it('Drops orders by delta ascending', async () => {
     const user = userEvent.setup();
-    render(<RunBreakdown breakdown={breakdown()} />);
+    renderBreakdown();
+
+    await user.click(screen.getByRole('radio', { name: 'Drops' }));
+
+    expect(rowNames()).toEqual(['Bonsoir', 'Adieu', 'Untitled card', 'Bonjour', 'Salut']);
+  });
+
+  it('choosing an order writes it to the URL, and Mastery removes it', async () => {
+    const user = userEvent.setup();
+    renderBreakdown();
+
+    await user.click(screen.getByRole('radio', { name: 'Drops' }));
+    expect(screen.getByTestId('search')).toHaveTextContent('?order=drops');
 
     await user.click(screen.getByRole('radio', { name: 'Mastery' }));
-
-    // Readiness: card2 0.4, card3 0.5, card4 0.6, card1 0.7.
-    const titles = rowTitles();
-    expect(titles[0]).toContain('Bonsoir');
-    expect(titles[1]).toContain('Untitled card');
-    expect(titles[2]).toContain('Adieu');
-    expect(titles[3]).toContain('Bonjour');
+    expect(screen.getByTestId('search')).toBeEmptyDOMElement();
   });
 
-  it("a row shows its first field's value alone, never the field's name", () => {
-    render(<RunBreakdown breakdown={breakdown()} />);
+  it('the five counts speak their count and word in order, and show the number', () => {
+    renderBreakdown();
 
-    expect(screen.getByText('Bonjour')).toBeInTheDocument();
-    expect(screen.queryByText('Front: Bonjour')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+    const counts = within(screen.getByRole('group')).getAllByRole('button');
+    expect(counts.map((count) => count.getAttribute('aria-label'))).toEqual([
+      '0 up a lot',
+      '2 up',
+      '1 no change',
+      '1 down',
+      '1 down a lot',
+    ]);
+    expect(counts.map((count) => count.textContent)).toEqual(['0', '2', '1', '1', '1']);
+    expect(counts.every((count) => count.getAttribute('aria-pressed') === 'false')).toBe(true);
+    expect(counts.every((count) => count.querySelector('svg'))).toBe(true);
   });
 
-  it('shows "Untitled card" for a card whose primary field is blank', () => {
-    render(<RunBreakdown breakdown={breakdown()} />);
+  it('choosing two counts narrows to their cards, writes kind twice, and leaves the counts', async () => {
+    const user = userEvent.setup();
+    renderBreakdown();
+
+    await user.click(screen.getByRole('button', { name: '1 down' }));
+    await user.click(screen.getByRole('button', { name: '1 down a lot' }));
+
+    expect(rowNames()).toEqual(['Bonsoir', 'Adieu']);
+    expect(screen.getByTestId('search')).toHaveTextContent('?kind=down&kind=down_a_lot');
+    expect(screen.getByRole('button', { name: '1 down' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '2 up' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('tapping a chosen count again shows every card', async () => {
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down');
+
+    await user.click(screen.getByRole('button', { name: '1 down' }));
+
+    expect(rowNames()).toHaveLength(5);
+    expect(screen.getByTestId('search')).toBeEmptyDOMElement();
+  });
+
+  it('a count of zero stays pressable and narrows to an empty list with no sentence', async () => {
+    const user = userEvent.setup();
+    renderBreakdown();
+
+    await user.click(screen.getByRole('button', { name: '0 up a lot' }));
+
+    expect(screen.getByRole('button', { name: '0 up a lot' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const list = screen.getByRole('list');
+    expect(list).toBeEmptyDOMElement();
+    expect(list.parentElement!.lastElementChild).toBe(list);
+  });
+
+  it('a kind in the URL on first render already narrows', () => {
+    renderBreakdown('/?kind=up');
+
+    expect(rowNames()).toEqual(['Bonjour', 'Salut']);
+    expect(screen.getByRole('button', { name: '2 up' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('a kind or order the lists do not hold reads as absent', () => {
+    renderBreakdown('/?kind=sideways&order=loudest');
+
+    expect(rowNames()).toEqual(['Bonsoir', 'Untitled card', 'Adieu', 'Bonjour', 'Salut']);
+    expect(screen.getByRole('radio', { name: 'Mastery' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('a row speaks its mastery and change, and shows no number or outcome', () => {
+    renderBreakdown();
+
+    const row = screen.getByRole('button', { name: /Bonsoir/ });
+    expect(within(row).getByRole('img', { name: 'Mastery 20%, down a lot' })).toBeInTheDocument();
+    expect(row.textContent).toBe('Bonsoir');
+
+    const words = within(screen.getByRole('list')).getByText('Bonjour').closest('ul')!.textContent!;
+    for (const forbidden of ['+', '−', '±', 'First try', 'Attempt']) {
+      expect(words).not.toContain(forbidden);
+    }
+  });
+
+  it('a card whose first field is blank reads "Untitled card"', () => {
+    renderBreakdown();
+
     expect(screen.getByRole('button', { name: /Untitled card/ })).toBeInTheDocument();
   });
 
-  it('a row shows its outcome badge, its mastery circle with no number, and its delta', () => {
-    render(<RunBreakdown breakdown={breakdown()} />);
+  describe('a card opened from the summary', () => {
+    it('tapping a row writes card to the URL and opens the sheet with its name and spoken circle', async () => {
+      const user = userEvent.setup();
+      renderSheet('/?order=gains');
 
-    const row = screen.getByRole('button', { name: /Bonjour/ });
-    expect(within(row).getByText('First try')).toBeInTheDocument();
-    expect(within(screen.getByRole('button', { name: /Adieu/ })).getByText('Failed')).toBeInTheDocument();
-    expect(within(row).getByRole('img', { name: 'Mastery 70%' })).toBeInTheDocument();
-    expect(within(row).queryByText('70')).not.toBeInTheDocument();
-    expect(within(row).getByText('+5')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /chmod/ }));
 
-    // One case each of the other two signs, from the other rows.
-    expect(
-      within(screen.getByRole('button', { name: /Bonsoir/ })).getByText('−10'),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('button', { name: /Untitled card/ })).getByText('±0'),
-    ).toBeInTheDocument();
-  });
+      expect(screen.getByTestId('search')).toHaveTextContent('?order=gains&card=c9');
+      const sheet = screen.getByRole('dialog', { name: 'chmod' });
+      expect(within(sheet).getByRole('heading', { level: 2, name: 'chmod' })).toBeInTheDocument();
+      expect(within(sheet).getByRole('img', { name: 'Mastery 58%, down' })).toBeInTheDocument();
+    });
 
-  it('opens the detail sheet with labels, ratings, every attempt, and the Fields section for a two-attempt card', async () => {
-    const user = userEvent.setup();
-    render(<RunBreakdown breakdown={breakdown()} />);
+    it('a card in the URL on first render opens it', () => {
+      renderSheet();
 
-    await user.click(screen.getByRole('button', { name: /Bonsoir/ }));
+      expect(screen.getByRole('dialog', { name: 'chmod' })).toBeInTheDocument();
+    });
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('heading', { level: 2, name: 'Bonsoir' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Attempt 1 of 2 · Failed')).toBeInTheDocument();
-    expect(within(dialog).getByText('Attempt 2 of 2 · Passed')).toBeInTheDocument();
-    // The prompt/answer field names and values are labeled once per attempt; the
-    // prompt's value also heads the sheet.
-    expect(within(dialog).getAllByText('Front')).toHaveLength(2);
-    expect(within(dialog).getAllByText('Bonsoir')).toHaveLength(3);
-    expect(within(dialog).getAllByText('Back')).toHaveLength(2);
-    expect(within(dialog).getAllByText('Good evening')).toHaveLength(2);
-    // The first attempt's answer was rated 1 ("Again"), the second 3 ("Good").
-    expect(within(dialog).getByText('Again')).toBeInTheDocument();
-    expect(within(dialog).getByText('Good')).toBeInTheDocument();
+    it('a card the payload does not hold leaves the sheet closed', () => {
+      renderSheet('/?card=gone');
 
-    // Fields section: every active field, including one never reviewed by anyone.
-    expect(within(dialog).getByText('Fields')).toBeInTheDocument();
-    expect(within(dialog).getByText('Filler')).toBeInTheDocument();
-    const notes = within(dialog).getByText('Notes').closest('li')!;
-    expect(within(notes).getByRole('img', { name: 'Mastery 40%' })).toBeInTheDocument();
-    expect(within(notes).queryByText('40')).not.toBeInTheDocument();
-    const filler = within(dialog).getByText('Filler').closest('li')!;
-    expect(within(filler).getByRole('img', { name: 'Mastery 0%' })).toBeInTheDocument();
-    expect(within(filler).getByText('±0')).toBeInTheDocument();
-  });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
 
-  it('shows no attempt header for a single-attempt card', async () => {
-    const user = userEvent.setup();
-    render(<RunBreakdown breakdown={breakdown()} />);
+    it('closing removes card and keeps the other params', async () => {
+      const user = userEvent.setup();
+      renderSheet('/?order=drops&card=c9');
 
-    await user.click(screen.getByRole('button', { name: /Bonjour/ }));
+      await user.keyboard('{Escape}');
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(/Attempt 1/)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('heading', { level: 2, name: 'Bonjour' })).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Bonjour')).toHaveLength(2);
-    expect(within(dialog).getByText('Easy')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('search')).toHaveTextContent('?order=drops');
+    });
+
+    it('lists each field under its side in the payload order, each with its value and circle', () => {
+      renderSheet();
+
+      const sheet = within(screen.getByRole('dialog', { name: 'chmod' }));
+      expect(sheet.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+        'Prompt',
+        'Answer',
+      ]);
+      const answerHeading = sheet.getByRole('heading', { level: 3, name: 'Answer' });
+      const os = sheet.getByText('OS');
+      expect(
+        os.compareDocumentPosition(answerHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(sheet.getByText('Linux')).toBeInTheDocument();
+      expect(sheet.getByText('Change permissions')).toBeInTheDocument();
+      expect(sheet.getAllByRole('img', { name: 'Mastery 50%, up' })).toHaveLength(4);
+    });
+
+    it('a prompt field speaks and draws one mark per attempt', () => {
+      renderSheet();
+
+      const marks = screen.getByRole('img', { name: 'OS: shown, then not shown' });
+      expect(drawnMarks(marks)).toEqual([
+        [{ r: '6.5', fill: 'var(--color-ink)', stroke: null }],
+        [{ r: '5.75', fill: 'none', stroke: 'var(--color-line)' }],
+      ]);
+    });
+
+    it('an answer field speaks and draws each rating, Again then Good', () => {
+      renderSheet();
+
+      const marks = screen.getByRole('img', { name: 'Meaning: Again, then Good' });
+      expect(drawnMarks(marks)).toEqual([
+        [{ r: '6.5', fill: 'var(--color-wrong)', stroke: null }],
+        [
+          { r: '5.75', fill: 'none', stroke: 'var(--color-ink)' },
+          { r: '3.25', fill: 'var(--color-ink)', stroke: null },
+        ],
+      ]);
+    });
+
+    it('an attempt that did not ask an answer field speaks "not asked"', () => {
+      renderSheet();
+
+      expect(screen.getByRole('img', { name: 'Example: Easy, then not asked' })).toBeInTheDocument();
+    });
+
+    it('a field no attempt names is absent', () => {
+      renderSheet();
+
+      expect(screen.queryByText('Filler')).not.toBeInTheDocument();
+    });
+
+    it('says nothing of how many attempts there were or which passed', () => {
+      renderSheet();
+
+      const words = screen.getByRole('dialog', { name: 'chmod' }).textContent!;
+      for (const forbidden of ['Attempt', 'Passed', 'Failed', 'First try']) {
+        expect(words).not.toContain(forbidden);
+      }
+    });
+
+    it('the "i" opens the key, which names the seven marks, and a tap on the layer closes it', async () => {
+      const user = userEvent.setup();
+      renderSheet();
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+
+      expect(screen.getByRole('button', { name: 'Key' })).toHaveAttribute('aria-expanded', 'true');
+      const key = within(screen.getByRole('dialog', { name: 'Key' }));
+      for (const word of ['shown', 'not shown', 'Again', 'Hard', 'Good', 'Easy', 'not asked']) {
+        expect(key.getByText(word).previousElementSibling?.tagName.toLowerCase()).toBe('svg');
+      }
+      expect(key.getByText('Prompt')).toBeInTheDocument();
+      expect(key.getByText('Answer')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('key-layer'));
+
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'chmod' })).toBeInTheDocument();
+    });
+
+    it('a second tap on the "i" closes the key', async () => {
+      const user = userEvent.setup();
+      renderSheet();
+
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+    });
   });
 });

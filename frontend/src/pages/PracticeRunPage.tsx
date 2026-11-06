@@ -100,9 +100,29 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
     queryFn: () => readPracticeRunBreakdown(practiceSessionId),
   });
 
+  const totalCards = breakdownQuery.data?.total_cards;
+
   return (
-    <div className="mt-4 flex flex-col gap-4">
-      <h2 className="text-title font-bold text-(--color-ink)">Practice complete</h2>
+    <div className="mt-3.5 flex flex-col gap-3.5">
+      <div>
+        <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          Practice complete
+        </h1>
+        {totalCards !== undefined && (
+          <p className="mt-1.5 text-body font-medium text-(--color-aside)">
+            {totalCards} card{totalCards === 1 ? '' : 's'} practiced
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2.5">
+        <Link
+          to={`/practice/${practiceSessionId}`}
+          className="tappable flex h-action flex-1 items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-action font-semibold text-(--color-ink)"
+        >
+          Done
+        </Link>
+      </div>
 
       {breakdownQuery.isError && (
         <p role="alert" className="text-sm text-(--color-wrong)">
@@ -110,13 +130,6 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
         </p>
       )}
       {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
-
-      <Link
-        to={`/practice/${practiceSessionId}`}
-        className="tappable flex h-action items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-action font-semibold text-(--color-ink)"
-      >
-        Done
-      </Link>
     </div>
   );
 }

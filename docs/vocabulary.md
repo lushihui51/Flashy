@@ -161,14 +161,14 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | Confirming a practice's deletion | "Delete this practice?" | Practice page; a practice's page | `confirmDeleteOpen`; `pendingDelete` |
 | Practice | What deleting a practice takes and leaves | "Its progress will be gone. The decks it practiced are not affected." | Practice page; a practice's page | `confirmDeleteOpen`; `pendingDelete` |
 | Run | The page a practice runs on | the practice's name | Run page | `/practice/:practiceSessionId/run`; `PracticeRunPage`; `PracticeRunState`; `/api/practice_runs/{practice_run_id}/state`; `session_name` |
-| Run | The current card's two zones | "Prompt"; "Answer" | Run page | `CurrentRunCard`; `prompts`; `answers` |
+| Run | The current card's two zones | "Prompt"; "Answer" | Run page; a card opened from the summary | `CurrentRunCard`; `prompts`; `answers`; `side` |
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
 | Run | Leaving a finished practice | "Done" | Run page, under "Practice complete" | `/practice/:practiceSessionId` |
 | Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
-| Run | One go at a card | "attempt"; "Attempt N of M · Passed" | Summary | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
-| Run | A card rated above Again on every field | "passed"; "Passed" | Run page; summary | `passed` |
-| Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page; summary | `failed`; `still_failed` |
+| Run | One go at a card | "attempt" | A card opened from the summary, as one mark per attempt | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
+| Run | A card rated above Again on every field | "passed"; "Passed" | Run page | `passed` |
+| Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page | `failed`; `still_failed` |
 | Run | A card that comes back after Again | "Retry"; "retrying" | Run page | `retry_pending`; `pending` |
 | Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
@@ -176,9 +176,14 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `PracticeRunBreakdown`; `/api/practice_runs/{practice_run_id}/breakdown`; `RunBreakdown`; `practice_run_breakdown` |
 | Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
-| Summary | Sorting the cards | "Sort", spoken; "Gains first"; "Drops first"; "Mastery" | Run page; a practice's page | `SortKey`; `gains`; `drops`; `mastery` |
-| Summary | A change in mastery | "+N"; "−N"; "±0" | Summary | `delta`; `FieldReadinessDelta` |
-| Summary | A card's outcome | "First try"; "One retry"; "2+ retries"; "Failed" | Summary | `BreakdownBucket`; `passed_first_try`; `passed_after_one_fail`; `passed_after_many_fails`; `still_failed` |
+| Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | Run page; a practice's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
+| Summary | A change in mastery, one of five kinds | a badge off the circle's top-right; "up a lot", "up", "no change", "down" or "down a lot", spoken after "Mastery N%" | Run page; a practice's page | `ChangeKind`; `change`; `delta`; `classify_change`; `ChangeBadge`; `CHANGE_WORDS` |
+| Summary | How many cards had each kind of change | the number under its kind's badge; "N up a lot", "N up", "N no change", "N down" or "N down a lot", spoken | Run page; a practice's page | `kind` |
+| Summary | A card opened from the summary | its name heading a sheet, its circle and badge beside it | Run page; a practice's page | `card`; `BreakdownCard` |
+| Summary | A prompt field's mark | a solid ink dot when the attempt showed it; an empty light-grey ring when it did not; "shown"; "not shown" | A card opened from the summary; the key | `PromptMark`; `shown` |
+| Summary | An answer field's mark | a solid red dot for Again; a red ring with a dot for Hard; an ink ring with a dot for Good; a solid ink dot for Easy; an empty light-grey ring when the attempt did not ask it; "not asked" | A card opened from the summary; the key | `RatingMark`; `rating` |
+| Summary | A field's marks, spoken | its name, then each mark in turn joined by "then", as "OS: shown, then not shown, then shown" or "Privilege needed: Easy, then not asked, then Good" | A card opened from the summary | `role="img"` |
+| Summary | The key to the marks | "Key", spoken, on the "i"; "Prompt" over "shown" and "not shown"; "Answer" over "Again", "Hard", "Good", "Easy" and "not asked" | A card opened from the summary | `KeyButton`; `keyOpen` |
 | Failure | The device is offline | "You're offline. Flashy will reconnect automatically." | A banner at the top of every page | `ConnectionStatus`; `offline`; `useConnectionStatus`; `ConnectionBanner` |
 | Failure | Flashy cannot be reached | "Can't reach Flashy. Check your connection; retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `unreachable`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |
 | Failure | Flashy is having trouble | "Flashy is having trouble right now. Retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `server_trouble`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |

@@ -7,6 +7,7 @@ from sqlmodel import col, select
 
 from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
+from app.mastery.readiness import classify_change
 from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.card import Card
 from app.models.field_def import FieldDef, FieldType
@@ -1875,7 +1876,7 @@ class TestBreakdown:
         assert res.status_code == 201, res.text
         return res.json()["id"]
 
-    def test_full_breakdown_all_four_buckets(self, client, db, existing_deck, existing_subject):
+    def test_full_breakdown_lists_every_card_once(self, client, db, existing_deck, existing_subject):
         """The stuck card lives in a second deck, and its only answer value is blanked
         right after the run starts: only the current card can be rated, and a single
         deck of four cannot fail one card twice before the blanking and still leave
@@ -1951,8 +1952,7 @@ class TestBreakdown:
         }
         assert set(by_card_id) == {first_card, retry_card, many_card, stuck_card}
 
-        # first: passed_first_try; retry: passed_after_one_fail; many:
-        # passed_after_many_fails; stuck: still_failed (its requeue is blocked).
+        # Each card's ratings in turn; the stuck card's requeue is blocked.
         script = {
             first_card: [4],
             retry_card: [1, 4],
@@ -1987,16 +1987,26 @@ class TestBreakdown:
         data = res.json()
 
         assert data["total_cards"] == 4
-        assert data["passed_first_try"] == 1
-        assert data["passed_after_one_fail"] == 1
-        assert data["passed_after_many_fails"] == 1
-        assert data["still_failed"] == 1
+        assert set(data) == {"total_cards", "cards"}
 
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
+        assert len(data["cards"]) == 4
         assert set(cards_by_id) == {first_card, retry_card, many_card, stuck_card}
 
-        assert cards_by_id[first_card]["bucket"] == "passed_first_try"
-        assert cards_by_id[first_card]["attempt_count"] == 1
+        # Nothing says how many attempts a card took or whether it passed.
+        for card in data["cards"]:
+            assert set(card) == {
+                "card_id",
+                "primary_field",
+                "readiness",
+                "delta",
+                "change",
+                "fields",
+                "attempts",
+            }
+            for attempt in card["attempts"]:
+                assert set(attempt) == {"practice_card_id", "prompts", "answers"}
+
         # The blank-primary-field case: value is passed through as "", not a fallback.
         assert cards_by_id[first_card]["primary_field"] == {
             "field_def_id": title["id"],
@@ -2005,31 +2015,39 @@ class TestBreakdown:
             "value": "",
         }
 
-        assert cards_by_id[retry_card]["bucket"] == "passed_after_one_fail"
-        assert cards_by_id[retry_card]["attempt_count"] == 2
         assert cards_by_id[retry_card]["primary_field"]["value"] == "Retry Card"
         retry_attempts = cards_by_id[retry_card]["attempts"]
-        assert [a["status"] for a in retry_attempts] == ["failed", "passed"]
-        assert [a["created_at"] for a in retry_attempts] == sorted(
-            a["created_at"] for a in retry_attempts
-        )
+        retry_rows = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session_id,
+                PracticeCard.card_id == uuid.UUID(retry_card),
+            )
+            .order_by(PracticeCard.created_at)
+        ).all()
+        assert [a["practice_card_id"] for a in retry_attempts] == [str(r.id) for r in retry_rows]
         assert [a["answers"][0]["rating"] for a in retry_attempts] == [1, 4]
         assert all(a["prompts"][0]["value"] == "retry prompt" for a in retry_attempts)
         assert all(a["answers"][0]["value"] == "retry answer" for a in retry_attempts)
 
-        assert cards_by_id[many_card]["bucket"] == "passed_after_many_fails"
-        assert cards_by_id[many_card]["attempt_count"] == 3
+        # Only the fields an attempt named, with their sides: never `title` or `filler`.
+        for card_id in (first_card, retry_card, many_card):
+            assert [(f["name"], f["side"]) for f in cards_by_id[card_id]["fields"]] == [
+                ("prompt", "prompt"),
+                ("answer", "answer"),
+            ]
+
         many_attempts = cards_by_id[many_card]["attempts"]
-        assert [a["status"] for a in many_attempts] == ["failed", "failed", "passed"]
         assert [a["answers"][0]["rating"] for a in many_attempts] == [1, 1, 4]
 
-        assert cards_by_id[stuck_card]["bucket"] == "still_failed"
-        assert cards_by_id[stuck_card]["attempt_count"] == 1
         stuck_attempts = cards_by_id[stuck_card]["attempts"]
-        assert [a["status"] for a in stuck_attempts] == ["failed"]
         assert stuck_attempts[0]["answers"][0]["rating"] == 1
         # `answer` was blanked before this attempt; the field still resolves.
         assert stuck_attempts[0]["answers"][0]["name"] == "answer"
+        assert [(f["name"], f["side"]) for f in cards_by_id[stuck_card]["fields"]] == [
+            ("prompt", "prompt"),
+            ("answer", "answer"),
+        ]
 
         # Ordered by first attempt's position ascending.
         first_rows_by_card: dict[str, PracticeCard] = {}
@@ -2075,19 +2093,19 @@ class TestBreakdown:
         act_as(other_user)
         assert client.get(f"/api/practice_runs/{session['id']}/breakdown").status_code == 404
 
-    def test_delta_computation_statement_count_is_fixed(
+    def test_breakdown_statement_count_is_fixed(
         self,
         client,
         existing_user,
         existing_subject,
         session_cards,
         session_config,
-        mastery_log_statement_counter,
+        statement_counter,
     ):
-        """The breakdown's mastery_log statement count is fixed — it must not grow with
-        the run's card count or the decks' active-field count. One card on a fresh
-        two-field deck and three cards on session_fields' eight-field deck
-        (session_cards + session_config) must report the same nonzero count."""
+        """The breakdown's statements against card, field_def and mastery_log are fixed:
+        they must not grow with the run's cards, its decks or their fields. One card on a
+        fresh two-field deck, and that deck's card with three more on session_fields'
+        eight-field deck, must report the same nonzero counts."""
         small_deck = client.post(
             "/api/decks",
             json={
@@ -2134,21 +2152,26 @@ class TestBreakdown:
         small_session = _start(client, "Small breakdown run", [small_config["id"]])
         _complete(small_session["id"])
 
-        large_session = _start(client, "Large breakdown run", [session_config["id"]])
+        large_session = _start(
+            client, "Large breakdown run", [session_config["id"], small_config["id"]]
+        )
         _complete(large_session["id"])
 
-        mastery_log_statement_counter.reset()
-        small_res = client.get(f"/api/practice_runs/{small_session['id']}/breakdown")
-        assert small_res.status_code == 200, small_res.text
-        small_count = mastery_log_statement_counter.count
+        counters = {table: statement_counter(table) for table in ("card", "field_def", "mastery_log")}
 
-        mastery_log_statement_counter.reset()
-        large_res = client.get(f"/api/practice_runs/{large_session['id']}/breakdown")
-        assert large_res.status_code == 200, large_res.text
-        large_count = mastery_log_statement_counter.count
+        def _counts(session_id):
+            for counter in counters.values():
+                counter.reset()
+            res = client.get(f"/api/practice_runs/{session_id}/breakdown")
+            assert res.status_code == 200, res.text
+            return res, {table: counter.count for table, counter in counters.items()}
 
-        assert small_count > 0
-        assert small_count == large_count
+        small_res, small_counts = _counts(small_session["id"])
+        large_res, large_counts = _counts(large_session["id"])
+
+        assert len(small_res.json()["cards"]) < len(large_res.json()["cards"])
+        assert all(count > 0 for count in small_counts.values())
+        assert small_counts == large_counts
 
     def test_deleted_fields_leave_every_attempt(self, client, existing_deck):
         """A field deleted after a practice completed leaves the breakdown's attempts
@@ -2223,7 +2246,6 @@ class TestBreakdown:
         res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["passed_first_try"] == 2
 
         def every_key(node):
             if isinstance(node, dict):
@@ -2241,7 +2263,7 @@ class TestBreakdown:
 
         for card_id, card in cards_by_id.items():
             tag = "one" if card_id == card_one else "two"
-            assert [fd["name"] for fd in card["fields"]] == ["title", "p1", "a1"]
+            assert [fd["name"] for fd in card["fields"]] == ["p1", "a1"]
             for attempt in card["attempts"]:
                 assert attempt["prompts"] == [
                     {"field_def_id": p1["id"], "name": "p1", "type": "text", "value": f"{tag} p1"}
@@ -2275,7 +2297,7 @@ class TestBreakdown:
         assert [r.field_def_id for r in resolved] == [first.id, second.id]
 
     def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
-        """The one path a user reaches to the `still_failed` bucket: a field delete
+        """The one path a user reaches to a card that ends failed: a field delete
         removes the active practices naming the field, so clearing a card's only
         answer value while a practice uses it is what leaves the requeue nothing to
         generate from. The blank value passes through unlabelled in the breakdown's
@@ -2365,16 +2387,14 @@ class TestBreakdown:
         res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["still_failed"] == 1
-        assert data["passed_first_try"] == 1
 
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
         assert set(cards_by_id) == set(card_ids)
         entry = cards_by_id[blanked_card["card_id"]]
-        assert entry["bucket"] == "still_failed"
-        assert entry["attempt_count"] == 1
+        assert [c["card_id"] for c in data["cards"]].count(blanked_card["card_id"]) == 1
+        assert "bucket" not in entry
         [attempt] = entry["attempts"]
-        assert attempt["status"] == "failed"
+        assert "status" not in attempt
         [answer] = attempt["answers"]
         assert answer["value"] == ""
         assert answer["rating"] == 1
@@ -2479,18 +2499,14 @@ class TestBreakdownReadiness:
 
         breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
-        fields_by_id = {f.field_def_id: f for f in card.fields}
 
-        # field_def.position ascending, not touched-first.
-        assert [f.field_def_id for f in card.fields] == [answer_id, other_id]
+        # Only the field an attempt named is listed; `other_id` counts in the fold alone.
+        [field] = card.fields
+        assert field.field_def_id == answer_id
 
         # Reviewed for the first time inside this run: delta is against 0.
-        assert fields_by_id[answer_id].readiness == pytest.approx(expected)
-        assert fields_by_id[answer_id].delta == pytest.approx(expected)
-
-        # Never reviewed by anyone, and untouched by this run: reads 0, no movement.
-        assert fields_by_id[other_id].readiness == 0.0
-        assert fields_by_id[other_id].delta == 0.0
+        assert field.readiness == pytest.approx(expected)
+        assert field.delta == pytest.approx(expected)
 
         # The accepted cost of folding over every active field: the untouched field
         # dilutes the card fold — half the per-field movement here, since one of the
@@ -2530,10 +2546,51 @@ class TestBreakdownReadiness:
         for card in cards:
             assert 0 <= card["readiness"] <= 1
             assert "mastery" not in card
+            assert card["change"] == classify_change(card["delta"], strategy.reach).value
             assert card["fields"]
             for field in card["fields"]:
                 assert 0 <= field["readiness"] <= 1
                 assert "mastery" not in field
+                assert field["change"] == classify_change(field["delta"], strategy.reach).value
+
+    def test_field_shown_by_one_attempt_and_asked_by_another_reads_prompt(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        names = ("first", "second", "unnamed")
+        ids = [
+            uuid.UUID(
+                client.post(
+                    f"/api/decks/{existing_deck['id']}/fields", json={"name": name, "type": "text"}
+                ).json()["id"]
+            )
+            for name in names
+        ]
+        first_id, second_id, _unnamed_id = ids
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {str(field_id): "v" for field_id in ids},
+                },
+            ).json()["id"]
+        )
+        run = _make_run(db, existing_user.id)
+        asked_first = _make_appearance(db, run.id, card_id, answers=[first_id], prompts=[second_id])
+        _rate(db, strategy, existing_user.id, run.id, asked_first, {first_id: 1}, (second_id,))
+        asked_again = _make_appearance(
+            db, run.id, card_id, answers=[second_id], prompts=[first_id], position=1
+        )
+        _rate(db, strategy, existing_user.id, run.id, asked_again, {second_id: 4}, (first_id,))
+
+        breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
+        card = next(c for c in breakdown.cards if c.card_id == card_id)
+
+        assert [(f.field_def_id, f.side.value) for f in card.fields] == [
+            (first_id, "prompt"),
+            (second_id, "prompt"),
+        ]
 
     def test_per_field_bound_excludes_a_different_runs_intervening_write(
         self, db, client, existing_user, existing_deck
@@ -2634,12 +2691,14 @@ class TestBreakdownReadiness:
 
         breakdown = get_practice_run_breakdown(db, strategy, new_run.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
-        fields_by_id = {f.field_def_id: f for f in card.fields}
+        expected_y = strategy.readiness(_expected_after(strategy, {y_id: 4})[y_id])
 
-        # field_x: untouched by new_run, and its only history's run is gone — must
-        # surface the orphaned row's real value rather than erroring or going missing.
-        assert fields_by_id[x_id].readiness == pytest.approx(expected_orphaned)
-        assert fields_by_id[x_id].delta == 0.0
+        # field_x: untouched by new_run, so unlisted, and its only history's run is gone —
+        # the card's fold must count the orphaned row's real value on both sides rather
+        # than erroring or going missing.
+        assert [f.field_def_id for f in card.fields] == [y_id]
+        assert card.readiness == pytest.approx((expected_orphaned + expected_y) / 2)
+        assert card.delta == pytest.approx(expected_y / 2)
 
 
 def _rerun(client, session_id, name):

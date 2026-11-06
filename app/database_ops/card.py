@@ -96,6 +96,16 @@ def db_read_cards_with_values_for_deck(db: Session, deck_id: uuid.UUID) -> list[
     )
 
 
+def db_read_cards_with_values(db: Session, card_ids: Collection[uuid.UUID]) -> list[Card]:
+    """Unscoped: the caller has already ownership-checked the practice these cards came
+    from. In no particular order."""
+    return list(
+        db.exec(
+            select(Card).where(col(Card.id).in_(card_ids)).options(selectinload(Card.values))
+        ).all()
+    )
+
+
 def db_update_card_values(db: Session, card: Card, values: dict[uuid.UUID, str]) -> Card:
     existing = {v.field_def_id: v for v in card.values}
     for field_def_id, value in values.items():

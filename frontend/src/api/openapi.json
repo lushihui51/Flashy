@@ -2814,14 +2814,6 @@
             "format": "uuid",
             "title": "Practice Card Id"
           },
-          "status": {
-            "$ref": "#/components/schemas/PracticeCardStatus"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
           "prompts": {
             "items": {
               "$ref": "#/components/schemas/ResolvedFieldValue"
@@ -2840,23 +2832,11 @@
         "type": "object",
         "required": [
           "practice_card_id",
-          "status",
-          "created_at",
           "prompts",
           "answers"
         ],
-        "title": "BreakdownAttempt"
-      },
-      "BreakdownBucket": {
-        "type": "string",
-        "enum": [
-          "passed_first_try",
-          "passed_after_one_fail",
-          "passed_after_many_fails",
-          "still_failed"
-        ],
-        "title": "BreakdownBucket",
-        "description": "The completion-time refinement of the chain fold: `passed` splits by chain\nlength so the breakdown can distinguish a card that took retries from one that\ndidn't; `still_failed` \u2014 a chain whose last row is `failed` with no successor,\nbecause nothing was left to generate a retry from \u2014 is unaffected by length and stays one\nbucket, displayed to the user as \"Failed\"."
+        "title": "BreakdownAttempt",
+        "description": "One go at a card, by what it showed and what it asked."
       },
       "BreakdownCard": {
         "properties": {
@@ -2865,22 +2845,8 @@
             "format": "uuid",
             "title": "Card Id"
           },
-          "bucket": {
-            "$ref": "#/components/schemas/BreakdownBucket"
-          },
-          "attempt_count": {
-            "type": "integer",
-            "title": "Attempt Count"
-          },
           "primary_field": {
             "$ref": "#/components/schemas/ResolvedFieldValue"
-          },
-          "attempts": {
-            "items": {
-              "$ref": "#/components/schemas/BreakdownAttempt"
-            },
-            "type": "array",
-            "title": "Attempts"
           },
           "readiness": {
             "type": "number",
@@ -2890,27 +2856,36 @@
             "type": "number",
             "title": "Delta"
           },
+          "change": {
+            "$ref": "#/components/schemas/ChangeKind"
+          },
           "fields": {
             "items": {
               "$ref": "#/components/schemas/FieldReadinessDelta"
             },
             "type": "array",
             "title": "Fields"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownAttempt"
+            },
+            "type": "array",
+            "title": "Attempts"
           }
         },
         "type": "object",
         "required": [
           "card_id",
-          "bucket",
-          "attempt_count",
           "primary_field",
-          "attempts",
           "readiness",
           "delta",
-          "fields"
+          "change",
+          "fields",
+          "attempts"
         ],
         "title": "BreakdownCard",
-        "description": "One card's whole outcome chain for the completion breakdown: `attempts` is\nchronological, so `attempts[-1]` is the determining attempt that decided `bucket`.\n`readiness`/`delta`/`fields` are the session deltas: `readiness` is the card's\nreadiness after the run, from 0 to 1, over every active field; `delta` is that\nfigure minus the same fold before the run, exact (the client rounds);\n`fields` lists every\ncurrently active field_def of the card's deck, field_def.position ascending \u2014\nnot just the ones this run's attempts happened to touch."
+        "description": "One card on the summary. `readiness` is the card's readiness after the run, from 0 to\n1, over every live field of its deck, and `delta` that figure minus the same fold before\nthe run, so a field the run never showed or asked counts here though `fields` omits it.\n`fields` is in field_def.position order; `attempts` is oldest first."
       },
       "CardBatchCreate": {
         "properties": {
@@ -3125,6 +3100,17 @@
           "values"
         ],
         "title": "CardUpdate"
+      },
+      "ChangeKind": {
+        "type": "string",
+        "enum": [
+          "up_a_lot",
+          "up",
+          "no_change",
+          "down",
+          "down_a_lot"
+        ],
+        "title": "ChangeKind"
       },
       "CurrentRunCard": {
         "properties": {
@@ -4006,6 +3992,9 @@
           "type": {
             "$ref": "#/components/schemas/FieldType"
           },
+          "side": {
+            "$ref": "#/components/schemas/FieldSide"
+          },
           "readiness": {
             "type": "number",
             "title": "Readiness"
@@ -4013,6 +4002,9 @@
           "delta": {
             "type": "number",
             "title": "Delta"
+          },
+          "change": {
+            "$ref": "#/components/schemas/ChangeKind"
           }
         },
         "type": "object",
@@ -4020,11 +4012,22 @@
           "field_def_id",
           "name",
           "type",
+          "side",
           "readiness",
-          "delta"
+          "delta",
+          "change"
         ],
         "title": "FieldReadinessDelta",
-        "description": "One active field's session-delta entry: `readiness` is the field's readiness\nafter the run, from 0 to 1, and 0 for a field never reviewed. `delta` is that\nreadiness minus the field's readiness before the run, 0.0 for a field this run's\ncard left untouched."
+        "description": "One field an attempt of the run showed or asked: `readiness` is the field's readiness\nafter the run, from 0 to 1, and `delta` that readiness minus its readiness before the\nrun, exact."
+      },
+      "FieldSide": {
+        "type": "string",
+        "enum": [
+          "prompt",
+          "answer"
+        ],
+        "title": "FieldSide",
+        "description": "Where a card opened from the summary lists a field: `prompt` when any attempt showed\nit, `answer` when attempts only asked it."
       },
       "FieldType": {
         "type": "string",
@@ -4122,22 +4125,6 @@
             "type": "integer",
             "title": "Total Cards"
           },
-          "passed_first_try": {
-            "type": "integer",
-            "title": "Passed First Try"
-          },
-          "passed_after_one_fail": {
-            "type": "integer",
-            "title": "Passed After One Fail"
-          },
-          "passed_after_many_fails": {
-            "type": "integer",
-            "title": "Passed After Many Fails"
-          },
-          "still_failed": {
-            "type": "integer",
-            "title": "Still Failed"
-          },
           "cards": {
             "items": {
               "$ref": "#/components/schemas/BreakdownCard"
@@ -4149,14 +4136,10 @@
         "type": "object",
         "required": [
           "total_cards",
-          "passed_first_try",
-          "passed_after_one_fail",
-          "passed_after_many_fails",
-          "still_failed",
           "cards"
         ],
         "title": "PracticeRunBreakdown",
-        "description": "The whole `GET .../breakdown` payload: bucket counts, and\nevery card's full resolved history, so the completion screen's row-tap detail needs\nno second request. Only ever built for a completed session \u2014 the router\n409s an active one before this is composed."
+        "description": "The whole `GET .../breakdown` payload: every card and what the run did to it, so the\nsummary needs no second request. Only ever built for a completed session; the router\n409s an active one before this is composed."
       },
       "PracticeRunCreate": {
         "properties": {
