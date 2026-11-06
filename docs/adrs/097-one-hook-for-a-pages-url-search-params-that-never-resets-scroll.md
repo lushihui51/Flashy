@@ -34,6 +34,12 @@ Create or Save sits in the bar at the foot (PDR 032), so on a form long enough t
 
 When the user taps Create or Save while a sentence about one part of the form is off screen, the page is to move just far enough to bring the first such part and its sentence on screen.
 
+A form can be opened over another form, and holds the same bar either way (PDR 032).
+
+The overlay that holds it scrolls on its own, and a bar on it and a bar on the form beneath are mounted at once (ADR 100).
+
+On a form opened over another form, the form in front is to move, and the one behind it is to stay where the user left it.
+
 New practice's Create, the configuration form's and the card form's are `disabled` while not ready, and the deck form's Save while a field's name is blank or duplicated, so a tap fires nothing; only the subject form's button is pressable, reading not ready through `aria-disabled`.
 
 Every refusal a user reaches carries a code, and the frontend chooses its sentence by that code; where the sentence goes was not decided there (ADR 070). Three refusals name one part of a form, `subject_name_taken`, `deck_name_taken` and `configuration_name_taken`, each about the Name input. `configuration_name_taken` renders beside that input today, and the other two render at the top of the form.
@@ -48,11 +54,11 @@ We will make `useViewParams()` in `frontend/src/lib/viewParams.ts` the only code
 
 It offers two writes and one reveal. `setParams(next)` writes without moving the page, and every write but a change to what a page's list shows goes through it. `changeView(next, { control, listStart })` writes a change to a list's tab, filters, chosen counts or order, then, on the first commit where the page reports its list rendered for the new params, scrolls by `revealDelta`. `reveal(targets)` takes the same targets, a part of a form as the control and its sentence as the rows, scrolls by `revealDelta` within the same band, and writes nothing to the URL.
 
-A form calls `reveal` when the user taps a Create or Save that is not ready, and when a refusal names one part, for the first part in document order whose sentence shows. A Create or Save that is not ready stays pressable and reads not ready through `aria-disabled`; `disabled` is only for a request in flight. A refusal that names one part of the form renders beside that part and is a part; every other refusal is the bar's sentence.
+When the user taps a Create or Save that is not ready, or a refusal names one part, a reveal brings up the first part in document order whose sentence shows. It finds that part in what the page or overlay has drawn, never in an order the form keeps. A Create or Save that is not ready stays pressable and reads not ready through `aria-disabled`; `disabled` is only for a request in flight. A refusal that names one part of the form renders beside that part and is a part; every other refusal is the bar's sentence.
 
 `revealDelta` is a pure function of the band in view, its top and its bottom, the control's rect, and the rects of the list's first two rows, or of the whole list when it is shorter. It returns the smallest scroll that puts all of them in view, 0 when they already are, and keeps the control in view first when they do not all fit. Node unit tests pin it.
 
-We will mark every stuck element a reveal must clear, at either edge, with `data-reveal-clear`, the one mark. A reveal reads only the marked elements on the page it runs on, and reads each one's side from its computed position, `bottom` first: one with a numeric `bottom` lowers the band's bottom to its rect's top, taking the least; any other, whose `bottom` is `auto`, raises the band's top to its stuck bottom, its `top` plus its height, taking the greatest.
+We will mark every stuck element a reveal must clear, at either edge, with `data-reveal-clear`, the one mark. A reveal moves the page or overlay its target sits in, never what lies behind it, reads only the marked elements inside that page or overlay, and reads each one's side from its computed position, `bottom` first: one with a numeric `bottom` lowers the band's bottom to its rect's top, taking the least; any other, whose `bottom` is `auto`, raises the band's top to its stuck bottom, its `top` plus its height, taking the greatest.
 
 ## Alternatives considered
 
@@ -108,6 +114,14 @@ Rejected because it is a second copy of the arithmetic.
 
 Rejected because it puts a sentence about the Name input at the foot.
 
+### The window as the only thing a reveal moves
+
+Rejected because, on a form opened over another form, it moves the form behind and leaves the form in front where it was.
+
+### An order each form keeps
+
+Rejected because each hand-written order can drift from the page, and the reveal then brings up the wrong part with nothing failing.
+
 ## Consequences
 
 **Positive**
@@ -118,6 +132,7 @@ Rejected because it puts a sentence about the Name input at the foot.
 - The developer tests the reveal's arithmetic without layout.
 - The developer's marked element is cleared with no change to any `changeView` or `reveal` call, wherever it sits and at whichever edge.
 - The developer serves a filter change and a tap of Create or Save from one arithmetic and one band.
+- The user who taps Create or Save on a form opened over another form finds that form moved and the one behind it as they left it.
 
 **Negative**
 
@@ -126,6 +141,7 @@ Rejected because it puts a sentence about the Name input at the foot.
 - The developer who leaves unmarked a stuck element a reveal must clear, at either edge, hides the control or a row from the user, and nothing fails.
 - The developer who keeps a not-ready Create or Save `disabled` leaves a tap doing nothing, and nothing fails.
 - The user with two problems on a form meets the second only after fixing the first.
+- The developer who builds another overlay that scrolls on its own must make it known to the reveal, or the reveal moves what lies behind it, and nothing fails.
 
 **Neutral**
 
