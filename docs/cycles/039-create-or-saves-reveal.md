@@ -179,7 +179,7 @@ Read in the code: `handleSaveClick` in `DeckEditor.tsx`, where a not-ready tap s
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -231,4 +231,31 @@ Tests: in `DeckConfigurationEditor.test.tsx`, Create with a blank name on a chos
 
 **Debrief**
 
-None.
+Evidence, in order:
+
+- `cd frontend && npx vitest run` printed `Test Files  61 passed (61)`, `Tests  722 passed (722)`; `grep -rl "useSearchParams" frontend/src --include=*.ts --include=*.tsx` printed `frontend/src/lib/viewParams.ts` alone.
+- The cycle's judgement, in headless Chromium against `localhost:5173`, by mouse at 390 by 844 unless stated, header bottom 114, bar top 763:
+  - `/practice/new`, configurations in six decks, nothing ticked, Selected heading at 1380, below `innerHeight`: Create left the heading at 715 to 735 and the hint at 741 to 763; a second click moved `scrollY` by 0.
+  - `/practice/new`, name cleared, from the bottom: Create moved `scrollY` from 707 to 89, Name input at 114 to 160, "Give this practice a name to create it." at 166 to 186. Nothing was posted on this page.
+  - `/subjects/new` at height 400, from the bottom: "Name is required." at 166 to 186 under the Name input at 114 to 160, bar top 319.
+  - `/decks/new`, "Commands", two fields: "A deck with this name already exists." at 255 to 275 under the Deck name input at 203 to 249, none inside the bar; with `POST /api/decks` aborted, "Couldn't reach Flashy. Check your connection and try again." inside the bar.
+  - `/decks/{id}/edit`, "Commands", twelve fields, last name cleared, from the top: input at 673 to 719, "Name is required." at 731 to 763.
+  - `/cards/new`, no deck: "Choose a deck to create a card." at 230 to 250 under the picker at 178 to 224, `role="alert"`, nothing posted.
+- Screenshot: /tmp/claude-1000/-home-jadenlu-Projects-Flashy/5f7373d6-e03c-412b-a0ff-225c9af8cfd8/scratchpad/deck-taken.png.
+
+Commit checks over the whole frontend: `npx vitest run` as above; `npm run lint` printed no findings; `npm run build` built, with only the existing warning on chunk size.
+
+The configuration form, beyond the Done when, same browser: `/deck-configurations/new` with no deck, Create moved 0; Edit configuration at height 500, a taken name, from the bottom, Name input at 115 to 161, sentence at 167 to 187, none in the bar.
+
+What remains, on the engineer's decision to raise it as a question for a later cycle rather than fix it here: when a configuration's board is too tall to fit in the band with its sentence, the tap leaves the sentence off screen, so this task's Goal and the cycle's Outcome do not hold on those decks, and the Out of scope's "the reveal brings the input and the sentence on screen together" is false there. `revealDelta` puts the control on the band's top and the hint sits below the whole board.
+
+- Blank name, Edit configuration, from the bottom, with the deck's GET response cut through `page.route` and two fields assigned: the hint is on screen at 727 to 747 before every tap, stays on screen after it at 2 and 3 fields, and is pushed off from 4 fields, at 761 to 781, and at 12 fields at 1083 to 1103. The real "Ports" deck, four fields with three assigned, fits, so the point depends on the assignments as well as the count.
+- A board with a problem, New configuration, empty board, from the top, cut the same way: the sentence is off screen before the tap, on screen after it at 2 to 4 fields, and still off screen from 5 fields, at 755 to 795, and at 12 fields at 1031 to 1071.
+- At height 500, on the real "Practiced" deck of two fields, a blank name leaves the hint at 696 to 716, under the bar at 419.
+- The 11 and 12 rows of both sweeps measured the same, and why was not looked into.
+
+The Goal's judgement has the Selected sentence above the screen; Selected is the page's last section, so scrolling down never takes it there, and at height 300 from the bottom it stays on screen and Create moved 0. The check used the Done when's position, below `innerHeight`.
+
+Departures from guidance: none. Beyond the Details, the tests also pin a tap with a board not yet valid moving the page once, a tap with no deck chosen moving nothing, a failed save moving nothing, and a blank-name tap on New practice moving the page once, and the existing `toBeEnabled()` on Create or Save became an assertion that `aria-disabled` is absent, since `toBeEnabled()` no longer tells ready from not ready.
+
+Read in the code: `handleSaveClick` in `DeckConfigurationEditor.tsx`, whose early return on a null `hintRef` keeps a tap while a chosen deck's fields load from leaving a reveal pending, and `submit` in `PracticeCreatePage.tsx`.

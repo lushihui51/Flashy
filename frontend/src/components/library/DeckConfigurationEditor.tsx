@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck, readDecks } from 'src/api/deck';
@@ -147,6 +147,11 @@ function DeckConfigurationEditorBody({
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
+  const { reveal } = useViewParams();
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameErrorRef = useRef<HTMLSpanElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLParagraphElement>(null);
 
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
@@ -220,6 +225,7 @@ function DeckConfigurationEditorBody({
       // the input rather than in the bar.
       if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
         setNameError(sentence);
+        reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
       } else {
         setSaveError(sentence);
       }
@@ -242,6 +248,21 @@ function DeckConfigurationEditorBody({
   const nameMissing = name.trim() === '';
   const canSave =
     !!deckId && !!board && !nameMissing && !validationError && !saveMutation.isPending;
+
+  const handleSaveClick = () => {
+    if (!canSave) {
+      // No hint shows until the chosen deck's board has loaded, so such a tap moves nothing.
+      if (!hintRef.current) return;
+      reveal({
+        control: () => (validationError ? boardRef.current : nameInputRef.current),
+        listStart: () => hintRef.current,
+      });
+      return;
+    }
+    setNameError(null);
+    setSaveError(null);
+    saveMutation.mutate();
+  };
 
   return (
     <div className="p-4">
@@ -293,6 +314,7 @@ function DeckConfigurationEditorBody({
               Name
             </label>
             <input
+              ref={nameInputRef}
               id={nameInputId}
               type="text"
               value={name}
@@ -306,6 +328,7 @@ function DeckConfigurationEditorBody({
             />
             {nameError && (
               <span
+                ref={nameErrorRef}
                 id={`${nameInputId}-error`}
                 role="alert"
                 className="text-sm text-(--color-wrong)"
@@ -320,7 +343,7 @@ function DeckConfigurationEditorBody({
       {deckId && !deck && <p className="mt-4 text-(--color-aside)">Loading fields…</p>}
 
       {deck && board && (
-        <div className="mt-4">
+        <div ref={boardRef} className="mt-4">
           <FieldAssignmentBoard
             fieldDefs={deck.field_defs}
             state={board}
@@ -335,7 +358,7 @@ function DeckConfigurationEditorBody({
       )}
 
       {deck && board && (validationError || nameMissing) && (
-        <p className="mt-3 text-sm text-(--color-aside)">
+        <p ref={hintRef} className="mt-3 text-sm text-(--color-aside)">
           {validationError ??
             (mode === 'edit'
               ? 'Give this configuration a name to save it.'
@@ -355,13 +378,10 @@ function DeckConfigurationEditorBody({
         </button>
         <button
           type="button"
-          disabled={!canSave}
-          onClick={() => {
-            setNameError(null);
-            setSaveError(null);
-            saveMutation.mutate();
-          }}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          disabled={saveMutation.isPending}
+          aria-disabled={!canSave || undefined}
+          onClick={handleSaveClick}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {mode === 'edit' ? 'Save' : 'Create'}
         </button>

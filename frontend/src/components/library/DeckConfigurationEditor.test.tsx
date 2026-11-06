@@ -528,14 +528,14 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByRole('checkbox', { name: '1' })).not.toBeChecked();
   });
 
-  it('Create stays disabled with the reason shown, for each rule the backend enforces', async () => {
+  it('Create reads not ready with the reason shown, for each rule the backend enforces', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
     const create = screen.getByRole('button', { name: 'Create' });
 
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText(/prompt side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_fields');
@@ -543,18 +543,18 @@ describe('DeckConfigurationEditor — create', () => {
 
     await assign(user, 'Meaning', 'answer_pool');
     expect(screen.getByText(/how many random answer fields/)).toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
     // The name is derived once both sides have a field, so nothing is left to do.
-    expect(create).toBeEnabled();
+    expect(create).not.toHaveAttribute('aria-disabled');
 
     await user.clear(screen.getByLabelText('Name'));
     expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
 
     await user.type(screen.getByLabelText('Name'), 'Recall');
-    expect(create).toBeEnabled();
+    expect(create).not.toHaveAttribute('aria-disabled');
   });
 
   it('saves the board as the six arrays, uuids only, and returns to the configs list', async () => {
@@ -751,7 +751,7 @@ describe('DeckConfigurationEditor — edit', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
   });
 
-  it('a cleared name keeps Save disabled with the reason shown', async () => {
+  it('a cleared name keeps Save not ready with the reason shown', async () => {
     mockLibrary();
     mockConfig();
     const user = userEvent.setup();
@@ -761,7 +761,7 @@ describe('DeckConfigurationEditor — edit', () => {
     await user.clear(screen.getByLabelText('Name'));
 
     expect(screen.getByText('Give this configuration a name to save it.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('never shows a field the config references but the deck has since deleted', async () => {
@@ -864,5 +864,112 @@ describe('DeckConfigurationEditor — edit', () => {
       'Could not load this deck configuration.',
     );
     expect(screen.queryByText('Deck configuration not found.')).not.toBeInTheDocument();
+  });
+});
+
+describe('DeckConfigurationEditor — bringing a part of the form and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  const posted = () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+      }),
+    );
+    return bodies;
+  };
+
+  it('a tap of Create with a blank name on a chosen deck posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.clear(screen.getByLabelText('Name'));
+
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).not.toBeDisabled();
+    await user.click(create);
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
+  });
+
+  it('a tap of Create with a board not yet valid posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
+  });
+
+  it('a tap of Create with no deck chosen says nothing and moves nothing', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new');
+    const create = await screen.findByRole('button', { name: 'Create' });
+
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    await user.click(create);
+
+    expect(scrollBy).not.toHaveBeenCalled();
+    expect(bodies).toEqual([]);
+  });
+
+  it('a configuration_name_taken refusal moves the page once', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'configuration_name_taken',
+              message: 'deck_practice_config (deck_id, name) already exists',
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await screen.findByText('A configuration with this name already exists.');
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed save stays in the bar and moves nothing', async () => {
+    mockLibrary();
+    posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await within(screen.getByTestId('form-bar')).findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
   });
 });

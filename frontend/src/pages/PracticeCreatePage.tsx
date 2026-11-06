@@ -39,13 +39,17 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const { params, setParams, changeView } = useViewParams();
+  const { params, setParams, changeView, reveal } = useViewParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
   const selectedHeadingId = useId();
 
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameHintRef = useRef<HTMLParagraphElement>(null);
+  const selectedHeadingRef = useRef<HTMLHeadingElement>(null);
+  const selectedHintRef = useRef<HTMLParagraphElement>(null);
   const filtersRef = useRef<HTMLDivElement>(null);
   // The pick list, its empty sentence or its failure sentence: whichever shows for the
   // current filters, so a reveal after a filter change finds where the list starts, and
@@ -259,6 +263,17 @@ export default function PracticeCreatePage() {
   const filtered = subjectId !== null || deckId !== null;
 
   const submit = () => {
+    if (!canCreate) {
+      if (nameMissing) {
+        reveal({ control: () => nameInputRef.current, listStart: () => nameHintRef.current });
+      } else {
+        reveal({
+          control: () => selectedHeadingRef.current,
+          listStart: () => selectedHintRef.current,
+        });
+      }
+      return;
+    }
     setRowError(null);
     setTopError(null);
     setSaveError(null);
@@ -276,6 +291,7 @@ export default function PracticeCreatePage() {
           Name
         </label>
         <input
+          ref={nameInputRef}
           id={nameInputId}
           type="text"
           value={name}
@@ -283,7 +299,9 @@ export default function PracticeCreatePage() {
           className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
         />
         {nameMissing && (
-          <p className="text-sm text-(--color-aside)">Give this practice a name to create it.</p>
+          <p ref={nameHintRef} className="text-sm text-(--color-aside)">
+            Give this practice a name to create it.
+          </p>
         )}
       </div>
 
@@ -350,11 +368,11 @@ export default function PracticeCreatePage() {
       )}
 
       <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1.5">
-        <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
+        <h2 ref={selectedHeadingRef} id={selectedHeadingId} className="text-label text-(--color-aside)">
           Selected
         </h2>
         {selectedCount === 0 ? (
-          <p className="text-body text-(--color-aside)">
+          <p ref={selectedHintRef} className="text-body text-(--color-aside)">
             Select at least one configuration to practice.
           </p>
         ) : allConfigsQuery.isError ? (
@@ -383,9 +401,10 @@ export default function PracticeCreatePage() {
         </button>
         <button
           type="button"
-          disabled={!canCreate}
+          disabled={createMutation.isPending}
+          aria-disabled={!canCreate || undefined}
           onClick={submit}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           Create
         </button>
