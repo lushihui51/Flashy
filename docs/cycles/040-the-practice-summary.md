@@ -167,7 +167,7 @@ Read in the code: nothing beyond `MasteryCircle.tsx`, for the paint order above.
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -192,6 +192,7 @@ The breakdown read returns every card and each field the practice showed or aske
 - `frontend/src/lib/changeKinds.ts`
 - `frontend/src/components/practice/RunBreakdown.tsx`
 - `frontend/src/components/practice/RunBreakdown.test.tsx`
+- `frontend/src/components/practice/ratingTiers.ts`
 - `frontend/src/pages/PracticeRunPage.tsx`
 - `frontend/src/pages/PracticeRunPage.test.tsx`
 - `frontend/src/pages/PracticeDetailsPage.tsx`
@@ -282,6 +283,7 @@ export default function RunBreakdown({ breakdown }: { breakdown: PracticeRunBrea
 - The counts: one `div` with `role="group"` holding five `button`s in the order up a lot, up, no change, down, down a lot, each `aria-pressed` when chosen and `aria-label` of the count then the kind's word, as "9 up a lot", each showing its `ChangeBadge` over its number; every one drawn as a block, `tappable-sm` with a rounded outline, the chosen one `tappable-pressed` on ink with surface text and its badge unchanged (LPD5, drawings 14 and 15). With one or more chosen the list holds only their cards; with none, every card (PDR 024). A count of zero stays pressable, and the list it narrows to is empty with no sentence.
 - "Order by:" then the three choices, a `div` with `role="radiogroup"` and `aria-label="Order by"` holding three `role="radio"` buttons with `aria-checked`, each a block as the counts are, the chosen one pressed in (LPD5, LPD8; drawing 14). The group sits below the counts.
 - The rows, in one block (`tappable rounded-block bg-(--color-surface)` with rows divided by a line): each a full-width `button` holding the card's name (`cardTitle` as today, "Untitled card" for a blank one), `MasteryCircle` at `size="summary"` with `change={card.change}`, and a `ChevronRight` from lucide in aside colour, as drawing 14. A row shows no number, no attempt count and no outcome word. The row's `onClick` opens nothing in this task.
+- `RatingBadge` goes with the old sheet, and with it `chipClass` in `ratingTiers.ts` and the sentence of its comment about the sheet's badge; `blockClass` stays for `RatingChip`. T3 draws a rating on the sheet as `RatingMark`, never as a chip.
 - "N cards practiced" is not drawn by this component: the run page draws it under its heading and the practice's own page draws it above this component.
 
 The pages:
@@ -309,24 +311,17 @@ The pages:
 **Done when**
 
 - `uv run pytest tests/api_tests/test_mastery.py tests/api_tests/test_practice_run.py` passes, `TestClassifyChange` and `test_breakdown_statement_count_is_fixed` among them.
-- `grep -c "Bucket\|still_failed\|passed_first_try\|attempt_count" app/models/practice_run_payloads.py` prints `0`.
+- `grep -c "Bucket\|passed_first_try\|attempt_count" app/models/practice_run_payloads.py` prints `0`; `still_failed` stays, as `RunProgress`'s.
 - `cd frontend && npm run gen:api && git status --porcelain src/api` prints nothing after the task's commit.
 - `cd frontend && npx vitest run src/components/practice/RunBreakdown.test.tsx src/pages/PracticeRunPage.test.tsx src/pages/PracticeDetailsPage.test.tsx src/test/practice_run.test.ts` passes.
-- `grep -rn "First try\|One retry\|Gains first\|Drops first\|±0\|Attempt \|useState<SortKey" frontend/src --include=*.tsx --include=*.ts | grep -v "\.test\."` prints nothing.
+- `grep -rn "First try\|One retry\|Gains first\|Drops first\|±0\|Attempt \|useState<SortKey" frontend/src --include=*.tsx --include=*.ts | grep -v "\.test\.\|src/api/"` prints nothing; the generated `types.ts` carries `/** Attempt */` comments of its own.
 - `grep -c "Sort\", spoken\|First try\|±0" docs/vocabulary.md` prints `0`.
+- `grep -c "chipClass" frontend/src/components/practice/ratingTiers.ts frontend/src/components/practice/RunBreakdown.tsx` prints `0` for each.
 - At 390 wide on the live server, on a completed practice's run page and on its own page: the five counts under their badges, "Order by:" with its three blocks, and one row per card with its circle and badge, as drawing 14; tapping "down" narrows the list and the counts stay on screen; tapping Gains and then Drops reorders the rows.
 
 **Debrief**
 
-Attempted: before the first edit, I read the task's Files, drawings 14 and 15, and the records, and ran the Done-when greps over the code as it stands, reasoning about what each would print once the task's Details are built. No code or test was written, so nothing needs reverting.
-
-Found: two Done-when lines cannot print what they state, whatever is built within the task, and one comment goes false in a path outside Files.
-
-- `grep -c "Bucket\|still_failed\|passed_first_try\|attempt_count" app/models/practice_run_payloads.py` cannot print `0`. `RunProgress.still_failed`, the live progress count, sits in that file and is not part of the breakdown. The Details leave `RunProgress` alone. `run_progress` in `app/services/practice_run.py`, `RunProgressBar.tsx` and the vocabulary's row "The practice's progress, a wordless bar, spoken" all use the name, and T2's own vocabulary edit keeps `still_failed` in the row "A card rated Again on a field at its last attempt". With the task built, the grep prints `1`. Reaching `0` would mean renaming the field, which needs `RunProgressBar.tsx`, a path outside Files, and contradicts that row.
-- The grep for `First try`, `One retry`, `Gains first`, `Drops first`, `±0`, `Attempt ` and `useState<SortKey` over `frontend/src` cannot print nothing. Its `Attempt ` matches two comments openapi-typescript writes into the generated `frontend/src/api/types.ts`: `/** BreakdownAttempt */`, the title of the class the Details require, and `/** Attempt */`, the title of `CurrentRunCard.attempt`, which the task does not touch. AGENTS.md forbids editing that file by hand.
-- `frontend/src/components/practice/ratingTiers.ts`, outside Files, says `chipClass` is for the breakdown detail sheet's read-only rating badge. The rewrite of `RunBreakdown.tsx` removes `RatingBadge`, the only reader of `chipClass`, and no task of this cycle lists that path, so the comment goes false and the member goes unread.
-
-Why the file cannot settle it: Done when is the planner's to edit, and the builder may write only a task's Status and Debrief. Each criterion states an exact output. Which outputs the planner meant, and whether `chipClass` leaves or stays, are not stated in the file. The Details otherwise agree with the code: every test the Details name exists, `MasteryStrategy.reach` exists, and T1's interfaces are as the task uses them.
+None.
 
 ### T3 — A card opened from the summary
 
