@@ -167,7 +167,7 @@ Read in the code: nothing beyond `MasteryCircle.tsx`, for the paint order above.
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -318,7 +318,15 @@ The pages:
 
 **Debrief**
 
-None.
+Attempted: before the first edit, I read the task's Files, drawings 14 and 15, and the records, and ran the Done-when greps over the code as it stands, reasoning about what each would print once the task's Details are built. No code or test was written, so nothing needs reverting.
+
+Found: two Done-when lines cannot print what they state, whatever is built within the task, and one comment goes false in a path outside Files.
+
+- `grep -c "Bucket\|still_failed\|passed_first_try\|attempt_count" app/models/practice_run_payloads.py` cannot print `0`. `RunProgress.still_failed`, the live progress count, sits in that file and is not part of the breakdown. The Details leave `RunProgress` alone. `run_progress` in `app/services/practice_run.py`, `RunProgressBar.tsx` and the vocabulary's row "The practice's progress, a wordless bar, spoken" all use the name, and T2's own vocabulary edit keeps `still_failed` in the row "A card rated Again on a field at its last attempt". With the task built, the grep prints `1`. Reaching `0` would mean renaming the field, which needs `RunProgressBar.tsx`, a path outside Files, and contradicts that row.
+- The grep for `First try`, `One retry`, `Gains first`, `Drops first`, `±0`, `Attempt ` and `useState<SortKey` over `frontend/src` cannot print nothing. Its `Attempt ` matches two comments openapi-typescript writes into the generated `frontend/src/api/types.ts`: `/** BreakdownAttempt */`, the title of the class the Details require, and `/** Attempt */`, the title of `CurrentRunCard.attempt`, which the task does not touch. AGENTS.md forbids editing that file by hand.
+- `frontend/src/components/practice/ratingTiers.ts`, outside Files, says `chipClass` is for the breakdown detail sheet's read-only rating badge. The rewrite of `RunBreakdown.tsx` removes `RatingBadge`, the only reader of `chipClass`, and no task of this cycle lists that path, so the comment goes false and the member goes unread.
+
+Why the file cannot settle it: Done when is the planner's to edit, and the builder may write only a task's Status and Debrief. Each criterion states an exact output. Which outputs the planner meant, and whether `chipClass` leaves or stays, are not stated in the file. The Details otherwise agree with the code: every test the Details name exists, `MasteryStrategy.reach` exists, and T1's interfaces are as the task uses them.
 
 ### T3 — A card opened from the summary
 
