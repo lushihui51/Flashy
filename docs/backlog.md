@@ -56,3 +56,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
   - Reason: a fading circle can feel like being told you're behind, which PDR 027 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 027's "nothing due".
   - Owner: /product-decide
+- B28. What does the summary say when the chosen counts list no card, and does "Practice these" show then?
+  - Reason: a count of zero can be chosen and narrows the list to nothing; PDR 026 offers a practice only of the cards the list shows, so "Practice these" does not show then, and no record gives words for a list narrowed to nothing or for a tap with nothing to practice, which would also need a refusal code (ADR 070).
+  - Owner: /product-decide
