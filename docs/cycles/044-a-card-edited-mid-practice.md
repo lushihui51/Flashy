@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide, on an active prac
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -48,6 +48,7 @@ Drawings 18, 19 and 40 are the run page.
 The place in the URL (LCD7, ADR 097):
 
 - The run page must keep "answers shown" and the ratings chosen so far in its search params, tagged with their practice card: `card`, the practice card's id; `shown`, `1` when the answers are shown; and `rating.<fieldId>`, the rating 1 to 4 for each rated answer field, as `/practice/{id}/run?card=<practiceCardId>&shown=1&rating.<fieldId>=3`. It must read them only when `card` equals the current practice card's id, and write them through `setParams`, never `changeView`; `useState` for either goes.
+- `RunCompletion` and its `rerunError` stay as they are; a failure's sentence is UI state (ADR 088), never a param.
 - On a successful "Next card" the page must write the params without `card`, `shown` and any `rating.` key, so nothing carries to the next card; a `card` from an earlier card reads as nothing.
 - `kind` and `order` from the summary, and `card` once the practice completes, are the summary's, written by `RunBreakdown`; the run page must not strip them.
 
@@ -82,17 +83,13 @@ Tests in `PracticeRunPage.test.tsx`: "Edit card" reads `aria-disabled` before "S
 **Done when**
 
 - `cd frontend && npx vitest run src/pages/PracticeRunPage.test.tsx src/components/practice/RatingChip.test.tsx` passes.
-- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `0`.
+- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `2`: the import and `rerunError`.
 - `grep -c "Scrim" frontend/src/components/practice/RatingChip.tsx` prints `2` or more.
 - At 390 wide on the live server, on an active practice: "Edit card" reads not ready beside "Show answer" and does nothing tapped, as drawing 18; after "Show answer" it opens Edit card, and Save after a change returns to the same card, answers shown, a rating given before kept, the new value showing, as does Cancel without it; a reload keeps the card, the shown answers and the rating; "Next card" shows the next card with nothing shown or rated; a rating chip's open list dims the page and a tap on the dimming closes it without pressing "Edit card" or "Next card", as drawing 40.
 
 **Debrief**
 
-Attempted: the six checks before starting, all of which held, and a reading of the task against the code. Nothing was built.
-
-Found: the Done-when line `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `0` cannot hold within the task's Files. Details removes `showAnswer` and `ratings` from `PracticeCardView`. `rerunError` in `RunCompletion`, in the same file, also uses `useState`, and holds the sentence `RerunButton` in `frontend/src/components/practice/RerunButton.tsx` reports through `onError`. With the two gone the command prints `2`: the import and `rerunError`. Keeping that sentence in the URL would put a failure in the page's address, and replacing `useState` with `useReducer` would pass the grep with the same state in place.
-
-Why the file cannot settle it: Details says `useState` goes for "either" of the two, and the Done-when line requires it gone from the whole file; the file never names `rerunError`. Meeting the line as written takes `RunCompletion` out of the page into a path outside Files, with the breakdown query staying in the page under ADR 088, and that is a refactor of the summary's page the task does not state. Changing the line is the planner's edit. The two ways out, the expected output changed to `2` or `RunCompletion` moved to a new `frontend/src/components/practice/RunCompletion.tsx`, were raised to the engineer, who chose to block.
+None.
 
 ### T2 — Edit card from the summary
 
