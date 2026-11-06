@@ -6,16 +6,13 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: a field's only type is "Text", so the question waits for pictures and audio to exist; `FieldValue` in `frontend/src/components/practice/FieldValue.tsx` renders a picture or audio value as a small chip that opens the value over the page, so a zone's size stays predictable whatever the card holds
   - Owner: /product-decide
 - B2. Do a summary's order and chosen counts survive a refresh, browser back, and a shared address, as a page's open tab and filters do?
-  - Reason: PDR 017 keeps the open tab and filters across browser back and PDR 024 gives the summary three orders and counts the user can choose; neither says whether the chosen order or counts are kept, and today they reset to the default.
+  - Reason: PDR 017 keeps the open tab and filters across browser back and PDR 024 gives the summary three orders and counts the user can choose; neither says whether the chosen order or counts are kept. ADR 097 names the chosen counts and the order among the writes that change what a list shows, so the summary keeps them in its address, where they survive a refresh, browser back and a shared address, with no product record saying that is wanted.
   - Owner: /product-decide
 - B3. Does the app have a dark appearance, and what are its colours?
   - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
   - Owner: /product-decide
 - B4. What does the top bar's search find, and where do its results appear?
   - Reason: `SearchBar` in `frontend/src/components/shell/SearchBar.tsx` takes typing, and Enter does nothing.
-  - Owner: /product-decide
-- B5. What does the Home page show?
-  - Reason: `HomePage` in `frontend/src/pages/HomePage.tsx` reads "Coming soon.", and it is where the app opens; a practice starts only from New practice, reached from the Practice page and the top bar's shortcut.
   - Owner: /product-decide
 - B8. On a wide screen, are a deck's cards shown and edited as a table, one column per field, with a field's type and order set from its column header?
   - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form. The answer turns on what the user does on this page on a wide screen: blocks in columns suit finding a card and opening it, and a table suits checking one field across many cards.
