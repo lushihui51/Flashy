@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 
@@ -116,6 +116,120 @@ describe('PickerCombobox', () => {
       />,
     );
     expect(screen.getByTestId('leading-d0')).toBeInTheDocument();
+  });
+
+  describe('while the list is open', () => {
+    const renderPicker = () =>
+      render(
+        <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" />,
+      );
+
+    it('a pointerdown on the scrim closes the list and a button beside the picker is not clicked', async () => {
+      const onBeside = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <>
+          <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" />
+          <button type="button" onClick={onBeside}>
+            Beside
+          </button>
+        </>,
+      );
+      await user.click(screen.getByRole('combobox'));
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+      fireEvent.pointerDown(screen.getByTestId('scrim'));
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('scrim')).not.toBeInTheDocument();
+      expect(onBeside).not.toHaveBeenCalled();
+    });
+
+    it('typing narrows the options and the input keeps focus', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      const input = screen.getByRole('combobox');
+      await user.click(input);
+      expect(screen.getAllByRole('option')).toHaveLength(9);
+
+      await user.keyboard('Deck 10');
+
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Deck 10', 'New deck…']);
+      expect(input).toHaveFocus();
+    });
+
+    it('the page cannot scroll until a choice closes the list', async () => {
+      const user = userEvent.setup();
+      document.documentElement.style.overflow = 'scroll';
+      renderPicker();
+      await user.click(screen.getByRole('combobox'));
+      expect(document.documentElement.style.overflow).toBe('hidden');
+
+      await user.click(screen.getByRole('option', { name: 'Deck 3' }));
+
+      expect(document.documentElement.style.overflow).toBe('scroll');
+      document.documentElement.style.overflow = '';
+    });
+
+    it('a focus moving outside closes the list, and a press on the input does not', async () => {
+      const user = userEvent.setup();
+      render(
+        <>
+          <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" />
+          <button type="button">Next</button>
+        </>,
+      );
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('combobox'));
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+      await user.tab();
+
+      expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+
+    it('Escape closes the list and leaves focus in the input', async () => {
+      const user = userEvent.setup();
+      renderPicker();
+      await user.click(screen.getByRole('combobox'));
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox')).toHaveFocus();
+    });
+
+    it('marks the chosen row with a check, the clear row when a filter has nothing chosen', async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <PickerCombobox purpose="filter" items={items} selected={null} onSelect={() => {}} clearLabel="All decks" onClear={() => {}} placeholder="Deck" />,
+      );
+      await user.click(screen.getByRole('combobox'));
+      const checked = () =>
+        screen.getAllByRole('option').filter((o) => o.querySelector('svg.lucide-check'));
+      expect(checked().map((o) => o.textContent)).toEqual(['All decks']);
+
+      rerender(
+        <PickerCombobox purpose="filter" items={items} selected={items[2]!} onSelect={() => {}} clearLabel="All decks" onClear={() => {}} placeholder="Deck" />,
+      );
+      expect(checked().map((o) => o.textContent)).toEqual(['Deck 2']);
+    });
+
+    it('the control reads as open: ink outline, and a chevron pointing up', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <PickerCombobox purpose="filter" items={items} selected={null} onSelect={() => {}} clearLabel="All decks" onClear={() => {}} placeholder="Deck" />,
+      );
+      const input = screen.getByRole('combobox');
+      expect(input).toHaveClass('outlined-line');
+
+      await user.click(input);
+
+      expect(input).toHaveClass('outlined-ink');
+      expect(container.querySelector('svg.lucide-chevron-up')).not.toBeNull();
+      expect(container.querySelector('svg.lucide-chevron-down')).toBeNull();
+    });
   });
 
   describe('purpose="filter"', () => {

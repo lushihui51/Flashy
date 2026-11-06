@@ -54,6 +54,10 @@
 @utility outlined-reserved {
   border: 1.5px solid transparent;
 }
+@utility outlined-pointer {
+  border-top: 1.5px solid var(--color-ink);
+  border-left: 1.5px solid var(--color-ink);
+}
 @utility ruled-top {
   border-top: 1.5px solid var(--color-ink);
 }

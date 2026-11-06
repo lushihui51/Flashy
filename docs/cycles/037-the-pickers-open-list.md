@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide: opening "All subj
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -75,13 +75,30 @@ Tests, in `Scrim.test.tsx`, under jsdom, ADR 017: with an anchor whose `getBound
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/components/ui/Scrim.test.tsx src/test/theme.test.ts src/test/pxLiterals.test.ts` printed `Test Files  3 passed (3)`, `Tests  12 passed (12)`.
+- `grep -c "bg-(--color-ink)/20" frontend/src/components/ui/Scrim.tsx` printed `1`.
+
+Departures from guidance: none. The hole is the `clip-path` even-odd polygon the Details suggest, with square corners, which the Details allow, so a control's rounded corners show a sliver of undimmed page until the eye reaches its outline. The scrim stands at `z-50`, the Details fixing only "above the header's `z-40`"; no caller of the picker renders it inside a dialog, whose `z-60` would cover it.
+
+An addition the Details do not name: `swallowNextClick` in `Scrim.tsx`, with three tests beyond those the Details list. The Details say nothing beneath receives the tap "since the scrim covers it", and that reason fails for touch. A touch's click arrives after its pointerdown, by when the caller has closed the panel and removed the scrim, so the click lands on what lay beneath. A plain-page probe in headless Chromium, touch emulated through Playwright, printed `scrim pointerdown`, `click@below`, `BELOW CLICKED`; a mouse in the same page printed only `scrim pointerdown`, since a mouse's click does not fire once its pointerdown's target is gone. So on a touch or a pen pointerdown the scrim now swallows the next click, and a later pointerdown stands that down.
+
+The real component, bundled from the scratchpad into a blank page in the same Chromium at 390 wide, printed:
+
+- Mouse on the page: `dismiss`, scrim gone, `overflow` restored, the button beneath not clicked.
+- Emulated touch on the page: `dismiss`, scrim gone, `overflow` restored, the button beneath not clicked; a second tap, the scrim gone, clicked it.
+- Mouse in the hole: no `dismiss`, focus in the control, scrim still up, `overflow` `hidden`, and the clip path `polygon(evenodd, 0px 0px, 100% 0px, 100% 100%, 0px 100%, 0px 0px, 16px 120px, 324px 120px, 324px 166px, 16px 166px, 16px 120px)`.
+
+Not checked: a tap on a real device, since none can reach the dev server, so the touch result above is emulation only. The hole and the dimming have not been seen in the app, since nothing uses `Scrim` until T2, and T2's Done when drives a mouse, which cannot show the touch case.
+
+Read: `swallowNextClick` in `frontend/src/components/ui/Scrim.tsx`, the one thing here the Details did not ask for.
 
 ### T2 — The picker's list as a panel
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -152,4 +169,34 @@ Tests: `PickerCombobox.test.tsx` keeps every test it has, opening the list by cl
 
 **Debrief**
 
-None.
+Evidence:
+
+- The three greps printed `1`, `0` and `1`.
+- `cd frontend && npx vitest run` printed `Test Files  62 passed (62)`, `Tests  737 passed (737)`. `PickerCombobox.test.tsx` gained the three named tests and four more: a focus moving outside closes the list and a press on the input does not; Escape leaves focus in the input; the check marks the chosen row; the control reads as open.
+- The judgement, in headless Chromium at 390 wide by mouse, signed out:
+  - On `/practice/new`, a click on "All subjects" printed a scrim background of `oklab(0.242969 -0.00863966 -0.0223459 / 0.2)`, `overflow` `hidden`, panel top 317 below control bottom 303, and the control as `document.activeElement`.
+  - **The background does not read `rgba(23, 33, 43, 0.2)` as the Done-when has it.** Tailwind compiles the `bg-(--color-ink)/20` that T1 requires through oklab. Both values drawn to a canvas give `[25, 35, 45, 51]`, so the colour is the same. The engineer ruled that this line counts as met.
+  - Typing `l` narrowed 7 options to 5 and typing `z` left only "All subjects"; the control kept focus each time.
+  - A click at a configuration row's edit control, the scrim being the element at that point, closed the list, left the path at `/practice/new` and restored `overflow` to empty. With the list closed, the same click went to `/deck-configurations/…/edit`, so the target was live. A wheel over the dimming moved the page by 0.
+  - On `/cards/new`, a click on the deck picker printed the same background, `overflow` `hidden`, the panel below the control and focus in the control. Choosing a deck printed `value Commands`, no list and `overflow` empty. The console held no errors.
+- Screenshots: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/abf69c58-e39c-4a8e-9301-999b80e15800/scratchpad/new-practice-all-subjects.png` and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/abf69c58-e39c-4a8e-9301-999b80e15800/scratchpad/new-card-deck-picker.png`, with `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/abf69c58-e39c-4a8e-9301-999b80e15800/scratchpad/new-card-deck-chosen.png` showing a chosen deck's check and `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/abf69c58-e39c-4a8e-9301-999b80e15800/scratchpad/new-card-short.png` showing a 320-tall screen.
+
+Departures from guidance: none. These are the choices the Details leave open, and where the build differs from a drawing:
+
+- The pointer is `absolute`, turned `-rotate-135` rather than 45°, and centred on the panel's edge. Radix turns the arrow's wrapper 180° when the panel opens below, so -135° reads as drawn, and it points the right way when the panel flips above. A measured arrow's height would be added to `sideOffset`, making the gap 28 rather than the drawings' 14; the gap printed 14.
+- A form picker also shows the chevron pointing up while open, since drawing 25 draws one, though the Details name only a filter's. A closed form picker still has no chevron, since no drawing shows one closed.
+- The Plus and X icons on the action row are gone, since the Details give every row but the chosen one a blank and drawing 25 draws "New deck…" with one.
+- `Popover.Content` takes `role="presentation"`, since focus stays in the input and it is not a dialog.
+- A wrapper `div` holds the scrim and the panel, since `Popover.Portal` takes a single child.
+- The panel is capped at Radix's available height and its list scrolls, which the Details do not name. The page is locked, so a list taller than the room would otherwise leave rows out of reach. At 320 tall the panel flipped above the control and scrolled 134 of 437.
+- Drawing 24 draws the filters as pills that size to their words. The app's filters stay equal-width inputs, since the Details keep typing in the control and leave `PracticeFilterBar.tsx` unchanged, which it is. Its panel is 248 wide where the Details fix `w-65`, and the Details are built.
+
+For the engineer to judge:
+
+- Cancelling New subject returns focus to the picker, whose open-on-focus opens the list again, now dimmed: the browser printed one list, one scrim and `overflow` `hidden` after the dialog closed. The open-on-focus and the return of focus are unchanged code, so the list reopened before too; only the dimming is new.
+- Tabbing into a picker opens it and dims the page in the same way.
+- The hole's square corners, which T1 reported, show as small bright slivers at the control's rounded corners in both screenshots.
+
+Not checked: a tap on a real device. Emulated touch on the scrim closed the list and left the URL alone, and emulated touch on a row chose it, which is emulation only. The on-screen keyboard's effect on the panel and the hole was not exercised.
+
+Read: the `Popover.Arrow` child in `frontend/src/components/ui/PickerCombobox.tsx`, for the geometry above, and `onInteractOutside` beside it, which keeps a press on the input from closing the list.
