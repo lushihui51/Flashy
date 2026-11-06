@@ -21,7 +21,7 @@ Judgement: The engineer judges on the live server at 390 wide: on New practice w
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -71,7 +71,16 @@ Tests in `viewParams.test.tsx`, with the file's `data-rect` stand-in: a stub who
 
 **Debrief**
 
-None.
+Evidence, in order:
+
+- `cd frontend && npx vitest run src/lib/viewParams.test.tsx src/lib/revealDelta.test.ts` printed `Test Files  2 passed (2)`, `Tests  20 passed (20)`. The three reveal tests the Details name are "scrolls once inside the call when the sentence is rendered, and leaves the URL unchanged", "scrolls once after the sentence has rendered when the same handler sets its state" and "scrolls by 0 when the control and the sentence are already in the band".
+- `grep -c "reveal" frontend/src/lib/viewParams.ts` printed `13`.
+
+Commit checks over the whole frontend: `npx vitest run` printed `Test Files  61 passed (61)`, `Tests  699 passed (699)`; `npm run lint` printed no findings; `npm run build` built, with only the existing warning on chunk size.
+
+Departures from guidance: none. Beyond the Details, the tests hold two more, "gives way to a changeView made before its commit" and "replaces a changeView made before its commit", pinning the constraint on which call replaces which. The stand-ins for `innerHeight`, `getBoundingClientRect` and `window.scrollBy` moved up from the `changeView` group to the file's outer `useViewParams` group, so the `reveal` group shares them; the `setParams` test runs under them too and reads none of them.
+
+Read in the code: `reveal` and the layout effect in `useViewParams`. A reveal whose `listStart()` stays null stays pending until a later commit renders its element or a later `changeView` or `reveal` replaces it, as the Details state, so a form must pass a `listStart` that its own tap goes on to render.
 
 ### T2 — The library forms' tap of Create or Save
 
