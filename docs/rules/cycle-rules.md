@@ -1,12 +1,14 @@
 # Cycle file rules
 
-**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged to main, the file is complete and is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history.
+**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged into its docket's branch, the cycle is complete and its file is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history, but the Waits for line of another cycle file.
+
+**Branch.** The engineer makes the cycle's branch from its docket's branch, named by the repository's `type:` prefix, a slash and the cycle file's name without `.md`; every commit of the cycle is made on it, and the engineer merges it back into the docket's branch.
 
 **Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation or the docket. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
 
 **Edits before the merge.** Until the cycle's merge, the builder writes a task's Status and Debrief; for a path outside the task's Files that the engineer approves, the Files and Dependencies lines that path changes; and, on the cycle's canvas, only an alternative to a drawing, beside it, the drawing and its alternative then lettered A upward under the drawing's number, and the alternative staying only as evidence a blocked task's Debrief cites; every other edit is the planner's, made by /cycle-plan.
 
-**Commits.** A task's commit holds its code, tests and cycle-file edit; its message is the repository's `type:` prefix, the task's Goal as the statement, and `(cycle NNN Tn)`. The cycle file's own commit, by the planner, has the message `docs: plan cycle NNN, <title>`.
+**Commits.** A task's commit holds its code, tests and cycle-file edit; its message is the repository's `type:` prefix, the task's Goal as the statement, and `(cycle NNN Tn)`. The cycle file's own commit, by the planner, has the message `docs: plan cycle NNN, <title>`. An amendment by the planner has the message `docs: amend cycle NNN, <what the file now states>`.
 
 **Purpose.** For the builder, a cycle file is the whole of what it is told for the cycle. The engineer judges each task from its Debrief and by testing the app on a live server, and reads code only where the Debrief points.
 
@@ -20,7 +22,9 @@
 
 **Records.** One line per active record, ADR or PDR: its number and title. Never restate the record's decision or its reasons; the builder reads the record.
 
-**Canvas.** When a task cites a drawing, the cycle has a canvas of its own, named "<repository> cycle NNN" after the repository's name and linked on the line under the title as "Canvas: " and the link. /cycle-plan makes it from the docket's canvas, holding only the drawings the cycle's tasks cite, each under its number from the docket's canvas and as the docket's canvas held it when /cycle-plan last wrote the cycle file. The canvas is part of the cycle file.
+**Canvas.** When a task cites a drawing, the cycle has a canvas of its own, named "<repository> cycle NNN" after the repository's name and linked on the line under the title, or under the Waits for line, as "Canvas: " and the link. /cycle-plan makes it from the docket's canvas, holding only the drawings the cycle's tasks cite, each under its number from the docket's canvas and as the docket's canvas held it when /cycle-plan last wrote or re-read the cycle file. The canvas is part of the cycle file.
+
+**Waits for.** When a cycle uses what a cycle not yet complete delivers, or shares a file with one, the line under the title reads "Waits for: " and, for each such cycle, its number and the interfaces of it this cycle uses, by name. Two cycles neither of which waits for the other, directly or through others, share no file.
 
 ## A task
 

@@ -37,8 +37,10 @@ This is the floor, not a ceiling: read anything in the repository you need.
 
 ## Before you start
 
-Check these four things, and if any fails, stop with the reason and touch nothing:
+Check these six things, and if any fails, stop with the reason and touch nothing:
 
+- The checkout is on the cycle's branch, as `docs/rules/cycle-rules.md` names it.
+- Every cycle the file's Waits for line names is complete and delivers each interface the line names for it.
 - The task's Status is not started.
 - Every task in the task's Dependencies is done.
 - Every path in Files exists unless marked new, and no path marked new exists.
