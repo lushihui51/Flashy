@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide: opening "All subj
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -75,7 +75,24 @@ Tests, in `Scrim.test.tsx`, under jsdom, ADR 017: with an anchor whose `getBound
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/components/ui/Scrim.test.tsx src/test/theme.test.ts src/test/pxLiterals.test.ts` printed `Test Files  3 passed (3)`, `Tests  12 passed (12)`.
+- `grep -c "bg-(--color-ink)/20" frontend/src/components/ui/Scrim.tsx` printed `1`.
+
+Departures from guidance: none. The hole is the `clip-path` even-odd polygon the Details suggest, with square corners, which the Details allow, so a control's rounded corners show a sliver of undimmed page until the eye reaches its outline. The scrim stands at `z-50`, the Details fixing only "above the header's `z-40`"; no caller of the picker renders it inside a dialog, whose `z-60` would cover it.
+
+An addition the Details do not name: `swallowNextClick` in `Scrim.tsx`, with three tests beyond those the Details list. The Details say nothing beneath receives the tap "since the scrim covers it", and that reason fails for touch. A touch's click arrives after its pointerdown, by when the caller has closed the panel and removed the scrim, so the click lands on what lay beneath. A plain-page probe in headless Chromium, touch emulated through Playwright, printed `scrim pointerdown`, `click@below`, `BELOW CLICKED`; a mouse in the same page printed only `scrim pointerdown`, since a mouse's click does not fire once its pointerdown's target is gone. So on a touch or a pen pointerdown the scrim now swallows the next click, and a later pointerdown stands that down.
+
+The real component, bundled from the scratchpad into a blank page in the same Chromium at 390 wide, printed:
+
+- Mouse on the page: `dismiss`, scrim gone, `overflow` restored, the button beneath not clicked.
+- Emulated touch on the page: `dismiss`, scrim gone, `overflow` restored, the button beneath not clicked; a second tap, the scrim gone, clicked it.
+- Mouse in the hole: no `dismiss`, focus in the control, scrim still up, `overflow` `hidden`, and the clip path `polygon(evenodd, 0px 0px, 100% 0px, 100% 100%, 0px 100%, 0px 0px, 16px 120px, 324px 120px, 324px 166px, 16px 166px, 16px 120px)`.
+
+Not checked: a tap on a real device, since none can reach the dev server, so the touch result above is emulation only. The hole and the dimming have not been seen in the app, since nothing uses `Scrim` until T2, and T2's Done when drives a mouse, which cannot show the touch case.
+
+Read: `swallowNextClick` in `frontend/src/components/ui/Scrim.tsx`, the one thing here the Details did not ask for.
 
 ### T2 — The picker's list as a panel
 
