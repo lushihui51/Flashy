@@ -57,6 +57,17 @@ export const rerunPracticeRun = async (practiceSessionId: string, name: string) 
     }),
   );
 
+export const startChosenCards = async (
+  practiceSessionId: string,
+  payload: components['schemas']['PracticeRunChosenCards'],
+) =>
+  unwrap(
+    await client.POST('/api/practice_runs/{practice_run_id}/chosen_cards', {
+      params: { path: { practice_run_id: practiceSessionId } },
+      body: payload,
+    }),
+  );
+
 export const ratePracticeCard = async (
   practiceCardId: string,
   payload: components['schemas']['RatingSubmission'],

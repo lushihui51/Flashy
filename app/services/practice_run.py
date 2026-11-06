@@ -10,6 +10,7 @@ from app.database_ops.card import (
     db_read_card,
     db_read_card_ids_for_deck,
     db_read_cards_with_values,
+    db_read_deck_id_by_card,
 )
 from app.database_ops.deck_practice_config import db_read_deck_practice_config
 from app.database_ops.field_def import db_read_field_defs, db_read_field_defs_for_decks
@@ -146,6 +147,22 @@ class RerunError(Exception):
         return {"code": self.code, "message": self.message}
 
 
+class ChosenCardsError(Exception):
+    """A failure to start a practice of chosen cards, detail `{code, message}`:
+    `run_active` while the practice has not completed; `nothing_to_practice` when no
+    snapshot holding a chosen card still validates against its deck's live fields;
+    `no_cards` when the surviving snapshots generated no practice card."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+    @property
+    def detail(self) -> dict:
+        return {"code": self.code, "message": self.message}
+
+
 def _config_field_ids(config) -> list[uuid.UUID]:
     return list(
         set(config.prompt_field_ids)
@@ -163,6 +180,7 @@ def _snapshot_and_generate_deck(
     array_values: dict[str, list],
     source_config_id: uuid.UUID | None,
     source_config_name: str | None,
+    card_ids: list[uuid.UUID] | None,
     rng: random.Random,
     next_position: int,
 ) -> int:
@@ -171,13 +189,16 @@ def _snapshot_and_generate_deck(
     practice_cards ordered unseen-first-then-ascending-readiness with sparse positions
     starting at `next_position`. Returns the position to continue from for
     the next deck. Shared by start_practice_run (fed from a live
-    deck_practice_config) and the re-run path (fed from a completed session's
-    own frozen practice_deck arrays) — both need exactly this step, just from different
-    sources. `source_config_id` rides along into the snapshot purely for
-    attribution — start_practice_run passes the live config's id, rerun_practice_run
+    deck_practice_config), the re-run path and a practice of chosen cards (both fed from
+    a completed session's own frozen practice_deck arrays) — all need exactly this step,
+    just from different sources. `source_config_id` rides along into the snapshot purely
+    for attribution — start_practice_run passes the live config's id, the other two
     the original snapshot's value verbatim — and is never read back by anything below this
     function. `source_config_name` rides into the snapshot next to it, the
-    same way, and is likewise read by nothing below."""
+    same way, and is likewise read by nothing below. `card_ids` is written onto the
+    snapshot and selects the cards generated: null is every card of the deck, a list is
+    those of the deck's cards it names, and an id naming no card of the deck selects
+    nothing."""
     practice_deck = db_stage_create_practice_deck(
         db,
         {
@@ -185,15 +206,19 @@ def _snapshot_and_generate_deck(
             "deck_id": deck_id,
             "source_config_id": source_config_id,
             "source_config_name": source_config_name,
+            "card_ids": card_ids,
             **array_values,
         },
     )
 
-    card_ids = db_read_card_ids_for_deck(db, deck_id)
+    selected_card_ids = db_read_card_ids_for_deck(db, deck_id)
+    if card_ids is not None:
+        chosen = set(card_ids)
+        selected_card_ids = [cid for cid in selected_card_ids if cid in chosen]
     field_ids = _config_field_ids(practice_deck)
-    readiness = card_readiness(db, strategy, card_ids, field_ids)
+    readiness = card_readiness(db, strategy, selected_card_ids, field_ids)
     ordered_card_ids = sorted(
-        card_ids,
+        selected_card_ids,
         key=lambda cid: (readiness[cid].reviewed, readiness[cid].readiness),
     )
 
@@ -297,6 +322,7 @@ def start_practice_run(
             array_values,
             config.id,
             config.name,
+            None,
             rng,
             next_position,
         )
@@ -330,7 +356,7 @@ def rerun_practice_run(
     regenerated exactly like session start, via the same _snapshot_and_generate_deck
     helper, each carrying its old snapshot's `source_config_id` forward verbatim
     (attribution only, possibly already null; never looked up fresh), and its
-    `source_config_name` likewise. `name` is stored verbatim on the new run —
+    `source_config_name` and `card_ids` likewise. `name` is stored verbatim on the new run —
     the client formats it, same as start_practice_run. Raises LookupError for an
     unknown/foreign session (the router 404s); RerunError('run_active') if the session
     hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
@@ -346,7 +372,7 @@ def rerun_practice_run(
         raise RerunError("run_active", "practice is still active")
 
     surviving_decks: list[
-        tuple[uuid.UUID, dict[str, list], uuid.UUID | None, str | None]
+        tuple[uuid.UUID, dict[str, list], uuid.UUID | None, str | None, list[uuid.UUID] | None]
     ] = []
     for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
         array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
@@ -360,6 +386,7 @@ def rerun_practice_run(
                 array_values,
                 practice_deck.source_config_id,
                 practice_deck.source_config_name,
+                practice_deck.card_ids,
             )
         )
 
@@ -372,7 +399,7 @@ def rerun_practice_run(
     new_session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
-    for deck_id, array_values, source_config_id, source_config_name in surviving_decks:
+    for deck_id, array_values, source_config_id, source_config_name, card_ids in surviving_decks:
         next_position = _snapshot_and_generate_deck(
             db,
             strategy,
@@ -381,6 +408,7 @@ def rerun_practice_run(
             array_values,
             source_config_id,
             source_config_name,
+            card_ids,
             rng,
             next_position,
         )
@@ -390,6 +418,84 @@ def rerun_practice_run(
     if next_position == 0:
         raise RerunError(
             "no_cards", "generation produced no practice cards across the surviving decks"
+        )
+
+    db.commit()
+    db.refresh(new_session)
+    return new_session
+
+
+def start_chosen_cards_run(
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    practice_run_id: uuid.UUID,
+    name: str,
+    card_ids: list[uuid.UUID],
+    rng: random.Random | None = None,
+) -> PracticeRun:
+    """A new practice of exactly `card_ids`, each asked through the snapshot its deck had in
+    the completed practice `practice_run_id`. Raises LookupError for an unknown or foreign
+    practice, ValueError when `card_ids` is empty or names a card the practice did not
+    hold, and ChosenCardsError for the three coded refusals."""
+    rng = rng or random.Random()
+
+    session = db_read_practice_run(db, practice_run_id, user_id)
+    if session is None:
+        raise LookupError(f"practice_run {practice_run_id} not found")
+    if session.status != RunStatus.completed:
+        raise ChosenCardsError("run_active", "practice is still active")
+
+    if not card_ids:
+        raise ValueError("no cards chosen")
+    held_card_ids = {card.card_id for card in db_read_practice_cards_for_run(db, practice_run_id)}
+    if not held_card_ids.issuperset(card_ids):
+        raise ValueError("a chosen card is not a card of this practice")
+
+    chosen_by_deck: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    deck_id_by_card = db_read_deck_id_by_card(db, card_ids)
+    for card_id in dict.fromkeys(card_ids):
+        chosen_by_deck[deck_id_by_card[card_id]].append(card_id)
+
+    surviving_decks: list[PracticeDeck] = []
+    for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
+        if practice_deck.deck_id not in chosen_by_deck:
+            continue
+        array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
+        try:
+            validate_deck_practice_config(db, practice_deck.deck_id, **array_values)
+        except ValueError:
+            continue
+        surviving_decks.append(practice_deck)
+
+    if not surviving_decks:
+        raise ChosenCardsError(
+            "nothing_to_practice",
+            "no deck holding a chosen card still has a live, valid snapshot",
+        )
+
+    new_session = db_stage_create_practice_run(db, user_id, name)
+
+    next_position = 0
+    for practice_deck in surviving_decks:
+        next_position = _snapshot_and_generate_deck(
+            db,
+            strategy,
+            new_session.id,
+            practice_deck.deck_id,
+            {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS},
+            practice_deck.source_config_id,
+            practice_deck.source_config_name,
+            chosen_by_deck[practice_deck.deck_id],
+            rng,
+            next_position,
+        )
+
+    # Same check as start: every chosen card can be blank on one side of its snapshot, and
+    # only generation knows. Raised before the commit, so nothing of the run persists.
+    if next_position == 0:
+        raise ChosenCardsError(
+            "no_cards", "generation produced no practice cards from the chosen cards"
         )
 
     db.commit()

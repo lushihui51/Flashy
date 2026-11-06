@@ -50,6 +50,14 @@ class PracticeRunRerun(AppModel):
     name: str
 
 
+class PracticeRunChosenCards(AppModel):
+    """Body of POST .../chosen_cards: the client-formatted name for the new run, stored
+    verbatim, and the cards to practice, each one a card of the completed practice."""
+
+    name: str
+    card_ids: list[uuid.UUID]
+
+
 class PracticeRunRead(AppModel):
     id: uuid.UUID
     user_id: uuid.UUID

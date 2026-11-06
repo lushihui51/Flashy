@@ -24,7 +24,7 @@ Judgement: The engineer judges on the live server at 390 wide, on a completed pr
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -133,7 +133,23 @@ with a test in `src/test/practice_run.test.ts` that posts the name and the ids a
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run alembic heads` printed `049886e86ae2 (head)` and `uv run alembic current` printed `049886e86ae2 (head)`. The dry run on a `pg_dump` copy of the dev database upgraded from `ec9df5054ea7`, left all 19 snapshots with `card_ids` null, the column an `ARRAY`, nullable, with no default, and went down and up again; the copy was then dropped and the migration applied to dev. `uv run alembic check` printed `No new upgrade operations detected.`
+- `uv run pytest tests/api_tests/test_practice_run.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_schema_guard.py` printed `123 passed`; `TestChosenCards` alone printed `11 passed`. With no other connection on the test database, the full `uv run pytest` printed `400 passed`.
+- `npm run gen:api` was run, and a second run left `openapi.json` and `types.ts` byte-identical. The `git status --porcelain src/api` half of this line can only be run after the commit.
+- `npx vitest run src/test/practice_run.test.ts` printed `18 passed`. The whole frontend: `npx vitest run` printed `780 passed`, `npm run lint` printed nothing, `npm run build` succeeded.
+
+Departures from guidance: none. `startChosenCards` is laid out across lines like its neighbours in `practice_run.ts`.
+
+Beyond the listed tests, `TestChosenCards` also covers a stale snapshot dropped with its chosen cards while another deck survives, and a deck holding no chosen card getting no snapshot; both are constraints with no listed test.
+
+Choices the file leaves open, each reversible inside a task:
+
+- A chosen id repeated in the request is written once onto `card_ids`.
+- `run_active` is checked before the list, so an active practice answers `run_active` even with an empty list.
+
+To read: `start_chosen_cards_run` in `app/services/practice_run.py`. A card deleted since the original practice has lost its practice card by cascade, so choosing it from that practice is the plain 400 of a card the practice did not hold, never a drop. The id staying in `card_ids` applies to a card deleted after a practice of chosen cards was made, as ADR 086 has it, and that is what the test covers.
 
 ### T2 — Re-run and Practice these on the summary
 
