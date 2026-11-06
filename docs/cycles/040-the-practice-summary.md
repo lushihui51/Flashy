@@ -364,7 +364,7 @@ Read in the code: `get_practice_run_breakdown` in `app/services/practice_run.py`
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -421,4 +421,14 @@ A row on the summary opens the card as a sheet showing its name, its circle and 
 
 **Debrief**
 
-None.
+Blocked before any code was written; nothing is built. Attempted: reading the task, its records, drawings 16 and 17, and the code Details names.
+
+Found: Details states that `card` is "written with `setParams` on a row's tap and removed on close" and that "the browser's back closes it", and the third Done-when line and the cycle's Judgement both require the browser's back to close the sheet. The code cannot do both. `setParams` in `useViewParams` in `frontend/src/lib/viewParams.ts` writes with `replace: true`, and `frontend/src/lib/viewParams.test.tsx`, in "setParams replaces the entry, writes the params and asks for no scroll reset", pins `historyAction` as `REPLACE`. A row's tap written that way adds no history entry, so the browser's back leaves the page, sheet and all, for the page before it.
+
+ADR 097 decides this: `useViewParams` is the only code that reads or writes a page's URL search params, and every write it makes is a `replace`. ADR 099 relies on it. `useNavigate` with a `?card=` address in `RunBreakdown.tsx` would pass the lint rule, which restricts only `useSearchParams`, and would still break the record.
+
+Why the file cannot settle it: the constraint and the Done-when line contradict each other, and keeping the second means departing from an active record or changing `frontend/src/lib/viewParams.ts` and its test, which are outside Files. The file also does not say what closing does once a row's tap has added an entry. Removing `card` by a `replace` leaves two entries of the same page, so the browser's back and the "<", whose showing `frontend/src/lib/historyIndex.ts` decides, then lead to the summary the user is already on. Going back instead fails on a card opened by reload or shared address, since there the earlier entry is not the summary.
+
+To be settled by the engineer and the planner: either opening a card adds a history entry, with ADR 097 amended, `frontend/src/lib/viewParams.ts` and its test added to Files, and what closing does stated; or opening stays a `replace`, and "the browser's back closes it" leaves Details, the Done-when line and the Judgement.
+
+No drawing cited contradicts the rest of the file in what was compared: the sheet, the record card, the marks, the "i", the key's layer and its panel.
