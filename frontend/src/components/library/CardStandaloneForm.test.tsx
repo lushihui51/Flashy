@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -168,16 +168,41 @@ describe.each([
   });
 });
 
-describe('CardStandaloneForm — the heading row', () => {
+describe('CardStandaloneForm — the heading and the bar', () => {
   it.each([
-    { path: '/cards/new', heading: 'New card' },
-    { path: '/cards/c1/edit', heading: 'Edit card' },
-  ])('$heading holds its row in the sticky row', async ({ path, heading }) => {
-    mockAll();
-    renderForm(path);
+    { path: '/cards/new', heading: 'New card', leaveLabel: 'Create' },
+    { path: '/cards/c1/edit', heading: 'Edit card', leaveLabel: 'Save' },
+  ])(
+    '$heading has its heading outside the bar, and Cancel and $leaveLabel in it',
+    async ({ path, heading, leaveLabel }) => {
+      mockAll();
+      renderForm(path);
 
-    const title = await screen.findByRole('heading', { name: heading });
-    expect(title.parentElement).toHaveAttribute('data-reveal-clear');
+      const title = await screen.findByRole('heading', { name: heading });
+      expect(title.closest('[data-reveal-clear]')).toBeNull();
+      const bar = within(screen.getByTestId('form-bar'));
+      expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(bar.getByRole('button', { name: leaveLabel })).toBeInTheDocument();
+    },
+  );
+
+  it('a failed Save puts its sentence in the bar', async () => {
+    mockAll();
+    server.use(
+      http.patch(`${BASE}/api/cards/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/cards/c1/edit');
+
+    await user.type(await screen.findByRole('textbox', { name: 'Front' }), '!');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
   });
 });
 

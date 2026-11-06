@@ -652,9 +652,43 @@ describe('DeckConfigurationEditor — create', () => {
     const error = await screen.findByRole('alert');
     expect(error).toHaveTextContent('A configuration with this name already exists.');
     expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
+    expect(error.closest('[data-testid="form-bar"]')).toBeNull();
     // Still on the form, board intact.
     expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+  });
+
+  it('renders a failed save in the bar, keeping the board', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
+    expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
+    expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+  });
+
+  it('holds its heading outside the bar, and Cancel and Create in it', async () => {
+    mockLibrary();
+    renderCreate('/deck-configurations/new?deck=d1');
+
+    const heading = await screen.findByRole('heading', { name: 'New configuration' });
+    expect(heading.closest('[data-reveal-clear]')).toBeNull();
+    const buttons = within(screen.getByTestId('form-bar')).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['Cancel', 'Create']);
   });
 
   it('changing deck after assigning asks first, and clears the board on confirm', async () => {

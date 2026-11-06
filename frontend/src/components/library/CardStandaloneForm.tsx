@@ -7,7 +7,7 @@ import { readDeck, readDecks } from 'src/api/deck';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
-import StickyPageRow from 'src/components/ui/StickyPageRow';
+import FormBar from 'src/components/ui/FormBar';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -227,32 +227,9 @@ function CardStandaloneFormBody({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <StickyPageRow>
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="text-body font-medium text-(--color-aside)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-title font-bold text-(--color-ink)">
-          {mode === 'create' ? 'New card' : 'Edit card'}
-        </h1>
-        <button
-          type="submit"
-          form={formId}
-          disabled={!canSubmit}
-          className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </button>
-      </StickyPageRow>
-
-      {formError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
-          {formError}
-        </p>
-      )}
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'create' ? 'New card' : 'Edit card'}
+      </h1>
 
       <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
         {deckLocked ? (
@@ -295,6 +272,20 @@ function CardStandaloneFormBody({
           Delete card
         </button>
       )}
+
+      <FormBar sentence={formError}>
+        <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form={formId}
+          disabled={!canSubmit}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </button>
+      </FormBar>
 
       <ConfirmDialog
         open={confirmCancelOpen}

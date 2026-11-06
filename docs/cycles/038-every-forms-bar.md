@@ -124,7 +124,7 @@ For the engineer, outside this task's Files:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -175,7 +175,38 @@ Tests: in `SubjectForm.test.tsx` and `CardStandaloneForm.test.tsx`, the "heading
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/components/library src/components/ui/FormBar.test.tsx src/test/pxLiterals.test.ts` passes: 11 files, 192 tests.
+- `grep -c "StickyPageRow"` prints `0` for each of the four files. `grep -c "FormBar"` prints `3` for each of the four files.
+
+Beyond the Done when:
+
+- `npx vitest run` over the whole frontend passes, 62 files and 692 tests; `npm run lint` and `npm run build` are clean.
+- Headless Chromium at 390 by 844 against `localhost:5173`, by mouse, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development`:
+  - On each of the eight routed forms, the bar's bottom equals `innerHeight`, the `h1` is the first heading with its top below the header's bottom, and the spacer's height equals the bar's. The bars read Cancel, Create on New subject, New deck, New card and New configuration; Cancel, Save on Edit subject, Edit card and Edit configuration; Done, Undo, Save on Edit deck.
+  - Edit card for a card of "Commands", scrolled to the end: the bar's bottom stays at `innerHeight`, and its top is 763. The last field's bottom is 667, Delete card's 731, and the `h1`'s bottom is -421.5 against the header's 114.
+  - New subject: `document.body.scrollHeight` is 844, `innerHeight` 844, and the bar is at the foot.
+  - New subject over New deck: the dialog's bar has its bottom at 844, is the topmost element at that point, and holds Cancel, Create. Two bars are mounted while it is open and one after Cancel.
+  - New card with `POST /api/cards` aborted: "Couldn't reach Flashy. Check your connection and try again." is in the bar above the buttons, and the spacer grows with the bar to 129.
+  - Edit deck: Done, Undo, Save when clean; Cancel, Undo, Save after typing in the deck's name; Done, Undo, Save after Undo. No save ran, so "Saved ✓" was not seen in a browser; the existing test in `DeckEditor.test.tsx` covers it, and T3's Done when checks it live.
+  - No page errors. Nothing was written to the dev database.
+- Screenshots, in the session scratchpad: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d67e246b-2ba9-46e9-901e-837863eac5a6/scratchpad/shot-new-card-failed.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d67e246b-2ba9-46e9-901e-837863eac5a6/scratchpad/shot-edit-deck.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d67e246b-2ba9-46e9-901e-837863eac5a6/scratchpad/shot-overlay.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d67e246b-2ba9-46e9-901e-837863eac5a6/scratchpad/shot-new-subject.png`, `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/d67e246b-2ba9-46e9-901e-837863eac5a6/scratchpad/shot-edit-config.png`.
+
+Departures from guidance:
+
+- Done or Cancel on Edit deck carries none of the `disabled:` variants Done has today, since that button is never `disabled`.
+- `DeckConfigurationEditor.tsx`'s content under the heading starts at `mt-4`, where it was `mt-3` under the row, to match the gap under the heading on the other three forms.
+
+Tests beyond the Details:
+
+- `DeckEditor.test.tsx`: New deck's bar reads Cancel, Create, and the failed save's `alert` is found inside the bar. `DeckConfigurationEditor.test.tsx`: the heading sits outside the bar, and a duplicate name's `alert` is not inside it.
+
+Comments changed because this task made them false: `FieldsSection`'s in `DeckEditor.tsx`, which called Undo the header's, and the duplicate-name one in `DeckConfigurationEditor.tsx`, which named a banner.
+
+For the engineer, outside this task's Files:
+
+- New subject over New deck insets its fields by twice the page's padding, 2rem against the bar's 1rem, because `FullScreenDialog`'s content and `SubjectFormBody`'s container each carry `p-4`. It was so before this task, and the bar at the foot now makes it visible. Removing it means editing `frontend/src/components/ui/FullScreenDialog.tsx`, which no task's Files list.
 
 ### T3 — New practice's bar and the sticky row's retirement
 

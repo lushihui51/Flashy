@@ -30,7 +30,7 @@ import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
-import StickyPageRow from 'src/components/ui/StickyPageRow';
+import FormBar from 'src/components/ui/FormBar';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -217,7 +217,7 @@ function DeckConfigurationEditorBody({
     onError: (error) => {
       const sentence = failureSentence(error, 'Deck configuration not found.');
       // A duplicate name is the one failure the user fixes in place, so it belongs on
-      // the input rather than in a banner that costs them the rest of the form.
+      // the input rather than in the bar.
       if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
         setNameError(sentence);
       } else {
@@ -245,34 +245,11 @@ function DeckConfigurationEditorBody({
 
   return (
     <div className="p-4">
-      <StickyPageRow>
-        <button
-          type="button"
-          onClick={() =>
-            navigate(cancelTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
-          }
-          className="text-body font-medium text-(--color-aside)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-title font-bold text-(--color-ink)">
-          {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
-        </h1>
-        <button
-          type="button"
-          disabled={!canSave}
-          onClick={() => {
-            setNameError(null);
-            setSaveError(null);
-            saveMutation.mutate();
-          }}
-          className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-        >
-          {mode === 'edit' ? 'Save' : 'Create'}
-        </button>
-      </StickyPageRow>
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
+      </h1>
 
-      <div className="mt-3 flex flex-col gap-3">
+      <div className="mt-4 flex flex-col gap-3">
         {/* Label and control are siblings, not a wrapping <label>: the inline error below
             would otherwise become part of the field's own accessible name. */}
         <div
@@ -366,11 +343,29 @@ function DeckConfigurationEditorBody({
         </p>
       )}
 
-      {saveError && (
-        <p role="alert" className="mt-3 text-sm text-(--color-wrong)">
-          {saveError}
-        </p>
-      )}
+      <FormBar sentence={saveError}>
+        <button
+          type="button"
+          onClick={() =>
+            navigate(cancelTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
+          }
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!canSave}
+          onClick={() => {
+            setNameError(null);
+            setSaveError(null);
+            saveMutation.mutate();
+          }}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+        >
+          {mode === 'edit' ? 'Save' : 'Create'}
+        </button>
+      </FormBar>
 
       <ConfirmDialog
         open={pendingDeck !== null}

@@ -30,7 +30,7 @@ import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
-import StickyPageRow from 'src/components/ui/StickyPageRow';
+import FormBar from 'src/components/ui/FormBar';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -64,7 +64,7 @@ type FieldsSectionProps = {
  * gesture, the buttons — fully tested and keyboard-operable — are the only mechanism.
  *
  * Removing a *saved* field (one with an `id`) stages the row pending-removal in place
- * (struck through, every control disabled) until Save or the header's single
+ * (struck through, every control disabled) until Save or the bar's single
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
@@ -572,46 +572,9 @@ function DeckEditorBody({
 
   return (
     <div className="p-4">
-      <StickyPageRow>
-        <button
-          type="button"
-          onClick={showDone ? leaveByDone : handleCancel}
-          className={showDone ? 'tappable-sm h-10 shrink-0 rounded-field bg-(--color-surface) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]' : 'text-body font-medium text-(--color-aside)'}
-        >
-          {showDone ? 'Done' : 'Cancel'}
-        </button>
-        <h1 className="text-title font-bold text-(--color-ink)">
-          {mode === 'edit' ? 'Edit deck' : 'New deck'}
-        </h1>
-        <div className="flex items-center gap-2">
-          {mode === 'edit' && (
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-surface) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-            >
-              Undo
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void handleSaveClick()}
-            disabled={!canSave || checkingSaveImpact}
-            className="tappable-sm h-10 shrink-0 rounded-field bg-(--color-main-action) px-4 text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-          >
-            {/* Reverts the instant a new edit re-dirties the form, not just after the
-                2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
-            {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
-          </button>
-        </div>
-      </StickyPageRow>
-
-      {saveError && (
-        <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
-          {saveError}
-        </p>
-      )}
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'edit' ? 'Edit deck' : 'New deck'}
+      </h1>
 
       <div className="mt-4 flex flex-col gap-3">
         <label className="flex flex-col gap-1.5">
@@ -658,6 +621,36 @@ function DeckEditorBody({
         </button>
       )}
 
+      <FormBar sentence={saveError}>
+        <button
+          type="button"
+          onClick={showDone ? leaveByDone : handleCancel}
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          {showDone ? 'Done' : 'Cancel'}
+        </button>
+        {mode === 'edit' && (
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          >
+            Undo
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => void handleSaveClick()}
+          disabled={!canSave || checkingSaveImpact}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+        >
+          {/* Reverts the instant a new edit re-dirties the form, not just after the
+              2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
+          {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
+        </button>
+      </FormBar>
+
       {/* Creating a subject from the combobox's create row happens *over* this editor
           rather than navigating away — unlike "New deck…" in the card form, there is
           nothing heavy to nest here and everything typed so far would otherwise be lost. */}
@@ -671,7 +664,6 @@ function DeckEditorBody({
           mode="create"
           subjectId={undefined}
           original={undefined}
-          stickyRow={false}
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);

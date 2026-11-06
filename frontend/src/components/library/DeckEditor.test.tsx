@@ -243,14 +243,14 @@ describe('DeckEditor — create mode', () => {
     await user.click(await screen.findByRole('option', { name: /New subject…/ }));
 
     const dialog = await screen.findByRole('dialog', { name: 'New subject' });
-    // Scoped to the dialog: the editor's own header has a Cancel button too.
+    // Scoped to the dialog: the editor's own bar has a Cancel button too.
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Subject')).toHaveValue('Math');
   });
 
-  it('the New subject overlay keeps its heading row in flow, not sticky', async () => {
+  it('the New subject overlay has a bar of its own, with its heading outside it', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
@@ -266,6 +266,9 @@ describe('DeckEditor — create mode', () => {
     const dialog = await screen.findByRole('dialog', { name: 'New subject' });
     const heading = within(dialog).getByRole('heading', { name: 'New subject' });
     expect(heading.closest('[data-reveal-clear]')).toBeNull();
+    const bar = within(within(dialog).getByTestId('form-bar'));
+    expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Create' })).toBeInTheDocument();
   });
 
   it('creating a subject in the overlay selects it immediately, without waiting for a refetch', async () => {
@@ -567,7 +570,38 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
-  it('header reads Done (not Cancel) when the editor is clean; Done exits with no prompt', async () => {
+  it('the bar reads Done, Undo, Save when clean, and Cancel, Undo, Save once a field is renamed', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    const barButtons = () =>
+      within(screen.getByTestId('form-bar'))
+        .getAllByRole('button')
+        .map((button) => button.textContent);
+    expect(barButtons()).toEqual(['Done', 'Undo', 'Save']);
+
+    const [firstField] = screen.getAllByRole('textbox', { name: 'Field name' });
+    await user.type(firstField!, 'x');
+
+    expect(barButtons()).toEqual(['Cancel', 'Undo', 'Save']);
+  });
+
+  it('New deck has only Cancel and Create in the bar', async () => {
+    mockSubjects();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+      </Routes>,
+      ['/decks/new'],
+    );
+
+    const buttons = within(await screen.findByTestId('form-bar')).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['Cancel', 'Create']);
+  });
+
+  it('the bar reads Done (not Cancel) when the editor is clean; Done exits with no prompt', async () => {
     mockEditDeck();
     const user = userEvent.setup();
     renderEditDeck();
@@ -580,7 +614,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.queryByText('Discard this deck?')).not.toBeInTheDocument();
   });
 
-  it('header switches to Cancel once dirty, and Cancel still prompts to discard', async () => {
+  it('the bar switches to Cancel once dirty, and Cancel still prompts to discard', async () => {
     mockEditDeck();
     const user = userEvent.setup();
     renderEditDeck();
@@ -847,7 +881,8 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent('Something went wrong.');
     expect(screen.queryByText('Save changes?')).not.toBeInTheDocument();
     expect(patchCallCount).toBe(0);
   });
