@@ -42,6 +42,51 @@ function breakdown(): PracticeRunBreakdown {
   };
 }
 
+// Two attempts: the second leaves OS unshown and retries Meaning; Example is rated only the first
+// time; Filler is listed but no attempt names it.
+function retriedCard(): BreakdownCard {
+  const field = (id: string, name: string, side: 'prompt' | 'answer') => ({
+    field_def_id: id,
+    name,
+    type: 'text' as const,
+    side,
+    readiness: 0.5,
+    delta: 0.1,
+    change: 'up' as const,
+  });
+  const value = (id: string, name: string, text: string) => ({
+    field_def_id: id,
+    name,
+    type: 'text' as const,
+    value: text,
+  });
+  return {
+    ...card('c9', 'chmod', 0.58, -0.2, 'down'),
+    fields: [
+      field('front', 'Command', 'prompt'),
+      field('os', 'OS', 'prompt'),
+      field('meaning', 'Meaning', 'answer'),
+      field('example', 'Example', 'answer'),
+      field('filler', 'Filler', 'answer'),
+    ],
+    attempts: [
+      {
+        practice_card_id: 'a1',
+        prompts: [value('front', 'Command', 'chmod'), value('os', 'OS', 'Linux')],
+        answers: [
+          { ...value('meaning', 'Meaning', 'Change permissions'), rating: 1 },
+          { ...value('example', 'Example', 'chmod +x'), rating: 4 },
+        ],
+      },
+      {
+        practice_card_id: 'a2',
+        prompts: [value('front', 'Command', 'chmod')],
+        answers: [{ ...value('meaning', 'Meaning', 'Change permissions'), rating: 3 }],
+      },
+    ],
+  };
+}
+
 function LocationProbe() {
   const { search } = useLocation();
   return <div data-testid="search">{search}</div>;
@@ -54,6 +99,27 @@ function renderBreakdown(entry = '/') {
       <LocationProbe />
     </>,
     [entry],
+  );
+}
+
+function renderSheet(entry = '/?card=c9') {
+  return renderWithProviders(
+    <>
+      <RunBreakdown breakdown={{ total_cards: 1, cards: [retriedCard()] }} />
+      <LocationProbe />
+    </>,
+    [entry],
+  );
+}
+
+// Each mark in `marks`, as its circles' radius, fill and stroke.
+function drawnMarks(marks: Element) {
+  return Array.from(marks.querySelectorAll('svg')).map((mark) =>
+    Array.from(mark.querySelectorAll('circle')).map((circle) => ({
+      r: circle.getAttribute('r'),
+      fill: circle.getAttribute('fill'),
+      stroke: circle.getAttribute('stroke'),
+    })),
   );
 }
 
@@ -187,5 +253,134 @@ describe('RunBreakdown', () => {
     renderBreakdown();
 
     expect(screen.getByRole('button', { name: /Untitled card/ })).toBeInTheDocument();
+  });
+
+  describe('a card opened from the summary', () => {
+    it('tapping a row writes card to the URL and opens the sheet with its name and spoken circle', async () => {
+      const user = userEvent.setup();
+      renderSheet('/?order=gains');
+
+      await user.click(screen.getByRole('button', { name: /chmod/ }));
+
+      expect(screen.getByTestId('search')).toHaveTextContent('?order=gains&card=c9');
+      const sheet = screen.getByRole('dialog', { name: 'chmod' });
+      expect(within(sheet).getByRole('heading', { level: 2, name: 'chmod' })).toBeInTheDocument();
+      expect(within(sheet).getByRole('img', { name: 'Mastery 58%, down' })).toBeInTheDocument();
+    });
+
+    it('a card in the URL on first render opens it', () => {
+      renderSheet();
+
+      expect(screen.getByRole('dialog', { name: 'chmod' })).toBeInTheDocument();
+    });
+
+    it('a card the payload does not hold leaves the sheet closed', () => {
+      renderSheet('/?card=gone');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('closing removes card and keeps the other params', async () => {
+      const user = userEvent.setup();
+      renderSheet('/?order=drops&card=c9');
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('search')).toHaveTextContent('?order=drops');
+    });
+
+    it('lists each field under its side in the payload order, each with its value and circle', () => {
+      renderSheet();
+
+      const sheet = within(screen.getByRole('dialog', { name: 'chmod' }));
+      expect(sheet.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+        'Prompt',
+        'Answer',
+      ]);
+      const answerHeading = sheet.getByRole('heading', { level: 3, name: 'Answer' });
+      const os = sheet.getByText('OS');
+      expect(
+        os.compareDocumentPosition(answerHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(sheet.getByText('Linux')).toBeInTheDocument();
+      expect(sheet.getByText('Change permissions')).toBeInTheDocument();
+      expect(sheet.getAllByRole('img', { name: 'Mastery 50%, up' })).toHaveLength(4);
+    });
+
+    it('a prompt field speaks and draws one mark per attempt', () => {
+      renderSheet();
+
+      const marks = screen.getByRole('img', { name: 'OS: shown, then not shown' });
+      expect(drawnMarks(marks)).toEqual([
+        [{ r: '6.5', fill: 'var(--color-ink)', stroke: null }],
+        [{ r: '5.75', fill: 'none', stroke: 'var(--color-line)' }],
+      ]);
+    });
+
+    it('an answer field speaks and draws each rating, Again then Good', () => {
+      renderSheet();
+
+      const marks = screen.getByRole('img', { name: 'Meaning: Again, then Good' });
+      expect(drawnMarks(marks)).toEqual([
+        [{ r: '6.5', fill: 'var(--color-wrong)', stroke: null }],
+        [
+          { r: '5.75', fill: 'none', stroke: 'var(--color-ink)' },
+          { r: '3.25', fill: 'var(--color-ink)', stroke: null },
+        ],
+      ]);
+    });
+
+    it('an attempt that did not ask an answer field speaks "not asked"', () => {
+      renderSheet();
+
+      expect(screen.getByRole('img', { name: 'Example: Easy, then not asked' })).toBeInTheDocument();
+    });
+
+    it('a field no attempt names is absent', () => {
+      renderSheet();
+
+      expect(screen.queryByText('Filler')).not.toBeInTheDocument();
+    });
+
+    it('says nothing of how many attempts there were or which passed', () => {
+      renderSheet();
+
+      const words = screen.getByRole('dialog', { name: 'chmod' }).textContent!;
+      for (const forbidden of ['Attempt', 'Passed', 'Failed', 'First try']) {
+        expect(words).not.toContain(forbidden);
+      }
+    });
+
+    it('the "i" opens the key, which names the seven marks, and a tap on the layer closes it', async () => {
+      const user = userEvent.setup();
+      renderSheet();
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+
+      expect(screen.getByRole('button', { name: 'Key' })).toHaveAttribute('aria-expanded', 'true');
+      const key = within(screen.getByRole('dialog', { name: 'Key' }));
+      for (const word of ['shown', 'not shown', 'Again', 'Hard', 'Good', 'Easy', 'not asked']) {
+        expect(key.getByText(word).previousElementSibling?.tagName.toLowerCase()).toBe('svg');
+      }
+      expect(key.getByText('Prompt')).toBeInTheDocument();
+      expect(key.getByText('Answer')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('key-layer'));
+
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'chmod' })).toBeInTheDocument();
+    });
+
+    it('a second tap on the "i" closes the key', async () => {
+      const user = userEvent.setup();
+      renderSheet();
+
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+      await user.click(screen.getByRole('button', { name: 'Key' }));
+
+      expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
+    });
   });
 });

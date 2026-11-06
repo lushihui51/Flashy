@@ -10,7 +10,7 @@ type FieldValueProps = {
   labeled: boolean;
   hidden?: boolean;
   /** The run page's zone this value sits in, which sets its size. Left out, the value
-   * is drawn at the completion breakdown's smaller size. */
+   * is drawn at the size of a card opened from the summary. */
   zone?: 'prompt' | 'answer';
 };
 
@@ -23,7 +23,7 @@ function textValueClass(value: string, zone: FieldValueProps['zone']) {
       ? 'text-[3.375rem] leading-none font-bold tracking-[-0.02em]'
       : 'text-value leading-[1.1] font-bold tracking-[-0.01em]';
   }
-  return 'text-lg font-semibold';
+  return 'text-base leading-[1.35] font-semibold';
 }
 
 /** Renders one resolved prompt/answer field. Text renders as text; image/audio never
@@ -33,8 +33,8 @@ function textValueClass(value: string, zone: FieldValueProps['zone']) {
  * row, whatever the value's length or type — the field's name label still renders per
  * `labeled`, but the real value and any chip/button are never in the DOM at all, so
  * nothing leaks through a screen reader, find-in-page, or a stray tap before the run
- * page's single "Show answer" tap. Shared by the run page's prompt/answer zones and the completion
- * breakdown's detail view (which never passes `hidden`). */
+ * page's single "Show answer" tap. Shared by the run page's prompt/answer zones and a card opened
+ * from the summary (which never passes `hidden`). */
 export default function FieldValue({ field, labeled, hidden, zone }: FieldValueProps) {
   return (
     <div className={`flex min-w-0 flex-col ${!zone ? 'gap-0.5' : hidden ? 'gap-2' : 'gap-1'}`}>

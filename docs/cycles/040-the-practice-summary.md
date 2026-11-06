@@ -364,7 +364,7 @@ Read in the code: `get_practice_run_breakdown` in `app/services/practice_run.py`
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -423,4 +423,33 @@ A row on the summary opens the card as a sheet showing its name, its circle and 
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The three test files pass: `Test Files  3 passed (3)`, `Tests  66 passed (66)`.
+- The `grep -c "role=\"dialog\""` over `RunBreakdown.tsx` prints `1`.
+- Browser check, in headless Chromium at 390 by 844 against localhost:5173, signed out with `DEV_AUTH_USER_ID` and `ENV=development` set, driven by a mouse, on the dev database's completed practice `13352e78-a29b-4ac6-8ab9-94179a16e64f`, at `/practice/{id}/run` and at `/practice/{id}`. Both pages gave the same results and logged no error:
+  - The five counts speak "0 up a lot", "2 up", "13 no change", "5 down" and "0 down a lot", each with its badge over its number. "Order by:" has Mastery pressed in. There are 20 rows, each with a name, a circle and a badge, and the page does not scroll sideways. The rows' text holds no "Failed", "First try", "Attempt", "%", "+" or "−"; each row's name is the card's own, which here is often a number.
+  - Clicking "down" gives 5 rows. Clicking "down a lot" as well keeps 5 rows, since no card here is of that kind, with the URL at `kind=down&kind=down_a_lot` and the counts on screen at 331 to 398 of 844 on the run page and 373 to 440 on the practice's own page. Clicking both again gives 20 rows and an empty URL query.
+  - Gains puts "53" first, spoken "Mastery 89%, up". Drops puts "161" first, spoken "Mastery 65%, down".
+  - The retried card "143" opens at `card=f1eb931c-2987-4a59-a4df-afaee69253e2` and the page does not move. Its `h2` measures 24px at weight 700. Its circle speaks "Mastery 61%, down". "Port Number" speaks "shown, then shown". "Protocol Name" speaks "Again, then Good" and draws a circle of radius 6.5 filled wrong, then a ring of radius 5.75 stroked ink over a circle of radius 3.25 filled ink. Screenshots of the sheet and the key read as drawings 16 and 17, apart from what Out of scope names.
+  - The "i" opens the key at 240px wide, naming the seven marks. The layer runs from the sheet's top to the viewport's foot across the full width; the "i" and the panel each take a click above it. A second click on the "i" closes the key, and so does a click on the dimming, which leaves the sheet open.
+  - A reload keeps the sheet open on "143". A click on the scrim closes it and empties the URL query.
+  - At 390 by 320, the sheet's content is 255px in a scrolling area of 208px, a mouse wheel scrolls it 47px, and the last field comes into view. This card has too few fields to scroll at 844.
+  - A touch was not tried. No card of this practice is "down a lot", so its badge on a row was not seen.
+- `uv run pytest tests/api_tests/test_practice_run.py -k test_breakdown_statement_count_is_fixed` prints `1 passed, 98 deselected`.
+
+The checks AGENTS.md requires: `npx vitest run` passes 66 files and 779 tests; `npm run lint` prints no problem; `npm run build` builds, with only its existing warning about chunks over 500 kB.
+
+Departures from guidance: none.
+
+Choices the file left open:
+
+- The 0.25rem gap beside the marks is a spacer `span` in a top line with a 0.625rem gap, as drawing 16 draws it, so the marks and the circle stand 1.5rem apart. Read alone, the Details' words could mean 0.25rem in all.
+- A field's value is read from the first attempt that names it, since `FieldReadinessDelta` carries no value. A field no attempt names is left out, though the server never lists one.
+- "Prompt" and "Answer" always show, even when one side lists no field.
+- The scrolling area is `max-h-[65vh]`, as the old sheet's was, and reaches out over the sheet's padding so it does not clip the "i".
+- Escape with the key open closes the whole sheet, not only the key, since `BottomSheet` offers no way to intercept it.
+- The layer carries `data-testid="key-layer"`, since being `aria-hidden` it has no role a test can find, as `BottomSheet`'s scrim does.
+- A card opened by a reload has no row to return focus to on close, so focus goes nowhere in particular.
+
+Read in the code: `CardSheetContent` in `RunBreakdown.tsx`, for the stacking of the layer, the "i" and the panel.
