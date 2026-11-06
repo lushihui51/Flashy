@@ -18,6 +18,10 @@ export type ViewParams = {
   /** Writes `next` as a change to what the page's list shows, then moves the page only
    * as far as it takes to show the control and the list's first rows. */
   changeView: (next: URLSearchParams, targets: ViewTargets) => void;
+  /** Moves the page only as far as it takes to show the control and the rows, within the
+   * band the marked elements leave clear, and writes nothing. `control` is the part of the
+   * form, `listStart` the element holding its sentence, null until it is rendered. */
+  reveal: (targets: ViewTargets) => void;
 };
 
 function edgesOf(element: Element): Edges {
@@ -66,13 +70,30 @@ function wholePixels(delta: number, top: number, bandTop: number): number {
   return top - above >= bandTop ? above : Math.floor(delta);
 }
 
+/** Scrolls by the whole pixels of `revealDelta` over the current band, `targets.control` and
+ * the first rows of `list`, the element `targets.listStart` gave. */
+function scrollToTargets(targets: ViewTargets, list: Element) {
+  const control = targets.control();
+  const band = bandTop();
+  const input = {
+    bandTop: band.top,
+    bandBottom: band.bottom,
+    control: control ? edgesOf(control) : null,
+    rows: rowsOf(list).map(edgesOf),
+  };
+  const edges = input.control ? [input.control, ...input.rows] : input.rows;
+  const top = Math.min(...edges.map((edge) => edge.top));
+  window.scrollBy(0, wholePixels(revealDelta(input), top, input.bandTop));
+}
+
 /** The one way a page reads and writes its own URL search params. A write replaces the
  * current history entry, so it adds no step to going back. */
 export function useViewParams(): ViewParams {
   const [params, setSearchParams] = useSearchParams();
-  // The targets of the latest changeView, held until the page has rendered its list for
-  // that write's params, keyed by those params so no earlier or later write can fire them.
-  const pending = useRef<{ key: string; targets: ViewTargets } | null>(null);
+  // The targets of the latest changeView or reveal, held until the page has rendered what they
+  // wait for. A changeView's are keyed by its write's params, so no earlier or later write can
+  // fire them; a reveal's key is null, since it writes no params and waits only for its target.
+  const pending = useRef<{ key: string | null; targets: ViewTargets } | null>(null);
 
   const setParams = useCallback(
     (next: URLSearchParams) => {
@@ -89,26 +110,27 @@ export function useViewParams(): ViewParams {
     [setSearchParams],
   );
 
-  // Every commit, before the browser paints, so the new list appears already in place
-  // rather than drawn once and then moved.
+  const reveal = useCallback((targets: ViewTargets) => {
+    const list = targets.listStart();
+    if (list) {
+      // Now rather than in the effect: a tap that changes no state causes no commit.
+      pending.current = null;
+      scrollToTargets(targets, list);
+    } else {
+      pending.current = { key: null, targets };
+    }
+  }, []);
+
+  // Every commit, before the browser paints, so the new list or sentence appears already in
+  // place rather than drawn once and then moved.
   useLayoutEffect(() => {
     const current = pending.current;
-    if (!current || params.toString() !== current.key) return;
+    if (!current || (current.key !== null && params.toString() !== current.key)) return;
     const list = current.targets.listStart();
     if (!list) return;
     pending.current = null;
-    const control = current.targets.control();
-    const band = bandTop();
-    const input = {
-      bandTop: band.top,
-      bandBottom: band.bottom,
-      control: control ? edgesOf(control) : null,
-      rows: rowsOf(list).map(edgesOf),
-    };
-    const targets = input.control ? [input.control, ...input.rows] : input.rows;
-    const top = Math.min(...targets.map((edges) => edges.top));
-    window.scrollBy(0, wholePixels(revealDelta(input), top, input.bandTop));
+    scrollToTargets(current.targets, list);
   });
 
-  return { params, setParams, changeView };
+  return { params, setParams, changeView, reveal };
 }

@@ -11,7 +11,7 @@ import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { internalReturnTo } from 'src/lib/returnTo';
@@ -84,6 +84,9 @@ export type SubjectFormBodyProps = {
   /** Delete confirmed and succeeded. Edit mode only — the overlay never renders the
    * Delete action, so it doesn't need to pass this. */
   onDelete?: () => void;
+  /** True when the form is opened in a sheet that scrolls on its own, over another form: a
+   * tap of Create then leaves the page beneath where it is. */
+  inOverlay?: boolean;
 };
 
 /** Create and edit share one form — mode only changes what's prefilled, the submit
@@ -97,9 +100,11 @@ export function SubjectFormBody({
   onSuccess,
   onCancel,
   onDelete,
+  inOverlay = false,
 }: SubjectFormBodyProps) {
   const queryClient = useQueryClient();
   const formId = useId();
+  const { reveal } = useViewParams();
 
   const [name, setName] = useState(original?.name ?? '');
   const [description, setDescription] = useState(original?.description ?? '');
@@ -108,6 +113,8 @@ export function SubjectFormBody({
   const [icon, setIcon] = useState(original?.icon ?? '');
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameErrorRef = useRef<HTMLSpanElement>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -132,11 +139,17 @@ export function SubjectFormBody({
     onCancel();
   };
 
+  const revealName = () => {
+    if (inOverlay) return;
+    reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) {
       setNameError('Name is required.');
+      revealName();
       return;
     }
     setNameError(null);
@@ -165,7 +178,14 @@ export function SubjectFormBody({
         onSuccess(updated);
       }
     } catch (err) {
-      setFormError(failureSentence(err, 'Subject not found.'));
+      const sentence = failureSentence(err, 'Subject not found.');
+      // A taken name is fixed at the input, so it is said there rather than in the bar.
+      if (err instanceof ApiDetailError && err.detail.code === 'subject_name_taken') {
+        setNameError(sentence);
+        revealName();
+      } else {
+        setFormError(sentence);
+      }
       setSubmitting(false);
     }
   };
@@ -211,13 +231,17 @@ export function SubjectFormBody({
         <label className="flex flex-col gap-1.5">
           <span className="text-label text-(--color-aside)">Name</span>
           <input
+            ref={nameInputRef}
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameError(null);
+            }}
             className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
           {nameError && (
-            <span role="alert" className="text-sm text-(--color-wrong)">
+            <span ref={nameErrorRef} role="alert" className="text-sm text-(--color-wrong)">
               {nameError}
             </span>
           )}

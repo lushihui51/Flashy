@@ -162,6 +162,101 @@ describe('SubjectForm — the heading and the bar', () => {
   });
 });
 
+describe('SubjectForm — bringing the Name input and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  it('a blank-name Create renders its sentence inside the label and moves the page once', async () => {
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('Name is required.');
+    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a blank-name Save on Edit subject moves the page once', async () => {
+    server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
+    const user = userEvent.setup();
+    renderForm('/subjects/s1/edit');
+
+    await user.clear(await screen.findByRole('textbox', { name: 'Name' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a subject_name_taken refusal renders inside the label, not in the bar, and moves the page once', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json(
+          { detail: { code: 'subject_name_taken', message: 'taken' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.type(input, 'Math');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('A subject with this name already exists.');
+    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('editing the name clears a taken name\'s sentence and a blank name\'s', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json(
+          { detail: { code: 'subject_name_taken', message: 'taken' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('Name is required.');
+    await user.type(input, 'Math');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('A subject with this name already exists.');
+    await user.type(input, '!');
+    expect(screen.queryByText('A subject with this name already exists.')).not.toBeInTheDocument();
+  });
+
+  it('a 500 renders in the bar and leaves the page where it is', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Math');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+});
+
 describe('SubjectForm — create mode', () => {
   it('blocks submit with an empty name and does not call the API', async () => {
     let createCalled = false;

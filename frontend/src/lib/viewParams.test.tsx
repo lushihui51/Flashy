@@ -85,6 +85,79 @@ function RevealStub({
   );
 }
 
+type FormStubProps = {
+  /** Whether the sentence is on screen from the start; false makes Create bring it. */
+  sentenceShown?: boolean;
+  controlRect?: string;
+  sentenceRect?: string;
+  clears?: ReactNode;
+};
+
+const headerAndBar = (
+  <>
+    <div data-reveal-clear style={{ top: '0px' }} data-rect="0,114" />
+    <div data-reveal-clear style={{ bottom: '0px' }} data-rect="754,844" />
+  </>
+);
+
+function FormStub({
+  sentenceShown = false,
+  controlRect = '900,940',
+  sentenceRect = '950,970',
+  clears = headerAndBar,
+}: FormStubProps) {
+  const { params, changeView, reveal } = useViewParams();
+  const [shown, setShown] = useState(sentenceShown);
+  const controlRef = useRef<HTMLInputElement>(null);
+  const sentenceRef = useRef<HTMLParagraphElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const part: ViewTargets = {
+    control: () => controlRef.current,
+    listStart: () => sentenceRef.current,
+  };
+  const list: ViewTargets = { control: () => null, listStart: () => listRef.current };
+  const next = new URLSearchParams('tab=decks');
+  return (
+    <>
+      {clears}
+      <input ref={controlRef} aria-label="Name" data-rect={controlRect} />
+      {shown && (
+        <p ref={sentenceRef} data-rect={sentenceRect}>
+          Name is required.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          setShown(true);
+          reveal(part);
+        }}
+      >
+        Create
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          reveal(part);
+          changeView(next, list);
+        }}
+      >
+        Reveal then change view
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          changeView(next, list);
+          reveal(part);
+        }}
+      >
+        Change view then reveal
+      </button>
+      {params.get('tab') === 'decks' && <div ref={listRef} data-rect="1000,1020" />}
+    </>
+  );
+}
+
 function mountAtLibrary(element: ReactNode) {
   const router = createMemoryRouter([{ path: '/library', element }], {
     initialEntries: ['/library'],
@@ -94,6 +167,23 @@ function mountAtLibrary(element: ReactNode) {
 }
 
 describe('useViewParams', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.stubGlobal('innerHeight', 500);
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      return rectOf(this);
+    });
+    scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('setParams replaces the entry, writes the params and asks for no scroll reset', async () => {
     const router = mountAtLibrary(<WriteStub />);
 
@@ -105,23 +195,6 @@ describe('useViewParams', () => {
   });
 
   describe('changeView', () => {
-    let scrollBy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      vi.stubGlobal('innerHeight', 500);
-      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
-        this: Element,
-      ) {
-        return rectOf(this);
-      });
-      scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      vi.restoreAllMocks();
-      vi.unstubAllGlobals();
-    });
-
     const twoRows = (
       <>
         <div data-rect="650,690" />
@@ -290,6 +363,64 @@ describe('useViewParams', () => {
       // The second control ends at 840; the first would have left the bottom at 740.
       expect(scrollBy).toHaveBeenCalledTimes(1);
       expect(scrollBy).toHaveBeenCalledWith(0, 840 - 500);
+    });
+  });
+
+  describe('reveal', () => {
+    beforeEach(() => {
+      vi.stubGlobal('innerHeight', 844);
+    });
+
+    it('scrolls once inside the call when the sentence is rendered, and leaves the URL unchanged', async () => {
+      const router = mountAtLibrary(<FormStub sentenceShown />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+      // The sentence ends at 970; the bar's top at 754 is the band's bottom.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 970 - 754);
+      expect(router.state.location.search).toBe('');
+      expect(router.state.historyAction).toBe('POP');
+    });
+
+    it('scrolls once after the sentence has rendered when the same handler sets its state', async () => {
+      mountAtLibrary(<FormStub />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+      // 970 is the sentence's bottom; the control alone would have ended at 940.
+      expect(screen.getByText('Name is required.')).toBeTruthy();
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 970 - 754);
+    });
+
+    it('scrolls by 0 when the control and the sentence are already in the band', async () => {
+      mountAtLibrary(<FormStub sentenceShown controlRect="200,240" sentenceRect="250,270" />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('gives way to a changeView made before its commit', async () => {
+      mountAtLibrary(<FormStub />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reveal then change view' }));
+
+      // The list ends at 1020; the reveal never fires, since its sentence never renders.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 1020 - 754);
+    });
+
+    it('replaces a changeView made before its commit', async () => {
+      mountAtLibrary(<FormStub sentenceShown />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Change view then reveal' }));
+
+      // The sentence's 970, not the list's 1020, and no second scroll when the list renders.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 970 - 754);
     });
   });
 });

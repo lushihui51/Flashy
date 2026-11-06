@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
@@ -92,8 +92,12 @@ function CardStandaloneFormBody({
   const location = useLocation();
   const queryClient = useQueryClient();
   const formId = useId();
+  const { reveal } = useViewParams();
+  const deckInputRef = useRef<HTMLInputElement>(null);
+  const deckErrorRef = useRef<HTMLSpanElement>(null);
 
   const [deckId, setDeckId] = useState(initialDeckId);
+  const [deckError, setDeckError] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>(original?.values ?? {});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -149,6 +153,7 @@ function CardStandaloneFormBody({
   };
 
   const handleDeckChange = (newDeckId: string) => {
+    setDeckError(null);
     const hasTypedValues = Object.values(values).some((v) => v.trim() !== '');
     if (deckId && newDeckId !== deckId && hasTypedValues) {
       setDeckChange({ previousDeckId: deckId });
@@ -183,6 +188,10 @@ function CardStandaloneFormBody({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!deckId) {
+      setDeckError('Choose a deck to create a card.');
+      reveal({ control: () => deckInputRef.current, listStart: () => deckErrorRef.current });
+    }
     if (!deckId || !deckQuery.data) return;
     setFormError(null);
     setSubmitting(true);
@@ -240,17 +249,25 @@ function CardStandaloneFormBody({
             </span>
           </div>
         ) : (
-          <PickerCombobox
-            items={decksQuery.data ?? []}
-            selected={selectedDeck}
-            onSelect={(item) => handleDeckChange(item.id)}
-            // No inline create (creating a card never creates a deck) — a deck editor is too
-            // heavy to nest in a dialog, so this always means leaving the page, and only this
-            // form knows whether there are typed values to confirm away first.
-            onSelectCreate={handleCreateNewDeck}
-            createLabel="New deck…"
-            placeholder="Deck"
-          />
+          <div className="flex flex-col gap-1.5">
+            <PickerCombobox
+              items={decksQuery.data ?? []}
+              selected={selectedDeck}
+              onSelect={(item) => handleDeckChange(item.id)}
+              // No inline create (creating a card never creates a deck) — a deck editor is too
+              // heavy to nest in a dialog, so this always means leaving the page, and only this
+              // form knows whether there are typed values to confirm away first.
+              onSelectCreate={handleCreateNewDeck}
+              createLabel="New deck…"
+              placeholder="Deck"
+              inputRef={deckInputRef}
+            />
+            {deckError && (
+              <span ref={deckErrorRef} role="alert" className="text-sm text-(--color-wrong)">
+                {deckError}
+              </span>
+            )}
+          </div>
         )}
 
         {deckId && deckQuery.data && (
@@ -280,8 +297,9 @@ function CardStandaloneFormBody({
         <button
           type="submit"
           form={formId}
-          disabled={!canSubmit}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          disabled={submitting}
+          aria-disabled={!canSubmit || undefined}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {mode === 'create' ? 'Create' : 'Save'}
         </button>

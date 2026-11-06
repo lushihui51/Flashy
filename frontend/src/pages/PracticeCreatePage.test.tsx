@@ -235,7 +235,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.getByRole('checkbox', { name: 'Recognition' })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Recall' })).not.toBeChecked();
     expect(screen.queryByText(/\d+ selected/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('the selection rides the URL as repeated config params, in tick order', async () => {
@@ -261,7 +261,7 @@ describe('PracticeCreatePage', () => {
     expect(within(screen.getByTestId('form-bar')).getByText('2 selected')).toBeInTheDocument();
   });
 
-  it('Create stays disabled with each unmet condition shown by its own hint, mirroring the builder’s Save', async () => {
+  it('Create is pressable and reads not ready with each unmet condition shown by its own hint, mirroring the builder’s Save', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -270,24 +270,27 @@ describe('PracticeCreatePage', () => {
     const selectHint = 'Select at least one configuration to practice.';
     const nameHint = 'Give this practice a name to create it.';
 
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).not.toBeDisabled();
     expect(screen.getByText(selectHint)).toBeInTheDocument();
     expect(screen.queryByText(nameHint)).not.toBeInTheDocument(); // the name arrives prefilled
 
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
-    expect(create).toBeEnabled();
+    expect(create).not.toHaveAttribute('aria-disabled');
     expect(screen.queryByText(selectHint)).not.toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Name'));
     expect(screen.getByText(nameHint)).toBeInTheDocument();
     expect(screen.queryByText(selectHint)).not.toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).not.toBeDisabled();
 
     // The two hints are independent: with neither condition met, both show.
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
     expect(screen.getByText(nameHint)).toBeInTheDocument();
     expect(screen.getByText(selectHint)).toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).not.toBeDisabled();
   });
 
   it('the Name input sits under the header, above the filters (MD-7)', async () => {
@@ -372,14 +375,14 @@ describe('PracticeCreatePage', () => {
     expect(await screen.findByLabelText('Name')).toHaveValue('Exam cram');
   });
 
-  it('an empty name param gives an empty input, the name hint, and a disabled Create', async () => {
+  it('an empty name param gives an empty input, the name hint, and a Create that reads not ready', async () => {
     mockLibrary();
     renderCreate('/practice/new?name=&config=c1');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     expect(screen.getByLabelText('Name')).toHaveValue('');
     expect(screen.getByText('Give this practice a name to create it.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('a name param fills the input', async () => {
@@ -531,7 +534,7 @@ describe('PracticeCreatePage', () => {
     ).toBeInTheDocument();
     await waitFor(() => expect(currentLocation().params.has('config')).toBe(false));
     expect(screen.queryByText(/\d+ selected/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
     expect(
       within(screen.getByRole('region', { name: 'Selected' })).getByText(
         'Select at least one configuration to practice.',
@@ -977,5 +980,50 @@ describe('PracticeCreatePage', () => {
     const selected = screen.getByRole('region', { name: 'Selected' });
     expect(within(selected).getByText('Recall')).toBeInTheDocument();
     expect(within(screen.getByTestId('form-bar')).getByText('1 selected')).toBeInTheDocument();
+  });
+});
+
+describe('PracticeCreatePage — bringing a part of the form and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  const posted = () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(`${BASE}/api/practice_runs`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+      }),
+    );
+    return bodies;
+  };
+
+  it('a tap of Create with nothing ticked posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
+  });
+
+  it('a tap of Create with a blank name posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/practice/new?name=&config=c1');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
   });
 });

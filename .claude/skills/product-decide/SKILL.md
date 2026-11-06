@@ -25,11 +25,7 @@ Facts about how the app is used and what the user needs come from me. Never inve
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - The Type test in `docs/rules/record-rules.md`.
 - Every PDR whose Status is Active, so you can tell me when a new decision contradicts or extends one.
-- From `docs/cycles/`: each file's Outcome, and each task's Status and Goal. Pull them with this command rather than reading the files; the rest describes how the app is built, not what it does.
-  ````
-  awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($(0),5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$(0); next} part=="**Status**"{s=$(0); sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $(0); part=""}' docs/cycles/*.md
-  ````
-  The command writes `$(0)` for awk's `$0`, because the skill loader substitutes `$0` with an argument.
+- The Summary in `docs/rules/cycle-rules.md`: run its command rather than reading the cycle files; the rest of a file describes how the app is built, not what it does.
 - `docs/vocabulary.md`: the row of each concept you write, for its words.
 - Nothing else without my explicit permission.
 

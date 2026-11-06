@@ -233,12 +233,69 @@ describe('CardStandaloneForm — create mode', () => {
     expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
   });
 
-  it('Create is disabled until a deck is chosen', async () => {
+  it('Create reads not ready until a deck is chosen', async () => {
     mockAll();
     renderForm('/cards/new');
 
     await screen.findByPlaceholderText('Deck');
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).toBeEnabled();
+  });
+
+  it('a tap on Create with no deck chosen posts nothing, says so under the picker and moves the page once', async () => {
+    mockAll();
+    let posted = false;
+    server.use(
+      http.post(`${BASE}/api/cards`, () => {
+        posted = true;
+        return HttpResponse.json(card1);
+      }),
+    );
+    const scrollBy = vi.spyOn(window, 'scrollBy');
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    const picker = await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('Choose a deck to create a card.');
+    expect(sentence).toHaveAttribute('role', 'alert');
+    expect(picker.compareDocumentPosition(sentence)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(posted).toBe(false);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    scrollBy.mockRestore();
+  });
+
+  it('choosing a deck clears the sentence', async () => {
+    mockAll();
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('Choose a deck to create a card.');
+
+    await user.click(screen.getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+
+    expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
+  });
+
+  it('a tap on Create while the chosen deck\'s fields load says nothing and moves nothing', async () => {
+    mockAll();
+    server.use(http.get(`${BASE}/api/decks/:id`, () => new Promise<Response>(() => {})));
+    const scrollBy = vi.spyOn(window, 'scrollBy');
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    await user.click(await screen.findByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+    scrollBy.mockRestore();
   });
 
   it('picking a deck loads its fields; typing values and saving creates the card and navigates to the deck', async () => {
