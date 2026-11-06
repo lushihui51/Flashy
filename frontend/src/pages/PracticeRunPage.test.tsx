@@ -105,14 +105,14 @@ function LocationProbe() {
   return <span data-testid="location">{location.pathname}</span>;
 }
 
-function renderRun(practiceSessionId = 'ps1') {
+function renderRun(practiceSessionId = 'ps1', search = '') {
   return renderWithProviders(
     <Routes>
       <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
       <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
       <Route path="/practice" element={<LocationProbe />} />
     </Routes>,
-    [`/practice/${practiceSessionId}/run`],
+    [`/practice/${practiceSessionId}/run${search}`],
   );
 }
 
@@ -247,6 +247,83 @@ describe('PracticeRunPage', () => {
     await user.click(done);
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
+  });
+
+  it('shows Re-run beside a yellow Done, in that order', async () => {
+    mockRun(runState({ session_status: 'completed', current_card: null }));
+    mockBreakdown();
+    renderRun('ps1');
+
+    const rerun = await screen.findByRole('button', { name: 'Re-run Evening run' });
+    const done = screen.getByRole('link', { name: 'Done' });
+    expect(rerun).toHaveTextContent('Re-run');
+    expect(done.nextElementSibling).toBe(rerun);
+    expect(done).toHaveClass('bg-(--color-main-action)', 'flex-1');
+  });
+
+  it('turns Done white with a kind in the URL', async () => {
+    mockRun(runState({ session_status: 'completed', current_card: null }));
+    mockBreakdown();
+    renderRun('ps1', '?kind=down');
+
+    const done = await screen.findByRole('link', { name: 'Done' });
+    expect(done).toHaveClass('bg-(--color-surface)');
+    expect(done).not.toHaveClass('bg-(--color-main-action)');
+  });
+
+  it('keeps Done yellow with a kind the summary does not know', async () => {
+    mockRun(runState({ session_status: 'completed', current_card: null }));
+    mockBreakdown();
+    renderRun('ps1', '?kind=sideways');
+
+    expect(await screen.findByRole('link', { name: 'Done' })).toHaveClass(
+      'bg-(--color-main-action)',
+    );
+  });
+
+  it('a re-run that fails says why under the row, closing the confirm', async () => {
+    mockRun(runState({ session_status: 'completed', current_card: null }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
+        HttpResponse.json(
+          { detail: { code: 'nothing_to_rerun', message: 'developer text' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderRun('ps1');
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Evening run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
+    );
+    expect(alert).toHaveClass('text-(--color-wrong)');
+    expect(alert.previousElementSibling).toContainElement(screen.getByRole('link', { name: 'Done' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('a re-run that succeeds lands on the new practice', async () => {
+    mockRun(runState({ session_status: 'completed', current_card: null }));
+    mockBreakdown();
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
+        HttpResponse.json({ id: 'ps2' }, { status: 201 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderRun('ps1');
+
+    await user.click(await screen.findByRole('button', { name: 'Re-run Evening run' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps2'));
   });
 
   it('swaps to the summary once nothing is pending', async () => {

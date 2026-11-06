@@ -8,13 +8,16 @@ import {
 } from 'src/api/practice_run';
 import FieldValue from 'src/components/practice/FieldValue';
 import RatingChip from 'src/components/practice/RatingChip';
+import RerunButton from 'src/components/practice/RerunButton';
 import RunProgressBar from 'src/components/practice/RunProgressBar';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
+import { CHANGE_KINDS } from 'src/lib/changeKinds';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
@@ -79,7 +82,7 @@ function PracticeRunBody({
   state: PracticeRunState;
 }) {
   if (!state.current_card) {
-    return <RunCompletion practiceSessionId={practiceSessionId} />;
+    return <RunCompletion practiceSessionId={practiceSessionId} sessionName={state.session_name} />;
   }
 
   // Keyed by practice_card_id so "next card" (a query invalidation, not a remount of
@@ -94,13 +97,23 @@ function PracticeRunBody({
   );
 }
 
-function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
+function RunCompletion({
+  practiceSessionId,
+  sessionName,
+}: {
+  practiceSessionId: string;
+  sessionName: string;
+}) {
+  const { params } = useViewParams();
+  const [rerunError, setRerunError] = useState('');
   const breakdownQuery = useQuery({
     queryKey: ['practice_run_breakdown', practiceSessionId],
     queryFn: () => readPracticeRunBreakdown(practiceSessionId),
   });
 
   const totalCards = breakdownQuery.data?.total_cards;
+  const requestedKinds = params.getAll('kind');
+  const countChosen = CHANGE_KINDS.some((kind) => requestedKinds.includes(kind));
 
   return (
     <div className="mt-3.5 flex flex-col gap-3.5">
@@ -118,18 +131,32 @@ function RunCompletion({ practiceSessionId }: { practiceSessionId: string }) {
       <div className="flex gap-2.5">
         <Link
           to={`/practice/${practiceSessionId}`}
-          className="tappable flex h-action flex-1 items-center justify-center rounded-2xl bg-(--color-main-action) px-6 text-action font-semibold text-(--color-ink)"
+          className={`tappable flex h-action flex-1 items-center justify-center rounded-2xl px-6 text-action font-semibold text-(--color-ink) ${
+            countChosen ? 'bg-(--color-surface)' : 'bg-(--color-main-action)'
+          }`}
         >
           Done
         </Link>
+        <RerunButton
+          session={{ id: practiceSessionId, name: sessionName }}
+          look="text"
+          onError={setRerunError}
+        />
       </div>
+      {rerunError && (
+        <p role="alert" className="text-sm text-(--color-wrong)">
+          {rerunError}
+        </p>
+      )}
 
       {breakdownQuery.isError && (
         <p role="alert" className="text-sm text-(--color-wrong)">
           {failureSentence(breakdownQuery.error, 'Practice not found.')}
         </p>
       )}
-      {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
+      {breakdownQuery.data && (
+        <RunBreakdown breakdown={breakdownQuery.data} practiceSessionId={practiceSessionId} />
+      )}
     </div>
   );
 }

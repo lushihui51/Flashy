@@ -12,6 +12,7 @@ from app.database_ops.practice_run import (
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.practice_run import (
+    PracticeRunChosenCards,
     PracticeRunCreate,
     PracticeRunRead,
     PracticeRunRerun,
@@ -25,12 +26,14 @@ from app.models.practice_run_payloads import (
 )
 from app.refusals import Refusal
 from app.services.practice_run import (
+    ChosenCardsError,
     RerunError,
     RunActiveError,
     RunStartError,
     get_practice_run_state,
     get_practice_run_breakdown,
     rerun_practice_run,
+    start_chosen_cards_run,
     start_practice_run,
     submit_rating,
 )
@@ -165,6 +168,35 @@ def rerun_run(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except RerunError as e:
         raise HTTPException(status_code=400, detail=e.detail) from e
+
+
+@router.post(
+    "/practice_runs/{practice_run_id}/chosen_cards",
+    response_model=PracticeRunRead,
+    status_code=201,
+)
+def start_chosen_cards(
+    db: SessionDep,
+    current_user: CurrentUserDep,
+    practice_run_id: uuid.UUID,
+    payload: PracticeRunChosenCards,
+):
+    """Creates a new practice of exactly the chosen cards, from the completed practice's
+    own snapshots; the original is untouched. 404 for an unknown or foreign practice; 400
+    `run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a
+    chosen card still validates; 400 `no_cards` if the survivors generate no practice card;
+    400 with a string detail for an empty list or a card the practice did not hold."""
+    strategy = get_mastery_strategy()
+    try:
+        return start_chosen_cards_run(
+            db, strategy, current_user.id, practice_run_id, payload.name, payload.card_ids
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ChosenCardsError as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(

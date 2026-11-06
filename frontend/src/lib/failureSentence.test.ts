@@ -7,7 +7,11 @@ import {
   unwrap,
 } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
-import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import {
+  MISSING_CONFIGURATION_MESSAGE,
+  NO_CARDS_MESSAGE,
+  NOTHING_TO_PRACTICE_MESSAGE,
+} from 'src/lib/practiceCopy';
 
 const NOT_FOUND = 'Deck not found.';
 
@@ -39,15 +43,22 @@ describe('failureSentence', () => {
       duplicate_deck: 'Choose one configuration per deck.',
       nothing_to_rerun:
         "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
+      nothing_to_practice: NOTHING_TO_PRACTICE_MESSAGE,
       database_unavailable: 'Flashy is temporarily unavailable.',
     };
-    expect(Object.keys(sentences)).toHaveLength(13);
+    expect(Object.keys(sentences)).toHaveLength(14);
 
     for (const [code, sentence] of Object.entries(sentences)) {
       for (const status of [400, 404, 409, 422, 500, 503]) {
         expect(failureSentence(detailError(status, code), NOT_FOUND)).toBe(sentence);
       }
     }
+  });
+
+  it('reads nothing_to_practice as the sentence drawn for it', () => {
+    expect(failureSentence(detailError(400, 'nothing_to_practice'), NOT_FOUND)).toBe(
+      "These cards can't be practiced. A field they used has since been removed from their decks.",
+    );
   });
 
   it('a known code wins over a 404', () => {

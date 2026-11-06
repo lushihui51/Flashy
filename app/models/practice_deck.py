@@ -43,7 +43,7 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     # 1. Written at run start with the config's name.
     # 2. Set to the new name on every linked snapshot by a non-material update that
     #    carries a name (`update_deck_practice_config`).
-    # 3. Copied verbatim by rerun, possibly null.
+    # 3. Copied verbatim by rerun and by a practice of chosen cards, possibly null.
     # 4. Touched by nothing else: a material edit and a delete only null the link.
     source_config_name: str | None = Field(default=None)
     prompt_field_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
@@ -52,3 +52,7 @@ class PracticeDeck(AppModel, TimestampMixin, table=True):
     prompt_pool_counts: list[int] = Field(sa_column=Column(ARRAY(Integer), nullable=False))
     answer_pool_ids: list[uuid.UUID] = Field(sa_column=Column(ARRAY(Uuid), nullable=False))
     answer_pool_counts: list[int] = Field(sa_column=Column(ARRAY(Integer), nullable=False))
+    # The cards this snapshot covers. Null means every card of the deck; a list means only
+    # those of the deck's cards it names. Frozen like the arrays above, so an id outlives
+    # its card and then selects nothing.
+    card_ids: list[uuid.UUID] | None = Field(sa_column=Column(ARRAY(Uuid), nullable=True))

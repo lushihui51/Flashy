@@ -24,7 +24,7 @@ Judgement: The engineer judges on the live server at 390 wide, on a completed pr
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -133,13 +133,29 @@ with a test in `src/test/practice_run.test.ts` that posts the name and the ids a
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run alembic heads` printed `049886e86ae2 (head)` and `uv run alembic current` printed `049886e86ae2 (head)`. The dry run on a `pg_dump` copy of the dev database upgraded from `ec9df5054ea7`, left all 19 snapshots with `card_ids` null, the column an `ARRAY`, nullable, with no default, and went down and up again; the copy was then dropped and the migration applied to dev. `uv run alembic check` printed `No new upgrade operations detected.`
+- `uv run pytest tests/api_tests/test_practice_run.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_schema_guard.py` printed `123 passed`; `TestChosenCards` alone printed `11 passed`. With no other connection on the test database, the full `uv run pytest` printed `400 passed`.
+- `npm run gen:api` was run, and a second run left `openapi.json` and `types.ts` byte-identical. The `git status --porcelain src/api` half of this line can only be run after the commit.
+- `npx vitest run src/test/practice_run.test.ts` printed `18 passed`. The whole frontend: `npx vitest run` printed `780 passed`, `npm run lint` printed nothing, `npm run build` succeeded.
+
+Departures from guidance: none. `startChosenCards` is laid out across lines like its neighbours in `practice_run.ts`.
+
+Beyond the listed tests, `TestChosenCards` also covers a stale snapshot dropped with its chosen cards while another deck survives, and a deck holding no chosen card getting no snapshot; both are constraints with no listed test.
+
+Choices the file leaves open, each reversible inside a task:
+
+- A chosen id repeated in the request is written once onto `card_ids`.
+- `run_active` is checked before the list, so an active practice answers `run_active` even with an empty list.
+
+To read: `start_chosen_cards_run` in `app/services/practice_run.py`. A card deleted since the original practice has lost its practice card by cascade, so choosing it from that practice is the plain 400 of a card the practice did not hold, never a drop. The id staying in `card_ids` applies to a card deleted after a practice of chosen cards was made, as ADR 086 has it, and that is what the test covers.
 
 ### T2 — Re-run and Practice these on the summary
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -218,4 +234,25 @@ type RerunButtonProps = {
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run src/components/practice src/pages/PracticeRunPage.test.tsx src/pages/PracticeDetailsPage.test.tsx src/lib/failureSentence.test.ts` printed `5 passed` files and `95 passed` tests. The whole frontend: `npx vitest run` printed `802 passed`, `npm run lint` printed nothing, `npm run build` succeeded.
+- `grep -c "nothing_to_practice" frontend/src/lib/failureSentence.ts docs/vocabulary.md` printed `1` for each.
+- The live server at 390 wide, in headless Chromium driven by a mouse, on a completed four-card practice with two cards at "down"; no touch was exercised, and the page raised no error:
+  - With no count chosen, "Done" is yellow, `rgb(255, 226, 52)`, 252 wide, and "Re-run" beside it is white, both 52 high, with no "Practice these" and no sideways scroll. "Re-run" asks "Re-run this practice?" with the description, and confirmed lands on a new practice's page with 4 cards.
+  - With "down" chosen, "Practice these" is yellow and 358 wide, y 408 to 460, between the counts, which end at 398, and "Order by:", which starts at 474; "Done" is `rgb(255, 255, 255)`. The list showed bravo and delta.
+  - Tapping it lands on a new practice's page. Its own page reads the name, Active, the date, the subject, deck and configuration line and "Start practice"; its row in Practice reads the name, Active and the deck and configuration, with no mark of chosen cards. Started, the run asked only bravo and delta, each with Back and Extra under Answer.
+  - Re-running that practice from its own page made a practice of 2 cards in the 4-card deck. On a second deck, through the API, a practice of alpha and charlie and its re-run each asked exactly charlie and alpha.
+  - After "Remove Extra" and Save on Edit deck, "Practice these" on the original summary shows "These cards can't be practiced. A field they used has since been removed from their decks." at y 468, under the button, which ends at 460, and above "Order by:", in `rgb(229, 72, 77)` at 14px, with the kinds, the list and the URL as they were. A tap of a count clears it. The practice's own page shows the same sentence.
+  - With bravo and delta blanked on Back and Extra through the API rather than Edit card, it shows the no-cards sentence, with the list and URL as they were.
+
+Departures and choices the file leaves open, each reversible inside a task:
+
+- `RerunButtonProps` keeps its types, and `onError` is also called with `''` on a new try and on a cancel, so the page's sentence clears as it does today. A props type with no way to clear would have left a failed re-run's sentence on the page after a cancel, and on the new practice's page after a retry that succeeds, because that page's body stays mounted across the navigation until the new practice loads. Its comment says so.
+- `RunBreakdown` takes a new required prop, `practiceSessionId`, because the breakdown payload carries no id of its practice.
+- "Practice these" is disabled while its post is in flight, so a double tap cannot make two practices.
+- `docs/vocabulary.md` goes beyond the listed edits so that Where stays true of the screens: "Confirming a re-run" and "What a re-run makes" gain "the summary"; "A re-run that nothing survives" and "A practice that would have no cards" gain "the summary, after Re-run"; and the Code cell of "Running a practice again" gains `RerunButton`.
+
+Data left on the dev database, as AGENTS.md has it: the subjects "Cycle 041 T2 check 731006" and "Cycle 041 T2 check 723016", with their decks and practices, made for this check; 723016 is from a first attempt at the check, and holds one practice left active. No seeded row was changed.
+
+To read: `RerunButton` in `frontend/src/components/practice/RerunButton.tsx`, for the `''` above.
