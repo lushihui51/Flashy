@@ -105,7 +105,7 @@ Read: `db_read_deck_listings` in `app/database_ops/deck.py`, for the removed fun
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -176,4 +176,8 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 
 **Debrief**
 
-None.
+Attempted: the whole of Details: `renderBeneath` on `PickerCombobox`, `DeckPicker`, the three surfaces on it, the tests and the two rows of `docs/vocabulary.md`. Every other Done-when line holds: the named test files pass, and at 390 wide on the live server all four lists show the deck's name with its subject's name beneath, two decks named "Practiced" told apart, with the library's Decks tab unchanged.
+
+Found: the second Done-when line cannot hold. `grep -ln "PickerCombobox"` over the three files prints `frontend/src/components/practice/PracticeFilterBar.tsx`, which the line does not allow. That file renders `PickerCombobox` for its subject filter, a list of subjects with each subject's icon as `renderLeading`, which `DeckPicker` must not take and whose items have no `subject_name`.
+
+Why the file cannot settle it: Details asks only for the deck filter to be `DeckPicker` and forbids `PickerCombobox` only with a list of decks, so the subject filter stays as it is; the Done-when line requires the name gone from the file. Passing the line would take a subject picker in a new file outside Files, which no Details describes. Which of the two is meant is the planner's edit.
