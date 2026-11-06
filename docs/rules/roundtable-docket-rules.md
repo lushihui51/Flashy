@@ -2,7 +2,7 @@
 
 **What a docket is.** A roundtable docket is the one file an initiative's decisions pass through on their way to cycle files. It holds everything the six skills, named in Order below, have raised or decided and no PDR, ADR or cycle file has absorbed yet, and nothing else.
 
-**Who reads a docket.** Each of the six skills reads it in full before anything else. The human (the engineer or the product owner) reads it to see where an initiative stands. No one else reads it, so no other tracked file cites it or names an item of it by label.
+**Who reads a docket.** Each of the six skills reads it in full before anything else. The human (the engineer or the product owner) reads it to see where an initiative stands. /dogfood reads its Open questions, to see whether a question is already open. No one else reads it, so no other tracked file cites it or names an item of it by label.
 
 **Lifetime.** Only the human creates a docket. A docket opened for a blocked task amends that task's cycle file and plans no other. When the docket is empty, it is finished: /cycle-plan deletes it and its canvas in the commit that emptied it.
 
