@@ -25,7 +25,11 @@ describe('MasteryCircle', () => {
     const { container } = render(<MasteryCircle readiness={0} size="row" />);
 
     expect(container.querySelector('path')).toBeNull();
-    expect(container.querySelectorAll('circle')).toHaveLength(1);
+    const circles = container.querySelectorAll('circle');
+    expect(circles).toHaveLength(2);
+    expect(circles[0]).toHaveAttribute('fill', 'var(--color-surface)');
+    expect(circles[1]).toHaveAttribute('fill', 'none');
+    expect(circles[1]).toHaveAttribute('stroke', 'var(--color-ink)');
     expect(screen.getByRole('img', { name: 'Mastery 0%' })).toBeInTheDocument();
   });
 
@@ -34,7 +38,7 @@ describe('MasteryCircle', () => {
 
     expect(container.querySelector('path')).toBeNull();
     const circles = container.querySelectorAll('circle');
-    expect(circles).toHaveLength(2);
+    expect(circles).toHaveLength(3);
     expect(circles[1]).toHaveAttribute('fill', 'var(--color-ink)');
     expect(screen.getByRole('img', { name: 'Mastery 100%' })).toBeInTheDocument();
   });
@@ -70,5 +74,50 @@ describe('MasteryCircle', () => {
     expect(heading!.querySelector('circle')).toHaveAttribute('r', '13.5');
     expect(heading).toHaveClass('size-[1.875rem]');
     expect(heading).not.toHaveAttribute('height');
+  });
+
+  it('draws the summary and sheet sizes on their own viewBox and radius, sized by a class in rem', () => {
+    const { container } = render(
+      <>
+        <MasteryCircle readiness={0.5} size="summary" />
+        <MasteryCircle readiness={0.5} size="sheet" />
+      </>,
+    );
+
+    const [summary, sheet] = container.querySelectorAll('svg');
+    expect(summary).toHaveAttribute('viewBox', '0 0 26 26');
+    expect(summary!.querySelector('circle')).toHaveAttribute('r', '11.5');
+    expect(summary).toHaveClass('size-[1.625rem]');
+    expect(sheet).toHaveAttribute('viewBox', '0 0 34 34');
+    expect(sheet!.querySelector('circle')).toHaveAttribute('r', '15.5');
+    expect(sheet).toHaveClass('size-[2.125rem]');
+  });
+
+  it('draws the outline after the wedge, so the wedge covers none of it', () => {
+    const { container } = render(<MasteryCircle readiness={0.5} size="summary" />);
+
+    const shapes = [...container.querySelector('svg')!.children];
+    expect(shapes.map((shape) => shape.tagName)).toEqual(['circle', 'path', 'circle']);
+    expect(shapes[2]).toHaveAttribute('stroke', 'var(--color-ink)');
+    expect(shapes[2]).toHaveAttribute('vector-effect', 'non-scaling-stroke');
+  });
+
+  it('with a change, speaks the kind after the percentage and renders its badge off the top-right', () => {
+    const { container } = render(<MasteryCircle readiness={0.24} size="summary" change="down_a_lot" />);
+
+    const circle = screen.getByRole('img', { name: 'Mastery 24%, down a lot' });
+    expect(circle).toHaveClass('relative', 'mr-3');
+    const svgs = container.querySelectorAll('svg');
+    expect(svgs).toHaveLength(2);
+    expect(svgs[1]).toHaveAttribute('viewBox', '0 0 19 19');
+    expect(svgs[1]).toHaveClass('absolute', 'right-[-0.9375rem]', 'top-[-0.375rem]');
+    expect(svgs[1]!.querySelectorAll('circle')[1]).toHaveAttribute('fill', 'var(--color-wrong)');
+  });
+
+  it('with no change, renders no badge and no margin', () => {
+    const { container } = render(<MasteryCircle readiness={0.24} size="summary" />);
+
+    expect(container.querySelectorAll('svg')).toHaveLength(1);
+    expect(screen.getByRole('img', { name: 'Mastery 24%' })).not.toHaveClass('mr-3');
   });
 });

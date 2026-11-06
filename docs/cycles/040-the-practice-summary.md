@@ -26,7 +26,7 @@ Judgement: The engineer judges on the live server at 390 wide, on a completed pr
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -133,7 +133,35 @@ Tests, one file per component: `MasteryCircle.test.tsx` adds that `summary` and 
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The five test files pass: `Test Files  5 passed (5)`, `Tests  34 passed (34)`.
+- The `grep -l "lucide"` over the five components prints nothing, exit 1.
+- The `grep -c "<svg"` prints `1` for each of `ChangeBadge.tsx`, `PromptMark.tsx`, `RatingMark.tsx` and `KeyButton.tsx`.
+
+The checks AGENTS.md requires over the whole frontend: `npx vitest run` passes 66 files and 764 tests; `npm run lint` prints no problem; `npm run build` builds, with only its existing warning about chunks over 500 kB.
+
+Browser check, in headless Chromium at 390 wide against localhost:5173, signed out with `DEV_AUTH_USER_ID` and `ENV=development` set. No screen uses the new marks yet, so a script from the session scratchpad mounted them on `/library` through the dev server, and the page logged no error:
+
+- `row`, `heading`, `summary` and `sheet` measure 22, 30, 26 and 34px.
+- With `change`, at every size, the badge measures 19px, its right edge 15px past the circle's and its top 6px above it, the circle's right margin is 12px and its outline 1.5px.
+- `PromptMark` and `RatingMark` measure 13px. `KeyButton`'s SVG measures 26 by 28px, with `aria-expanded` and the face's fill following `open`.
+- A screenshot showed every kind, mark and key state as the drawings hold them. `KeyButton`'s press was tested only by the unit test, with `userEvent`.
+- On the live `/library`, the subject rows' circles draw as surface circle, wedge, outline, at 22px.
+
+Departures from guidance:
+
+- The outline is drawn after the wedge at all four sizes, not only the two new ones, so the live `row` and `heading` circles change their paint order. Drawing 16 draws `row` this way; drawing 13, the one of drawings 11 to 13 read, draws the outline first at `row` and `heading`. Both the wedge and the outline are ink, so the order shows no visible difference there.
+- `vectorEffect="non-scaling-stroke"` is on the outline rings only. The chevrons, the dash and the "i" scale with their mark, since they are glyphs and not outlines.
+
+Choices the file left open:
+
+- `MasteryCircle` keeps one wrapping `span`, which carries `role="img"`, `relative` and `mr-3`. The drawings nest a second `span`, which places nothing further.
+- `RatingMark` holds its own map of ratings to colours rather than importing `RATING_TIERS` from `src/components/practice/`, so a component under `ui/` does not depend on the practice folder.
+- The `hatch` pattern in the drawings' circles is used by no shape and is not drawn.
+- In `MasteryCircle.test.tsx`, the tests at 0 and at 1 now count one circle more, for the separate outline.
+
+Read in the code: nothing beyond `MasteryCircle.tsx`, for the paint order above.
 
 ### T2 — The breakdown read and the summary's list
 
