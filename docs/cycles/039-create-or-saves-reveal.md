@@ -86,7 +86,7 @@ Read in the code: `reveal` and the layout effect in `useViewParams`. A reveal wh
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -147,7 +147,33 @@ Tests: in `SubjectForm.test.tsx`, a blank-name Create renders "Name is required.
 
 **Debrief**
 
-None.
+Evidence, in order:
+
+- `cd frontend && npx vitest run src/components/library` printed `Test Files  9 passed (9)`, `Tests  202 passed (202)`. The new tests are in the groups "SubjectForm — bringing the Name input and its sentence on screen", "DeckEditor — bringing a part of the form and its sentence on screen", and in "CardStandaloneForm — create mode", "a tap on Create with no deck chosen posts nothing, says so under the picker and moves the page once". Every `toBeDisabled()` on Create or Save in the three files is now `aria-disabled="true"`, "Saved ✓" included; Undo's stay. `SubjectForm.test.tsx` held none.
+- `grep -c "aria-disabled" frontend/src/components/library/DeckEditor.tsx frontend/src/components/library/CardStandaloneForm.tsx` printed `2` for each file; `grep -c "deck_name_taken" frontend/src/components/library/DeckEditor.tsx` printed `1`.
+
+Commit checks over the whole frontend: `npx vitest run` printed `Test Files  61 passed (61)`, `Tests  715 passed (715)`; `npm run lint` printed no findings; `npm run build` built, with only the existing warning on chunk size.
+
+Browser check, headless Chromium against `localhost:5173`, by mouse, 390 wide, header bottom 114:
+
+- `/subjects/new` at height 400, scrolled to the bottom, blank name: Create moved `scrollY` from 191 to 89, Name input at 114 to 160, "Name is required." at 166 to 186, bar top 319; a second tap moved the page by 0. A name a subject already has moved the page the same way, with the sentence under the input and not in the bar.
+- `/decks/new` at height 844, name "Commands": the sentence rendered at 255 to 275 under the Deck name input and not in the bar, and left when the name was edited. With `POST /api/decks` aborted, "Couldn't reach Flashy. Check your connection and try again." rendered in the bar.
+- `/decks/new` at height 400, scrolled to the bottom, blank Deck name and no subject: Create moved `scrollY` from 294 to 89, Deck name input at 114 to 160, "Name is required." at 166 to 186, "Choose a subject to create a deck." at 250 to 270, bar top 319; a second tap moved the page by 0. With a name typed, the first sentence left, and from the bottom Create moved `scrollY` from 320 to 147, the Subject picker at 114 to 160, its sentence at 166 to 186; choosing a subject cleared it. Nothing was posted.
+- `/decks/{id}/edit`, "Commands", twelve fields, the last one's name cleared, from the top: Save moved `scrollY` from 0 to 523, the input at 673 to 719, "Name is required." at 731 to 763, bar top 763; a second tap moved the page by 0.
+- `/cards/new`, no deck: Create rendered "Choose a deck to create a card." at 230 to 250, under the picker at 178 to 224, and posted nothing; choosing a deck cleared it.
+- Screenshots: /tmp/claude-1000/-home-jadenlu-Projects-Flashy/a5cf6fb5-0dda-4784-b447-e36d1b55418a/scratchpad/deck-taken.png and /tmp/claude-1000/-home-jadenlu-Projects-Flashy/a5cf6fb5-0dda-4784-b447-e36d1b55418a/scratchpad/card-nodeck.png and /tmp/claude-1000/-home-jadenlu-Projects-Flashy/a5cf6fb5-0dda-4784-b447-e36d1b55418a/scratchpad/deck-unchosen.png.
+
+Departures from guidance: none. Beyond the Details, the tests also pin a blank-name Save on Edit subject, Edit deck's Save with nothing changed moving nothing, the taken deck name's sentence leaving on an edit, a 500 on Edit deck, a chosen deck clearing the card's sentence, a tap while a chosen deck's fields load saying and moving nothing, a blank-name Create in the deck form's overlay showing its sentence and moving nothing, and an edit of the subject's name clearing its sentence.
+
+The deck form's overlay, on the engineer's order, which added the Details' constraint: `FullScreenDialog` scrolls inside itself and `reveal` scrolls only the window, so `SubjectFormBody` takes `inOverlay`, which `DeckEditor` sets and which skips `reveal`. Measured after the change, a blank-name Create in the overlay left the deck form behind it where it was: at height 844, 261 before and after, with the sentence on screen at 157 to 177; at height 300 with the overlay scrolled to its foot, 394 before and after, with the sentence off screen at -78 to -58. That short-screen miss is what remains, and it stands open for a decision outside this cycle.
+
+On the engineer's order, beyond the Details, editing a subject's name clears `nameError`, so both "Name is required." and "A subject with this name already exists." leave on an edit.
+
+On the engineer's order, `docs/vocabulary.md` holds, beyond the row the Details give, one "A name left blank" row in place of the subject's and the field's, and a row for a subject left unchosen. `nameError` on the deck form also clears on Undo, which restores the name. A sentence for a taken name that still shows counts as the first part on a later not-ready tap.
+
+For T3's browser check: Playwright's `locator.click` refuses an `aria-disabled` button and times out, so the script must click its coordinates through `page.mouse.click`.
+
+Read in the code: `handleSaveClick` in `DeckEditor.tsx`, where a not-ready tap sets the name's and the subject's sentences and reveals the first part in order, and the first `[data-field-error]` under the field list gives a field's sentence and its row's `input` its control, and `SubjectFormBody`'s `revealName` in `SubjectForm.tsx`, for the overlay's exception.
 
 ### T3 — The configuration form's and New practice's tap of Create or Save
 

@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState, type RefObject } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
@@ -26,7 +26,7 @@ import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
@@ -50,6 +50,9 @@ const FIELD_TYPE_SELECT =
 
 type FieldsSectionProps = {
   fields: EditorField[];
+  /** The list of field rows; a row whose name is refused marks its sentence
+   * `data-field-error`. */
+  listRef: RefObject<HTMLUListElement | null>;
   onRename: (key: string, name: string) => void;
   onMove: (key: string, toIndex: number) => void;
   onRemove: (key: string) => void;
@@ -68,7 +71,7 @@ type FieldsSectionProps = {
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
-function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
+function FieldsSection({ fields, listRef, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
   const activeCount = fields.filter((f) => !f.pendingRemoval).length;
   // The primary field is the first field still active (not staged for removal), in
   // array order — array index doubles as position here, exactly what the Move up/down
@@ -82,7 +85,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
+      <ul ref={listRef} className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
@@ -202,7 +205,11 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   <X aria-hidden="true" className="size-icon" />
                 </button>
               </div>
-              {error && <p className="pb-3 text-sm text-(--color-wrong)">{error}</p>}
+              {error && (
+                <p data-field-error className="pb-3 text-sm text-(--color-wrong)">
+                  {error}
+                </p>
+              )}
             </li>
           );
         })}
@@ -341,6 +348,7 @@ function DeckEditorBody({
 }: DeckEditorBodyProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { reveal } = useViewParams();
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   // Computed once, at mount — the same rule as the subject combobox's own initial
@@ -367,6 +375,12 @@ function DeckEditorBody({
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
+  const subjectErrorRef = useRef<HTMLSpanElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameErrorRef = useRef<HTMLSpanElement>(null);
+  const fieldsRef = useRef<HTMLUListElement>(null);
   // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
@@ -377,8 +391,8 @@ function DeckEditorBody({
 
   const valid = isDeckEditorValid(state);
   // Nothing to save/undo when the form hasn't changed since it was loaded (or since
-  // the last successful save, once `original` has been rebased) — Save and Undo
-  // disable exactly then, rather than staying clickable for a no-op.
+  // the last successful save, once `original` has been rebased) — Save reads not ready
+  // and Undo disables exactly then.
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
@@ -397,7 +411,13 @@ function DeckEditorBody({
   // The single global Undo — discards every uncommitted change (renames, reorders,
   // added rows, and every staged removal) in one step, back to `original`. No confirm:
   // nothing has reached the server yet.
-  const handleUndo = () => dispatch({ type: 'LOAD', state: original });
+  const handleUndo = () => {
+    dispatch({ type: 'LOAD', state: original });
+    setNameError(null);
+  };
+
+  const revealName = () =>
+    reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
 
   const handleSaveCreate = async () => {
     const created = await createDeck(buildDeckCreatePayload(state));
@@ -415,7 +435,7 @@ function DeckEditorBody({
 
   const handleSaveEdit = async () => {
     const payload = buildDeckBatchEditPayload(original, state);
-    if (Object.keys(payload).length === 0) return; // Save is disabled in this state; nothing to do.
+    if (Object.keys(payload).length === 0) return; // Save reads not ready in this state; nothing to do.
     const updated = await updateDeck(deckId!, payload);
     // Stay on the page. Rebuild both the live state and the baseline from the
     // response, one call — this resolves every client_key to a real id and clears
@@ -439,10 +459,18 @@ function DeckEditorBody({
     if (!canSave) return;
     setSaving(true);
     setSaveError(null);
+    setNameError(null);
     try {
       await (mode === 'edit' ? handleSaveEdit() : handleSaveCreate());
     } catch (err) {
-      setSaveError(failureSentence(err, 'Deck not found.'));
+      const sentence = failureSentence(err, 'Deck not found.');
+      // A taken name is fixed at the input, so it is said there rather than in the bar.
+      if (err instanceof ApiDetailError && err.detail.code === 'deck_name_taken') {
+        setNameError(sentence);
+        revealName();
+      } else {
+        setSaveError(sentence);
+      }
     } finally {
       setSaving(false);
     }
@@ -503,6 +531,27 @@ function DeckEditorBody({
   // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
   // so the check reads it symmetrically with field_defs.delete.
   const handleSaveClick = async () => {
+    if (!valid) {
+      const nameBlank = state.name.trim() === '';
+      const noSubject = state.subjectId === null;
+      if (nameBlank) setNameError('Name is required.');
+      if (noSubject) setSubjectError('Choose a subject to create a deck.');
+      const fieldSentence = fieldsRef.current?.querySelector('[data-field-error]');
+      if (nameBlank || nameError) {
+        revealName();
+      } else if (noSubject) {
+        reveal({
+          control: () => subjectInputRef.current,
+          listStart: () => subjectErrorRef.current,
+        });
+      } else if (fieldSentence) {
+        reveal({
+          control: () => fieldSentence.closest('li')?.querySelector('input') ?? null,
+          listStart: () => fieldSentence,
+        });
+      }
+      return;
+    }
     if (!canSave) return;
     if (mode === 'edit') {
       const payload = buildDeckBatchEditPayload(original, state);
@@ -580,29 +629,47 @@ function DeckEditorBody({
         <label className="flex flex-col gap-1.5">
           <span className="text-label text-(--color-aside)">Deck name</span>
           <input
+            ref={nameInputRef}
             type="text"
             value={state.name}
-            onChange={(e) => dispatch({ type: 'SET_NAME', name: e.target.value })}
+            onChange={(e) => {
+              dispatch({ type: 'SET_NAME', name: e.target.value });
+              setNameError(null);
+            }}
             className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
+          {nameError && (
+            <span ref={nameErrorRef} role="alert" className="text-sm text-(--color-wrong)">
+              {nameError}
+            </span>
+          )}
         </label>
-        <PickerCombobox<SubjectItem>
-          items={subjectsQuery.data ?? []}
-          selected={selectedSubject}
-          onSelect={(item) => {
-            setSelectedSubject(item);
-            dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
-          }}
-          onSelectCreate={() => setSubjectOverlayOpen(true)}
-          createLabel="New subject…"
-          placeholder="Subject"
-          renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
-          inputRef={subjectInputRef}
-        />
+        <div className="flex flex-col gap-1.5">
+          <PickerCombobox<SubjectItem>
+            items={subjectsQuery.data ?? []}
+            selected={selectedSubject}
+            onSelect={(item) => {
+              setSelectedSubject(item);
+              setSubjectError(null);
+              dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
+            }}
+            onSelectCreate={() => setSubjectOverlayOpen(true)}
+            createLabel="New subject…"
+            placeholder="Subject"
+            renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
+            inputRef={subjectInputRef}
+          />
+          {subjectError && (
+            <span ref={subjectErrorRef} role="alert" className="text-sm text-(--color-wrong)">
+              {subjectError}
+            </span>
+          )}
+        </div>
       </div>
 
       <FieldsSection
         fields={state.fields}
+        listRef={fieldsRef}
         onRename={(key, name) => dispatch({ type: 'RENAME_FIELD', key, name })}
         onMove={(key, toIndex) => dispatch({ type: 'MOVE_FIELD', key, toIndex })}
         onRemove={handleRemoveField}
@@ -642,8 +709,9 @@ function DeckEditorBody({
         <button
           type="button"
           onClick={() => void handleSaveClick()}
-          disabled={!canSave || checkingSaveImpact}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          disabled={saving || checkingSaveImpact}
+          aria-disabled={!canSave || undefined}
+          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {/* Reverts the instant a new edit re-dirties the form, not just after the
               2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
@@ -664,9 +732,11 @@ function DeckEditorBody({
           mode="create"
           subjectId={undefined}
           original={undefined}
+          inOverlay
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);
+            setSubjectError(null);
             dispatch({ type: 'SET_SUBJECT', subjectId: subject.id });
             setSubjectOverlayOpen(false);
           }}

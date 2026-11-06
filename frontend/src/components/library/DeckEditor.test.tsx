@@ -110,13 +110,13 @@ afterEach(() => {
 });
 
 describe('DeckEditor — create mode', () => {
-  it('starts with Term and Definition fields and a disabled Create', async () => {
+  it('starts with Term and Definition fields and a Create that reads not ready', async () => {
     mockSubjects();
     renderEditor();
 
     expect(await screen.findByDisplayValue('Term')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Definition')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('the field type select offers only Text', async () => {
@@ -561,12 +561,12 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Back' })).toBeDisabled();
   });
 
-  it('change nothing: Save and Undo both start disabled (nothing to save/undo)', async () => {
+  it('change nothing: Save reads not ready and Undo starts disabled (nothing to save/undo)', async () => {
     mockEditDeck();
     renderEditDeck();
 
     await screen.findByDisplayValue('French Vocab');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
@@ -691,7 +691,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByDisplayValue('French Vocab')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Back')).toBeEnabled();
     expect(screen.queryAllByDisplayValue('')).toHaveLength(0); // the added blank field is gone too
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
@@ -797,7 +797,7 @@ describe('DeckEditor — edit mode', () => {
     // Rebuilt from the response: the removed field is really gone.
     expect(screen.queryByDisplayValue('Back')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('Notes')).toBeInTheDocument();
-    expect(screen.getByText('Saved ✓').closest('button')).toBeDisabled();
+    expect(screen.getByText('Saved ✓').closest('button')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
   });
@@ -1033,6 +1033,144 @@ describe('DeckEditor — edit mode', () => {
 
     await waitFor(() => expect(deleteCalled).toBe(true));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+  });
+});
+
+describe('DeckEditor — bringing a part of the form and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  it('Save with a blank field name is pressable, reads not ready, and a tap moves the page once', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await user.clear(await screen.findByDisplayValue('Back'));
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(save).toHaveAttribute('aria-disabled', 'true');
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a blank-name Create in the New subject overlay shows its sentence and moves nothing', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject/ }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.click(dialog.getByRole('button', { name: 'Create' }));
+
+    expect(await dialog.findByText('Name is required.')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  it('Create with a blank Deck name and no subject says both, and moves the page once', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    const name = await screen.findByRole('textbox', { name: 'Deck name' });
+    const picker = screen.getByPlaceholderText('Subject');
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).toBeEnabled();
+
+    await user.click(create);
+
+    const nameSentence = await screen.findByText('Name is required.');
+    expect(nameSentence).toHaveAttribute('role', 'alert');
+    expect(nameSentence.closest('label')).toBe(name.closest('label'));
+    const subjectSentence = screen.getByText('Choose a subject to create a deck.');
+    expect(subjectSentence).toHaveAttribute('role', 'alert');
+    expect(picker.compareDocumentPosition(subjectSentence)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Create with a Deck name and no subject says only the subject, and choosing one clears it', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.type(await screen.findByRole('textbox', { name: 'Deck name' }), 'Verbs');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await screen.findByText('Choose a subject to create a deck.');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    expect(screen.queryByText('Choose a subject to create a deck.')).not.toBeInTheDocument();
+  });
+
+  it('editing the Deck name clears its sentence, and so does Undo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    const input = await screen.findByDisplayValue('French Vocab');
+    await user.clear(input);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText('Name is required.');
+    await user.type(input, 'F');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText('Name is required.');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+  });
+
+  it('Save with nothing changed moves nothing', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  async function refuseSave(detail: unknown, status: number) {
+    mockEditDeck();
+    server.use(http.patch(`${BASE}/api/decks/:id`, () => HttpResponse.json({ detail }, { status })));
+    const user = userEvent.setup();
+    renderEditDeck();
+    const input = await screen.findByDisplayValue('French Vocab');
+    await user.type(input, ' II');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    return { user, input };
+  }
+
+  it('a deck_name_taken refusal renders under the Deck name input, not in the bar, until the name is edited', async () => {
+    const { user, input } = await refuseSave({ code: 'deck_name_taken', message: 'taken' }, 400);
+
+    const sentence = await screen.findByText('A deck with this name already exists.');
+    expect(sentence).toHaveAttribute('role', 'alert');
+    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+
+    await user.type(input, '!');
+    expect(screen.queryByText('A deck with this name already exists.')).not.toBeInTheDocument();
+  });
+
+  it('a 500 renders in the bar and leaves the page where it is', async () => {
+    await refuseSave('boom', 500);
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
   });
 });
 

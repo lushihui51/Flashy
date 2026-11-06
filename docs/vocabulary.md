@@ -34,6 +34,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Why leaving discards | "You have unsaved changes. Leaving now will discard them." | New subject; Edit subject; New deck; Edit deck; New card; Edit card | `confirmCancelOpen` |
 | App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit subject; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
 | App | Switching the deck a form is filling in | "Change deck?" | New card; New configuration | `deckChange`; `pendingDeck` |
+| App | A name left blank | "Name is required." | New subject; Edit subject; the deck form's overlay; New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name | `nameError`; `FieldsSection` |
 | Places | The main places | "Home"; "Your library"; "Practice" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
@@ -59,7 +60,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Subject | A subject name already taken | "A subject with this name already exists." | New subject; Edit subject; the deck form's overlay | `subject_name_taken` |
 | Subject | Confirming a subject's deletion | "Delete subject?" | Edit subject | `confirmDeleteOpen` |
 | Subject | Leaving the subject form with unsaved changes | "Discard changes?" | New subject; Edit subject; the deck form's overlay | `confirmCancelOpen` |
-| Subject | A subject's name left blank | "Name is required." | New subject; Edit subject; the deck form's overlay | `nameError` |
+| Subject | A subject left unchosen | "Choose a subject to create a deck." | New deck | `subjectError` |
 | Deck | A deck | "deck" | Library; subject page; deck page; forms | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |
 | Deck | A deck's name | "Deck name" | New deck; Edit deck | `name`; `DeckCreate`; `DeckBatchEdit` |
 | Deck | Adding a deck to the list in view | "Add deck" | Library's Decks tab; subject page | `AddButton` |
@@ -93,7 +94,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Field | A field name already taken | "A field with this name already exists." | New deck; Edit deck | `field_name_taken` |
 | Field | Two fields with one name in the deck form | "Duplicate name" | New deck; Edit deck | `isDuplicate` |
 | Field | What the primary field is | "The first field identifies this card in lists and summaries." | New deck; Edit deck | `primaryIndex` |
-| Field | A field's name left blank | "Name is required." | New deck; Edit deck | `FieldsSection` |
 | Card | A card | "card" | Deck page; forms; run page; summary | `card`; `Card`; `CardRead`; `card_field_value`; `CardFieldValue`; `/api/cards`; `cardId` |
 | Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardList` |
 | Card | Adding a card to the list in view | "Add card" | Deck page's Cards tab | `AddButton` |
@@ -103,6 +103,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
 | Card | Deleting a card | "Delete card" | Edit card | `deleteCard`; `/api/cards/{card_id}` |
+| Card | A card's deck left unchosen | "Choose a deck to create a card." | New card | `deckError` |
 | Card | Leaving the card form with unsaved changes | "Discard this card?" | New card; Edit card | `confirmCancelOpen` |
 | Card | Why switching a card's deck clears it | "Switching decks will clear the card you were filling in." | New card | `deckChange` |
 | Card | Leaving a card to make a deck | "Create a new deck?" | New card | `confirmCreateDeckOpen`; `goToCreateDeck` |
