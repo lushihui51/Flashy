@@ -14,6 +14,10 @@ A card holds one value for each field of its deck. PDR 009 has the user rate eac
 
 PDR 008 lets a configuration choose which fields a practice asks, and random draw varies them from one attempt to the next. A card can have fields the user has never practiced.
 
+PDR 028 lets a user who stops studying a field keep it in its deck or delete it.
+
+No one has reported a field held below ready as a problem.
+
 PDR 006 shows a card as one row under one label in lists and on a practice's summary, where it sits beside other cards.
 
 PDR 022 gives a deck and a subject the average mastery of their cards. A card's mastery carries up to the decks and subjects the user chooses between.
@@ -27,6 +31,8 @@ A mastery that says how likely the user is to recall a card tells them how ready
 ## Decision
 
 We will give a card one mastery that says how ready the user is to recall it: how likely they are to recall it now, across every field of its deck. Each field of the card has a mastery of its own, built from the ratings the user has given that field.
+
+We will count every field of a deck in its cards' mastery, and offer the user no way to choose which count.
 
 We will count a field the user has never practiced as not ready. A card never practiced is not ready at all, and it fills as the user practices it, until a card the user will recall is ready.
 
@@ -64,6 +70,14 @@ Rejected because a card practiced on one field of five would read ready.
 
 Rejected because the user compares cards as rows, and finds the least ready one to practice next.
 
+### A choice per field of whether it counts
+
+Rejected because it adds a control, a word and a lasting concept, and a card reading ready would no longer mean ready on the whole card.
+
+### Counting only the fields some configuration uses
+
+Rejected because a card's mastery would move when a configuration is edited or deleted, and one narrow configuration would read ready on one field of five.
+
 ## Consequences
 
 **Positive**
@@ -72,6 +86,7 @@ Rejected because the user compares cards as rows, and finds the least ready one 
 - The user sees a new card, and a deck never practiced, as not ready rather than half known.
 - The user sees the same mastery for a card wherever it appears.
 - The user who takes a break finds their mastery where they left it.
+- The user reads ready as one thing on every card: ready on the whole card.
 
 **Negative**
 

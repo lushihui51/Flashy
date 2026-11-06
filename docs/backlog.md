@@ -18,7 +18,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: `HomePage` in `frontend/src/pages/HomePage.tsx` reads "Coming soon.", and it is where the app opens; a practice starts only from New practice, reached from the Practice page and the top bar's shortcut.
   - Owner: /product-decide
 - B8. On a wide screen, are a deck's cards shown and edited as a table, one column per field, with a field's type and order set from its column header?
-  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form.
+  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form. The answer turns on what the user does on this page on a wide screen: blocks in columns suit finding a card and opening it, and a table suits checking one field across many cards.
   - Owner: /product-decide
 - B9. Can the user create many cards at once by pasting rows of text?
   - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
@@ -55,4 +55,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Owner: /product-decide
 - B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
   - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
+  - Owner: /product-decide
+- B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
+  - Reason: a fading circle can feel like being told you're behind, which PDR 027 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 027's "nothing due".
   - Owner: /product-decide
