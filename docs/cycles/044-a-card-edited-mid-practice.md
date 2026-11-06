@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide, on an active prac
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -88,7 +88,11 @@ Tests in `PracticeRunPage.test.tsx`: "Edit card" reads `aria-disabled` before "S
 
 **Debrief**
 
-None.
+Attempted: the six checks before starting, all of which held, and a reading of the task against the code. Nothing was built.
+
+Found: the Done-when line `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `0` cannot hold within the task's Files. Details removes `showAnswer` and `ratings` from `PracticeCardView`. `rerunError` in `RunCompletion`, in the same file, also uses `useState`, and holds the sentence `RerunButton` in `frontend/src/components/practice/RerunButton.tsx` reports through `onError`. With the two gone the command prints `2`: the import and `rerunError`. Keeping that sentence in the URL would put a failure in the page's address, and replacing `useState` with `useReducer` would pass the grep with the same state in place.
+
+Why the file cannot settle it: Details says `useState` goes for "either" of the two, and the Done-when line requires it gone from the whole file; the file never names `rerunError`. Meeting the line as written takes `RunCompletion` out of the page into a path outside Files, with the breakdown query staying in the page under ADR 088, and that is a refactor of the summary's page the task does not state. Changing the line is the planner's edit. The two ways out, the expected output changed to `2` or `RunCompletion` moved to a new `frontend/src/components/practice/RunCompletion.tsx`, were raised to the engineer, who chose to block.
 
 ### T2 — Edit card from the summary
 
