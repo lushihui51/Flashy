@@ -404,6 +404,7 @@ A row on the summary opens the card as a sheet showing its name, its circle and 
   - Concept "An answer field's mark"; User reads `a solid red dot for Again; a red ring with a dot for Hard; an ink ring with a dot for Good; a solid ink dot for Easy; an empty light-grey ring when the attempt did not ask it; "not asked"`; Where "A card opened from the summary; the key"; Code `` `RatingMark`; `rating` ``.
   - Concept "A field's marks, spoken"; User reads `its name, then each mark in turn joined by "then", as "OS: shown, then not shown, then shown" or "Privilege needed: Easy, then not asked, then Good"`; Where "A card opened from the summary"; Code `` `role="img"` ``.
   - Concept "The key to the marks"; User reads `"Key", spoken, on the "i"; "Prompt" over "shown" and "not shown"; "Answer" over "Again", "Hard", "Good", "Easy" and "not asked"`; Where "A card opened from the summary"; Code `` `KeyButton`; `keyOpen` ``.
+- The row "A card rated above Again on every field" has its Where become "Run page", since the summary no longer shows "Passed" (LPD8).
 
 **Out of scope**
 
@@ -412,6 +413,7 @@ A row on the summary opens the card as a sheet showing its name, its circle and 
 - A count of attempts or a passed or failed word on the sheet: never, PDR 025.
 - The key always shown: never, PDR 025.
 - The mastery before and after on the sheet's heading: never, LPD7.
+- The sheet's own padding, gap and starting height as drawing 16 draws them: never; `BottomSheet` gives every sheet one shape, and the sheet grows with its content.
 
 **Done when**
 
