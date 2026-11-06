@@ -165,7 +165,15 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
               {failureSentence(breakdownQuery.error, 'Practice not found.')}
             </p>
           )}
-          {breakdownQuery.data && <RunBreakdown breakdown={breakdownQuery.data} />}
+          {breakdownQuery.data && (
+            <>
+              <p className="mb-3.5 text-body font-medium text-(--color-aside)">
+                {breakdownQuery.data.total_cards} card
+                {breakdownQuery.data.total_cards === 1 ? '' : 's'} practiced
+              </p>
+              <RunBreakdown breakdown={breakdownQuery.data} />
+            </>
+          )}
         </div>
       )}
 

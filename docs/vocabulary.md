@@ -168,7 +168,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
 | Run | One go at a card | "attempt"; "Attempt N of M · Passed" | Summary | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page; summary | `passed` |
-| Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page; summary | `failed`; `still_failed` |
+| Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page | `failed`; `still_failed` |
 | Run | A card that comes back after Again | "Retry"; "retrying" | Run page | `retry_pending`; `pending` |
 | Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
@@ -176,9 +176,9 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `PracticeRunBreakdown`; `/api/practice_runs/{practice_run_id}/breakdown`; `RunBreakdown`; `practice_run_breakdown` |
 | Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
-| Summary | Sorting the cards | "Sort", spoken; "Gains first"; "Drops first"; "Mastery" | Run page; a practice's page | `SortKey`; `gains`; `drops`; `mastery` |
-| Summary | A change in mastery | "+N"; "−N"; "±0" | Summary | `delta`; `FieldReadinessDelta` |
-| Summary | A card's outcome | "First try"; "One retry"; "2+ retries"; "Failed" | Summary | `BreakdownBucket`; `passed_first_try`; `passed_after_one_fail`; `passed_after_many_fails`; `still_failed` |
+| Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | Run page; a practice's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
+| Summary | A change in mastery, one of five kinds | a badge off the circle's top-right; "up a lot", "up", "no change", "down" or "down a lot", spoken after "Mastery N%" | Run page; a practice's page | `ChangeKind`; `change`; `delta`; `classify_change`; `ChangeBadge`; `CHANGE_WORDS` |
+| Summary | How many cards had each kind of change | the number under its kind's badge; "N up a lot", "N up", "N no change", "N down" or "N down a lot", spoken | Run page; a practice's page | `kind` |
 | Failure | The device is offline | "You're offline. Flashy will reconnect automatically." | A banner at the top of every page | `ConnectionStatus`; `offline`; `useConnectionStatus`; `ConnectionBanner` |
 | Failure | Flashy cannot be reached | "Can't reach Flashy. Check your connection; retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `unreachable`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |
 | Failure | Flashy is having trouble | "Flashy is having trouble right now. Retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `server_trouble`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |

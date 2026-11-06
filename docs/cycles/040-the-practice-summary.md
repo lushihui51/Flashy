@@ -167,7 +167,7 @@ Read in the code: nothing beyond `MasteryCircle.tsx`, for the paint order above.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -184,6 +184,7 @@ The breakdown read returns every card and each field the practice showed or aske
 - `app/services/practice_run.py`
 - `app/database_ops/card.py`
 - `app/database_ops/field_def.py`
+- `app/database_ops/practice_card.py`
 - `tests/conftest.py`
 - `tests/api_tests/test_mastery.py`
 - `tests/api_tests/test_practice_run.py`
@@ -321,7 +322,43 @@ The pages:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run pytest tests/api_tests/test_mastery.py tests/api_tests/test_practice_run.py` prints `141 passed`. With `-k "TestClassifyChange or test_breakdown_statement_count_is_fixed"` it prints `9 passed, 132 deselected`: eight boundary tests and the statement count.
+- The `grep -c` over `practice_run_payloads.py` prints `0`.
+- `npm run gen:api` run again leaves `openapi.json` and `types.ts` byte-identical to the working copies. `git status --porcelain src/api` can print nothing only after the task's commit, so that half is not yet shown.
+- The four frontend test files pass: `Test Files  4 passed (4)`, `Tests  71 passed (71)`.
+- The `grep -rn` over `frontend/src`, leaving out tests and `src/api/`, prints nothing, exit 1.
+- The `grep -c` over `docs/vocabulary.md` prints `0`.
+- The `grep -c "chipClass"` prints `0` for `ratingTiers.ts` and `0` for `RunBreakdown.tsx`.
+- Browser check, in headless Chromium at 390 by 844 against localhost:5173, signed out with `DEV_AUTH_USER_ID` and `ENV=development` set, driven by a mouse, on the dev database's completed practice `13352e78-a29b-4ac6-8ab9-94179a16e64f`, at `/practice/{id}/run` and at `/practice/{id}`. Both pages gave the same results and logged no error:
+  - The five counts speak "0 up a lot", "2 up", "13 no change", "5 down" and "0 down a lot", each with one badge over its number. "Order by:" shows Mastery pressed in, then Gains and Drops. There are 20 rows, each with a name, a circle and a badge, and the page does not scroll sideways. Screenshots of the run page narrowed to "down" and of the practice's own page unnarrowed read as drawings 15 and 14, apart from what Out of scope names.
+  - Clicking "down" gives 5 rows, all spoken "down", with the URL at `kind=down` and the counts on screen at 331 to 398 of 844 on the run page and 373 to 440 on the practice's own page. Clicking it again gives 20 rows and an empty URL query.
+  - Gains puts "53" first, spoken "Mastery 89%, up". Drops puts "161" first, spoken "Mastery 65%, down". The URL holds `order=gains`, then `order=drops`.
+  - Clicking "0 up a lot" leaves a list of no rows, a height of 0 and no sentence. A reload keeps `order=drops&kind=up_a_lot`.
+  - The run page's `h1` is "Practice complete", with "20 cards practiced" under it and "Done" alone at full width.
+  - No completed practice in the dev database holds a card of "down a lot", and only the practice "Judgement practice" holds "up a lot", so a row with a two-chevron badge was not seen on this practice; the unit test covers its spoken words. A touch was not tried.
+
+The checks AGENTS.md requires: `npx vitest run` passes 66 files and 767 tests; `npm run lint` prints no problem; `npm run build` builds, with only its existing warning about chunks over 500 kB. A full `uv run pytest`, started with no other connection to the test database, prints `389 passed`; it ran before the one-word comment edit in `practice_card.py`, and the two test files above ran after it.
+
+Departures from guidance:
+
+- Only the field definitions are grouped by deck before the loop. The cards are keyed by id, since the loop goes card by card and a card's deck is on its row.
+
+Choices the file left open:
+
+- `app/database_ops/practice_card.py` was added to Files with the engineer's go-ahead: the docstring of `db_read_practice_cards_for_run` named the removed `_breakdown_bucket`.
+- `test_full_breakdown_all_four_buckets` is now named `test_full_breakdown_lists_every_card_once`, since no bucket remains.
+- `test_breakdown_statement_count_is_fixed` runs its large practice over two decks, so the pinned counts cover the number of decks as well as cards.
+- `test_field_shown_by_one_attempt_and_asked_by_another_reads_prompt` is added, for the `side` rule.
+- `test_first_review_delta_and_untouched_field_dilutes_card_fold` and `test_deleted_run_attribution_survives_as_before_state` read an unlisted field through the card's fold, since `fields` no longer lists it. `test_deleted_fields_leave_every_attempt` now expects only `p1` and `a1` in `fields`.
+- "N cards practiced" and "Order by:" use `text-body font-medium` in aside colour. The drawings' `#3a4553` is no token in `frontend/src/index.css`.
+- The list's `ul` stays mounted with no block classes when it holds no row, so `changeView` still finds `listStart` and nothing is drawn.
+- A count row's block uses `rounded-field`, the 0.875rem the drawing holds. The counts group has no accessible name, since the file gives it none.
+- Writing a `kind` rewrites all of them in `CHANGE_KINDS` order, so a value the lists do not hold leaves the URL on the first tap.
+- "1 card practiced" keeps the singular, as the old line did, written once in each page.
+
+Read in the code: `get_practice_run_breakdown` in `app/services/practice_run.py`, for the narrowed `fields` beside the fold over every live field.
 
 ### T3 — A card opened from the summary
 

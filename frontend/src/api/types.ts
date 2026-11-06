@@ -406,44 +406,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BreakdownAttempt */
+        /**
+         * BreakdownAttempt
+         * @description One go at a card, by what it showed and what it asked.
+         */
         BreakdownAttempt: {
             /**
              * Practice Card Id
              * Format: uuid
              */
             practice_card_id: string;
-            status: components["schemas"]["PracticeCardStatus"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
             /** Prompts */
             prompts: components["schemas"]["ResolvedFieldValue"][];
             /** Answers */
             answers: components["schemas"]["RatedFieldValue"][];
         };
         /**
-         * BreakdownBucket
-         * @description The completion-time refinement of the chain fold: `passed` splits by chain
-         *     length so the breakdown can distinguish a card that took retries from one that
-         *     didn't; `still_failed` — a chain whose last row is `failed` with no successor,
-         *     because nothing was left to generate a retry from — is unaffected by length and stays one
-         *     bucket, displayed to the user as "Failed".
-         * @enum {string}
-         */
-        BreakdownBucket: "passed_first_try" | "passed_after_one_fail" | "passed_after_many_fails" | "still_failed";
-        /**
          * BreakdownCard
-         * @description One card's whole outcome chain for the completion breakdown: `attempts` is
-         *     chronological, so `attempts[-1]` is the determining attempt that decided `bucket`.
-         *     `readiness`/`delta`/`fields` are the session deltas: `readiness` is the card's
-         *     readiness after the run, from 0 to 1, over every active field; `delta` is that
-         *     figure minus the same fold before the run, exact (the client rounds);
-         *     `fields` lists every
-         *     currently active field_def of the card's deck, field_def.position ascending —
-         *     not just the ones this run's attempts happened to touch.
+         * @description One card on the summary. `readiness` is the card's readiness after the run, from 0 to
+         *     1, over every live field of its deck, and `delta` that figure minus the same fold before
+         *     the run, so a field the run never showed or asked counts here though `fields` omits it.
+         *     `fields` is in field_def.position order; `attempts` is oldest first.
          */
         BreakdownCard: {
             /**
@@ -451,18 +434,16 @@ export interface components {
              * Format: uuid
              */
             card_id: string;
-            bucket: components["schemas"]["BreakdownBucket"];
-            /** Attempt Count */
-            attempt_count: number;
             primary_field: components["schemas"]["ResolvedFieldValue"];
-            /** Attempts */
-            attempts: components["schemas"]["BreakdownAttempt"][];
             /** Readiness */
             readiness: number;
             /** Delta */
             delta: number;
+            change: components["schemas"]["ChangeKind"];
             /** Fields */
             fields: components["schemas"]["FieldReadinessDelta"][];
+            /** Attempts */
+            attempts: components["schemas"]["BreakdownAttempt"][];
         };
         /**
          * CardBatchCreate
@@ -581,6 +562,11 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * ChangeKind
+         * @enum {string}
+         */
+        ChangeKind: "up_a_lot" | "up" | "no_change" | "down" | "down_a_lot";
         /** CurrentRunCard */
         CurrentRunCard: {
             /**
@@ -930,10 +916,9 @@ export interface components {
         };
         /**
          * FieldReadinessDelta
-         * @description One active field's session-delta entry: `readiness` is the field's readiness
-         *     after the run, from 0 to 1, and 0 for a field never reviewed. `delta` is that
-         *     readiness minus the field's readiness before the run, 0.0 for a field this run's
-         *     card left untouched.
+         * @description One field an attempt of the run showed or asked: `readiness` is the field's readiness
+         *     after the run, from 0 to 1, and `delta` that readiness minus its readiness before the
+         *     run, exact.
          */
         FieldReadinessDelta: {
             /**
@@ -944,11 +929,20 @@ export interface components {
             /** Name */
             name: string;
             type: components["schemas"]["FieldType"];
+            side: components["schemas"]["FieldSide"];
             /** Readiness */
             readiness: number;
             /** Delta */
             delta: number;
+            change: components["schemas"]["ChangeKind"];
         };
+        /**
+         * FieldSide
+         * @description Where a card opened from the summary lists a field: `prompt` when any attempt showed
+         *     it, `answer` when attempts only asked it.
+         * @enum {string}
+         */
+        FieldSide: "prompt" | "answer";
         /**
          * FieldType
          * @enum {string}
@@ -996,22 +990,13 @@ export interface components {
         PracticeCardStatus: "pending" | "passed" | "failed";
         /**
          * PracticeRunBreakdown
-         * @description The whole `GET .../breakdown` payload: bucket counts, and
-         *     every card's full resolved history, so the completion screen's row-tap detail needs
-         *     no second request. Only ever built for a completed session — the router
+         * @description The whole `GET .../breakdown` payload: every card and what the run did to it, so the
+         *     summary needs no second request. Only ever built for a completed session; the router
          *     409s an active one before this is composed.
          */
         PracticeRunBreakdown: {
             /** Total Cards */
             total_cards: number;
-            /** Passed First Try */
-            passed_first_try: number;
-            /** Passed After One Fail */
-            passed_after_one_fail: number;
-            /** Passed After Many Fails */
-            passed_after_many_fails: number;
-            /** Still Failed */
-            still_failed: number;
             /** Cards */
             cards: components["schemas"]["BreakdownCard"][];
         };

@@ -47,6 +47,20 @@ def db_read_field_defs_for_copy(db: Session, deck_id: uuid.UUID) -> list[FieldDe
     )
 
 
+def db_read_field_defs_for_decks(
+    db: Session, deck_ids: Collection[uuid.UUID]
+) -> list[FieldDef]:
+    """Unscoped: the caller has already ownership-checked the practice these decks came
+    from. Ordered by deck, then position."""
+    return list(
+        db.exec(
+            select(FieldDef)
+            .where(col(FieldDef.deck_id).in_(deck_ids))
+            .order_by(col(FieldDef.deck_id), col(FieldDef.position))
+        ).all()
+    )
+
+
 def db_next_position(db: Session, deck_id: uuid.UUID) -> int:
     max_position = db.exec(
         select(func.max(FieldDef.position)).where(FieldDef.deck_id == deck_id)

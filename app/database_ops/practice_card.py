@@ -93,7 +93,7 @@ def db_read_practice_cards_for_run(
     db: Session, practice_run_id: uuid.UUID
 ) -> list[PracticeCard]:
     """Every row a session has ever produced, in every status, oldest first — the raw
-    material for the chain fold (run_progress, _breakdown_bucket): grouping
+    material for the chain fold (run_progress): grouping
     consecutive same-card_id rows in this order reconstructs each card's chain, and a
     chain's last item is its current bucket. Unscoped by user, like db_read_cards_with_values_for_deck — every call site
     reaches this session through an ownership-checked lookup first."""

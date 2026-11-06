@@ -1,98 +1,115 @@
-import { useId, useRef, useState } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
-import FieldValue from 'src/components/practice/FieldValue';
-import { RATING_TIERS } from 'src/components/practice/ratingTiers';
-import BottomSheet from 'src/components/ui/BottomSheet';
+import ChangeBadge from 'src/components/ui/ChangeBadge';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import type { components } from 'src/api/types';
+import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
+import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
-type BreakdownBucket = components['schemas']['BreakdownBucket'];
-type FieldReadinessDelta = components['schemas']['FieldReadinessDelta'];
 
-const BUCKET_LABELS: Record<BreakdownBucket, string> = {
-  passed_first_try: 'First try',
-  passed_after_one_fail: 'One retry',
-  passed_after_many_fails: '2+ retries',
-  still_failed: 'Failed',
-};
+type OrderKey = 'mastery' | 'gains' | 'drops';
 
-type SortKey = 'gains' | 'drops' | 'mastery';
-
-// Labeled exactly this way, `gains` the default. No tie-breaking rule is defined —
-// Array.prototype.sort is stable, so equal values keep the server's first-attempt
-// position order, but nothing here relies on that being the case.
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'gains', label: 'Gains first' },
-  { key: 'drops', label: 'Drops first' },
+const ORDER_OPTIONS: { key: OrderKey; label: string }[] = [
   { key: 'mastery', label: 'Mastery' },
+  { key: 'gains', label: 'Gains' },
+  { key: 'drops', label: 'Drops' },
 ];
 
-function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
+const BLOCK_CLASS = 'tappable-sm bg-(--color-surface) text-(--color-ink)';
+const BLOCK_PRESSED_CLASS = 'tappable-sm tappable-pressed bg-(--color-ink) text-(--color-surface)';
+
+function readOrder(params: URLSearchParams): OrderKey {
+  const order = params.get('order');
+  return order === 'gains' || order === 'drops' ? order : 'mastery';
+}
+
+function orderCards(cards: BreakdownCard[], order: OrderKey): BreakdownCard[] {
   const sorted = [...cards];
-  if (sort === 'gains') sorted.sort((a, b) => b.delta - a.delta);
-  else if (sort === 'drops') sorted.sort((a, b) => a.delta - b.delta);
+  if (order === 'gains') sorted.sort((a, b) => b.delta - a.delta);
+  else if (order === 'drops') sorted.sort((a, b) => a.delta - b.delta);
   else sorted.sort((a, b) => a.readiness - b.readiness);
   return sorted;
 }
 
-// The exact difference between two readinesses, on a 0 to 100 scale, rounded to a signed integer, "±0" at
-// zero. Rounding happens first and the sign is read off the rounded value, not the
-// original float — otherwise a delta like -0.003 would round to -0 and misprint as "−0"
-// instead of "±0".
-function formatDelta(delta: number): string {
-  const rounded = Math.round(delta * 100);
-  if (rounded === 0) return '±0';
-  return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
-}
-
-/** The card's name in its row and its detail sheet's heading: the value of its deck's
- * first field alone, or "Untitled card" when that value is blank. */
+/** The card's name in its row: the value of its deck's first field alone, or "Untitled card"
+ * when that value is blank. */
 function cardTitle(card: BreakdownCard): string {
   return card.primary_field.value || 'Untitled card';
 }
 
-type RunBreakdownProps = {
-  breakdown: PracticeRunBreakdown;
-};
+/** A completed practice's summary: how many cards had each kind of change, the list narrowed to
+ * the kinds chosen and ordered by mastery, gains or drops, and one row per card. The chosen kinds
+ * and the order are the page's `kind` and `order` URL params, so the page must render it under a
+ * router and keep those params. */
+export default function RunBreakdown({ breakdown }: { breakdown: PracticeRunBreakdown }): ReactNode {
+  const { params, changeView } = useViewParams();
+  const countsRef = useRef<HTMLDivElement>(null);
+  const orderRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
-/** The one retrospective view: a summary line, a sort control, one compact row per
- * card (outcome badge, mastery, delta), and a row tap opening the full
- * attempt-by-attempt detail plus every active field's mastery/delta. Doesn't fetch —
- * the run page (once nothing is pending) and the details page (for any completed
- * session) each own the breakdown query and pass the same payload down here, so the
- * view itself can't drift between the two places it's shown. */
-export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('gains');
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  // One shared trigger ref, reassigned to whichever row was tapped most recently, so
-  // BottomSheet's onCloseAutoFocus returns focus to that exact row (mirrors
-  // FieldAssignmentBoard's identical need).
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const titleId = useId();
+  const requested = params.getAll('kind');
+  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind));
+  const order = readOrder(params);
 
-  const cards = sortCards(breakdown.cards, sortKey);
-  const selectedCard = breakdown.cards.find((card) => card.card_id === selectedCardId) ?? null;
+  const narrowed =
+    chosen.length === 0
+      ? breakdown.cards
+      : breakdown.cards.filter((card) => chosen.includes(card.change));
+  const cards = orderCards(narrowed, order);
+
+  const toggleKind = (kind: ChangeKind) => {
+    const next = new URLSearchParams(params);
+    next.delete('kind');
+    for (const other of CHANGE_KINDS) {
+      if (chosen.includes(other) !== (other === kind)) next.append('kind', other);
+    }
+    changeView(next, { control: () => countsRef.current, listStart: () => listRef.current });
+  };
+
+  const chooseOrder = (key: OrderKey) => {
+    const next = new URLSearchParams(params);
+    if (key === 'mastery') next.delete('order');
+    else next.set('order', key);
+    changeView(next, { control: () => orderRef.current, listStart: () => listRef.current });
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-(--color-aside)">
-        {breakdown.total_cards} card{breakdown.total_cards === 1 ? '' : 's'} practiced
-      </p>
+    <div className="flex flex-col gap-3.5">
+      <div ref={countsRef} role="group" className="flex gap-1.5 pb-0.5">
+        {CHANGE_KINDS.map((kind) => {
+          const pressed = chosen.includes(kind);
+          const count = breakdown.cards.filter((card) => card.change === kind).length;
+          return (
+            <button
+              key={kind}
+              type="button"
+              aria-pressed={pressed}
+              aria-label={`${count} ${CHANGE_WORDS[kind]}`}
+              onClick={() => toggleKind(kind)}
+              className={`flex flex-1 flex-col items-center gap-1 rounded-field py-2 ${
+                pressed ? BLOCK_PRESSED_CLASS : BLOCK_CLASS
+              }`}
+            >
+              <ChangeBadge kind={kind} />
+              <span className="text-base font-bold">{count}</span>
+            </button>
+          );
+        })}
+      </div>
 
-      <div role="radiogroup" aria-label="Sort" className="flex gap-2 overflow-x-auto">
-        {SORT_OPTIONS.map((option) => (
+      <div ref={orderRef} role="radiogroup" aria-label="Order by" className="flex items-center gap-2">
+        <span className="mr-0.5 text-body font-medium text-(--color-aside)">Order by:</span>
+        {ORDER_OPTIONS.map((option) => (
           <button
             key={option.key}
             type="button"
             role="radio"
-            aria-checked={sortKey === option.key}
-            onClick={() => setSortKey(option.key)}
-            className={`h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-sm font-medium ${
-              sortKey === option.key
-                ? 'border-(--color-ink) bg-(--color-ink) text-(--color-surface)'
-                : 'border-(--color-line) text-(--color-aside)'
+            aria-checked={order === option.key}
+            onClick={() => chooseOrder(option.key)}
+            className={`h-9.5 rounded-full px-4 text-sm font-semibold ${
+              order === option.key ? BLOCK_PRESSED_CLASS : BLOCK_CLASS
             }`}
           >
             {option.label}
@@ -100,120 +117,35 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
         ))}
       </div>
 
-      <ul className="flex flex-col">
+      {/* Drawn with no block when empty, so a list narrowed to nothing shows nothing, while a
+          reveal still finds where the list starts. */}
+      <ul
+        ref={listRef}
+        className={
+          cards.length > 0
+            ? 'tappable divide-y divide-(--color-line) overflow-hidden rounded-block bg-(--color-surface)'
+            : undefined
+        }
+      >
         {cards.map((card) => (
           <li key={card.card_id}>
             <button
               type="button"
-              onClick={(event) => {
-                triggerRef.current = event.currentTarget;
-                setSelectedCardId(card.card_id);
-              }}
-              className="flex min-h-16 w-full items-center gap-3 py-3.5 text-left"
+              className="flex w-full items-center gap-3 py-2.75 pr-3 pl-4 text-left text-(--color-ink)"
             >
-              <span className="min-w-0 flex-1 truncate text-body leading-5 text-(--color-ink)">
+              <span className="min-w-0 flex-1 text-base font-semibold break-words">
                 {cardTitle(card)}
               </span>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-line) px-2 text-xs text-(--color-aside)">
-                {BUCKET_LABELS[card.bucket]}
-              </span>
-              <MasteryCircle readiness={card.readiness} size="row" />
-              <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-                {formatDelta(card.delta)}
-              </span>
+              <MasteryCircle readiness={card.readiness} size="summary" change={card.change} />
               <ChevronRight
                 aria-hidden="true"
-                className="h-4 w-4 shrink-0 text-(--color-aside)"
+                strokeWidth={2.2}
+                className="size-icon shrink-0 text-(--color-aside)"
               />
             </button>
           </li>
         ))}
       </ul>
-
-      <BottomSheet
-        open={selectedCard !== null}
-        onClose={() => setSelectedCardId(null)}
-        triggerRef={triggerRef}
-        ariaLabelledBy={titleId}
-      >
-        {selectedCard && (
-          <>
-            <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
-              {cardTitle(selectedCard)}
-            </h2>
-            <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto">
-              {selectedCard.attempts.map((attempt, index) => (
-                <div key={attempt.practice_card_id} className="flex flex-col gap-3">
-                  {selectedCard.attempts.length > 1 && (
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
-                      Attempt {index + 1} of {selectedCard.attempts.length} ·{' '}
-                      {attempt.status === 'passed' ? 'Passed' : 'Failed'}
-                    </h3>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    {attempt.prompts.map((field) => (
-                      <FieldValue key={field.field_def_id} field={field} labeled />
-                    ))}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {attempt.answers.map((field) => (
-                      <div
-                        key={field.field_def_id}
-                        className="flex items-start justify-between gap-3"
-                      >
-                        <FieldValue field={field} labeled />
-                        <div className="mt-4 shrink-0">
-                          <RatingBadge rating={field.rating} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="flex flex-col gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-aside)">
-                  Fields
-                </h3>
-                <ul className="flex flex-col gap-2">
-                  {selectedCard.fields.map((field) => (
-                    <FieldReadinessRow key={field.field_def_id} field={field} />
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </>
-        )}
-      </BottomSheet>
     </div>
-  );
-}
-
-/** One entry of the detail sheet's Fields section: every currently active field of the
- * card's deck, not just the ones this run's attempts happened to touch — an untouched
- * field still shows its current mastery, at ±0. */
-function FieldReadinessRow({ field }: { field: FieldReadinessDelta }) {
-  return (
-    <li className="flex items-center justify-between gap-3">
-      <span className="min-w-0 flex-1 truncate text-sm text-(--color-ink)">{field.name}</span>
-      <MasteryCircle readiness={field.readiness} size="row" />
-      <span className="shrink-0 text-sm font-medium text-(--color-ink)">
-        {formatDelta(field.delta)}
-      </span>
-    </li>
-  );
-}
-
-/** A read-only rendering of one answer's rating, drawing its label/color from the same
- * tier ramp `RatingChip` uses — this is history, so unlike `RatingChip` it never opens
- * anything on tap. A rating no tier matches renders nothing. */
-function RatingBadge({ rating }: { rating: number }) {
-  const tier = RATING_TIERS.find((t) => t.rating === rating);
-  if (!tier) return null;
-  return (
-    <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium ${tier.chipClass}`}
-    >
-      {tier.label}
-    </span>
   );
 }
