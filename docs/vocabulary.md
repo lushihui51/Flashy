@@ -40,7 +40,10 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "Practice" on a practice's page; "Practice › <Practice>" on the run page | Subject page; deck page; practice's page; run page | `Breadcrumb`; `places` |
 | Places | A thing's address, widest place first | "Subject · Deck"; "Deck · Configuration"; "Subject · Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
-| Places | A place not built yet | "Coming soon." | Home | `HomePage` |
+| Home | The steps to a first practice | "Your first practice"; "N of 5"; "New subject", "New deck", "New card", "New configuration", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
+| Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_practices`; `HomeActivePractice` |
+| Home | The decks of the most recently completed practices | "Recently practiced"; "Practice" on each deck | Home | `recent_decks` |
+| Home | Going to New practice from Home | "New practice" | Home, last | `/practice/new` |
 | Library | The library's tabs | "Library", spoken; "Subjects"; "Decks" | Library | `TABS`; `tab` |
 | Library | The Subjects tab's toolbar label | "N subjects"; "Subjects" while the list loads | Library | `readSubjects`; `/api/subjects` |
 | Library | The Decks tab's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
@@ -68,11 +71,11 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
 | Deck | Choosing a deck | "Deck"; each row the deck's name with its subject's name beneath; "New deck…" as the last row | New card; Edit card; New configuration | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id`; `subject_name` |
 | Deck | A deck counted | "N cards"; "N fields" | Library rows; subject page rows | `card_count`; `field_names` |
-| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page | `DeckRow` |
+| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page; Home | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |
 | Deck | The Cards tab's toolbar label | "N cards · N fields" | Deck page | `cards`; `field_defs` |
 | Deck | The Configurations tab's toolbar label | "N configurations"; "Configurations" while the list loads | Deck page | `readDeckPracticeConfigs` |
-| Deck | Practicing a deck | "Practice" | Deck page's header | `/practice?subject=&deck=` |
+| Deck | Practicing a deck | "Practice" | Deck page's header; Home | `/practice?subject=&deck=` |
 | Deck | Deleting a deck | "Delete deck" | Edit deck | `deleteDeck`; `/api/decks/{deck_id}` |
 | Deck | A new deck's starting fields | "Term"; "Definition" | New deck | `deckEditorReducer` |
 | Deck | A deck name already taken | "A deck with this name already exists." | New deck; Edit deck | `deck_name_taken` |
@@ -143,9 +146,9 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | The chosen configurations | "Selected"; "N selected", above Cancel and Create; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids`; `selectedCount` |
 | Practice | A practice's own page | its name, its date and time beneath | A practice's page | `/practice/:practiceSessionId`; `PracticeDetailsPage` |
 | Practice | Narrowing practices by state | "Practice status", spoken; "All"; "Active"; "Completed" | Practice page | `RunStatus`; `status`; `StatusTab` |
-| Practice | A practice that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page | `active` |
+| Practice | A practice that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page; Home | `active` |
 | Practice | A practice that has finished | "completed"; "Completed" as badge and tab | Practice page; a practice's page | `completed` |
-| Practice | Going on with an active practice | "Start practice" | A practice's page | `/practice/:practiceSessionId/run` |
+| Practice | Going on with an active practice | "Start practice" | A practice's page; Home | `/practice/:practiceSessionId/run` |
 | Practice | The copy of each configuration a practice takes at start | — | — | `practice_deck`; `PracticeDeck`; `source_config_id`; `source_config_name` |
 | Practice | Running a practice again | "Re-run"; "Re-run <name>", spoken | A practice's page; the summary, beside Done | `/api/practice_runs/{practice_run_id}/rerun`; `PracticeRunRerun`; `rerunPracticeRun`; `RerunButton` |
 | Practice | New practice with a blank name | "Give this practice a name to create it." | New practice | `nameMissing` |
@@ -172,10 +175,10 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page | `passed` |
 | Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page | `failed`; `still_failed` |
 | Run | A card that comes back after Again | "Retry"; "retrying" | Run page | `retry_pending`; `pending` |
-| Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
+| Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page; Home | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
 | Run | Rating a card that is no longer current | "This is not the current card." | Run page | `not_current_card` |
-| Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
+| Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary; Home | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `PracticeRunBreakdown`; `/api/practice_runs/{practice_run_id}/breakdown`; `RunBreakdown`; `practice_run_breakdown` |
 | Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
 | Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | Run page; a practice's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
@@ -193,6 +196,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Failure | An action Flashy had trouble with | "Flashy is having trouble right now. Try again in a moment." | Beside the control that failed | `ApiError`; `unwrap`; `failureSentence`; `SERVER_TROUBLE_MESSAGE` |
 | Failure | An action while Flashy is temporarily unavailable | "Flashy is temporarily unavailable." | Not shown yet | `database_unavailable` |
 | Failure | A thing that is gone | "<Thing> not found." | In place of a thing that is gone; beside the control that failed; the whole content of the page, for an address that leads to no page | `ApiError`; `unwrap`; `isNotFound`; `failureSentence`; `NotFoundPage` |
-| Failure | A thing that will not load | "Could not load this <thing>." | Edit subject; subject page; Edit deck; deck page; Edit card; Edit configuration; a practice's page; run page; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |
+| Failure | A thing that will not load | "Could not load this <thing>."; "Could not load Home." | Edit subject; subject page; Edit deck; deck page; Edit card; Edit configuration; a practice's page; run page; Home; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |
 | Failure | A list that will not load | "Could not load <things>." | Library; deck page's Configurations tab; Practice page; New practice | `isError` |
 | Failure | Any other failed action | "Something went wrong." | Beside the control that failed | `ApiError`; `ApiDetailError`; `detail.code`; `unwrap`; `failureSentence`; `SOMETHING_WENT_WRONG` |
