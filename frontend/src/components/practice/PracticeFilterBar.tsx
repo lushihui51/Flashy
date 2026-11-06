@@ -1,3 +1,4 @@
+import DeckPicker from 'src/components/library/DeckPicker';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 
@@ -55,7 +56,7 @@ export default function PracticeFilterBar({
         />
       </div>
       <div className="min-w-0 flex-1">
-        <PickerCombobox<DeckOption>
+        <DeckPicker<DeckOption>
           purpose="filter"
           items={deckOptions}
           selected={selectedDeck}

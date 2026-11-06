@@ -51,6 +51,7 @@ const initialDeckSummaries = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
@@ -61,6 +62,7 @@ const initialDeckSummaries = [
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
@@ -227,6 +229,7 @@ function mockLibrary() {
       decks.push({
         id: 'd9',
         subject_id: body.subject_id,
+        subject_name: subjects.find((subject) => subject.id === body.subject_id)!.name,
         name: body.name,
         created_at: '',
         last_activity_at: '',

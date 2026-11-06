@@ -44,6 +44,7 @@ const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
@@ -54,6 +55,7 @@ const decks = [
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
@@ -216,6 +218,21 @@ describe('PracticeCreatePage', () => {
     expect(within(alphaGroup).getByText('Recall')).toBeInTheDocument();
     expect(within(alphaGroup).getByText('Recognition')).toBeInTheDocument();
     expect(within(betaGroup).getByText('Basics')).toBeInTheDocument();
+  });
+
+  it("each deck's row in the deck filter reads its name with its subject's name beneath", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByPlaceholderText('All decks'));
+    const rows = screen.getAllByRole('option');
+    // Two decks of one name, told apart by the line beneath; the first row is "All decks".
+    expect(within(rows[1]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('Alpha')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Beta')).toBeInTheDocument();
   });
 
   it('a checkbox per configuration: at most one ticked per deck, and a tick can be cleared (MD-1)', async () => {

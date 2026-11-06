@@ -8,7 +8,7 @@ import {
   updateDeckPracticeConfig,
 } from 'src/api/deck_practice_config';
 import FieldAssignmentBoard from 'src/components/library/FieldAssignmentBoard';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
+import DeckPicker from 'src/components/library/DeckPicker';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import {
   boardFromConfig,
@@ -270,7 +270,7 @@ function DeckConfigurationEditorBody({
                 : (deck?.name ?? '')}
             </span>
           ) : (
-            <PickerCombobox<DeckOption>
+            <DeckPicker<DeckOption>
               items={deckOptions}
               selected={selectedDeck}
               onSelect={chooseDeck}
@@ -285,11 +285,6 @@ function DeckConfigurationEditorBody({
               }}
               createLabel="New deck…"
               placeholder="Deck"
-              renderLeading={(item) => (
-                <span className="shrink-0 text-xs text-(--color-aside)">
-                  {item.subject_name}
-                </span>
-              )}
             />
           )}
         </div>

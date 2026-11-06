@@ -290,6 +290,21 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
+  it("each deck's row in the picker reads its name with its subject's name beneath, and nowhere else", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(await screen.findByPlaceholderText('Deck'));
+    const row = (await screen.findByText('Alpha Deck')).closest('[role="option"]') as HTMLElement;
+    const subject = within(row).getByText('Alpha');
+    // The subject stands after the deck's name in the row, not before it.
+    expect(within(row).getByText('Alpha Deck').compareDocumentPosition(subject)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getAllByText('Alpha')).toHaveLength(1);
+  });
+
   it('starts with every live field unassigned, in deck order', async () => {
     mockLibrary();
     renderCreate('/deck-configurations/new?deck=d1');

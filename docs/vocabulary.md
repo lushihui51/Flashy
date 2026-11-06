@@ -27,7 +27,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Deleting a thing | "Delete"; "Delete <name>", spoken | Page headers; list rows; every delete confirm | `ConfirmDialog`; `/api/deletion-impact`; `DeletionImpactRead` |
 | App | Changing a thing, spoken | "Edit subject"; "Edit deck"; "Edit <name>" | Subject page; deck page; New practice's rows | `navigate` |
 | App | A thing's name | "Name" | Subject form; New configuration; Edit configuration; New practice | `name` |
-| App | Narrowing a list | "All subjects"; "All decks"; "Clear filters" | Practice page; New practice | `PracticeFilterBar`; `subject`; `deck` |
+| App | Narrowing a list | "All subjects"; "All decks", each deck's row with its subject's name beneath; "Clear filters" | Practice page; New practice | `PracticeFilterBar`; `DeckPicker`; `subject`; `deck` |
 | App | A picker holding more than it shows | "Showing N of N · type to narrow" | Every picker | `PickerCombobox`; `PICKER_MAX_ITEMS` |
 | App | A list with nothing in it | "No <things> yet." | Library; subject page; deck page's Configurations tab; Practice page; New practice | `EmptyState` |
 | App | A list its filters empty | "No <things> match these filters." | Practice page; New practice | `filtered` |
@@ -66,7 +66,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Deck | Adding a deck to the list in view | "Add deck" | Library's Decks tab; subject page | `AddButton` |
 | Deck | The page where a deck is made | "New deck" | Its heading | `/decks/new`; `DeckEditor` |
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
-| Deck | Choosing a deck | "Deck"; "New deck…" as the last row | New card; Edit card; New configuration | `PickerCombobox`; `createLabel`; `deck_id` |
+| Deck | Choosing a deck | "Deck"; each row the deck's name with its subject's name beneath; "New deck…" as the last row | New card; Edit card; New configuration | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id`; `subject_name` |
 | Deck | A deck counted | "N cards"; "N fields" | Library rows; subject page rows | `card_count`; `field_names` |
 | Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { createCard, deleteCard, readCard, updateCard } from 'src/api/card';
 import { readDeck, readDecks } from 'src/api/deck';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
+import DeckPicker from 'src/components/library/DeckPicker';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
@@ -111,18 +111,18 @@ function CardStandaloneFormBody({
     queryFn: () => readDeck(deckId!),
     enabled: !!deckId,
   });
-  // The combobox's own options. Fetched here rather than inside a picker component,
-  // because a shared component takes its data as props (AGENTS.md) — and with the fetch
-  // here there is nothing left for a wrapper to hold.
+  // The combobox's own options. Fetched here rather than inside the picker, because a
+  // shared component takes its data as props (AGENTS.md).
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
   // Derived from `deckId` rather than kept as its own state: reverting `deckId` after a
   // cancelled "Change deck?" confirm then redisplays the previous deck by itself, with no
   // remount needed to tell the combobox its selection moved back. Falls back to the
-  // single-deck fetch for the initial preselection, which lands before the list does.
+  // single-deck fetch for the initial preselection, which lands before the list does. That
+  // read carries no subject's name; a chosen deck shows only its own name, so none is missed.
   const selectedDeck =
     decksQuery.data?.find((deck) => deck.id === deckId) ??
-    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
+    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name, subject_name: '' } : null);
 
   // A card can't move between decks once it exists, so editing one shows its deck as a
   // fixed value. A contextual "New card" and the deck-editor round-trip both just
@@ -250,7 +250,7 @@ function CardStandaloneFormBody({
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <PickerCombobox
+            <DeckPicker
               items={decksQuery.data ?? []}
               selected={selectedDeck}
               onSelect={(item) => handleDeckChange(item.id)}

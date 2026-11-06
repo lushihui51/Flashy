@@ -105,7 +105,7 @@ Read: `db_read_deck_listings` in `app/database_ops/deck.py`, for the removed fun
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -177,4 +177,31 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 
 **Debrief**
 
-None.
+Done-when evidence, in order:
+
+- `npx vitest run` over the six named test files: `Test Files  6 passed (6)`, `Tests  173 passed (173)`.
+- `grep -c "<PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx` printed `1`, the subject filter. `grep -n "<PickerCombobox"` over `CardStandaloneForm.tsx` and `DeckConfigurationEditor.tsx` printed nothing.
+- Headless Chromium at 390 wide against the live server, on the Practice page, New practice, New card and New configuration. On each, the open deck list and typing "Practiced" were screenshotted and the rows measured:
+  - Typing "Practiced" left two rows reading "Practiced" with "Cycle 032 T3 judgement 2026-11-05 11:49" and "Cycle 032 T3 judgement 2026-11-05 11:47" beneath, told apart.
+  - The name measured 16px at weight 600. The line beneath measured 13px at weight 400 in `rgb(92, 102, 114)`, the aside colour of the drawing's label, with 1px above it.
+  - The leading mark stayed on the rows, and "All decks" and "New deck…" kept their 44px single line. A row with a one-line subject measured 53.25px, and these two-line subjects 69.5px.
+  - New configuration's rows hold only the name and the line beneath, with nothing before the name.
+  - No page scrolled sideways, and the console logged no error.
+  - The library's Decks tab read, for example, "CompTIA A+ · 54 cards · 12 fields" under the deck.
+
+Whole-frontend checks: `npx vitest run` 68 files and 810 tests passed; `npm run lint` clean; `npm run build` clean. No backend file changed, so `GET /api/decks` runs the statements T1 left. A browser check drives a mouse, so no touch interaction was checked.
+
+Choices the file does not settle, each reversible:
+
+- The line beneath wraps and never clips, while the name still clips as every picker row does. Clipped at the panel's width, the two subjects above read identically, and the line exists to tell them apart. Drawing 39 shows no name long enough to decide this.
+- The stacked name and line are `leading-tight` and the line is `font-normal`, because the row is otherwise 1.5 line height and semibold, which drew 60.5px rows against the drawing's 53px.
+- `CardStandaloneForm`'s `selectedDeck` falls back to `subject_name: ''` while the single-deck read stands in for the list, since `DeckPicker`'s `selected` is a row and `DeckDetail` carries no `subject_name`. A chosen deck draws only its name, so the empty string never shows.
+- `DeckPickerProps` is `PickerComboboxProps<T>` with `renderBeneath` and `renderLeading` typed `never`, because `Omit` collapses the union of the two purposes and failed the type check. `PickerComboboxProps` is now exported for it.
+
+Also changed, and within Details:
+
+- Comments this change made false: `PickerCombobox`'s interface comment, which said every caller uses it directly, and `CardStandaloneForm`'s comment on `decksQuery`, which said nothing was left for a wrapper to hold.
+- `CardStandaloneForm.test.tsx`'s rows are now found by `/^French Vocab/` and `/^Spanish Vocab/`, since a row's accessible name now holds its subject too. In Chromium it reads "Practiced Cycle 032 T3 judgement 2026-11-05 11:49".
+- `practicePrefilterChain.test.tsx`'s deck fixtures carry a `subject_name`, the deck its `POST /api/decks` handler adds included.
+
+Read: the `renderBeneath` branch in `PickerCombobox`, for the wrapping.
