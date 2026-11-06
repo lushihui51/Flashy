@@ -105,7 +105,7 @@ Read: `db_read_deck_listings` in `app/database_ops/deck.py`, for the removed fun
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -171,13 +171,9 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 **Done when**
 
 - `cd frontend && npx vitest run src/components/ui/PickerCombobox.test.tsx src/components/library/DeckPicker.test.tsx src/components/library/CardStandaloneForm.test.tsx src/components/library/DeckConfigurationEditor.test.tsx src/pages/PracticeOverviewPage.test.tsx src/pages/PracticeCreatePage.test.tsx` passes.
-- `grep -ln "PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx frontend/src/components/library/CardStandaloneForm.tsx frontend/src/components/library/DeckConfigurationEditor.tsx` prints nothing but a line for `DeckConfigurationEditor.tsx` if it still imports the type for its own option.
+- `grep -c "<PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx` prints `1`, the subject filter, and `grep -n "<PickerCombobox" frontend/src/components/library/CardStandaloneForm.tsx frontend/src/components/library/DeckConfigurationEditor.tsx` prints nothing.
 - At 390 wide on the live server: the deck filter on the Practice page and on New practice, and the Deck picker on New card and on New configuration, each show rows as drawing 39 with the subject beneath the name, two decks of one name told apart; New configuration's rows show the subject nowhere else; and the library's Decks tab still reads "<subject> · N cards · N fields" under each deck.
 
 **Debrief**
 
-Attempted: the whole of Details: `renderBeneath` on `PickerCombobox`, `DeckPicker`, the three surfaces on it, the tests and the two rows of `docs/vocabulary.md`. Every other Done-when line holds: the named test files pass, and at 390 wide on the live server all four lists show the deck's name with its subject's name beneath, two decks named "Practiced" told apart, with the library's Decks tab unchanged.
-
-Found: the second Done-when line cannot hold. `grep -ln "PickerCombobox"` over the three files prints `frontend/src/components/practice/PracticeFilterBar.tsx`, which the line does not allow. That file renders `PickerCombobox` for its subject filter, a list of subjects with each subject's icon as `renderLeading`, which `DeckPicker` must not take and whose items have no `subject_name`.
-
-Why the file cannot settle it: Details asks only for the deck filter to be `DeckPicker` and forbids `PickerCombobox` only with a list of decks, so the subject filter stays as it is; the Done-when line requires the name gone from the file. Passing the line would take a subject picker in a new file outside Files, which no Details describes. Which of the two is meant is the planner's edit.
+None.
