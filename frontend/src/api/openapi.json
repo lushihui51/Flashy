@@ -2693,6 +2693,92 @@
         }
       }
     },
+    "/api/practice_runs/{practice_run_id}/chosen_cards": {
+      "post": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Start Chosen Cards",
+        "description": "Creates a new practice of exactly the chosen cards, from the completed practice's\nown snapshots; the original is untouched. 404 for an unknown or foreign practice; 400\n`run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a\nchosen card still validates; 400 `no_cards` if the survivors generate no practice card;\n400 with a string detail for an empty list or a card the practice did not hold.",
+        "operationId": "start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post",
+        "parameters": [
+          {
+            "name": "practice_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeRunChosenCards"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/practice_cards/{practice_card_id}/rate": {
       "post": {
         "tags": [
@@ -4140,6 +4226,29 @@
         ],
         "title": "PracticeRunBreakdown",
         "description": "The whole `GET .../breakdown` payload: every card and what the run did to it, so the\nsummary needs no second request. Only ever built for a completed session; the router\n409s an active one before this is composed."
+      },
+      "PracticeRunChosenCards": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "card_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Card Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "card_ids"
+        ],
+        "title": "PracticeRunChosenCards",
+        "description": "Body of POST .../chosen_cards: the client-formatted name for the new run, stored\nverbatim, and the cards to practice, each one a card of the completed practice."
       },
       "PracticeRunCreate": {
         "properties": {

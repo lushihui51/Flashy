@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
   deletePracticeRun,
   readPracticeRun,
   readPracticeRunBreakdown,
-  rerunPracticeRun,
 } from 'src/api/practice_run';
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
+import RerunButton from 'src/components/practice/RerunButton';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
 import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
@@ -68,8 +68,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
   const queryClient = useQueryClient();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [confirmRerunOpen, setConfirmRerunOpen] = useState(false);
-  const [rerunError, setRerunError] = useState<string | null>(null);
+  const [rerunError, setRerunError] = useState('');
 
   // Only a completed session has a breakdown to show — the router itself 409s a
   // breakdown request for an active one, so this stays disabled until then.
@@ -88,20 +87,6 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
     onError: (error: Error) => setDeleteError(failureSentence(error, 'Practice not found.')),
   });
 
-  const rerunMutation = useMutation({
-    // Named the same way the creation page pre-fills its own name field (the one
-    // sanctioned formatter) — generated fresh at click time, not cached from mount.
-    mutationFn: () => rerunPracticeRun(session.id, formatDateTime(new Date())),
-    onSuccess: async (newSession) => {
-      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
-      navigate(`/practice/${newSession.id}`);
-    },
-    onError: (error: Error) => {
-      setConfirmRerunOpen(false);
-      setRerunError(failureSentence(error, 'Practice not found.'));
-    },
-  });
-
   return (
     <div className="p-4">
       <Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />
@@ -115,14 +100,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {session.status === 'completed' && (
-            <button
-              type="button"
-              aria-label={`Re-run ${session.name}`}
-              onClick={() => setConfirmRerunOpen(true)}
-              className={HEADER_ACTION_CLASS}
-            >
-              <RotateCcw aria-hidden="true" className="size-icon" />
-            </button>
+            <RerunButton session={session} look="icon" onError={setRerunError} />
           )}
           <button
             type="button"
@@ -135,7 +113,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
         </div>
       </div>
 
-      {/* The rerun mutation's dialog closes on failure (unlike delete's, which stays
+      {/* The re-run's confirm closes on failure (unlike delete's, which stays
           open), so its error renders here instead — same alert styling as the delete
           error, next to the header actions that triggered it. */}
       {rerunError && (
@@ -171,7 +149,7 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
                 {breakdownQuery.data.total_cards} card
                 {breakdownQuery.data.total_cards === 1 ? '' : 's'} practiced
               </p>
-              <RunBreakdown breakdown={breakdownQuery.data} />
+              <RunBreakdown breakdown={breakdownQuery.data} practiceSessionId={session.id} />
             </>
           )}
         </div>
@@ -200,21 +178,6 @@ function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
           </p>
         )}
       </ConfirmDialog>
-
-      <ConfirmDialog
-        open={confirmRerunOpen}
-        title="Re-run this practice?"
-        description="A new practice with the same decks is created. This practice and its reviews stay on record."
-        confirmLabel="Re-run"
-        onConfirm={() => {
-          setRerunError(null);
-          rerunMutation.mutate();
-        }}
-        onCancel={() => {
-          setConfirmRerunOpen(false);
-          setRerunError(null);
-        }}
-      />
     </div>
   );
 }

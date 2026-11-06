@@ -71,6 +71,14 @@ def db_read_card_ids_for_deck(db: Session, deck_id: uuid.UUID) -> list[uuid.UUID
     return list(db.exec(select(Card.id).where(Card.deck_id == deck_id)).all())
 
 
+def db_read_deck_id_by_card(
+    db: Session, card_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, uuid.UUID]:
+    """`{card.id: card.deck_id}` for the ids that still exist. Unscoped: the caller has
+    already ownership-checked the practice these cards came from."""
+    return dict(db.exec(select(Card.id, Card.deck_id).where(col(Card.id).in_(card_ids))).all())
+
+
 def db_read_cards_for_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> list[Card]:
     return list(
         db.exec(

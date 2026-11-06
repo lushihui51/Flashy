@@ -2901,6 +2901,248 @@ class TestRerun:
         assert _rerun(client, session["id"], "Rerun").status_code == 404
 
 
+def _chosen(client, session_id, name, card_ids):
+    return client.post(
+        f"/api/practice_runs/{session_id}/chosen_cards",
+        json={"name": name, "card_ids": [str(c) for c in card_ids]},
+    )
+
+
+def _snapshots(db, session_id):
+    return db.exec(
+        select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
+    ).all()
+
+
+def _practice_card_ids(db, session_id):
+    return {
+        c.card_id
+        for c in db.exec(
+            select(PracticeCard).where(PracticeCard.practice_run_id == uuid.UUID(session_id))
+        ).all()
+    }
+
+
+def _add_card(client, deck, fields):
+    values = {str(fid): f"late-{name}" for name, fid in fields.items()}
+    res = client.post("/api/cards", json={"deck_id": deck["id"], "values": values})
+    assert res.status_code == 201, res.text
+    return uuid.UUID(res.json()["id"])
+
+
+def _two_field_deck(client, subject, name, extra_fields=()):
+    """A deck of one card, with a configuration asking `front` and answering `back`;
+    `extra_fields` lets a test delete `back` without hitting the deck's field floor."""
+    deck = client.post(
+        "/api/decks",
+        json={
+            "name": name,
+            "subject_id": subject["id"],
+            "field_defs": [
+                {"name": field, "type": "text"} for field in ("front", "back", *extra_fields)
+            ],
+        },
+    ).json()
+    fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+    card = client.post(
+        "/api/cards",
+        json={"deck_id": deck["id"], "values": {fid: "v" for fid in fields.values()}},
+    )
+    assert card.status_code == 201, card.text
+    config = client.post(
+        "/api/deck_practice_configs",
+        json={
+            "deck_id": deck["id"],
+            "name": f"{name} config",
+            "prompt_field_ids": [fields["front"]],
+            "answer_field_ids": [fields["back"]],
+            "prompt_pool_ids": [],
+            "prompt_pool_counts": [],
+            "answer_pool_ids": [],
+            "answer_pool_counts": [],
+        },
+    )
+    assert config.status_code == 201, config.text
+    return fields, uuid.UUID(card.json()["id"]), config.json()
+
+
+class TestChosenCards:
+    """POST .../chosen_cards: a new practice of exactly the chosen cards, from a completed
+    practice's own snapshots."""
+
+    def _completed(self, client, session_config):
+        session = _start(client, "Whole deck", [session_config["id"]])
+        _finish_session(client, session["id"])
+        return session
+
+    def test_holds_exactly_the_chosen_cards_on_a_snapshot_copied_from_the_original(
+        self, client, db, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+
+        res = _chosen(client, session["id"], "Chosen", chosen)
+        assert res.status_code == 201, res.text
+        new_session = res.json()
+        assert new_session["name"] == "Chosen"
+        assert new_session["status"] == "active"
+        assert new_session["id"] != session["id"]
+
+        assert _practice_card_ids(db, new_session["id"]) == set(chosen)
+
+        [original] = _snapshots(db, session["id"])
+        [snapshot] = _snapshots(db, new_session["id"])
+        assert snapshot.card_ids == chosen
+        assert snapshot.source_config_id == uuid.UUID(session_config["id"])
+        assert snapshot.source_config_name == session_config["name"]
+        assert snapshot.prompt_field_ids == original.prompt_field_ids
+        assert snapshot.answer_field_ids == original.answer_field_ids
+        assert snapshot.prompt_pool_ids == original.prompt_pool_ids
+        assert snapshot.prompt_pool_counts == original.prompt_pool_counts
+        assert snapshot.answer_pool_ids == original.answer_pool_ids
+        assert snapshot.answer_pool_counts == original.answer_pool_counts
+
+        # A whole-deck practice's own snapshot stays null and the original is untouched.
+        assert original.card_ids is None
+        assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "completed"
+
+    def test_a_rerun_holds_the_same_cards_after_a_card_is_added_to_the_deck(
+        self, client, db, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        chosen_session = _chosen(client, session["id"], "Chosen", chosen).json()
+        _finish_session(client, chosen_session["id"])
+
+        _add_card(client, existing_deck, session_fields)
+
+        res = _rerun(client, chosen_session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == set(chosen)
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids == chosen
+
+    def test_a_chosen_card_deleted_since_stays_in_card_ids_and_makes_no_practice_card(
+        self, client, db, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        chosen_session = _chosen(client, session["id"], "Chosen", chosen).json()
+        _finish_session(client, chosen_session["id"])
+
+        deleted = client.delete(f"/api/cards/{chosen[0]}")
+        assert deleted.status_code == 204, deleted.text
+
+        [frozen] = _snapshots(db, chosen_session["id"])
+        db.refresh(frozen)
+        assert frozen.card_ids == chosen
+
+        res = _rerun(client, chosen_session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {chosen[1]}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids == chosen
+
+    def test_an_active_practice_is_refused(self, client, session_cards, session_config):
+        session = _start(client, "Still going", [session_config["id"]])
+
+        res = _chosen(client, session["id"], "Chosen", session_cards[:1])
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "run_active"
+
+    def test_every_snapshot_stale_is_refused_and_writes_no_run(
+        self, client, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        deleted = client.delete(f"/api/fields/{session_config['answer_field_ids'][0]}")
+        assert deleted.status_code == 204, deleted.text
+        before = client.get("/api/practice_runs").json()
+
+        res = _chosen(client, session["id"], "Chosen", session_cards[:2])
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "nothing_to_practice"
+        assert client.get("/api/practice_runs").json() == before
+
+    def test_a_stale_snapshot_is_dropped_with_its_chosen_cards(
+        self, client, db, existing_subject
+    ):
+        fields_a, card_a, config_a = _two_field_deck(
+            client, existing_subject, "Deck A", extra_fields=("filler",)
+        )
+        _, card_b, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
+        _finish_session(client, session["id"])
+
+        deleted = client.delete(f"/api/fields/{fields_a['back']}")
+        assert deleted.status_code == 204, deleted.text
+
+        res = _chosen(client, session["id"], "Chosen", [card_a, card_b])
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {card_b}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.deck_id == uuid.UUID(config_b["deck_id"])
+        assert snapshot.card_ids == [card_b]
+
+    def test_only_the_decks_holding_a_chosen_card_get_a_snapshot(
+        self, client, db, existing_subject
+    ):
+        _, card_a, config_a = _two_field_deck(client, existing_subject, "Deck A")
+        _, _, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
+        _finish_session(client, session["id"])
+
+        res = _chosen(client, session["id"], "Chosen", [card_a])
+        assert res.status_code == 201, res.text
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.deck_id == uuid.UUID(config_a["deck_id"])
+
+    def test_chosen_cards_blank_on_their_answer_side_are_refused_and_write_no_run(
+        self, client, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        blank_answers = {
+            str(session_fields[name]): "" for name in ("answer1", "pool_a1", "pool_a2", "pool_a3")
+        }
+        for card_id in chosen:
+            patched = client.patch(f"/api/cards/{card_id}", json={"values": blank_answers})
+            assert patched.status_code == 200, patched.text
+        before = client.get("/api/practice_runs").json()
+
+        res = _chosen(client, session["id"], "Chosen", chosen)
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "no_cards"
+        assert client.get("/api/practice_runs").json() == before
+
+    def test_an_empty_list_is_refused(self, client, session_cards, session_config):
+        session = self._completed(client, session_config)
+
+        res = _chosen(client, session["id"], "Chosen", [])
+        assert res.status_code == 400, res.text
+
+    def test_a_card_the_practice_never_held_is_refused(
+        self, client, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        added_since = _add_card(client, existing_deck, session_fields)
+
+        for outside in (added_since, uuid.uuid4()):
+            res = _chosen(client, session["id"], "Chosen", [session_cards[0], outside])
+            assert res.status_code == 400, res.text
+
+    def test_a_rerun_of_a_whole_deck_practice_takes_in_a_card_added_since(
+        self, client, db, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        added_since = _add_card(client, existing_deck, session_fields)
+
+        res = _rerun(client, session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {*session_cards, added_since}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids is None
+
+
 class TestConfigLineage:
     """practice_deck.source_config_id — attribution-only: written at run start, copied
     through rerun verbatim, nulled (snapshot untouched) if the source config is later

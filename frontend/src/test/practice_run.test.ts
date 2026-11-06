@@ -8,6 +8,7 @@ import {
   readPracticeRunState,
   readPracticeRunBreakdown,
   rerunPracticeRun,
+  startChosenCards,
   ratePracticeCard,
 } from 'src/api/practice_run';
 import type { components } from 'src/api/types';
@@ -328,6 +329,40 @@ describe('readPracticeRunBreakdown', () => {
     );
 
     await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow('Practice not found');
+  });
+});
+
+describe('startChosenCards', () => {
+  it('posts the name and the ids to the right practice and returns the created run', async () => {
+    const payload: components['schemas']['PracticeRunChosenCards'] = {
+      name: 'Evening run',
+      card_ids: ['00000000-0000-0000-0000-000000000501', '00000000-0000-0000-0000-000000000502'],
+    };
+    const created = {
+      id: '00000000-0000-0000-0000-000000000403',
+      user_id: '00000000-0000-0000-0000-000000000001',
+      name: 'Evening run',
+      status: 'active',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+    let requestedSessionId: string | readonly string[] | undefined;
+    let requestedBody: unknown;
+    server.use(
+      http.post(
+        `${BASE}/api/practice_runs/:practice_run_id/chosen_cards`,
+        async ({ params, request }) => {
+          requestedSessionId = params.practice_run_id;
+          requestedBody = await request.json();
+          return HttpResponse.json(created, { status: 201 });
+        },
+      ),
+    );
+
+    const result = await startChosenCards('ps_7', payload);
+
+    expect(requestedSessionId).toBe('ps_7');
+    expect(requestedBody).toEqual(payload);
+    expect(result).toEqual(created);
   });
 });
 

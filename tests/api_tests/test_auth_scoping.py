@@ -159,6 +159,7 @@ class TestForeignResourcesAreNotFound:
         config_id = owned["config"]["id"]
         session_id = owned["session"]["id"]
         current_card_id = owned["current_card"]["practice_card_id"]
+        card_id = owned["card"]["id"]
         act_as(other_user)
 
         assert (
@@ -171,6 +172,13 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/practice_runs/{session_id}").status_code == 404
         assert (
             client.get(f"/api/practice_runs/{session_id}/state").status_code
+            == 404
+        )
+        assert (
+            client.post(
+                f"/api/practice_runs/{session_id}/chosen_cards",
+                json={"name": "Scoping run", "card_ids": [card_id]},
+            ).status_code
             == 404
         )
         assert (

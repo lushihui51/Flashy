@@ -147,24 +147,26 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A practice that has finished | "completed"; "Completed" as badge and tab | Practice page; a practice's page | `completed` |
 | Practice | Going on with an active practice | "Start practice" | A practice's page | `/practice/:practiceSessionId/run` |
 | Practice | The copy of each configuration a practice takes at start | — | — | `practice_deck`; `PracticeDeck`; `source_config_id`; `source_config_name` |
-| Practice | Running a practice again | "Re-run"; "Re-run <name>", spoken | A practice's page | `/api/practice_runs/{practice_run_id}/rerun`; `PracticeRunRerun`; `rerunPracticeRun` |
+| Practice | Running a practice again | "Re-run"; "Re-run <name>", spoken | A practice's page; the summary, beside Done | `/api/practice_runs/{practice_run_id}/rerun`; `PracticeRunRerun`; `rerunPracticeRun`; `RerunButton` |
 | Practice | New practice with a blank name | "Give this practice a name to create it." | New practice | `nameMissing` |
 | Practice | New practice with nothing chosen | "Select at least one configuration to practice." | New practice's Selected list | `selectedCount` |
 | Practice | A chosen configuration deleted since it was chosen | "A selected configuration no longer exists." | New practice | `config_not_found`; `MISSING_CONFIGURATION_MESSAGE`; `missingIds` |
 | Practice | A chosen configuration that yields no prompts | "This configuration no longer produces any prompts — edit it." | New practice, against the configuration's row | `stale_config` |
 | Practice | Two chosen configurations of one deck | "Choose one configuration per deck." | New practice | `duplicate_deck` |
-| Practice | A practice that would have no cards | "This practice would have no cards. Either the selected decks have no cards, or every card is blank in every field its configuration shows on one side." | New practice; a practice's page, after Re-run | `no_cards` |
+| Practice | A practice that would have no cards | "This practice would have no cards. Either the selected decks have no cards, or every card is blank in every field its configuration shows on one side." | New practice; a practice's page, after Re-run; the summary, after Re-run; the summary, after Practice these | `no_cards` |
 | Practice | The chosen configurations will not load | "Could not load your selected configurations." | New practice's Selected list | `allConfigsQuery` |
-| Practice | Confirming a re-run | "Re-run this practice?" | A practice's page | `confirmRerunOpen` |
-| Practice | What a re-run makes | "A new practice with the same decks is created. This practice and its reviews stay on record." | A practice's page | `confirmRerunOpen` |
-| Practice | A re-run that nothing survives | "This practice can't be re-run. A field it practiced has since been removed from each of its decks." | A practice's page | `nothing_to_rerun` |
+| Practice | Confirming a re-run | "Re-run this practice?" | A practice's page; the summary | `confirmRerunOpen` |
+| Practice | What a re-run makes | "A new practice with the same decks is created. This practice and its reviews stay on record." | A practice's page; the summary | `confirmRerunOpen` |
+| Practice | A re-run that nothing survives | "This practice can't be re-run. A field it practiced has since been removed from each of its decks." | A practice's page; the summary, after Re-run | `nothing_to_rerun` |
+| Practice | Practicing the cards the summary lists | "Practice these" | The summary, under the counts, once a count is chosen | `/api/practice_runs/{practice_run_id}/chosen_cards`; `PracticeRunChosenCards`; `startChosenCards`; `card_ids` |
+| Practice | A practice of chosen cards that nothing survives | "These cards can't be practiced. A field they used has since been removed from their decks." | The summary, under Practice these | `nothing_to_practice`; `NOTHING_TO_PRACTICE_MESSAGE` |
 | Practice | Confirming a practice's deletion | "Delete this practice?" | Practice page; a practice's page | `confirmDeleteOpen`; `pendingDelete` |
 | Practice | What deleting a practice takes and leaves | "Its progress will be gone. The decks it practiced are not affected." | Practice page; a practice's page | `confirmDeleteOpen`; `pendingDelete` |
 | Run | The page a practice runs on | the practice's name | Run page | `/practice/:practiceSessionId/run`; `PracticeRunPage`; `PracticeRunState`; `/api/practice_runs/{practice_run_id}/state`; `session_name` |
 | Run | The current card's two zones | "Prompt"; "Answer" | Run page; a card opened from the summary | `CurrentRunCard`; `prompts`; `answers`; `side` |
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
-| Run | Leaving a finished practice | "Done" | Run page, under "Practice complete" | `/practice/:practiceSessionId` |
+| Run | Leaving a finished practice | "Done", white while a count is chosen | Run page, under "Practice complete" | `/practice/:practiceSessionId` |
 | Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
 | Run | One go at a card | "attempt" | A card opened from the summary, as one mark per attempt | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page | `passed` |

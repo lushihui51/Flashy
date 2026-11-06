@@ -363,6 +363,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/practice_runs/{practice_run_id}/chosen_cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Chosen Cards
+         * @description Creates a new practice of exactly the chosen cards, from the completed practice's
+         *     own snapshots; the original is untouched. 404 for an unknown or foreign practice; 400
+         *     `run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a
+         *     chosen card still validates; 400 `no_cards` if the survivors generate no practice card;
+         *     400 with a string detail for an empty list or a card the practice did not hold.
+         */
+        post: operations["start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/practice_cards/{practice_card_id}/rate": {
         parameters: {
             query?: never;
@@ -999,6 +1023,17 @@ export interface components {
             total_cards: number;
             /** Cards */
             cards: components["schemas"]["BreakdownCard"][];
+        };
+        /**
+         * PracticeRunChosenCards
+         * @description Body of POST .../chosen_cards: the client-formatted name for the new run, stored
+         *     verbatim, and the cards to practice, each one a card of the completed practice.
+         */
+        PracticeRunChosenCards: {
+            /** Name */
+            name: string;
+            /** Card Ids */
+            card_ids: string[];
         };
         /** PracticeRunCreate */
         PracticeRunCreate: {
@@ -2479,6 +2514,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PracticeRunRerun"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeRunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeRunChosenCards"];
             };
         };
         responses: {

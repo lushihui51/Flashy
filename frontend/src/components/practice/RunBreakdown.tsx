@@ -1,5 +1,8 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
+import { startChosenCards } from 'src/api/practice_run';
 import FieldValue from 'src/components/practice/FieldValue';
 import { RATING_TIERS } from 'src/components/practice/ratingTiers';
 import BottomSheet from 'src/components/ui/BottomSheet';
@@ -10,6 +13,8 @@ import PromptMark from 'src/components/ui/PromptMark';
 import RatingMark from 'src/components/ui/RatingMark';
 import type { components } from 'src/api/types';
 import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
+import { formatDateTime } from 'src/lib/datetime';
+import { failureSentence } from 'src/lib/failureSentence';
 import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
@@ -204,12 +209,22 @@ function CardSheetContent({ card, titleId }: { card: BreakdownCard; titleId: str
   );
 }
 
-/** A completed practice's summary: how many cards had each kind of change, the list narrowed to
- * the kinds chosen and ordered by mastery, gains or drops, one row per card, and the sheet of the
- * card a row opens. The chosen kinds, the order and the open card are the page's `kind`, `order`
- * and `card` URL params, so the page must render it under a router and keep those params. */
-export default function RunBreakdown({ breakdown }: { breakdown: PracticeRunBreakdown }): ReactNode {
+/** A completed practice's summary: how many cards had each kind of change, the way to start a
+ * practice of the listed cards once a kind is chosen, the list narrowed to the kinds chosen and
+ * ordered by mastery, gains or drops, one row per card, and the sheet of the card a row opens.
+ * The chosen kinds, the order and the open card are the page's `kind`, `order` and `card` URL
+ * params, so the page must render it under a router and keep those params. A practice started
+ * here opens its own page. */
+export default function RunBreakdown({
+  breakdown,
+  practiceSessionId,
+}: {
+  breakdown: PracticeRunBreakdown;
+  practiceSessionId: string;
+}): ReactNode {
   const { params, setParams, changeView } = useViewParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const titleId = useId();
   const rowRef = useRef<HTMLButtonElement | null>(null);
   const countsRef = useRef<HTMLDivElement>(null);
@@ -227,7 +242,20 @@ export default function RunBreakdown({ breakdown }: { breakdown: PracticeRunBrea
   const cards = orderCards(narrowed, order);
   const openCard = breakdown.cards.find((card) => card.card_id === params.get('card'));
 
+  const practiceThese = useMutation({
+    mutationFn: () =>
+      startChosenCards(practiceSessionId, {
+        name: formatDateTime(new Date()),
+        card_ids: cards.map((card) => card.card_id),
+      }),
+    onSuccess: async (newSession) => {
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
+      navigate(`/practice/${newSession.id}`);
+    },
+  });
+
   const toggleKind = (kind: ChangeKind) => {
+    practiceThese.reset();
     const next = new URLSearchParams(params);
     next.delete('kind');
     for (const other of CHANGE_KINDS) {
@@ -279,6 +307,22 @@ export default function RunBreakdown({ breakdown }: { breakdown: PracticeRunBrea
           );
         })}
       </div>
+
+      {chosen.length > 0 && cards.length > 0 && (
+        <button
+          type="button"
+          disabled={practiceThese.isPending}
+          onClick={() => practiceThese.mutate()}
+          className="tappable -mt-1 h-action w-full shrink-0 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
+        >
+          Practice these
+        </button>
+      )}
+      {practiceThese.isError && (
+        <p role="alert" className="-mt-1.5 text-sm leading-[1.35] font-medium text-(--color-wrong)">
+          {failureSentence(practiceThese.error, 'Practice not found.')}
+        </p>
+      )}
 
       <div ref={orderRef} role="radiogroup" aria-label="Order by" className="flex items-center gap-2">
         <span className="mr-0.5 text-body font-medium text-(--color-aside)">Order by:</span>
