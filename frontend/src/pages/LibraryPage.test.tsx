@@ -45,6 +45,7 @@ const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Math',
     name: 'Algebra',
     created_at: '',
     card_count: 3,
@@ -54,6 +55,7 @@ const decks = [
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Bio',
     name: 'Cells',
     created_at: '',
     card_count: 0,
@@ -103,15 +105,15 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
   });
 
-  it("a deck row shows its counts alone while its subject's name is unknown", async () => {
+  it("a deck row shows its subject's name from the row, whatever the subjects read is doing", async () => {
     server.use(
       http.get(`${BASE}/api/subjects`, () => new Promise(() => {})),
       http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     );
     renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
 
-    expect(await screen.findByText('3 cards · 2 fields')).toBeInTheDocument();
-    expect(screen.getByText('0 cards · 1 field')).toBeInTheDocument();
+    expect(await screen.findByText('Math · 3 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
   });
 
   it('opens straight onto the Decks tab when ?tab=decks is in the URL', async () => {

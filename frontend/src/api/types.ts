@@ -812,7 +812,8 @@ export interface components {
          * DeckSummary
          * @description A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck
          *     reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,
-         *     which already includes everything here except card_count and field_names.
+         *     which already includes everything here except the subject's name, card_count and
+         *     field_names.
          */
         DeckSummary: {
             /**
@@ -837,6 +838,8 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Subject Name */
+            subject_name: string;
             /** Card Count */
             card_count: number;
             /** Field Names */

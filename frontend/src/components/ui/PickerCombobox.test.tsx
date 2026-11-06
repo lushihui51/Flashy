@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 
@@ -116,6 +116,48 @@ describe('PickerCombobox', () => {
       />,
     );
     expect(screen.getByTestId('leading-d0')).toBeInTheDocument();
+  });
+
+  it('renderBeneath draws under each row\'s name, not in the input', async () => {
+    const user = userEvent.setup();
+    render(
+      <PickerCombobox
+        items={items.slice(0, 2)}
+        selected={items[0]!}
+        onSelect={() => {}}
+        onSelectCreate={() => {}}
+        createLabel="New deck…"
+        placeholder="Deck"
+        renderBeneath={(item) => `beneath ${item.id}`}
+      />,
+    );
+    expect(screen.queryByText('beneath d0')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox'));
+    const [first, second, createRow] = screen.getAllByRole('option');
+    const name = within(first!).getByText('Deck 0');
+    const beneath = within(first!).getByText('beneath d0');
+    expect(name.compareDocumentPosition(beneath)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(within(second!).getByText('beneath d1')).toBeInTheDocument();
+    expect(createRow).toHaveTextContent(/^New deck…$/);
+    expect(screen.getByRole('combobox')).toHaveValue('Deck 0');
+  });
+
+  it('renderBeneath draws nothing on the locked chip', () => {
+    render(
+      <PickerCombobox
+        items={items}
+        selected={items[0]!}
+        onSelect={() => {}}
+        onSelectCreate={() => {}}
+        createLabel="New deck…"
+        placeholder="Deck"
+        locked
+        renderBeneath={(item) => `beneath ${item.id}`}
+      />,
+    );
+    expect(screen.getByText('Deck 0')).toBeInTheDocument();
+    expect(screen.queryByText('beneath d0')).not.toBeInTheDocument();
   });
 
   describe('while the list is open', () => {

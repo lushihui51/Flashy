@@ -22,7 +22,7 @@ None.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -43,6 +43,7 @@ None.
 - `frontend/src/pages/LibraryPage.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
+- `frontend/src/components/library/DeckRow.test.tsx`
 - `frontend/src/components/practice/PracticeFilterBar.tsx`
 
 **Details**
@@ -74,13 +75,37 @@ After the backend, `cd frontend && npm run gen:api`, then:
 
 **Debrief**
 
-None.
+Done-when evidence, in order:
+
+- `uv run pytest tests/api_tests/test_decks.py tests/api_tests/test_practice_run.py -k "decks or deck_filter or statements"`: `23 passed, 104 deselected`, `test_list_runs_a_fixed_number_of_statements` among them, its bound of 4 unchanged. The new `test_read_decks_tells_same_named_decks_apart_by_subject_name` also passes.
+- `grep -c "subject_name" app/models/deck.py` printed `1`.
+- `npm run gen:api` was run after the last backend edit, and a second run left both generated files byte-identical. The line's own check, `git status --porcelain src/api` after the commit, can only run once this commit exists, and this Debrief is part of the commit.
+- `npx vitest run` over the four named test files: `Test Files  4 passed (4)`, `Tests  128 passed (128)`.
+- `grep -n "subjectNameById"` over the two files printed nothing.
+
+Whole-repository checks: `npx vitest run` 67 files and 802 tests passed; `npm run lint` clean; `npm run build` clean; `uv run pytest` 401 passed, started with no other connection to the test database.
+
+Departures from guidance:
+
+- `db_read_decks` is gone rather than kept. The guidance kept it for its other callers, and `db_read_deck_listings` was its only caller, so keeping it would have left a function nothing calls. Its query now lives in `db_read_deck_listings`, selecting `Deck` and `Subject.name` together.
+
+Engineer-approved addition to Files: `frontend/src/components/library/DeckRow.test.tsx`, whose fixture is typed `DeckSummary` and failed `npm run build` without `subject_name`. One line added.
+
+Also changed, and within Details:
+
+- `LibraryPage.test.tsx`'s "a deck row shows its counts alone while its subject's name is unknown" described a state that can no longer happen. It now holds the subjects read pending and asserts that each deck row still shows its subject's name.
+- `orderedDeckOptions` returns the rows themselves rather than a mapped copy, since `DeckOption` is now a `Pick` of `DeckSummary`.
+- `DeckConfigurationEditor` no longer reads subjects, so its test file's subjects fixture and handler went with it.
+
+Nothing shows differently on screen in this task except that the library's Decks tab and New configuration's rows no longer wait on the subjects read for the subject's name. No browser check was run; no Done-when line asks for one.
+
+Read: `db_read_deck_listings` in `app/database_ops/deck.py`, for the removed function.
 
 ### T2 — DeckPicker and the subject beneath
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -103,6 +128,7 @@ Every list of decks is drawn by one `DeckPicker`, whose rows show the deck's nam
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
 - `frontend/src/pages/PracticeOverviewPage.test.tsx`
 - `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
@@ -130,7 +156,7 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 
 - It must pass `renderBeneath={(deck) => deck.subject_name}` and nothing for `renderLeading`, and forward every other prop, both purposes included.
 - `PracticeFilterBar`'s deck filter, `CardStandaloneForm`'s Deck picker and `DeckConfigurationEditor`'s Deck picker must all be `DeckPicker`, and no file but `DeckPicker.tsx` may render `PickerCombobox` with a list of decks (LCD13, LPD24). `DeckConfigurationEditor` drops the `renderLeading` that drew the subject before the name; its locked line in edit mode still reads "<subject> · <deck>".
-- Tests: `PickerCombobox.test.tsx` adds that `renderBeneath` draws under each row's name and not on the locked chip; `DeckPicker.test.tsx` checks a row reads the deck's name with its subject beneath for both purposes; `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx`, `PracticeOverviewPage.test.tsx` and `PracticeCreatePage.test.tsx` each have one test that opens the deck list and finds a subject's name on a row.
+- Tests: `practicePrefilterChain.test.tsx`'s deck fixtures carry a `subject_name`, so its rows draw a real line beneath; `PickerCombobox.test.tsx` adds that `renderBeneath` draws under each row's name and not on the locked chip; `DeckPicker.test.tsx` checks a row reads the deck's name with its subject beneath for both purposes; `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx`, `PracticeOverviewPage.test.tsx` and `PracticeCreatePage.test.tsx` each have one test that opens the deck list and finds a subject's name on a row.
 
 `docs/vocabulary.md`:
 
@@ -146,9 +172,36 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 **Done when**
 
 - `cd frontend && npx vitest run src/components/ui/PickerCombobox.test.tsx src/components/library/DeckPicker.test.tsx src/components/library/CardStandaloneForm.test.tsx src/components/library/DeckConfigurationEditor.test.tsx src/pages/PracticeOverviewPage.test.tsx src/pages/PracticeCreatePage.test.tsx` passes.
-- `grep -ln "PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx frontend/src/components/library/CardStandaloneForm.tsx frontend/src/components/library/DeckConfigurationEditor.tsx` prints nothing but a line for `DeckConfigurationEditor.tsx` if it still imports the type for its own option.
+- `grep -c "<PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx` prints `1`, the subject filter, and `grep -n "<PickerCombobox" frontend/src/components/library/CardStandaloneForm.tsx frontend/src/components/library/DeckConfigurationEditor.tsx` prints nothing.
 - At 390 wide on the live server: the deck filter on the Practice page and on New practice, and the Deck picker on New card and on New configuration, each show rows as drawing 39 with the subject beneath the name, two decks of one name told apart; New configuration's rows show the subject nowhere else; and the library's Decks tab still reads "<subject> · N cards · N fields" under each deck.
 
 **Debrief**
 
-None.
+Done-when evidence, in order:
+
+- `npx vitest run` over the six named test files: `Test Files  6 passed (6)`, `Tests  173 passed (173)`.
+- `grep -c "<PickerCombobox" frontend/src/components/practice/PracticeFilterBar.tsx` printed `1`, the subject filter. `grep -n "<PickerCombobox"` over `CardStandaloneForm.tsx` and `DeckConfigurationEditor.tsx` printed nothing.
+- Headless Chromium at 390 wide against the live server, on the Practice page, New practice, New card and New configuration. On each, the open deck list and typing "Practiced" were screenshotted and the rows measured:
+  - Typing "Practiced" left two rows reading "Practiced" with "Cycle 032 T3 judgement 2026-11-05 11:49" and "Cycle 032 T3 judgement 2026-11-05 11:47" beneath, told apart.
+  - The name measured 16px at weight 600. The line beneath measured 13px at weight 400 in `rgb(92, 102, 114)`, the aside colour of the drawing's label, with 1px above it.
+  - The leading mark stayed on the rows, and "All decks" and "New deck…" kept their 44px single line. A row with a one-line subject measured 53.25px, and these two-line subjects 69.5px.
+  - New configuration's rows hold only the name and the line beneath, with nothing before the name.
+  - No page scrolled sideways, and the console logged no error.
+  - The library's Decks tab read, for example, "CompTIA A+ · 54 cards · 12 fields" under the deck.
+
+Whole-frontend checks: `npx vitest run` 68 files and 810 tests passed; `npm run lint` clean; `npm run build` clean. No backend file changed, so `GET /api/decks` runs the statements T1 left. A browser check drives a mouse, so no touch interaction was checked.
+
+Choices the file does not settle, each reversible:
+
+- The line beneath wraps and never clips, while the name still clips as every picker row does. Clipped at the panel's width, the two subjects above read identically, and the line exists to tell them apart. Drawing 39 shows no name long enough to decide this.
+- The stacked name and line are `leading-tight` and the line is `font-normal`, because the row is otherwise 1.5 line height and semibold, which drew 60.5px rows against the drawing's 53px.
+- `CardStandaloneForm`'s `selectedDeck` falls back to `subject_name: ''` while the single-deck read stands in for the list, since `DeckPicker`'s `selected` is a row and `DeckDetail` carries no `subject_name`. A chosen deck draws only its name, so the empty string never shows.
+- `DeckPickerProps` is `PickerComboboxProps<T>` with `renderBeneath` and `renderLeading` typed `never`, because `Omit` collapses the union of the two purposes and failed the type check. `PickerComboboxProps` is now exported for it.
+
+Also changed, and within Details:
+
+- Comments this change made false: `PickerCombobox`'s interface comment, which said every caller uses it directly, and `CardStandaloneForm`'s comment on `decksQuery`, which said nothing was left for a wrapper to hold.
+- `CardStandaloneForm.test.tsx`'s rows are now found by `/^French Vocab/` and `/^Spanish Vocab/`, since a row's accessible name now holds its subject too. In Chromium it reads "Practiced Cycle 032 T3 judgement 2026-11-05 11:49".
+- `practicePrefilterChain.test.tsx`'s deck fixtures carry a `subject_name`, the deck its `POST /api/decks` handler adds included.
+
+Read: the `renderBeneath` branch in `PickerCombobox`, for the wrapping.

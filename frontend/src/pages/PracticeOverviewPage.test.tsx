@@ -41,6 +41,7 @@ const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
@@ -51,6 +52,7 @@ const decks = [
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
@@ -270,6 +272,21 @@ describe('PracticeOverviewPage', () => {
     // Both decks share a name, so the count is what proves the narrowing: one deck
     // option plus the "All decks" clear row.
     expect(screen.getAllByRole('option')).toHaveLength(2);
+  });
+
+  it("each deck's row in the deck filter reads its name with its subject's name beneath", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderOverview('/practice');
+    await screen.findByText('Beta run');
+
+    await user.click(screen.getByPlaceholderText('All decks'));
+    const rows = screen.getAllByRole('option');
+    // Two decks of one name, told apart by the line beneath; the first row is "All decks".
+    expect(within(rows[1]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('Alpha')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Beta')).toBeInTheDocument();
   });
 
   it('clearing the subject drops it from the URL', async () => {

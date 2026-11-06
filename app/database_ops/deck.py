@@ -37,31 +37,26 @@ def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
     return db.get(Deck, deck_id)
 
 
-def db_read_decks(
+def db_read_deck_listings(
     db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
-) -> list[Deck]:
+) -> list[DeckListing]:
+    """The user's decks, of one subject when subject_id is given, most recently active
+    first, each with its subject's name, card_count and field_names (position order,
+    active fields only) — via two grouped queries regardless of how many decks there
+    are, never one query per deck."""
     # Recency order, server-side — the frontend never sorts this list.
     query = (
-        select(Deck)
+        select(Deck, Subject.name)
         .join(Subject, Subject.id == Deck.subject_id)
         .where(Subject.user_id == user_id)
     )
     if subject_id is not None:
         query = query.where(Deck.subject_id == subject_id)
     query = query.order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
-    return list(db.exec(query).all())
-
-
-def db_read_deck_listings(
-    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
-) -> list[DeckListing]:
-    """Same decks as db_read_decks, plus each one's card_count and field_names
-    (position order, active fields only) — via two grouped queries regardless of how
-    many decks there are, never one query per deck."""
-    decks = db_read_decks(db, user_id, subject_id)
-    if not decks:
+    rows = db.exec(query).all()
+    if not rows:
         return []
-    deck_ids = [deck.id for deck in decks]
+    deck_ids = [deck.id for deck, _ in rows]
 
     card_counts = dict(
         db.exec(
@@ -83,10 +78,11 @@ def db_read_deck_listings(
     return [
         DeckListing(
             **deck.model_dump(),
+            subject_name=subject_name,
             card_count=card_counts.get(deck.id, 0),
             field_names=field_names_by_deck.get(deck.id, []),
         )
-        for deck in decks
+        for deck, subject_name in rows
     ]
 
 

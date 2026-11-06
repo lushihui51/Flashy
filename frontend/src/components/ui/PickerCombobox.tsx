@@ -32,7 +32,7 @@ type PurposeProps =
       createLabel?: never;
     };
 
-type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
+export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   /** Already in the server's recency order — this component never sorts. */
   items: T[];
   selected: T | null;
@@ -41,6 +41,8 @@ type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   /** Static chip, no combobox — edit mode only (a card can't move between decks). */
   locked?: boolean;
   renderLeading?: (item: T) => ReactNode;
+  /** Drawn under the item's name on its row in the list, and nowhere else. */
+  renderBeneath?: (item: T) => ReactNode;
   disabled?: boolean;
   /** So a caller opening an overlay from the create row (DeckEditor) can pass this
    * straight through as FullScreenDialog's triggerRef, returning focus to the actual
@@ -48,7 +50,7 @@ type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   inputRef?: RefObject<HTMLInputElement | null>;
 };
 
-/** The one combobox in the app, used directly by every caller: open-on-focus-or-click,
+/** The one combobox in the app, under `DeckPicker` for a list of decks: open-on-focus-or-click,
  * filter, cap at PICKER_MAX_ITEMS with a "Showing X of Y" footer when there's more, and
  * one always-present action row — "New X…" when picking a value, "All X" when narrowing
  * by one (see PurposeProps). What that row *does*, and how the items were fetched,
@@ -69,6 +71,7 @@ export default function PickerCombobox<T extends PickerItem>({
   placeholder,
   locked,
   renderLeading,
+  renderBeneath,
   disabled,
   inputRef,
 }: PickerComboboxProps<T>) {
@@ -256,7 +259,17 @@ export default function PickerCombobox<T extends PickerItem>({
                 >
                   <ChosenMark chosen={selected?.id === item.id} />
                   {renderLeading?.(item)}
-                  <span className="min-w-0 truncate">{item.name}</span>
+                  {renderBeneath ? (
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block truncate">{item.name}</span>
+                      {/* Wraps rather than clips: it is what tells two decks of one name apart. */}
+                      <span className="mt-0.25 block text-label leading-tight font-normal wrap-break-word text-(--color-aside)">
+                        {renderBeneath(item)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="min-w-0 truncate">{item.name}</span>
+                  )}
                 </li>
               ))}
               {hasMore && (

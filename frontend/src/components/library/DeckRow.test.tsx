@@ -7,6 +7,7 @@ import DeckRow from 'src/components/library/DeckRow';
 const deck = {
   id: 'd1',
   subject_id: 's1',
+  subject_name: 'Math',
   name: 'Algebra',
   created_at: '',
   last_activity_at: '',

@@ -177,8 +177,21 @@ class TestDeckCRUD:
         response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
         assert response.status_code == 200
         [summary] = response.json()
+        assert summary["subject_name"] == "Test Subject"
         assert summary["card_count"] == 2
         assert summary["field_names"] == ["Back", "Notes"]
+
+    def test_read_decks_tells_same_named_decks_apart_by_subject_name(
+        self, client, multi_subject_library
+    ):
+        lib = multi_subject_library
+
+        rows = client.get("/api/decks").json()
+
+        assert {row["id"]: (row["name"], row["subject_name"]) for row in rows} == {
+            lib["decks"]["a"]["id"]: ("Shared Deck Name", "Alpha"),
+            lib["decks"]["b"]["id"]: ("Shared Deck Name", "Beta"),
+        }
 
     def test_read_decks_empty_deck_has_zero_card_count(self, client, existing_deck):
         response = client.get("/api/decks", params={"subject_id": existing_deck["subject_id"]})
