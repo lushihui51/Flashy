@@ -1,16 +1,24 @@
 # Cycle file rules
 
-**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged into its docket's branch, the cycle is complete and its file is never edited again. It stays in the repository for debugging only: to see what the builder was asked and what it reported. The test: after the merge, deleting the file would lose nothing the repository still needs. No tracked file cites a cycle file, as a rule or as history, but the Waits for line of another cycle file.
+**Lifetime.** A cycle file serves one cycle. Once the cycle's work is merged into its docket's branch, the cycle is complete and its file is never edited again. It stays in the repository for debugging, to see what the builder was asked and what it reported, and for the Summary. The test: after the merge, deleting the file would lose nothing the repository still needs but the Summary. No tracked file cites a cycle file, as a rule or as history, but the Waits for line of another cycle file.
 
 **Branch.** The engineer makes the cycle's branch from its docket's branch, named by the repository's `type:` prefix, a slash and the cycle file's name without `.md`; every commit of the cycle is made on it, and the engineer merges it back into the docket's branch.
 
-**Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation or the docket. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session.
+**Readers.** A cycle file is written for the builder of its cycle: an agent that has read AGENTS.md, can read anything in the repository, and has not seen the planning conversation or the docket. A cycle file is read as a whole by the engineer first to approve it before it's built, and is read one task at a time to supervise each building session. /product-decide and /dogfood read only its Summary.
 
 **Edits before the merge.** Until the cycle's merge, the builder writes a task's Status and Debrief; for a path outside the task's Files that the engineer approves, the Files and Dependencies lines that path changes; and, on the cycle's canvas, only an alternative to a drawing, beside it, the drawing and its alternative then lettered A upward under the drawing's number, and the alternative staying only as evidence a blocked task's Debrief cites; every other edit is the planner's, made by /cycle-plan.
 
 **Commits.** A task's commit holds its code, tests and cycle-file edit; its message is the repository's `type:` prefix, the task's Goal as the statement, and `(cycle NNN Tn)`. The cycle file's own commit, by the planner, has the message `docs: plan cycle NNN, <title>`. An amendment by the planner has the message `docs: amend cycle NNN, <what the file now states>`.
 
 **Purpose.** For the builder, a cycle file is the whole of what it is told for the cycle. The engineer judges each task from its Debrief and by testing the app on a live server, and reads code only where the Debrief points.
+
+**Summary.** This command prints each cycle file's Outcome and each task's Status and Goal, from the checked-out branch only:
+
+````
+awk 'FNR==1{fence=0; print "==> " FILENAME} /^```/{fence=!fence; next} fence || /^$/{next} /^Outcome:/{print; next} /^### /{t=substr($0,5); sub(/ — .*/,"",t); next} /^\*\*[A-Za-z ]+\*\*$/{part=$0; next} part=="**Status**"{s=$0; sub(/^- /,"",s); part=""; next} part=="**Goal**"{print t " " s " " $0; part=""}' docs/cycles/*.md
+````
+
+A task is built only when its Status is done, and a cycle's Outcome holds only from when every task of it is done until a later cycle changes it. Whoever reads the Summary says what it found in the conversation and, by Lifetime, cites no cycle file in a tracked file.
 
 ## The cycle
 

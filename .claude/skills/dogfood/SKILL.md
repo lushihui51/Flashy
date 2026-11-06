@@ -20,7 +20,7 @@ Give me one thing to answer per turn: one question, or one finding with what sta
 ## Where facts come from
 
 - What I met comes from me. Never invent a finding, and never soften one.
-- What stands behind it comes from the records, the backlog, the open dockets and the code. Mark each fact verified (you read the record, the entry or the code path, or ran it) or inferred.
+- What stands behind it comes from the records, the Summary, the backlog, the open dockets and the code. Mark each fact verified (you read the record, the Summary line, the entry or the code path, or ran it) or inferred.
 
 ## What you read
 
@@ -28,6 +28,7 @@ Give me one thing to answer per turn: one question, or one finding with what sta
 - `docs/rules/roundtable-docket-rules.md`, for how an open question is written, then the Open questions of every open docket.
 - The Type test in `docs/rules/record-rules.md`, for the question's Owner.
 - Every active PDR, and every active ADR a finding touches, so you can tell me what decides what I met.
+- The Summary in `docs/rules/cycle-rules.md`: run its command rather than reading the cycle files, so you can tell me which cycle built what I met or will change it.
 - Whatever code you need to find where the app does what I met.
 - `docs/vocabulary.md`: the row of each concept you write, for its words.
 - Nothing else without my explicit permission.
@@ -40,7 +41,7 @@ Take my finding. Where what I did, what the app showed or what I expected is mis
 
 ### 2. What stands behind it
 
-Tell me, for the finding: the Active record that decides what I met, or that none does; whether the backlog or an open docket already holds its question, by label; and where the app does it, by file and symbol. Then propose the backlog edit: a new entry, written as the backlog rules write one, with its Reason and Owner, or the Reason an existing entry gains. Ask whether I keep it or drop it.
+Tell me, for the finding: the Active record that decides what I met, or that none does; the cycle that built what I met or will change it, by number and with the branch you read, or that none does; whether the backlog or an open docket already holds its question, by label; and where the app does it, by file and symbol. Then propose the backlog edit: a new entry, written as the backlog rules write one, with its Reason and Owner, or the Reason an existing entry gains. Ask whether I keep it or drop it.
 
 ### 3. The verdict
 
