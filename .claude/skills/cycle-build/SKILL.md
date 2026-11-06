@@ -44,10 +44,12 @@ Check these four things, and if any fails, stop with the reason and touch nothin
 - Every path in Files exists unless marked new, and no path marked new exists.
 - No path in Files carries uncommitted changes from a peer.
 
+Then check that no drawing the task cites contradicts the rest of the cycle file. If one does, the file is wrong, and it's a block.
+
 ## How you work
 
 - Depart from guidance only when the code you have read shows a better way. A constraint you cannot keep is a block.
-- If you would build a drawing the task cites differently, draw your alternative on the cycle's canvas as the cycle rules allow and raise it; my agreement is a block, my refusal removes your drawing.
+- If you would build a drawing the task cites differently, first draw your alternative on the cycle's canvas as the cycle rules allow and raise it; my agreement is a block, my refusal removes your drawing.
 - If the code contradicts what Details says of it, the file is wrong, and it's a block.
 - When you meet a choice the file does not settle, ask whether a builder could reverse it inside a task. If so, the choice is yours. If not, it is a decision for me: block.
 - Whether a comment is written, and how, is your verdict after consulting `docs/rules/comment-rules.md`, overruled by no one but me. Nothing in the cycle file becomes a comment on its own. Fix any existing comment your change makes false.

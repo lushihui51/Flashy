@@ -307,27 +307,6 @@ export default function PracticeCreatePage() {
         )}
       </div>
 
-      <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1.5">
-        <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
-          Selected
-        </h2>
-        {selectedCount === 0 ? (
-          <p className="text-body text-(--color-aside)">
-            Select at least one configuration to practice.
-          </p>
-        ) : allConfigsQuery.isError ? (
-          <p role="alert" className="text-sm text-(--color-wrong)">
-            Could not load your selected configurations.
-          </p>
-        ) : (
-          // Nothing to hold until the selected ids resolve, and an empty block would draw a
-          // bare outline.
-          selectedConfigs.length > 0 && (
-            <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
-          )
-        )}
-      </section>
-
       <div ref={filtersRef} className="mt-3">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
@@ -401,6 +380,27 @@ export default function PracticeCreatePage() {
           />
         </div>
       )}
+
+      <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1.5">
+        <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
+          Selected
+        </h2>
+        {selectedCount === 0 ? (
+          <p className="text-body text-(--color-aside)">
+            Select at least one configuration to practice.
+          </p>
+        ) : allConfigsQuery.isError ? (
+          <p role="alert" className="text-sm text-(--color-wrong)">
+            Could not load your selected configurations.
+          </p>
+        ) : (
+          // Nothing to hold until the selected ids resolve, and an empty block would draw a
+          // bare outline.
+          selectedConfigs.length > 0 && (
+            <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
+          )
+        )}
+      </section>
     </div>
   );
 }

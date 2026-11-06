@@ -1,5 +1,7 @@
 # Backlog
 
+Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
+
 - B1. How does a picture or audio value show on a card during a practice and in a practice's summary?
   - Reason: a field's only type is "Text", so the question waits for pictures and audio to exist; `FieldValue` in `frontend/src/components/practice/FieldValue.tsx` renders a picture or audio value as a small chip that opens the value over the page, so a zone's size stays predictable whatever the card holds
   - Owner: /product-decide
@@ -50,4 +52,7 @@
   - Owner: /product-decide
 - B24. When the browser's text size makes a row's contents wider than the screen, the top bar's items, a row of tabs, a page's heading beside its buttons, a field's row on Edit deck, the Practice page's two filters or a list row's title beside what stands next to it, does the row wrap, scroll sideways on its own, or shrink what it holds, and how small may what it holds become?
   - Reason: PDR 030 has everything grow with the browser's text size; at a 24px root on a 390-wide screen the top bar's "Log in", the Practice page's "Completed" tab and a deck's "Add configuration" run past the edge, and the whole page scrolls sideways; a deck's heading breaks inside its word, "Commands" taking five lines, Edit deck's field name inputs narrow to about one character, the Practice page's two filters cut their own words to "All subj" and "All deck", and a row's title truncates to a few characters, "Sep 28, …" on the Practice page, where several rows then look alike, and "CompTI…" on Your library.
+  - Owner: /product-decide
+- B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
+  - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
   - Owner: /product-decide

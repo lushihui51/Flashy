@@ -8,7 +8,7 @@ Outcome: While any filter's or picker's list is open, the list is a panel pointi
 
 Scope: The cycle covers the app's own `Scrim`, which dims the whole screen in ink at an opacity with a hole over the control, catches the tap that closes the panel so nothing beneath receives it, and locks the page's scroll while open; and `PickerCombobox`, the one filter and picker, whose list becomes a Radix Popover with the scrim rendered in its portal beneath the panel, the panel drawn as drawings 24 and 25 have it. Every caller of the picker, the two filters and the three form pickers, takes the change through the component unchanged. It leaves out the rating chips' popover, which is neither a filter nor a picker and whose dimming no decision settles; the summary's key, which the summary's cycle builds on the same scrim inside its sheet; and a deck option's subject beneath its name, which the drawings show and no decision gives.
 
-Judgement: The engineer judges on the live server at 390 wide: opening "All subjects" on the Practice page matches drawing 24, the page dimmed with the control bright and the panel pointing at it; opening the deck picker on New card matches drawing 25, the form dimmed the same way; typing while the list is open narrows it; tapping a row beneath the dimming closes the list and that row does nothing; the page cannot scroll while the list is open, and choosing or closing restores it.
+Judgement: The engineer judges on the live server at 390 wide: opening "All subjects" on New practice matches drawing 24, the page dimmed with the control bright and the panel pointing at it; opening the deck picker on New card matches drawing 25, the form dimmed the same way; typing while the list is open narrows it; tapping a row beneath the dimming closes the list and that row does nothing; the page cannot scroll while the list is open, and choosing or closing restores it.
 
 ## Records
 
@@ -106,14 +106,15 @@ Every filter's and picker's list opens as a Radix Popover panel pointing at its 
 
 **Details**
 
-The mechanism, ADR 098 and LPD12, in `PickerCombobox.tsx`:
+The mechanism, ADR 098, in `PickerCombobox.tsx`:
 
+- While any list of choices is open, a filter's or a picker's, the list must open as its own panel pointing at the control that opened it; everything else on the page must be dimmed and stay readable; a tap on the dimmed page must close the list and change nothing.
 - The list must be a `@radix-ui/react-popover`, never the absolutely placed box closed on blur it is today: `Popover.Root` controlled by the component's `open`, `Popover.Anchor` around the input, and `Popover.Portal` holding, in this order, `<Scrim anchor={…} onDismiss={close} />` and `Popover.Content` with the list, so the scrim lies in the popover's portal beneath the panel.
 - The popover is non-modal: `Popover.Content` prevents its open and close auto-focus, so focus stays in the input and the user keeps typing while the list is open; a focus moving outside, as Tab does, closes the list through Radix's own dismiss. `onBlur` closes nothing any more.
 - Escape, choosing an item, choosing the action row and a pointerdown on the scrim each close the list; the arrow keys and Enter keep their behaviour; the `inputRef` prop and the deck form's return of focus to it stay.
 - `PICKER_MAX_ITEMS`, the "Showing N of N · type to narrow" footer, the `purpose` variants and every word stay as they are.
 
-The panel's look, LPD12, drawings 24 and 25:
+The panel's look, drawings 24 and 25:
 
 - The panel is a `tappable` block in surface with `rounded-[1.125rem]` corners and `p-1.5` padding, `w-65` wide, `side="bottom"`, `align="start"`, `sideOffset={14}` and `collisionPadding={16}`, flipping above the control when the screen below is short. Its press shadow is `tappable`'s, 3px, where the drawings have 4px: a shadow's offset lives only in `index.css` utilities, ADR 101, and the one difference stays.
 - It carries a pointer at the control through `Popover.Arrow asChild` wrapping a `size-3.5` square in surface rotated 45°, outlined on its top and left by a new `index.css` utility, exactly:
@@ -146,8 +147,8 @@ Tests: `PickerCombobox.test.tsx` keeps every test it has, opening the list by cl
 
 - `grep -c "react-popover" frontend/src/components/ui/PickerCombobox.tsx` prints `1`, `grep -c "onBlur" frontend/src/components/ui/PickerCombobox.tsx` prints `0`, and `grep -c "^@utility outlined-pointer" frontend/src/index.css` prints `1`.
 - `cd frontend && npx vitest run` passes over the whole frontend, the three new picker tests among them.
-- The cycle's judgement, in headless Chromium against `localhost:5173`, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development`, at 390 wide, by mouse: on `/practice`, a click on "All subjects" shows `[data-testid="scrim"]` with a computed background of `rgba(23, 33, 43, 0.2)`, `document.documentElement.style.overflow` reads `hidden`, the panel's `getBoundingClientRect().top` is below the control's bottom, and `document.activeElement` is the control; typing one letter narrows the options and the control still has focus; a click on a practice row's position beneath the dimming closes the list, leaves the URL unchanged and restores `overflow`; on `/cards/new`, the deck picker opens the same way and choosing a deck closes it and fills the control. The script prints each check, and its output is the evidence.
-- Screenshots at 390 wide of the Practice page with "All subjects" open and of New card with the deck picker open, saved in the session scratchpad and named in the Debrief, for the engineer to set beside drawings 24 and 25.
+- The cycle's judgement, in headless Chromium against `localhost:5173`, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development`, at 390 wide, by mouse: on `/practice/new`, a click on "All subjects" shows `[data-testid="scrim"]` with a computed background of `rgba(23, 33, 43, 0.2)`, `document.documentElement.style.overflow` reads `hidden`, the panel's `getBoundingClientRect().top` is below the control's bottom, and `document.activeElement` is the control; typing one letter narrows the options and the control still has focus; a click on a configuration row's position beneath the dimming closes the list, leaves the URL unchanged and restores `overflow`; on `/cards/new`, the deck picker opens the same way and choosing a deck closes it and fills the control. The script prints each check, and its output is the evidence.
+- Screenshots at 390 wide of New practice with "All subjects" open and of New card with the deck picker open, saved in the session scratchpad and named in the Debrief, for the engineer to set beside drawings 24 and 25.
 
 **Debrief**
 

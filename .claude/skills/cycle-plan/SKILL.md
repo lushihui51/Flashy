@@ -11,7 +11,7 @@ Files you may write in this conversation:
 
 - The cycle files and their canvases, in `docs/cycles/`, following `docs/rules/cycle-rules.md`
 - The docket and its canvas, following `docs/rules/roundtable-docket-rules.md`
-- The backlog, `docs/backlog.md`, following `docs/rules/backlog-rules.md`
+- The backlog, `docs/backlog.md`, and its canvas, following `docs/rules/backlog-rules.md`
 
 Give me one thing to answer per turn: one question, an outcome, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
 
@@ -79,6 +79,7 @@ Once I approve the outline, draft the tasks in full, one per turn, in build orde
 For each task, read the files in its Files first for context.
 
 - Details: every lesser decision the outline placed here, and, for every live site placed here, the constraint that the task changes the code at its symbol to follow what replaced the record it cites and removes the old reference; whether the changed code carries a comment, and whether that comment cites a record, stays the builder's verdict by `docs/rules/comment-rules.md`. Guidance only where you have read the code and know the best way.
+- Out of scope: for each drawing the task cites, compare everything it shows with the code, and write one line for each difference the task does not build.
 - Done when: where the builder cannot observe a behaviour the outcome needs, write the nearest evidence it can produce, and tell me.
 
 #### Cycle file
