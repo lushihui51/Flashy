@@ -4,7 +4,7 @@
 
 **Who reads a docket.** Each of the six skills reads it in full before anything else. The human (the engineer or the product owner) reads it to see where an initiative stands. /dogfood reads its Open questions, to see whether a question is already open. No one else reads it, so no other tracked file cites it or names an item of it by label.
 
-**Lifetime.** Only the human creates a docket, and only the human deletes it, with its canvas, after its branch has merged to main. A docket /cycle-plan has emptied reads "None." in every section, and the human reopens it for a blocked task of its cycles; a docket reopened for a blocked task amends that task's cycle file and plans no other.
+**Lifetime.** Only the human creates a docket, and only the human deletes it, with its canvas, after its branch has merged to main. A docket /cycle-plan has emptied reads "None." in every section, and the human reopens it for a blocked task of its cycles; a docket reopened for a blocked task amends that task's cycle file and plans no new cycle.
 
 **Branch.** The human makes one branch from main for each docket, named `docket/` and the docket file's name without `.md`; every commit of the docket's skills is made on it, every cycle's branch merges into it, and the human merges it to main by pull request once every cycle planned from the docket is complete and judged together.
 

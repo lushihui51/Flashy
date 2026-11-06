@@ -13,7 +13,7 @@ Files you may write in this conversation:
 - The docket and its canvas, following `docs/rules/roundtable-docket-rules.md`
 - The backlog, `docs/backlog.md`, and its canvas, following `docs/rules/backlog-rules.md`
 
-Give me one thing to answer per turn: one question, an outcome, the build order, a Title and Goal, the Records, the decomposition, one task in full, or a cycle file in full, for me to approve or change.
+Give me one thing to answer per turn: one question, an outcome, the build order, a Title and Goal, the Records, the decomposition, one task in full, a cycle file in full, or the edits to the cycles a file affects, for me to approve or change.
 
 ## Terms
 
@@ -44,7 +44,7 @@ Give me one thing to answer per turn: one question, an outcome, the build order,
 
 Extract the implied outcomes from the docket's records, lesser decisions and live sites, against what is on the docket's branch. Each outcome describes something worth a cycle of its own, with an observable acceptance. Show me the outcomes one by one, each with its acceptance, its records, its lesser decisions and its live sites for my explicit approval. Each approved outcome is the goal for a cycle file.
 
-When all outcomes are approved, propose one build order over them and every cycle not yet complete: each after every one whose work it uses or whose file it shares, naming what it uses. Each cycle's Waits for line carries its place in the order, a new cycle's when its file is written and an earlier cycle's when I approve the build order.
+When all outcomes are approved, propose one build order over them and every cycle not yet complete: each after every one whose work it uses or whose file it shares, naming what it uses.
 
 ### 2. Cycle files
 
@@ -88,10 +88,12 @@ Once every task in a cycle has been approved by me, draft the cycle file in full
 
 Before showing me a draft, take the builder's seat on it; fix what you find or raise it to me.
 
-Once I have approved the draft, it is final: write it to `docs/cycles/`, with its canvas where `docs/rules/cycle-rules.md` calls for one, commit it, and move to the next outcome.
+Once I have approved the draft, it is final: write it to `docs/cycles/`, with its canvas where `docs/rules/cycle-rules.md` calls for one, and commit it.
+
+Once the file is committed, for each cycle not yet complete it affects, as `docs/rules/cycle-rules.md` defines it, show me the edits that make both files hold in the build order, as one set, old text and new text with a line of reason each; make them on my approval and commit each amended file as `docs/rules/cycle-rules.md` defines the planner's amendment, and take each amended file through this step in turn. Then move to the next outcome.
 
 ## Ending
 
-When the last cycle file is committed, show me the docket edit and the backlog edit, then make them and commit them. Then one of two endings. If an approved outcome is held by an open question, its items and every open question stay, and the docket is left as one a later /cycle-plan runs. Otherwise the docket is finished: the backlog edit takes in every open question left, unless I drop it, and the docket's every section reads "None." Then stop.
+When no outcome is left to plan, show me the docket edit and the backlog edit, then make them and commit them. Then one of two endings. If an approved outcome is held by an open question, its items and every open question stay, and the docket is left as one a later /cycle-plan runs. Otherwise the docket is finished: the backlog edit takes in every open question left, unless I drop it, and the docket's every section reads "None." Then stop.
 
 Docket for this conversation: $ARGUMENTS
