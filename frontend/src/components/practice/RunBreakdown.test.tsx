@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { useLocation } from 'react-router-dom';
 import RunBreakdown from 'src/components/practice/RunBreakdown';
+import { NO_CARDS_MESSAGE, NOTHING_TO_PRACTICE_MESSAGE } from 'src/lib/practiceCopy';
+import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import type { components } from 'src/api/types';
 
@@ -88,14 +91,19 @@ function retriedCard(): BreakdownCard {
 }
 
 function LocationProbe() {
-  const { search } = useLocation();
-  return <div data-testid="search">{search}</div>;
+  const { pathname, search } = useLocation();
+  return (
+    <>
+      <div data-testid="pathname">{pathname}</div>
+      <div data-testid="search">{search}</div>
+    </>
+  );
 }
 
 function renderBreakdown(entry = '/') {
   return renderWithProviders(
     <>
-      <RunBreakdown breakdown={breakdown()} />
+      <RunBreakdown breakdown={breakdown()} practiceSessionId="ps1" />
       <LocationProbe />
     </>,
     [entry],
@@ -105,7 +113,7 @@ function renderBreakdown(entry = '/') {
 function renderSheet(entry = '/?card=c9') {
   return renderWithProviders(
     <>
-      <RunBreakdown breakdown={{ total_cards: 1, cards: [retriedCard()] }} />
+      <RunBreakdown breakdown={{ total_cards: 1, cards: [retriedCard()] }} practiceSessionId="ps1" />
       <LocationProbe />
     </>,
     [entry],
@@ -382,5 +390,126 @@ describe('RunBreakdown', () => {
 
       expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('RunBreakdown Practice these', () => {
+  const BASE = 'http://localhost:8000';
+  const practiceThese = () => screen.queryByRole('button', { name: 'Practice these' });
+
+  function refuseWith(status: number, detail: unknown) {
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/chosen_cards`, () =>
+        HttpResponse.json({ detail }, { status }),
+      ),
+    );
+  }
+
+  afterEach(() => server.resetHandlers());
+
+  it('is absent with no count chosen', () => {
+    renderBreakdown();
+
+    expect(practiceThese()).not.toBeInTheDocument();
+  });
+
+  it('is absent with a count of zero alone chosen', () => {
+    renderBreakdown('/?kind=up_a_lot');
+
+    expect(practiceThese()).not.toBeInTheDocument();
+  });
+
+  it('sits under the counts and above the order once a chosen count lists a card', () => {
+    renderBreakdown('/?kind=down');
+
+    const button = practiceThese()!;
+    expect(button).toHaveClass('w-full', 'bg-(--color-main-action)');
+    const counts = screen.getByRole('button', { name: '1 down' }).closest('[role="group"]')!;
+    const order = screen.getByRole('radiogroup', { name: 'Order by' });
+    expect(counts.compareDocumentPosition(button)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(button.compareDocumentPosition(order)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('posts the name and the ids of the narrowed list, then opens the new practice', async () => {
+    const posted: { id: unknown; body: { name?: string; card_ids?: string[] } }[] = [];
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/chosen_cards`, async ({ params, request }) => {
+        posted.push({
+          id: params.id,
+          body: (await request.json()) as { name?: string; card_ids?: string[] },
+        });
+        return HttpResponse.json({ id: 'ps2' }, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down&kind=down_a_lot');
+
+    await user.click(practiceThese()!);
+
+    await waitFor(() => expect(screen.getByTestId('pathname')).toHaveTextContent('/practice/ps2'));
+    expect(posted).toHaveLength(1);
+    expect(posted[0]?.id).toBe('ps1');
+    expect(posted[0]?.body.name).toBeTruthy();
+    expect(posted[0]?.body.card_ids?.toSorted()).toEqual(['c2', 'c4']);
+  });
+
+  it.each([
+    ['nothing_to_practice', 400, { code: 'nothing_to_practice', message: 'x' }, NOTHING_TO_PRACTICE_MESSAGE],
+    ['no_cards', 400, { code: 'no_cards', message: 'x' }, NO_CARDS_MESSAGE],
+    ['a practice gone', 404, 'Practice not found', 'Practice not found.'],
+  ])('%s reads its sentence under the button, with the list as it was', async (_name, status, detail, sentence) => {
+    refuseWith(status, detail);
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down&order=drops');
+    const before = rowNames();
+
+    await user.click(practiceThese()!);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe(sentence);
+    expect(alert).toHaveClass('text-sm', 'text-(--color-wrong)');
+    expect(practiceThese()!.compareDocumentPosition(alert)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(rowNames()).toEqual(before);
+    expect(screen.getByTestId('pathname')).toHaveTextContent('/');
+    expect(screen.getByTestId('search')).toHaveTextContent('?kind=down&order=drops');
+  });
+
+  it('the sentence clears on the next tap of Practice these', async () => {
+    refuseWith(400, { code: 'no_cards', message: 'x' });
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down');
+
+    await user.click(practiceThese()!);
+    await screen.findByRole('alert');
+
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post(`${BASE}/api/practice_runs/:id/chosen_cards`, async () => {
+        await held;
+        return HttpResponse.json({ id: 'ps2' }, { status: 201 });
+      }),
+    );
+    await user.click(practiceThese()!);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    release();
+    await waitFor(() => expect(screen.getByTestId('pathname')).toHaveTextContent('/practice/ps2'));
+  });
+
+  it('the sentence clears on the next tap of a count', async () => {
+    refuseWith(400, { code: 'no_cards', message: 'x' });
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down');
+
+    await user.click(practiceThese()!);
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: '2 up' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(practiceThese()).toBeInTheDocument();
   });
 });
