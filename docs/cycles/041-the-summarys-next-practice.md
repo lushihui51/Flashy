@@ -187,11 +187,11 @@ type RerunButtonProps = {
 
 "Practice these", in `RunBreakdown` (PDR 026, LPD7, LPD10):
 
-- With one or more counts chosen, a yellow block button "Practice these", full width, must sit under the counts and above "Order by:", as drawing 15; with none chosen it must not render.
+- With one or more counts chosen and the narrowed list holding one or more cards, a yellow block button "Practice these", full width, must sit under the counts and above "Order by:", as drawing 15; with no count chosen, or with the chosen counts listing no card, it must not render.
 - A tap must post, through `startChosenCards`, the name `formatDateTime(new Date())` and the ids of exactly the cards the narrowed list shows, invalidate `['practice_runs']`, and navigate to the new practice's page.
 - A failure must render as a `role="alert"` sentence under the button, in wrong colour at `text-sm`, with the counts, the order and the list left as they were: `nothing_to_practice` reads "These cards can't be practiced. A field they used has since been removed from their decks." (drawing 22), `no_cards` reads `NO_CARDS_MESSAGE`, and every other failure `failureSentence(error, 'Practice not found.')`. The sentence clears on the next tap of "Practice these" or of a count.
 - `failureSentence.ts` must map `nothing_to_practice` to that sentence, held in `practiceCopy.ts` as `NOTHING_TO_PRACTICE_MESSAGE`, and `failureSentence.test.ts` must cover it.
-- Tests: `RerunButton.test.tsx` covers both looks, the confirm, the post and the navigation, and a failure handed to `onError`; `PracticeRunPage.test.tsx` covers "Re-run" beside "Done", "Done" white with a `kind` in the URL; `PracticeDetailsPage.test.tsx`'s re-run tests keep passing through the shared button; `RunBreakdown.test.tsx` covers "Practice these" absent with no count chosen, present with one, posting the narrowed list's ids and the name, navigating on success, and each of the three failures' sentences under the button with the list unchanged.
+- Tests: `RerunButton.test.tsx` covers both looks, the confirm, the post and the navigation, and a failure handed to `onError`; `PracticeRunPage.test.tsx` covers "Re-run" beside "Done", "Done" white with a `kind` in the URL; `PracticeDetailsPage.test.tsx`'s re-run tests keep passing through the shared button; `RunBreakdown.test.tsx` covers "Practice these" absent with no count chosen, absent with a count of zero alone chosen, present with one that lists a card, posting the narrowed list's ids and the name, navigating on success, and each of the three failures' sentences under the button with the list unchanged.
 
 `docs/vocabulary.md`:
 
@@ -205,6 +205,7 @@ type RerunButtonProps = {
 **Out of scope**
 
 - "Practice these" shown but unusable before a count is chosen: never, LPD10.
+- A sentence when the chosen counts list no card: an unsettled decision; the button does not show.
 - Practicing the chosen cards on the fields that remain: never, LPD10.
 - "Edit card" on the sheet: cycle 044.
 - A sentence for a list narrowed to nothing: an unsettled decision.
