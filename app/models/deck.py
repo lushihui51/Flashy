@@ -29,9 +29,10 @@ class DeckRead(DeckBase):
 
 
 class DeckListing(DeckRead):
-    """DeckRead plus what the tables give for a list row: card_count, and field_names
-    in position order, active fields only."""
+    """DeckRead plus what the tables give for a list row: its subject's name, card_count,
+    and field_names in position order, active fields only."""
 
+    subject_name: str
     card_count: int
     field_names: list[str]
 
@@ -39,7 +40,8 @@ class DeckListing(DeckRead):
 class DeckSummary(DeckListing):
     """A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck
     reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,
-    which already includes everything here except card_count and field_names."""
+    which already includes everything here except the subject's name, card_count and
+    field_names."""
 
     # 0 to 1, over the deck's cards; None with no card.
     readiness: float | None

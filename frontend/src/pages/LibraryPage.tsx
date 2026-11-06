@@ -63,8 +63,6 @@ export default function LibraryPage() {
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
-  const subjectNameById = new Map((subjectsQuery.data ?? []).map((s) => [s.id, s.name]));
-
   return (
     <div className="p-4">
       <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
@@ -139,7 +137,7 @@ export default function LibraryPage() {
             <ul ref={decksQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
-                  <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />
+                  <DeckRow deck={deck} subjectName={deck.subject_name} />
                 </li>
               ))}
             </ul>

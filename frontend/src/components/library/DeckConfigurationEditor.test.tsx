@@ -11,35 +11,11 @@ import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
 
-const subjects = [
-  {
-    id: 's1',
-    name: 'Alpha',
-    icon: 'brain',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-  {
-    id: 's2',
-    name: 'Beta',
-    icon: 'music',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-];
-
 const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
@@ -50,6 +26,7 @@ const decks = [
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
@@ -91,7 +68,6 @@ const savedConfig = {
 
 function mockLibrary(deck: typeof deckDetail = deckDetail) {
   server.use(
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/decks/:deckId`, ({ params }) =>
       params.deckId === deck.id

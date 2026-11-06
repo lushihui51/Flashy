@@ -2,7 +2,7 @@ import PickerCombobox from 'src/components/ui/PickerCombobox';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 
 type SubjectOption = { id: string; name: string; icon?: string | null };
-type DeckOption = { id: string; name: string; subject_id: string };
+type DeckOption = { id: string; name: string; subject_id: string; subject_name: string };
 
 type PracticeFilterBarProps = {
   /** Both lists arrive already fetched — this component takes its data as props like

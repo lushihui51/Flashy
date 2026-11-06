@@ -22,7 +22,7 @@ None.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -43,6 +43,7 @@ None.
 - `frontend/src/pages/LibraryPage.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
+- `frontend/src/components/library/DeckRow.test.tsx`
 - `frontend/src/components/practice/PracticeFilterBar.tsx`
 
 **Details**
@@ -74,7 +75,31 @@ After the backend, `cd frontend && npm run gen:api`, then:
 
 **Debrief**
 
-None.
+Done-when evidence, in order:
+
+- `uv run pytest tests/api_tests/test_decks.py tests/api_tests/test_practice_run.py -k "decks or deck_filter or statements"`: `23 passed, 104 deselected`, `test_list_runs_a_fixed_number_of_statements` among them, its bound of 4 unchanged. The new `test_read_decks_tells_same_named_decks_apart_by_subject_name` also passes.
+- `grep -c "subject_name" app/models/deck.py` printed `1`.
+- `npm run gen:api` was run after the last backend edit, and a second run left both generated files byte-identical. The line's own check, `git status --porcelain src/api` after the commit, can only run once this commit exists, and this Debrief is part of the commit.
+- `npx vitest run` over the four named test files: `Test Files  4 passed (4)`, `Tests  128 passed (128)`.
+- `grep -n "subjectNameById"` over the two files printed nothing.
+
+Whole-repository checks: `npx vitest run` 67 files and 802 tests passed; `npm run lint` clean; `npm run build` clean; `uv run pytest` 401 passed, started with no other connection to the test database.
+
+Departures from guidance:
+
+- `db_read_decks` is gone rather than kept. The guidance kept it for its other callers, and `db_read_deck_listings` was its only caller, so keeping it would have left a function nothing calls. Its query now lives in `db_read_deck_listings`, selecting `Deck` and `Subject.name` together.
+
+Engineer-approved addition to Files: `frontend/src/components/library/DeckRow.test.tsx`, whose fixture is typed `DeckSummary` and failed `npm run build` without `subject_name`. One line added.
+
+Also changed, and within Details:
+
+- `LibraryPage.test.tsx`'s "a deck row shows its counts alone while its subject's name is unknown" described a state that can no longer happen. It now holds the subjects read pending and asserts that each deck row still shows its subject's name.
+- `orderedDeckOptions` returns the rows themselves rather than a mapped copy, since `DeckOption` is now a `Pick` of `DeckSummary`.
+- `DeckConfigurationEditor` no longer reads subjects, so its test file's subjects fixture and handler went with it.
+
+Nothing shows differently on screen in this task except that the library's Decks tab and New configuration's rows no longer wait on the subjects read for the subject's name. No browser check was run; no Done-when line asks for one.
+
+Read: `db_read_deck_listings` in `app/database_ops/deck.py`, for the removed function.
 
 ### T2 — DeckPicker and the subject beneath
 

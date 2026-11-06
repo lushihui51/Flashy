@@ -3806,6 +3806,10 @@
             "format": "date-time",
             "title": "Last Activity At"
           },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
           "card_count": {
             "type": "integer",
             "title": "Card Count"
@@ -3836,12 +3840,13 @@
           "id",
           "created_at",
           "last_activity_at",
+          "subject_name",
           "card_count",
           "field_names",
           "readiness"
         ],
         "title": "DeckSummary",
-        "description": "A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck\nreads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,\nwhich already includes everything here except card_count and field_names."
+        "description": "A deck as a list row shows it. Only `GET /api/decks` returns this; the single-deck\nreads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead,\nwhich already includes everything here except the subject's name, card_count and\nfield_names."
       },
       "DeletionImpactRead": {
         "properties": {

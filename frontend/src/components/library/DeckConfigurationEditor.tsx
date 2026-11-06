@@ -2,7 +2,6 @@ import { useId, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck, readDecks } from 'src/api/deck';
-import { readSubjects } from 'src/api/subject';
 import {
   createDeckPracticeConfig,
   readDeckPracticeConfig,
@@ -36,26 +35,16 @@ type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
 type DeckPracticeConfigRead = components['schemas']['DeckPracticeConfigRead'];
 
-type DeckOption = { id: string; name: string; subject_id: string; subject_name: string };
+type DeckOption = Pick<DeckSummary, 'id' | 'name' | 'subject_id' | 'subject_name'>;
 
 /** Context decks first, then the rest — the picker itself never sorts (it renders items
  * in the order given), so arriving from a subject or a deck page means its decks are the
  * ones already at the top of the list. */
-function orderedDeckOptions(
-  decks: DeckSummary[],
-  subjectNameById: Map<string, string>,
-  contextSubjectId: string | null,
-): DeckOption[] {
-  const options = decks.map((deck) => ({
-    id: deck.id,
-    name: deck.name,
-    subject_id: deck.subject_id,
-    subject_name: subjectNameById.get(deck.subject_id) ?? '',
-  }));
-  if (!contextSubjectId) return options;
+function orderedDeckOptions(decks: DeckSummary[], contextSubjectId: string | null): DeckOption[] {
+  if (!contextSubjectId) return decks;
   return [
-    ...options.filter((deck) => deck.subject_id === contextSubjectId),
-    ...options.filter((deck) => deck.subject_id !== contextSubjectId),
+    ...decks.filter((deck) => deck.subject_id === contextSubjectId),
+    ...decks.filter((deck) => deck.subject_id !== contextSubjectId),
   ];
 }
 
@@ -166,7 +155,6 @@ function DeckConfigurationEditorBody({
   const [nameError, setNameError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -174,10 +162,8 @@ function DeckConfigurationEditorBody({
     enabled: !!deckId,
   });
 
-  const subjectNameById = new Map((subjectsQuery.data ?? []).map((s) => [s.id, s.name]));
   const deckOptions = orderedDeckOptions(
     decksQuery.data ?? [],
-    subjectNameById,
     contextSubjectId ??
       (decksQuery.data ?? []).find((deck) => deck.id === contextDeckId)?.subject_id ??
       null,
