@@ -128,6 +128,7 @@ Every list of decks is drawn by one `DeckPicker`, whose rows show the deck's nam
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
 - `frontend/src/pages/PracticeOverviewPage.test.tsx`
 - `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
@@ -155,7 +156,7 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
 
 - It must pass `renderBeneath={(deck) => deck.subject_name}` and nothing for `renderLeading`, and forward every other prop, both purposes included.
 - `PracticeFilterBar`'s deck filter, `CardStandaloneForm`'s Deck picker and `DeckConfigurationEditor`'s Deck picker must all be `DeckPicker`, and no file but `DeckPicker.tsx` may render `PickerCombobox` with a list of decks (LCD13, LPD24). `DeckConfigurationEditor` drops the `renderLeading` that drew the subject before the name; its locked line in edit mode still reads "<subject> · <deck>".
-- Tests: `PickerCombobox.test.tsx` adds that `renderBeneath` draws under each row's name and not on the locked chip; `DeckPicker.test.tsx` checks a row reads the deck's name with its subject beneath for both purposes; `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx`, `PracticeOverviewPage.test.tsx` and `PracticeCreatePage.test.tsx` each have one test that opens the deck list and finds a subject's name on a row.
+- Tests: `practicePrefilterChain.test.tsx`'s deck fixtures carry a `subject_name`, so its rows draw a real line beneath; `PickerCombobox.test.tsx` adds that `renderBeneath` draws under each row's name and not on the locked chip; `DeckPicker.test.tsx` checks a row reads the deck's name with its subject beneath for both purposes; `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx`, `PracticeOverviewPage.test.tsx` and `PracticeCreatePage.test.tsx` each have one test that opens the deck list and finds a subject's name on a row.
 
 `docs/vocabulary.md`:
 
