@@ -3,13 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
@@ -126,9 +120,7 @@ function LocationProbe() {
  * showing — the page's own URL writes included. */
 function CurrentLocationProbe() {
   const location = useLocation();
-  return (
-    <span data-testid="current-location">{`${location.pathname}${location.search}`}</span>
-  );
+  return <span data-testid="current-location">{`${location.pathname}${location.search}`}</span>;
 }
 
 /** True when `first` comes before `second` in the document. */
@@ -303,9 +295,49 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByText('Recall');
 
-    expect(precedes(screen.getByLabelText('Name'), screen.getByPlaceholderText('All subjects'))).toBe(
-      true,
-    );
+    expect(
+      precedes(screen.getByLabelText('Name'), screen.getByPlaceholderText('All subjects')),
+    ).toBe(true);
+  });
+
+  it('the filters sit above the first configuration group', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    const [firstGroup] = screen.getAllByRole('group');
+    expect(precedes(screen.getByPlaceholderText('All subjects'), firstGroup!)).toBe(true);
+  });
+
+  it('Selected sits below the last configuration group', async () => {
+    mockLibrary();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    const lastGroup = screen.getAllByRole('group').at(-1)!;
+    expect(precedes(lastGroup, screen.getByRole('region', { name: 'Selected' }))).toBe(true);
+  });
+
+  it('with three configurations ticked across three decks, the filters stay above the first group and Selected below it', async () => {
+    const configThirdDeck = config({
+      id: 'c4',
+      deck_id: 'd3',
+      name: 'Listening',
+      deck_name: 'Third Deck',
+    });
+    mockLibrary(() => [...ALL_CONFIGS, configThirdDeck]);
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByText('Recall');
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Listening' }));
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
+
+    const [firstGroup] = screen.getAllByRole('group');
+    expect(precedes(screen.getByPlaceholderText('All subjects'), firstGroup!)).toBe(true);
+    expect(precedes(firstGroup!, screen.getByRole('region', { name: 'Selected' }))).toBe(true);
   });
 
   it('the name is prefilled with no name param, and an edit writes the name param', async () => {
@@ -483,9 +515,7 @@ describe('PracticeCreatePage', () => {
     await waitFor(() => expect(currentLocation().params.getAll('config')).toEqual(['c1']));
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeChecked();
     expect(screen.getByText('1 selected')).toBeInTheDocument();
-    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole(
-      'listitem',
-    );
+    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole('listitem');
     expect(items).toHaveLength(1);
     expect(items[0]).toHaveTextContent('Recall');
     expect(posted).toBe(false);
@@ -644,9 +674,7 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Basics' }));
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));
 
-    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole(
-      'listitem',
-    );
+    const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole('listitem');
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent('Recall');
     expect(items[0]).toHaveTextContent('Alpha · Shared Deck Name');
@@ -732,9 +760,9 @@ describe('PracticeCreatePage', () => {
     await screen.findByText('Recall');
 
     await waitFor(() =>
-      expect(
-        requests.some((query) => !query.has('subject_id') && !query.has('deck_id')),
-      ).toBe(true),
+      expect(requests.some((query) => !query.has('subject_id') && !query.has('deck_id'))).toBe(
+        true,
+      ),
     );
   });
 

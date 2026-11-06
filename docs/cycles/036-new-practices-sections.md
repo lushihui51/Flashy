@@ -20,7 +20,7 @@ Judgement: The engineer judges on the live server at 390 wide: New practice matc
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -64,4 +64,37 @@ Tests, in `PracticeCreatePage.test.tsx`, with the page's `precedes` helper: the 
 
 **Debrief**
 
-None.
+Done when, in order:
+
+1. `cd frontend && npx vitest run src/pages/PracticeCreatePage.test.tsx src/pages/practicePrefilterChain.test.tsx` printed "Test Files 2 passed (2)" and "Tests 46 passed (46)". The three new order tests passed by name: "the filters sit above the first configuration group", "Selected sits below the last configuration group", and "with three configurations ticked across three decks, the filters stay above the first group and Selected below it". The Name-above-filters test stands as it was.
+
+2. The script, in headless Chromium against `localhost:5173`, signed out of Clerk, at 390 wide and 844 tall, on `/practice/new` with six deck groups, printed:
+
+   ```
+   width 390 groups 6
+   before scrollY 0 filterTop 281.5 firstRowTop 460.5
+   tick Cycle 032 T3 judgement 2026-11-05 11:49 · Cycle 033 T2 check 2026-11-05T17:10:00.714Z / Term → Definition
+   tick Cycle 032 T3 judgement 2026-11-05 11:49 · Practiced / Term to Definition
+   tick Cycle 032 T3 judgement 2026-11-05 11:47 · Practiced / Term to Definition
+   after  scrollY 0 filterTop 281.5 firstRowTop 460.5
+   pairs equal true
+   lastGroupBottom 1388.5 selectedTop 1400.5 selectedBelow true
+   Create row text "3 selectedCreate"
+   order { name: 224, filter: 282, newConfiguration: 332, firstGroup: 380, selected: 1401 }
+   remove buttons 3
+   removed scrollY 0 filterTop 281.5 firstRowTop 460.5
+   after remove equal true count "2 selectedCreate" remove buttons 2
+   page errors 0
+   ```
+
+   The rows being ticked sit lower than the screen's top, so the script scrolled to each one, clicked it with the mouse, and went back to the top of the page before reading the tops. Every reading is at `scrollY` 0, so the numbers compare the two elements' places on the page and do not show the scroll position held during a tick. Ticks and the removal only wrote the URL; no row of the dev database changed.
+
+3. The screenshot is `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/40c40422-ef27-493e-b620-281eef85da08/scratchpad/practice-new-three-ticked-390.png`: the sticky row with "3 selected" beside Create, the end of the configurations, and Selected with its three rows.
+
+Checks over the whole frontend: `npx vitest run` printed "Test Files 61 passed (61)" and "Tests 680 passed (680)"; `npm run lint` exited 0; `npm run build` built with no error.
+
+The Practice page's own files are untouched: the commit changes only `PracticeCreatePage.tsx`, `PracticeCreatePage.test.tsx` and this file.
+
+Departures from guidance: none. The move is the Selected `section` alone, its text unchanged, and its `mt-3` matches the 12px drawing 27 gives it.
+
+Code to read: nothing beyond the diff, which is the one block moved.
