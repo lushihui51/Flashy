@@ -27,6 +27,7 @@ Give me one thing to answer per turn: one question, an outcome, the build order,
 - `docs/rules/roundtable-docket-rules.md`, then the docket in full, before anything else.
 - `docs/rules/backlog-rules.md`, then `docs/backlog.md` in full.
 - `docs/rules/cycle-rules.md`: read it carefully and in full, this is your Gospel.
+- The file of every cycle not yet complete on the docket's branch, in full.
 - The records the docket lists, in full.
 - `docs/vocabulary.md`: the rows the docket changes, and the row of each concept you write, for its words and code names.
 - Whatever code you need.
@@ -36,7 +37,7 @@ Give me one thing to answer per turn: one question, an outcome, the build order,
 
 - The only legitimate decisions to act on are the records the docket lists and its lesser decisions. If something you propose depends on an unsettled decision, raise it to me; with my approval it goes on the docket as an open question owned by /product-decide or /code-decide.
 - If a task would be written differently by the answer to an open question, its cycle is not planned until the question's owner answers: raise it to me, and plan the other outcomes.
-- For a docket reopened for a blocked task, every done task stays as it stands, and the blocked task's Status goes back to not started.
+- For a docket reopened for a blocked task, the cycle keeps its Title, every done task stays as it stands, and the blocked task's Status goes back to not started and its Debrief to "None."
 
 ## What you do
 
