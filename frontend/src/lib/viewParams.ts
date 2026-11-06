@@ -35,17 +35,27 @@ function rowsOf(list: Element): Element[] {
   return [list];
 }
 
-/** The greatest stuck bottom among the page's sticky elements marked `data-reveal-clear`,
- * each its sticky `top` plus its height; 0 when the page has none. */
-function bandTop(): number {
-  let greatest = 0;
+/** The band a reveal keeps its targets in, between the page's elements marked
+ * `data-reveal-clear`: `top` is the greatest stuck bottom among those stuck at the top, 0 with
+ * none, and `bottom` the least top among those stuck at the foot, the viewport's bottom with
+ * none. */
+function bandTop(): { top: number; bottom: number } {
+  let top = 0;
+  let bottom = window.innerHeight;
   for (const element of document.querySelectorAll('[data-reveal-clear]')) {
-    // The stuck place rather than the current edges: a row the page has not scrolled to yet
-    // sits below where it will stick, and would misplace the band (ADR 097).
-    const top = Number.parseFloat(getComputedStyle(element).top) || 0;
-    greatest = Math.max(greatest, top + element.getBoundingClientRect().height);
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    // The side comes from `bottom` first: an element fixed at the foot reports a numeric `top`
+    // too, and would read as stuck at the top (ADR 097).
+    if (style.bottom !== 'auto') {
+      bottom = Math.min(bottom, rect.top);
+    } else {
+      // The stuck place rather than the current edges: a row the page has not scrolled to yet
+      // sits below where it will stick, and would misplace the band (ADR 097).
+      top = Math.max(top, (Number.parseFloat(style.top) || 0) + rect.height);
+    }
   }
-  return greatest;
+  return { top, bottom };
 }
 
 /** `delta` as whole pixels, since the browser lands a scroll on a whole pixel and would round
@@ -88,9 +98,10 @@ export function useViewParams(): ViewParams {
     if (!list) return;
     pending.current = null;
     const control = current.targets.control();
+    const band = bandTop();
     const input = {
-      viewportHeight: window.innerHeight,
-      bandTop: bandTop(),
+      bandTop: band.top,
+      bandBottom: band.bottom,
       control: control ? edgesOf(control) : null,
       rows: rowsOf(list).map(edgesOf),
     };

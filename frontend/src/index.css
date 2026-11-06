@@ -57,6 +57,9 @@
 @utility ruled-top {
   border-top: 1.5px solid var(--color-ink);
 }
+@utility ruled-top-line {
+  border-top: 1.5px solid var(--color-line);
+}
 @utility ruled-bottom {
   border-bottom: 1.5px solid var(--color-ink);
 }

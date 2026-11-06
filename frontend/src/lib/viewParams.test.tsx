@@ -171,6 +171,51 @@ describe('useViewParams', () => {
       expect(scrollBy).toHaveBeenCalledWith(0, 100 - 170);
     });
 
+    it('lowers the band bottom to the top of a marked element stuck at the foot', async () => {
+      vi.stubGlobal('innerHeight', 844);
+      mountAtLibrary(
+        <RevealStub
+          rows={
+            <>
+              <div data-rect="650,700" />
+              <div data-rect="750,800" />
+            </>
+          }
+          clears={<div data-reveal-clear style={{ bottom: '0px' }} data-rect="754,844" />}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Write' }));
+
+      // The row ends at 800, inside the viewport's 844 but behind the bar from 754.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 800 - 754);
+    });
+
+    it('reads an element with both a top and a bottom as the foot, raising the band top by nothing', async () => {
+      vi.stubGlobal('innerHeight', 844);
+      mountAtLibrary(
+        <RevealStub
+          controlRect="-40,0"
+          rows={
+            <>
+              <div data-rect="10,50" />
+              <div data-rect="60,100" />
+            </>
+          }
+          clears={
+            <div data-reveal-clear style={{ top: '754px', bottom: '0px' }} data-rect="754,844" />
+          }
+        />,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Write' }));
+
+      // The control lands on 0, the band's top with nothing stuck there.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, -40);
+    });
+
     it('measures the first two marked rows, not the groups around them', async () => {
       mountAtLibrary(
         <RevealStub

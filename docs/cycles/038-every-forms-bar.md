@@ -24,7 +24,7 @@ Judgement: The engineer judges on the live server at 390 wide: each of the ten f
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -96,7 +96,29 @@ The band's foot, ADR 097, in `viewParams.ts` and `revealDelta.ts`:
 
 **Debrief**
 
-None.
+Evidence:
+
+- The vitest command passes: 6 files, 25 tests. `FormBar.test.tsx`: "is fixed to the foot and carries the mark a reveal clears"; "renders the sentence above the count, and the count above the buttons in order"; "renders neither the sentence nor the count when null". `viewParams.test.tsx`: "lowers the band bottom to the top of a marked element stuck at the foot", where the row ending at 800 scrolls by 46; "reads an element with both a top and a bottom as the foot, raising the band top by nothing". The existing tests pass with `innerHeight` as the bottom.
+- `grep -c "^@utility ruled-top-line" frontend/src/index.css` prints `1`. `grep -c "viewportHeight"` prints `0` for `revealDelta.ts` and `0` for `viewParams.ts`.
+
+Beyond the Done when:
+
+- `npx vitest run` over the whole frontend passes, 62 files and 686 tests; `npm run lint` and `npm run build` are clean.
+- `FormBar.test.tsx` also has "keeps a hidden spacer of its height in the flow, follows the height, and stops on unmount".
+- Headless Chromium at 390 by 844, on a stand-in page and not the app, since no form renders the bar yet: the two sticky elements report `bottom` as `auto`, and the fixed one reports `top` `754px` and `bottom` `0px`. The band's arithmetic gives top 164 and bottom 754. No live-server check ran; T3's judgement covers that.
+
+Departures from guidance:
+
+- The spacer carries `shrink-0`, which the Details do not name. `FullScreenDialog` is a fixed-height `flex-col`, so a spacer inside it could otherwise shrink below the bar's height.
+
+To read:
+
+- `bandTop()` in `frontend/src/lib/viewParams.ts` keeps the name the Details and ADR 100 give it, though it now returns both edges. Renaming it would have to reach ADR 100.
+
+For the engineer, outside this task's Files:
+
+- `docs/vocabulary.md`'s row for the chosen configurations says "N selected", beside Create, which T3 makes false, and T3's Files do not list that file.
+- The comment on the `useLayoutEffect` in `frontend/src/components/shell/AppShell.tsx` says a page's sticky row stops at `--app-header-height`, which T3 makes false, and no task's Files list that file.
 
 ### T2 — The library and configuration forms' bars
 
