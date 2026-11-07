@@ -390,6 +390,29 @@ describe('RunBreakdown', () => {
 
       expect(screen.queryByRole('dialog', { name: 'Key' })).not.toBeInTheDocument();
     });
+
+    it('shows "Edit card" with a pencil under the record card', () => {
+      renderSheet();
+
+      const sheet = within(screen.getByRole('dialog', { name: 'chmod' }));
+      const edit = sheet.getByRole('button', { name: 'Edit card' });
+      expect(edit.querySelector('svg')).not.toBeNull();
+      expect(edit).toHaveClass('tappable-sm', 'rounded-full', 'self-start');
+      const answerHeading = sheet.getByRole('heading', { level: 3, name: 'Answer' });
+      expect(answerHeading.compareDocumentPosition(edit)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it("Edit card opens the card's form with both addresses the page's full address", async () => {
+      const user = userEvent.setup();
+      renderSheet('/practice/ps1?kind=down&kind=up&order=gains&card=c9');
+
+      await user.click(screen.getByRole('button', { name: 'Edit card' }));
+
+      expect(screen.getByTestId('pathname')).toHaveTextContent(/^\/cards\/c9\/edit$/);
+      const search = new URLSearchParams(screen.getByTestId('search').textContent!);
+      expect(search.get('cancelTo')).toBe('/practice/ps1?kind=down&kind=up&order=gains&card=c9');
+      expect(search.get('returnTo')).toBe('/practice/ps1?kind=down&kind=up&order=gains&card=c9');
+    });
   });
 });
 

@@ -101,7 +101,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardList` |
 | Card | Adding a card to the list in view | "Add card" | Deck page's Cards tab | `AddButton` |
 | Card | The page where a card is made | "New card" | Its heading | `/cards/new`; `CardStandaloneForm` |
-| Card | The page where a card is changed | "Edit card" | Its heading | `/cards/:cardId/edit`; `CardStandaloneForm` |
+| Card | The page where a card is changed | "Edit card" | Its heading; the run page's button beside the card's main action, with a pencil, not ready while the answers are hidden; the sheet's button under the record card | `/cards/:cardId/edit`; `CardStandaloneForm` |
 | Card | A blank value | "empty" | Deck page's Cards tab | `CardList` |
 | Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
@@ -170,7 +170,8 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
 | Run | Leaving a finished practice | "Done", white while a count is chosen | Run page, under "Practice complete" | `/practice/:practiceSessionId` |
-| Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy" | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip` |
+| Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy"; the page dimmed while the list is open | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/practice_cards/{practice_card_id}/rate`; `review_log`; `RatingChip`; `Scrim` |
+| Run | The user's place on the card, in the address | — | Run page | `card`; `shown`; `rating.<fieldId>` |
 | Run | One go at a card | "attempt" | A card opened from the summary, as one mark per attempt | `practice_card`; `PracticeCard`; `attempt`; `BreakdownAttempt` |
 | Run | A card rated above Again on every field | "passed"; "Passed" | Run page | `passed` |
 | Run | A card rated Again on a field at its last attempt | "failed"; "Failed" | Run page | `failed`; `still_failed` |

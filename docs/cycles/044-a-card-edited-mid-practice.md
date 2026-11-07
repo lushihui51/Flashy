@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide, on an active prac
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -48,6 +48,7 @@ Drawings 18, 19 and 40 are the run page.
 The place in the URL (LCD7, ADR 097):
 
 - The run page must keep "answers shown" and the ratings chosen so far in its search params, tagged with their practice card: `card`, the practice card's id; `shown`, `1` when the answers are shown; and `rating.<fieldId>`, the rating 1 to 4 for each rated answer field, as `/practice/{id}/run?card=<practiceCardId>&shown=1&rating.<fieldId>=3`. It must read them only when `card` equals the current practice card's id, and write them through `setParams`, never `changeView`; `useState` for either goes.
+- `RunCompletion` and its `rerunError` stay as they are; a failure's sentence is UI state (ADR 088), never a param.
 - On a successful "Next card" the page must write the params without `card`, `shown` and any `rating.` key, so nothing carries to the next card; a `card` from an earlier card reads as nothing.
 - `kind` and `order` from the summary, and `card` once the practice completes, are the summary's, written by `RunBreakdown`; the run page must not strip them.
 
@@ -82,19 +83,34 @@ Tests in `PracticeRunPage.test.tsx`: "Edit card" reads `aria-disabled` before "S
 **Done when**
 
 - `cd frontend && npx vitest run src/pages/PracticeRunPage.test.tsx src/components/practice/RatingChip.test.tsx` passes.
-- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `0`.
+- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `2`: the import and `rerunError`.
 - `grep -c "Scrim" frontend/src/components/practice/RatingChip.tsx` prints `2` or more.
 - At 390 wide on the live server, on an active practice: "Edit card" reads not ready beside "Show answer" and does nothing tapped, as drawing 18; after "Show answer" it opens Edit card, and Save after a change returns to the same card, answers shown, a rating given before kept, the new value showing, as does Cancel without it; a reload keeps the card, the shown answers and the rating; "Next card" shows the next card with nothing shown or rated; a rating chip's open list dims the page and a tap on the dimming closes it without pressing "Edit card" or "Next card", as drawing 40.
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `npx vitest run src/pages/PracticeRunPage.test.tsx src/components/practice/RatingChip.test.tsx`: 2 files and 40 tests passed.
+- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `2`.
+- `grep -c "Scrim" frontend/src/components/practice/RatingChip.tsx` prints `2`.
+- Headless Chromium at 390 by 844, driven by a mouse, signed out of Clerk, on the active practice "Oct 1, 2026 at 1:18 PM", whose current card is the prompt "139" with the two answers Protocol Name and Protocol Function. With the answers hidden, "Edit card" with a pencil sits to the left of "Show answer", both 54px high, the main action the wider, with `aria-disabled="true"`, a line-coloured border, aside-coloured text and no shadow, as drawing 18; a tap on it leaves the URL and the two "Hidden" marks as they were. "Show answer" writes `?card=<practiceCardId>&shown=1`, and "Edit card" is then pressable, with its shadow, beside "Next card", as drawing 19. Rating Protocol Name Good writes `&rating.<fieldId>=3`. "Edit card" lands on `/cards/<cardId>/edit` with `cancelTo` and `returnTo` both the run page's pathname and search; Save after " (edited)" is appended to Protocol Function returns to that address with both answers shown, "Protocol Name: Good" kept and the new value showing; a reload keeps all three; Cancel returns the same way; a second Save with the seeded value returns the card to what it was. With both answers rated, a chip's open list dims the page, with the chip and its list bright, as drawing 40; a tap on the dimming over "Edit card" closes the list and stays on the run page, and a tap on the dimming over "Next card" closes the list and stays on the card. "Next card" shows the next card, "21", with "Hidden" marks, "Show answer", "Edit card" not ready and no `card`, `shown` or `rating.` key in the URL.
+
+Checks for the commit: `npx vitest run` over the whole frontend, 70 files and 833 tests passed; `npm run lint` and `npm run build` both exit 0. The browser check rated the card "139" Good on both answers and moved the practice to the card "21", which stays, as an earlier run of the same check had rated "445" and moved it to "139".
+
+Departures and additions: none from the Details. Beyond the tests Details names, `RatingChip.test.tsx` also checks that the scrim's pointerdown reaches `onSelect` nowhere, and the "Next card" test also checks the next card shows "Hidden" and "Show answer".
+
+To read in the code:
+
+- `PracticeCardView` in `frontend/src/pages/PracticeRunPage.tsx`: `rateMutation`'s `onSuccess` awaits the run query's invalidation and only then writes the params without the place. Written first, the card on screen would lose its shown answers and ratings for as long as the refetch takes. Details fixes no order.
+- The same component: `rateMutation`'s failure sentence now renders under the action row rather than under "Next card" alone, since the row holds both buttons.
+- `RatingChip` in `frontend/src/components/practice/RatingChip.tsx`: its interface comment no longer says a tap on another chip closes this one through Radix's outside dismissal; the scrim now takes that tap, and the other chip is not pressed.
 
 ### T2 — Edit card from the summary
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -134,4 +150,18 @@ Drawing 16 is the sheet.
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `npx vitest run src/components/practice/RunBreakdown.test.tsx`: 1 file and 35 tests passed.
+- `grep -c "Edit card" frontend/src/components/practice/RunBreakdown.tsx` prints `1`.
+- Headless Chromium at 390 by 844, driven by a mouse, signed out of Clerk, on the completed practice "Sep 29, 2026 at 8:41 AM" at its own page, with the count "53 no change" chosen and the order Drops, which wrote `?kind=no_change&order=drops`. The row "format" opened its sheet and wrote `&card=<cardId>`. "Edit card" with a pencil sits under the record card, 16px below its bottom edge and flush with its left edge, 120 by 40, as drawing 16. A tap landed on `/cards/<cardId>/edit` with `cancelTo` and `returnTo` both the summary's pathname and search, `kind`, `order` and `card` included. Save after " (edited)" was appended to Command purpose returned to that address with the sheet open on "format", the new value showing, "53 no change" still pressed, Drops still checked and the 53 rows beneath. After a reload of that address the sheet was open; Cancel from the form returned the same way with the value as saved; a second Save with the seeded value returned the card to what it was.
+
+Checks for the commit: `npx vitest run` over the whole frontend, 70 files and 835 tests passed; `npm run lint` and `npm run build` both exit 0. The dev database holds the card as it was seeded.
+
+Departures and additions: none from the Details. The pill sits after the record card's scrolling area rather than inside it, so it stays in reach under a card whose fields scroll; Details fixes neither. Beyond the tests Details names, the first also checks the pill's classes and that it follows the "Answer" heading.
+
+To read in the code:
+
+- `CardSheetContent` in `frontend/src/components/practice/RunBreakdown.tsx` takes `onEdit`, and `RunBreakdown` builds the address from `useLocation`, since `useViewParams` gives the search alone.
+
+A finding outside this task's Files, raised and not fixed: `CardStandaloneForm` in `frontend/src/components/library/CardStandaloneForm.tsx` seeds its values from the cached card on mount, and its Save invalidates the deck queries but not the card's, so the form reopened straight after a Save, from the summary or the run page alike, seeds from the stale card, refetches, and then reads itself as dirty: Cancel with nothing changed asks "Discard this card?". Observed in Chromium; a reload between the Save and the reopening avoids it.
