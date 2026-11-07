@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ratePracticeCard,
@@ -17,6 +18,7 @@ import { isNotFound } from 'src/api/unwrap';
 import { CHANGE_KINDS } from 'src/lib/changeKinds';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunState = components['schemas']['PracticeRunState'];
@@ -26,7 +28,26 @@ const ZONE_CLASS = 'tappable rounded-block bg-(--color-surface) px-4.5 landscape
 const ZONE_HEADING_CLASS =
   'flex h-10.5 items-center ruled-bottom text-sm font-semibold text-(--color-ink)';
 const ZONE_ROW_CLASS = 'pt-3.5 pb-4 last:pb-4.5';
-const CARD_ACTION_CLASS = 'mt-2 h-13.5 w-full shrink-0 rounded-2xl text-action font-semibold';
+const CARD_ACTION_CLASS = 'h-13.5 flex-1 rounded-2xl text-action font-semibold';
+
+const RATING_PARAM_PREFIX = 'rating.';
+
+/** `params` less the user's place on the card: `card`, `shown` and every `rating.` key. */
+function withoutCardPlace(params: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(params);
+  next.delete('card');
+  next.delete('shown');
+  for (const key of Array.from(next.keys())) {
+    if (key.startsWith(RATING_PARAM_PREFIX)) next.delete(key);
+  }
+  return next;
+}
+
+/** The rating `params` holds for `fieldDefId`, 1 to 4; undefined when absent or not one. */
+function ratingParam(params: URLSearchParams, fieldDefId: string): number | undefined {
+  const value = Number(params.get(`${RATING_PARAM_PREFIX}${fieldDefId}`));
+  return Number.isInteger(value) && value >= 1 && value <= 4 ? value : undefined;
+}
 
 /** The active-session run surface: the current card as a static two-zone reveal with
  * rating, live progress, and a retry marker. Once `current_card` is null, nothing is
@@ -85,9 +106,8 @@ function PracticeRunBody({
     return <RunCompletion practiceSessionId={practiceSessionId} sessionName={state.session_name} />;
   }
 
-  // Keyed by practice_card_id so "next card" (a query invalidation, not a remount of
-  // this whole page) still gets fresh showAnswer/ratings state by forcing React to
-  // discard and recreate this subtree rather than reusing it across cards.
+  // Keyed by practice_card_id so a new card, which arrives by a query invalidation and not
+  // a remount of this page, starts with no rating request pending or failed.
   return (
     <PracticeCardView
       key={state.current_card.practice_card_id}
@@ -168,18 +188,56 @@ function PracticeCardView({
   practiceSessionId: string;
   currentCard: CurrentRunCard;
 }) {
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const { params, setParams } = useViewParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // The place in the URL belongs to this card only when tagged with it; one left by an
+  // earlier card reads as nothing.
+  const placeIsThisCard = params.get('card') === currentCard.practice_card_id;
+  const showAnswer = placeIsThisCard && params.get('shown') === '1';
+  const ratings: Record<string, number> = {};
+  if (placeIsThisCard) {
+    for (const field of currentCard.answers) {
+      const rating = ratingParam(params, field.field_def_id);
+      if (rating !== undefined) ratings[field.field_def_id] = rating;
+    }
+  }
 
   const rateMutation = useMutation({
     mutationFn: () => ratePracticeCard(currentCard.practice_card_id, { ratings }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['practice_run', practiceSessionId] }),
+    onSuccess: async () => {
+      // The next card first, so this one keeps its answers and ratings on screen until it
+      // is replaced; then the place goes, so nothing carries to the next card.
+      await queryClient.invalidateQueries({ queryKey: ['practice_run', practiceSessionId] });
+      setParams(withoutCardPlace(params));
+    },
   });
 
   const allRated = currentCard.answers.every((field) => field.field_def_id in ratings);
   const canSubmit = allRated && !rateMutation.isPending;
+
+  const showAnswers = () => {
+    const next = withoutCardPlace(params);
+    next.set('card', currentCard.practice_card_id);
+    next.set('shown', '1');
+    setParams(next);
+  };
+
+  const rate = (fieldDefId: string, rating: number) => {
+    const next = new URLSearchParams(params);
+    next.set(`${RATING_PARAM_PREFIX}${fieldDefId}`, String(rating));
+    setParams(next);
+  };
+
+  const editCard = () => {
+    if (!showAnswer) return;
+    navigate({
+      pathname: `/cards/${currentCard.card_id}/edit`,
+      search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+    });
+  };
 
   return (
     <div className="mt-3.5 flex flex-col gap-3.5">
@@ -215,9 +273,7 @@ function PracticeCardView({
                     <RatingChip
                       fieldName={field.name}
                       rating={ratings[field.field_def_id] ?? null}
-                      onSelect={(rating) =>
-                        setRatings((prev) => ({ ...prev, [field.field_def_id]: rating }))
-                      }
+                      onSelect={(rating) => rate(field.field_def_id, rating)}
                     />
                   </div>
                 </div>
@@ -231,8 +287,17 @@ function PracticeCardView({
         </section>
       </div>
 
-      {showAnswer ? (
-        <>
+      <div className="mt-2 flex gap-2.5">
+        <button
+          type="button"
+          aria-disabled={!showAnswer || undefined}
+          onClick={editCard}
+          className="tappable flex h-13.5 shrink-0 items-center gap-2 rounded-2xl bg-(--color-surface) px-4 text-base font-semibold text-(--color-ink) aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+        >
+          <Pencil aria-hidden="true" className="size-4" />
+          Edit card
+        </button>
+        {showAnswer ? (
           <button
             type="button"
             disabled={!canSubmit}
@@ -245,20 +310,20 @@ function PracticeCardView({
           >
             Next card
           </button>
-          {rateMutation.isError && (
-            <p role="alert" className="text-sm text-(--color-wrong)">
-              {failureSentence(rateMutation.error, 'Practice not found.')}
-            </p>
-          )}
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowAnswer(true)}
-          className={`tappable bg-(--color-main-action) text-(--color-ink) ${CARD_ACTION_CLASS}`}
-        >
-          Show answer
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={showAnswers}
+            className={`tappable bg-(--color-main-action) text-(--color-ink) ${CARD_ACTION_CLASS}`}
+          >
+            Show answer
+          </button>
+        )}
+      </div>
+      {rateMutation.isError && (
+        <p role="alert" className="text-sm text-(--color-wrong)">
+          {failureSentence(rateMutation.error, 'Practice not found.')}
+        </p>
       )}
     </div>
   );

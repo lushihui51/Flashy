@@ -102,18 +102,38 @@ function twoAnswerRunState() {
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return (
+    <span data-testid="location">
+      {location.pathname}
+      {location.search}
+    </span>
+  );
 }
 
 function renderRun(practiceSessionId = 'ps1', search = '') {
   return renderWithProviders(
     <Routes>
-      <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
+      <Route
+        path="/practice/:practiceSessionId/run"
+        element={
+          <>
+            <PracticeRunPage />
+            <LocationProbe />
+          </>
+        }
+      />
       <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
       <Route path="/practice" element={<LocationProbe />} />
+      <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
     </Routes>,
     [`/practice/${practiceSessionId}/run${search}`],
   );
+}
+
+/** The probe's address split into its path and its search params. */
+function probedAddress() {
+  const [pathname, search = ''] = screen.getByTestId('location').textContent!.split('?');
+  return { pathname, search: new URLSearchParams(search) };
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -304,7 +324,9 @@ describe('PracticeRunPage', () => {
       "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
     );
     expect(alert).toHaveClass('text-(--color-wrong)');
-    expect(alert.previousElementSibling).toContainElement(screen.getByRole('link', { name: 'Done' }));
+    expect(alert.previousElementSibling).toContainElement(
+      screen.getByRole('link', { name: 'Done' }),
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -542,6 +564,145 @@ describe('PracticeRunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This card has already been rated.');
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
+  });
+});
+
+describe('PracticeRunPage Edit card and the place on the card in the URL', () => {
+  it('Edit card reads not ready beside Show answer, and a click navigates nowhere', async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun();
+
+    const showAnswer = await screen.findByRole('button', { name: 'Show answer' });
+    const edit = screen.getByRole('button', { name: 'Edit card' });
+    expect(edit).toHaveAttribute('aria-disabled', 'true');
+    expect(edit.nextElementSibling).toBe(showAnswer);
+
+    await user.click(edit);
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/practice\/ps1\/run$/);
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+  });
+
+  it("after Show answer, Edit card opens the card's form with both addresses the run page's full address", async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    await user.click(screen.getByRole('button', { name: 'Rate Back' }));
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+    const edit = screen.getByRole('button', { name: 'Edit card' });
+    expect(edit).not.toHaveAttribute('aria-disabled');
+    expect(edit.nextElementSibling).toBe(screen.getByRole('button', { name: 'Next card' }));
+
+    await user.click(edit);
+
+    const { pathname, search } = probedAddress();
+    expect(pathname).toBe('/cards/card1/edit');
+    expect(search.get('cancelTo')).toBe('/practice/ps1/run?card=pc1&shown=1&rating.back=3');
+    expect(search.get('returnTo')).toBe('/practice/ps1/run?card=pc1&shown=1&rating.back=3');
+  });
+
+  it('Show answer writes shown=1 and the practice card', async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      /^\/practice\/ps1\/run\?card=pc1&shown=1$/,
+    );
+  });
+
+  it('a rating writes rating.<fieldId>', async () => {
+    mockRun();
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    await user.click(screen.getByRole('button', { name: 'Rate Back' }));
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      /^\/practice\/ps1\/run\?card=pc1&shown=1&rating\.back=3$/,
+    );
+  });
+
+  it('mounting with card, shown and a rating in the URL renders the answers shown and the chip rated', async () => {
+    mockRun();
+    renderRun('ps1', '?card=pc1&shown=1&rating.back=3');
+
+    expect(await screen.findByText('Hello')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Show answer' })).not.toBeInTheDocument();
+  });
+
+  it("mounting with another card's card renders the answers hidden", async () => {
+    mockRun();
+    renderRun('ps1', '?card=pc0&shown=1&rating.back=3');
+
+    expect(await screen.findByText('Hidden')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show answer' })).toBeInTheDocument();
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+  });
+
+  it('a successful Next card leaves none of card, shown and rating in the URL', async () => {
+    let runCallCount = 0;
+    server.use(
+      http.get(`${BASE}/api/practice_runs/:id/state`, () => {
+        runCallCount += 1;
+        return runCallCount === 1
+          ? HttpResponse.json(runState())
+          : HttpResponse.json(
+              runState({
+                current_card: {
+                  practice_card_id: 'pc2',
+                  card_id: 'card2',
+                  attempt: 1,
+                  prompts: [
+                    { field_def_id: 'front2', name: 'Front', type: 'text', value: 'Bonsoir' },
+                  ],
+                  answers: [
+                    { field_def_id: 'back', name: 'Back', type: 'text', value: 'Good evening' },
+                  ],
+                },
+              }),
+            );
+      }),
+      http.post(`${BASE}/api/practice_cards/:id/rate`, () =>
+        HttpResponse.json({
+          rated_practice_card: {
+            id: 'pc1',
+            practice_run_id: 'ps1',
+            card_id: 'card1',
+            position: 0,
+            prompts: [],
+            answers: [],
+            status: 'passed',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+          requeued_practice_card: null,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    await user.click(screen.getByRole('button', { name: 'Rate Back' }));
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+    await user.click(screen.getByRole('button', { name: 'Next card' }));
+
+    expect(await screen.findByText('Bonsoir')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/practice\/ps1\/run$/),
+    );
+    expect(screen.getByText('Hidden')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show answer' })).toBeInTheDocument();
+    expect(screen.queryByText('Good evening')).not.toBeInTheDocument();
   });
 });
 

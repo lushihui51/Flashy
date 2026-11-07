@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide, on an active prac
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -89,7 +89,22 @@ Tests in `PracticeRunPage.test.tsx`: "Edit card" reads `aria-disabled` before "S
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `npx vitest run src/pages/PracticeRunPage.test.tsx src/components/practice/RatingChip.test.tsx`: 2 files and 40 tests passed.
+- `grep -c "useState" frontend/src/pages/PracticeRunPage.tsx` prints `2`.
+- `grep -c "Scrim" frontend/src/components/practice/RatingChip.tsx` prints `2`.
+- Headless Chromium at 390 by 844, driven by a mouse, signed out of Clerk, on the active practice "Oct 1, 2026 at 1:18 PM", whose current card is the prompt "139" with the two answers Protocol Name and Protocol Function. With the answers hidden, "Edit card" with a pencil sits to the left of "Show answer", both 54px high, the main action the wider, with `aria-disabled="true"`, a line-coloured border, aside-coloured text and no shadow, as drawing 18; a tap on it leaves the URL and the two "Hidden" marks as they were. "Show answer" writes `?card=<practiceCardId>&shown=1`, and "Edit card" is then pressable, with its shadow, beside "Next card", as drawing 19. Rating Protocol Name Good writes `&rating.<fieldId>=3`. "Edit card" lands on `/cards/<cardId>/edit` with `cancelTo` and `returnTo` both the run page's pathname and search; Save after " (edited)" is appended to Protocol Function returns to that address with both answers shown, "Protocol Name: Good" kept and the new value showing; a reload keeps all three; Cancel returns the same way; a second Save with the seeded value returns the card to what it was. With both answers rated, a chip's open list dims the page, with the chip and its list bright, as drawing 40; a tap on the dimming over "Edit card" closes the list and stays on the run page, and a tap on the dimming over "Next card" closes the list and stays on the card. "Next card" shows the next card, "21", with "Hidden" marks, "Show answer", "Edit card" not ready and no `card`, `shown` or `rating.` key in the URL.
+
+Checks for the commit: `npx vitest run` over the whole frontend, 70 files and 833 tests passed; `npm run lint` and `npm run build` both exit 0. The browser check rated the card "139" Good on both answers and moved the practice to the card "21", which stays, as an earlier run of the same check had rated "445" and moved it to "139".
+
+Departures and additions: none from the Details. Beyond the tests Details names, `RatingChip.test.tsx` also checks that the scrim's pointerdown reaches `onSelect` nowhere, and the "Next card" test also checks the next card shows "Hidden" and "Show answer".
+
+To read in the code:
+
+- `PracticeCardView` in `frontend/src/pages/PracticeRunPage.tsx`: `rateMutation`'s `onSuccess` awaits the run query's invalidation and only then writes the params without the place. Written first, the card on screen would lose its shown answers and ratings for as long as the refetch takes. Details fixes no order.
+- The same component: `rateMutation`'s failure sentence now renders under the action row rather than under "Next card" alone, since the row holds both buttons.
+- `RatingChip` in `frontend/src/components/practice/RatingChip.tsx`: its interface comment no longer says a tap on another chip closes this one through Radix's outside dismissal; the scrim now takes that tap, and the other chip is not pressed.
 
 ### T2 — Edit card from the summary
 
