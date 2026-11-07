@@ -1,15 +1,5 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs -r npx --yes prettier@3.9.10 --write --ignore-unknown"
-          }
-        ]
-      }
-    ]
+  "enabledPlugins": {
+    "process@process": true
   }
 }

@@ -5,7 +5,7 @@
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
-- docs/rules/ holds the rules for every file an agent writes under docs/, for comments in code, and for this file.
+- The `process` plugin, read from the Process repository, holds the skills and the rules for every file an agent writes under docs/, for comments in code, and for this file.
 - README.md is for a human reader and self-contained; it never points at AGENTS.md or a record.
 
 # Commands
@@ -16,6 +16,7 @@
 - Dry-run a new migration on a `pg_dump` copy of the dev database, then apply it with `alembic upgrade head` in the task that writes it.
   - Reason: fastapi dev reloads new models before the schema
 - Check a frontend change in headless Chromium through playwright-core, run from the session scratchpad against localhost:5173, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development` set.
+- Run the record citation guard with `uv run pytest tests/api_tests/test_record_citation_guard.py -q`.
 
 # Hard rules
 
