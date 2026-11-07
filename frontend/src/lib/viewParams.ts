@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useReducer, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { revealDelta, type Edges } from 'src/lib/revealDelta';
 
@@ -25,6 +25,11 @@ export type ViewParams = {
    * element holding its sentence, null until it is rendered. Throws when the sentence has no
    * ancestor marked `data-reveal-scroller`. */
   reveal: (targets: ViewTargets) => void;
+  /** Reveals the first element marked `data-reveal-sentence`, in DOM order, inside the
+   * nearest marked scroller of `from`, with that sentence's part as the control; nothing
+   * when no sentence shows. Waits for a commit as `reveal` does. Throws when `from` has no
+   * ancestor marked `data-reveal-scroller`. */
+  revealFirstSentence: (from: Element | null) => void;
 };
 
 function edgesOf(element: Element): Edges {
@@ -104,7 +109,10 @@ export function useViewParams(): ViewParams {
   // The targets of the latest changeView or reveal, held until the page has rendered what they
   // wait for. A changeView's are keyed by its write's params, so no earlier or later write can
   // fire them; a reveal's key is null, since it writes no params and waits only for its target.
-  const pending = useRef<{ key: string | null; targets: ViewTargets } | null>(null);
+  // A reveal of the first sentence looks once, on the commit it asks for: waiting on would move
+  // the page later, when a sentence appears with no tap behind it.
+  const pending = useRef<{ key: string | null; targets: ViewTargets; once?: boolean } | null>(null);
+  const [, askForCommit] = useReducer((commits: number) => commits + 1, 0);
 
   const setParams = useCallback(
     (next: URLSearchParams) => {
@@ -132,16 +140,33 @@ export function useViewParams(): ViewParams {
     }
   }, []);
 
+  const revealFirstSentence = useCallback((from: Element | null) => {
+    if (!from) return;
+    const sentence = () => scrollerOf(from).querySelector('[data-reveal-sentence]');
+    pending.current = {
+      key: null,
+      once: true,
+      targets: {
+        control: () => sentence()?.closest('[data-reveal-part]') ?? null,
+        listStart: sentence,
+      },
+    };
+    // The caller may have just set a sentence above the first one showing, so the choice waits
+    // for that commit; a tap that changes no state must still get one.
+    askForCommit();
+  }, []);
+
   // Every commit, before the browser paints, so the new list or sentence appears already in
   // place rather than drawn once and then moved.
   useLayoutEffect(() => {
     const current = pending.current;
     if (!current || (current.key !== null && params.toString() !== current.key)) return;
     const list = current.targets.listStart();
-    if (!list) return;
+    if (!list && !current.once) return;
     pending.current = null;
+    if (!list) return;
     scrollToTargets(current.targets, list);
   });
 
-  return { params, setParams, changeView, reveal };
+  return { params, setParams, changeView, reveal, revealFirstSentence };
 }

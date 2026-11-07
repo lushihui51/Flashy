@@ -6,6 +6,8 @@ import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/ap
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
@@ -45,9 +47,9 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
           {isNotFound(subjectQuery.error) ? (
             <p className="text-(--color-aside)">Subject not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-wrong)">
-              Could not load this subject.
-            </p>
+            <FormPart sentence="Could not load this subject." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -100,7 +102,8 @@ export function SubjectFormBody({
 }: SubjectFormBodyProps) {
   const queryClient = useQueryClient();
   const formId = useId();
-  const { reveal } = useViewParams();
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const [name, setName] = useState(original?.name ?? '');
   const [description, setDescription] = useState(original?.description ?? '');
@@ -109,8 +112,6 @@ export function SubjectFormBody({
   const [icon, setIcon] = useState(original?.icon ?? '');
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const nameErrorRef = useRef<HTMLSpanElement>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -135,18 +136,9 @@ export function SubjectFormBody({
     onCancel();
   };
 
-  const revealName = () => {
-    reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
-  };
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      setNameError('Name is required.');
-      revealName();
-      return;
-    }
     setNameError(null);
     setFormError(null);
     setSubmitting(true);
@@ -177,7 +169,7 @@ export function SubjectFormBody({
       // A taken name is fixed at the input, so it is said there rather than in the bar.
       if (err instanceof ApiDetailError && err.detail.code === 'subject_name_taken') {
         setNameError(sentence);
-        revealName();
+        revealFirstSentence(rootRef.current);
       } else {
         setFormError(sentence);
       }
@@ -217,30 +209,26 @@ export function SubjectFormBody({
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div ref={rootRef} className="flex flex-col gap-4 p-4">
       <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
         {mode === 'create' ? 'New subject' : 'Edit subject'}
       </h1>
 
       <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-label text-(--color-aside)">Name</span>
-          <input
-            ref={nameInputRef}
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setNameError(null);
-            }}
-            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
-          />
-          {nameError && (
-            <span ref={nameErrorRef} role="alert" className="text-sm text-(--color-wrong)">
-              {nameError}
-            </span>
-          )}
-        </label>
+        <FormPart sentence={nameError} look="wrong" className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-(--color-aside)">Name</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameError(null);
+              }}
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            />
+          </label>
+        </FormPart>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-label text-(--color-aside)">Description</span>
@@ -285,17 +273,15 @@ export function SubjectFormBody({
         <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
           Cancel
         </button>
-        {/* A blank name reads as not pressable yet, but stays pressable: pressing it is how
-            "Name is required." appears. */}
-        <button
-          type="submit"
+        {/* Pressing it while the name is blank is how "Name is required." appears. */}
+        <SubmitButton
+          ready={name.trim() !== ''}
+          busy={submitting}
+          onNotReady={() => setNameError('Name is required.')}
           form={formId}
-          disabled={submitting}
-          aria-disabled={name.trim() === '' || undefined}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {mode === 'create' ? 'Create' : 'Save'}
-        </button>
+        </SubmitButton>
       </FormBar>
 
       <SubjectIconPicker

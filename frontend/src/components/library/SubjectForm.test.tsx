@@ -170,7 +170,7 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
   });
   afterEach(() => scrollBy.mockRestore());
 
-  it('a blank-name Create renders its sentence inside the label and moves the page once', async () => {
+  it("a blank-name Create renders its sentence in the Name input's part, outside the label, and moves the page once", async () => {
     const user = userEvent.setup();
     renderForm('/subjects/new');
 
@@ -178,7 +178,8 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const sentence = await screen.findByText('Name is required.');
-    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });
 
@@ -219,7 +220,7 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });
 
-  it('a subject_name_taken refusal renders inside the label, not in the bar, and moves the page once', async () => {
+  it("a subject_name_taken refusal renders in the Name input's part, not in the bar, and moves the page once", async () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
@@ -236,7 +237,8 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const sentence = await screen.findByText('A subject with this name already exists.');
-    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
     expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });

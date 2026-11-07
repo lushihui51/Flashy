@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
@@ -8,6 +8,8 @@ import DeckPicker from 'src/components/library/DeckPicker';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -42,9 +44,9 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
           {isNotFound(cardQuery.error) ? (
             <p className="text-(--color-aside)">Card not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-wrong)">
-              Could not load this card.
-            </p>
+            <FormPart sentence="Could not load this card." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -92,9 +94,6 @@ function CardStandaloneFormBody({
   const location = useLocation();
   const queryClient = useQueryClient();
   const formId = useId();
-  const { reveal } = useViewParams();
-  const deckInputRef = useRef<HTMLInputElement>(null);
-  const deckErrorRef = useRef<HTMLSpanElement>(null);
 
   const [deckId, setDeckId] = useState(initialDeckId);
   const [deckError, setDeckError] = useState<string | null>(null);
@@ -140,7 +139,6 @@ function CardStandaloneFormBody({
       ? Object.values(values).some((v) => v.trim() !== '')
       : !!original && Object.entries(values).some(([k, v]) => v !== (original.values[k] ?? ''));
 
-  const canSubmit = deckId !== null && !!deckQuery.data && !submitting;
 
   const leaveByCancel = () => navigate(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
 
@@ -188,10 +186,6 @@ function CardStandaloneFormBody({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!deckId) {
-      setDeckError('Choose a deck to create a card.');
-      reveal({ control: () => deckInputRef.current, listStart: () => deckErrorRef.current });
-    }
     if (!deckId || !deckQuery.data) return;
     setFormError(null);
     setSubmitting(true);
@@ -249,7 +243,7 @@ function CardStandaloneFormBody({
             </span>
           </div>
         ) : (
-          <div className="flex flex-col gap-1.5">
+          <FormPart sentence={deckError} look="wrong" className="flex flex-col gap-1.5">
             <DeckPicker
               items={decksQuery.data ?? []}
               selected={selectedDeck}
@@ -260,14 +254,8 @@ function CardStandaloneFormBody({
               onSelectCreate={handleCreateNewDeck}
               createLabel="New deck…"
               placeholder="Deck"
-              inputRef={deckInputRef}
             />
-            {deckError && (
-              <span ref={deckErrorRef} role="alert" className="text-sm text-(--color-wrong)">
-                {deckError}
-              </span>
-            )}
-          </div>
+          </FormPart>
         )}
 
         {deckId && deckQuery.data && (
@@ -294,15 +282,16 @@ function CardStandaloneFormBody({
         <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
           Cancel
         </button>
-        <button
-          type="submit"
+        <SubmitButton
+          ready={deckId !== null && !!deckQuery.data}
+          busy={submitting}
+          onNotReady={() => {
+            if (!deckId) setDeckError('Choose a deck to create a card.');
+          }}
           form={formId}
-          disabled={submitting}
-          aria-disabled={!canSubmit || undefined}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
         >
           {mode === 'create' ? 'Create' : 'Save'}
-        </button>
+        </SubmitButton>
       </FormBar>
 
       <ConfirmDialog

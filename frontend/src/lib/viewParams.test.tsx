@@ -461,4 +461,102 @@ describe('useViewParams', () => {
       expect(scrollBy).toHaveBeenCalledWith(0, 970 - 754);
     });
   });
+
+  describe('revealFirstSentence', () => {
+    function SentenceStub({ sentences }: { sentences: ReactNode }) {
+      const { revealFirstSentence } = useViewParams();
+      const rootRef = useRef<HTMLDivElement>(null);
+      const [shown, setShown] = useState(false);
+      return (
+        <div ref={rootRef}>
+          {headerAndBar}
+          {shown && (
+            <div data-reveal-part data-rect="300,360">
+              <p data-reveal-sentence data-rect="340,360">
+                Set by the tap
+              </p>
+            </div>
+          )}
+          {sentences}
+          <button type="button" onClick={() => revealFirstSentence(rootRef.current)}>
+            Reveal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShown(true);
+              revealFirstSentence(rootRef.current);
+            }}
+          >
+            Set and reveal
+          </button>
+          <button type="button" onClick={() => setShown(true)}>
+            Set
+          </button>
+        </div>
+      );
+    }
+
+    const lowerPart = (
+      <div data-reveal-part data-rect="900,980">
+        <p data-reveal-sentence data-rect="960,980">
+          Lower
+        </p>
+      </div>
+    );
+
+    beforeEach(() => {
+      vi.stubGlobal('innerHeight', 844);
+    });
+
+    it('takes the sentence and its part as the targets of one scroll', async () => {
+      mountAtLibrary(<SentenceStub sentences={lowerPart} />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reveal' }));
+
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 980 - 754);
+    });
+
+    it('chooses after the commit, so a sentence set in the same tap above one showing is the first', async () => {
+      mountAtLibrary(<SentenceStub sentences={lowerPart} />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Set and reveal' }));
+
+      // Already inside the band, where the lower sentence would have moved the page by 226.
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('does nothing with no sentence showing, and nothing when one appears later', async () => {
+      mountAtLibrary(<SentenceStub sentences={null} />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reveal' }));
+      expect(scrollBy).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Set' }));
+      expect(scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('looks only inside the nearest marked scroller of the element it is given', async () => {
+      const overlayScrollBy = vi.spyOn(Element.prototype, 'scrollBy').mockImplementation(() => {});
+      mountAtLibrary(
+        <>
+          <p data-reveal-sentence data-rect="10,30">
+            Behind the overlay
+          </p>
+          <div data-testid="overlay" data-reveal-scroller>
+            <SentenceStub sentences={lowerPart} />
+          </div>
+        </>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reveal' }));
+
+      expect(overlayScrollBy).toHaveBeenCalledTimes(1);
+      expect(overlayScrollBy).toHaveBeenCalledWith(0, 980 - 754);
+      expect(overlayScrollBy.mock.contexts[0]).toBe(screen.getByTestId('overlay'));
+      expect(scrollBy).not.toHaveBeenCalled();
+    });
+  });
 });

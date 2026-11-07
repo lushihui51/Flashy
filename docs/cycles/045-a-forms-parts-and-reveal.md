@@ -96,7 +96,7 @@ Read in the code: nothing beyond the Debrief. The 500-tall result above bears on
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -186,7 +186,31 @@ type SubmitButtonProps = {
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run` over the seven named files: 7 files passed, 157 tests passed, 2 todo, the two being `DeckEditor.tsx` and `DeckConfigurationEditor.tsx` in `formParts.test.ts`.
+- The `grep -n` over the three forms printed nothing, exit 1.
+
+Commit checks over the whole frontend: `npx vitest run` 73 files passed, 857 tests passed, 2 todo; `npm run lint` clean; `npm run build` exit 0.
+
+Live, in headless Chromium by the mouse at 390 by 300, the bar's top at 219, no page errors:
+
+- New subject, scrolled to the foot: Create moved the window from 291 to 63, "Name is required." at 192 to 212. Enter in the Name input gave the same result and stayed on the page. A taken name gave the same place with "A subject with this name already exists."
+- New subject over New deck: Create moved the overlay from 209 to 79, the sentence at 78, and the window stayed at 120.
+- New card, at the foot: "Choose a deck to create a card." appeared at 193 to 213, in view, with the window unmoved at 37.
+- New practice with a blank name, at the foot: Create moved the window from 1471 to 63, the name's sentence at 192 to 212, over the Selected sentence also showing. With a name and nothing selected, the Selected sentence was already in view at 181 to 203 and nothing moved.
+
+Departures from guidance: none. Additions and consequences the file does not state:
+
+- `FormPart`'s `aside` look is `text-sm`, but "Select at least one configuration to practice." is `text-body` today, and the file also says no sentence's look changes. Both constraints hold: `PracticeCreatePage` overrides the size on that one sentence through the wrapper's `className`, and Chromium measures it at 15px over 22.5px, its size before this task. A one-pixel change to `text-sm` would drop the override.
+- The scan forbids `role="alert"` in the form files, so the sentences that are not about a part also go through `FormPart`, with no children: "Could not load this subject.", "Could not load this card." and "Could not load configurations."
+- "Could not load configurations." therefore carries the sentence mark. With a name typed, nothing selected and the list failed, Create now brings that sentence on screen rather than the Selected section's.
+- `ConfigurationPickList`'s row sentence, the stale configuration's, keeps its own `role="alert"` and no mark, since that file is outside Files. A tap never reveals it, as before; its refusal moved nothing before this task either.
+- Two tests in `SubjectForm.test.tsx` asserted the sentence sits inside the label. The Details put it outside, so they now assert it sits in the Name input's part and outside the label.
+- `handleSubmit` in `SubjectForm` no longer checks for a blank name: Enter reaches `SubmitButton` as a click on the form's default button, which the live run above shows.
+- `revealFirstSentence` always asks for a commit through a reducer in `useViewParams`, and looks once on that commit. This chooses after a sentence set in the same tap, still scrolls on a tap that changes nothing, and never fires later when a sentence appears with no tap behind it.
+
+Read in the code: the Selected section in `PracticeCreatePage`, for the size override above.
 
 ### T3 — The deck and configuration forms' parts
 

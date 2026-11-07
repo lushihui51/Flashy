@@ -11,6 +11,8 @@ import ConfigurationPickList from 'src/components/practice/ConfigurationPickList
 import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
@@ -39,24 +41,20 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const { params, setParams, changeView, reveal } = useViewParams();
+  const { params, setParams, changeView } = useViewParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
   const selectedHeadingId = useId();
 
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const nameHintRef = useRef<HTMLParagraphElement>(null);
-  const selectedHeadingRef = useRef<HTMLHeadingElement>(null);
-  const selectedHintRef = useRef<HTMLParagraphElement>(null);
   const filtersRef = useRef<HTMLDivElement>(null);
   // The pick list, its empty sentence or its failure sentence: whichever shows for the
   // current filters, so a reveal after a filter change finds where the list starts, and
   // nothing while the old list stands in for the new one.
   const pickListRef = useRef<HTMLDivElement>(null);
   const emptyRef = useRef<HTMLDivElement>(null);
-  const failureRef = useRef<HTMLParagraphElement>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
 
   const subjectId = params.get('subject');
   const deckId = params.get('deck');
@@ -258,22 +256,11 @@ export default function PracticeCreatePage() {
   };
 
   const selectedCount = selectedIds.length;
+  const nothingSelected = selectedCount === 0;
   const nameMissing = name.trim() === '';
-  const canCreate = selectedCount > 0 && !nameMissing && !createMutation.isPending;
   const filtered = subjectId !== null || deckId !== null;
 
   const submit = () => {
-    if (!canCreate) {
-      if (nameMissing) {
-        reveal({ control: () => nameInputRef.current, listStart: () => nameHintRef.current });
-      } else {
-        reveal({
-          control: () => selectedHeadingRef.current,
-          listStart: () => selectedHintRef.current,
-        });
-      }
-      return;
-    }
     setRowError(null);
     setTopError(null);
     setSaveError(null);
@@ -286,24 +273,22 @@ export default function PracticeCreatePage() {
         New practice
       </h1>
 
-      <div className="mt-4 flex flex-col gap-1.5">
+      <FormPart
+        sentence={nameMissing ? 'Give this practice a name to create it.' : null}
+        look="aside"
+        className="mt-4 flex flex-col gap-1.5"
+      >
         <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
           Name
         </label>
         <input
-          ref={nameInputRef}
           id={nameInputId}
           type="text"
           value={name}
           onChange={(event) => changeName(event.target.value)}
           className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
         />
-        {nameMissing && (
-          <p ref={nameHintRef} className="text-sm text-(--color-aside)">
-            Give this practice a name to create it.
-          </p>
-        )}
-      </div>
+      </FormPart>
 
       <div ref={filtersRef} className="mt-3">
         <PracticeFilterBar
@@ -320,9 +305,11 @@ export default function PracticeCreatePage() {
       </div>
 
       {configsQuery.isError && (
-        <p ref={failureRef} role="alert" className="text-sm text-(--color-wrong)">
-          Could not load configurations.
-        </p>
+        <div ref={failureRef}>
+          <FormPart sentence="Could not load configurations." look="wrong">
+            {null}
+          </FormPart>
+        </div>
       )}
 
       {configsQuery.data && groups.length === 0 ? (
@@ -367,25 +354,32 @@ export default function PracticeCreatePage() {
         </div>
       )}
 
-      <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1.5">
-        <h2 ref={selectedHeadingRef} id={selectedHeadingId} className="text-label text-(--color-aside)">
-          Selected
-        </h2>
-        {selectedCount === 0 ? (
-          <p ref={selectedHintRef} className="text-body text-(--color-aside)">
-            Select at least one configuration to practice.
-          </p>
-        ) : allConfigsQuery.isError ? (
-          <p role="alert" className="text-sm text-(--color-wrong)">
-            Could not load your selected configurations.
-          </p>
-        ) : (
-          // Nothing to hold until the selected ids resolve, and an empty block would draw a
-          // bare outline.
-          selectedConfigs.length > 0 && (
+      <section aria-labelledby={selectedHeadingId} className="mt-3">
+        <FormPart
+          sentence={
+            nothingSelected
+              ? 'Select at least one configuration to practice.'
+              : allConfigsQuery.isError
+                ? 'Could not load your selected configurations.'
+                : null
+          }
+          look={nothingSelected ? 'aside' : 'wrong'}
+          // This sentence reads at body size, larger than a form's other sentences.
+          className={
+            nothingSelected
+              ? 'flex flex-col gap-1.5 [&>[data-reveal-sentence]]:text-body [&>[data-reveal-sentence]]:[line-height:inherit]'
+              : 'flex flex-col gap-1.5'
+          }
+        >
+          <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
+            Selected
+          </h2>
+          {/* Nothing to hold until the selected ids resolve, and an empty block would draw a
+              bare outline. */}
+          {!allConfigsQuery.isError && selectedConfigs.length > 0 && (
             <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
-          )
-        )}
+          )}
+        </FormPart>
       </section>
 
       <FormBar
@@ -399,15 +393,13 @@ export default function PracticeCreatePage() {
         >
           Cancel
         </button>
-        <button
-          type="button"
-          disabled={createMutation.isPending}
-          aria-disabled={!canCreate || undefined}
-          onClick={submit}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+        <SubmitButton
+          ready={selectedCount > 0 && !nameMissing}
+          busy={createMutation.isPending}
+          onPress={submit}
         >
           Create
-        </button>
+        </SubmitButton>
       </FormBar>
     </div>
   );
