@@ -84,9 +84,6 @@ export type SubjectFormBodyProps = {
   /** Delete confirmed and succeeded. Edit mode only — the overlay never renders the
    * Delete action, so it doesn't need to pass this. */
   onDelete?: () => void;
-  /** True when the form is opened in a sheet that scrolls on its own, over another form: a
-   * tap of Create then leaves the page beneath where it is. */
-  inOverlay?: boolean;
 };
 
 /** Create and edit share one form — mode only changes what's prefilled, the submit
@@ -100,7 +97,6 @@ export function SubjectFormBody({
   onSuccess,
   onCancel,
   onDelete,
-  inOverlay = false,
 }: SubjectFormBodyProps) {
   const queryClient = useQueryClient();
   const formId = useId();
@@ -140,7 +136,6 @@ export function SubjectFormBody({
   };
 
   const revealName = () => {
-    if (inOverlay) return;
     reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
   };
 

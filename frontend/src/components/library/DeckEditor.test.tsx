@@ -1058,18 +1058,23 @@ describe('DeckEditor — bringing a part of the form and its sentence on screen'
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });
 
-  it('a blank-name Create in the New subject overlay shows its sentence and moves nothing', async () => {
+  it("a blank-name Create in the New subject overlay scrolls the dialog's content once and the window not at all", async () => {
     mockSubjects();
+    const dialogScrollBy = vi.spyOn(Element.prototype, 'scrollBy');
     const user = userEvent.setup();
     renderEditor();
 
     await user.click(await screen.findByPlaceholderText('Subject'));
     await user.click(await screen.findByRole('option', { name: /New subject/ }));
-    const dialog = within(await screen.findByRole('dialog'));
+    const dialogElement = await screen.findByRole('dialog');
+    const dialog = within(dialogElement);
     await user.click(dialog.getByRole('button', { name: 'Create' }));
 
     expect(await dialog.findByText('Name is required.')).toBeInTheDocument();
+    expect(dialogScrollBy).toHaveBeenCalledTimes(1);
+    expect(dialogScrollBy.mock.contexts[0]).toBe(dialogElement);
     expect(scrollBy).not.toHaveBeenCalled();
+    dialogScrollBy.mockRestore();
   });
 
   it('Create with a blank Deck name and no subject says both, and moves the page once', async () => {

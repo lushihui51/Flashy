@@ -34,6 +34,7 @@ export default function FullScreenDialog({ open, onClose, ariaLabel, triggerRef,
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-(--color-ink)/50" />
         <Dialog.Content
+          data-reveal-scroller
           aria-label={ariaLabel}
           onCloseAutoFocus={(event) => {
             if (triggerRef?.current) {

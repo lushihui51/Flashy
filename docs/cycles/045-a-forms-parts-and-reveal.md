@@ -25,7 +25,7 @@ Judgement: The engineer judges on the live server at 390 wide: on Edit configura
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -39,6 +39,7 @@ None.
 
 - `frontend/index.html`
 - `frontend/src/components/ui/FullScreenDialog.tsx`
+- `frontend/src/lib/revealDelta.ts`
 - `frontend/src/lib/viewParams.ts`
 - `frontend/src/lib/viewParams.test.tsx`
 - `frontend/src/test/setup.ts`
@@ -71,7 +72,25 @@ LCD11 and LPD23, under ADR 097:
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run src/lib/viewParams.test.tsx src/components/library/SubjectForm.test.tsx src/components/library/DeckEditor.test.tsx`: 3 files passed, 116 tests passed.
+- `grep -c "data-reveal-scroller"` printed `1` for each of `frontend/index.html`, `frontend/src/components/ui/FullScreenDialog.tsx` and `frontend/src/test/setup.ts`.
+- `grep -n "window.scrollBy\|inOverlay"` over the three files printed nothing.
+- Live, New deck with New subject opened over it, in headless Chromium, driven by the mouse. The page behind was first scrolled to 120, the overlay then scrolled to its foot.
+  - At 390 by 500: the overlay overflows by only 9 pixels, so at its foot the Name input (96 to 142) already sits in the band above the bar (top 419). Create showed "Name is required." at 148 to 168, the scroll delta was 0 and the overlay stayed at 9. The overlay does not move at this size, because nothing it must show is off screen. The window stayed at 120 and was still at 120 after Cancel closed the overlay.
+  - At 390 by 300, added because 500 tall cannot show movement: the overlay moved from 209 to 105, the Name input landed at 0 to 46 and the sentence at 52 to 72, above the bar (top 219). The window stayed at 120 and was still at 120 after the overlay closed.
+  - Also added, the page as scroller: routed New subject at 390 by 300, scrolled to its foot, Create moved the window from 291 to 89 with the Name input at 114, under the header.
+
+Commit checks over the whole frontend: `npx vitest run` 70 files and 838 tests passed; `npm run lint` clean; `npm run build` exit 0.
+
+Departures from guidance: none. Additions the file does not state:
+
+- `frontend/src/test/setup.ts` stubs `Element.prototype.scrollBy`, which jsdom lacks, and makes `document.documentElement.scrollBy` call `window.scrollBy`, as Chromium does. `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx` and `PracticeCreatePage.test.tsx` spy on `window.scrollBy` and are outside these Files; they stay green unchanged, and their spies still see only a page reveal.
+- `frontend/src/lib/revealDelta.ts` joined Files with the engineer's approval, for its interface comment alone, which named `window.scrollBy`.
+- The existing DeckEditor test "moves nothing" is replaced by the overlay test the Details name. The "no marked ancestor" test calls `reveal` on a detached element through `renderHook`.
+
+Read in the code: nothing beyond the Debrief. The 500-tall result above bears on the cycle's Judgement and on T3's Done when, whose New deck line says Create moves the overlay at 500 tall; the Name input and the sentence are on screen there, with no movement.
 
 ### T2 — FormPart and SubmitButton
 

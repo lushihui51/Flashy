@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRef, useState, type ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { useViewParams, type ViewTargets } from 'src/lib/viewParams';
@@ -176,7 +176,7 @@ describe('useViewParams', () => {
     ) {
       return rectOf(this);
     });
-    scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
+    scrollBy = vi.spyOn(document.documentElement, 'scrollBy').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -411,6 +411,44 @@ describe('useViewParams', () => {
       // The list ends at 1020; the reveal never fires, since its sentence never renders.
       expect(scrollBy).toHaveBeenCalledTimes(1);
       expect(scrollBy).toHaveBeenCalledWith(0, 1020 - 754);
+    });
+
+    it('scrolls the marked element around the sentence, not the window, and ignores a mark outside it', async () => {
+      const windowScrollBy = vi.spyOn(window, 'scrollBy');
+      const overlayScrollBy = vi.spyOn(Element.prototype, 'scrollBy').mockImplementation(() => {});
+      mountAtLibrary(
+        <>
+          <div data-reveal-clear style={{ bottom: '0px' }} data-rect="100,844" />
+          <div data-testid="overlay" data-reveal-scroller>
+            <FormStub sentenceShown clears={<div data-reveal-clear style={{ bottom: '0px' }} data-rect="754,844" />} />
+          </div>
+        </>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+      // The band's bottom is the overlay's bar at 754, not the mark outside at 100.
+      expect(overlayScrollBy).toHaveBeenCalledTimes(1);
+      expect(overlayScrollBy).toHaveBeenCalledWith(0, 970 - 754);
+      expect(overlayScrollBy.mock.contexts[0]).toBe(screen.getByTestId('overlay'));
+      expect(scrollBy).not.toHaveBeenCalled();
+      expect(windowScrollBy).not.toHaveBeenCalled();
+    });
+
+    it('throws, naming the mark, when the sentence has no marked ancestor', () => {
+      const { result } = renderHook(() => useViewParams(), {
+        wrapper: ({ children }) => (
+          <RouterProvider
+            router={createMemoryRouter([{ path: '/', element: children }])}
+          />
+        ),
+      });
+      const detached = document.createElement('p');
+
+      expect(() =>
+        result.current.reveal({ control: () => null, listStart: () => detached }),
+      ).toThrow('data-reveal-scroller');
+      expect(scrollBy).not.toHaveBeenCalled();
     });
 
     it('replaces a changeView made before its commit', async () => {

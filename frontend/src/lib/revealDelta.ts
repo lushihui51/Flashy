@@ -15,7 +15,7 @@ export type RevealInput = {
 };
 
 /** The smallest vertical scroll that puts the control and the rows in view, as a delta
- * for `window.scrollBy`: negative to scroll up, 0 when they are in view already. When they
+ * for a scroller's `scrollBy`: negative to scroll up, 0 when they are in view already. When they
  * do not all fit between `bandTop` and `bandBottom`, the control lands on `bandTop`
  * and the rows follow as far as they fit; with no control, the first row lands there. */
 export function revealDelta({ bandTop, bandBottom, control, rows }: RevealInput): number {

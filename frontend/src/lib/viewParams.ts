@@ -15,12 +15,15 @@ export type ViewParams = {
   params: URLSearchParams;
   /** Writes `next` as the page's search params without moving the page. */
   setParams: (next: URLSearchParams) => void;
-  /** Writes `next` as a change to what the page's list shows, then moves the page only
-   * as far as it takes to show the control and the list's first rows. */
+  /** Writes `next` as a change to what the page's list shows, then moves the list's scroller
+   * only as far as it takes to show the control and the list's first rows. Throws when the list
+   * has no ancestor marked `data-reveal-scroller`. */
   changeView: (next: URLSearchParams, targets: ViewTargets) => void;
-  /** Moves the page only as far as it takes to show the control and the rows, within the
-   * band the marked elements leave clear, and writes nothing. `control` is the part of the
-   * form, `listStart` the element holding its sentence, null until it is rendered. */
+  /** Moves the sentence's scroller, the page or the overlay the form sits in, only as far as it
+   * takes to show the control and the rows, within the band the marked elements inside that
+   * scroller leave clear, and writes nothing. `control` is the part of the form, `listStart` the
+   * element holding its sentence, null until it is rendered. Throws when the sentence has no
+   * ancestor marked `data-reveal-scroller`. */
   reveal: (targets: ViewTargets) => void;
 };
 
@@ -39,14 +42,21 @@ function rowsOf(list: Element): Element[] {
   return [list];
 }
 
-/** The band a reveal keeps its targets in, between the page's elements marked
- * `data-reveal-clear`: `top` is the greatest stuck bottom among those stuck at the top, 0 with
+/** The nearest element at or above `element` that a reveal scrolls. Throws when there is none. */
+function scrollerOf(element: Element): Element {
+  const scroller = element.closest('[data-reveal-scroller]');
+  if (!scroller) throw new Error('A reveal found no ancestor marked data-reveal-scroller.');
+  return scroller;
+}
+
+/** The band a reveal keeps its targets in, between the elements inside `scroller` marked
+ * `data-reveal-clear`, in viewport coordinates: `top` is the greatest stuck bottom among those stuck at the top, 0 with
  * none, and `bottom` the least top among those stuck at the foot, the viewport's bottom with
  * none. */
-function bandTop(): { top: number; bottom: number } {
+function bandOf(scroller: Element): { top: number; bottom: number } {
   let top = 0;
   let bottom = window.innerHeight;
-  for (const element of document.querySelectorAll('[data-reveal-clear]')) {
+  for (const element of scroller.querySelectorAll('[data-reveal-clear]')) {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     // The side comes from `bottom` first: an element fixed at the foot reports a numeric `top`
@@ -70,11 +80,12 @@ function wholePixels(delta: number, top: number, bandTop: number): number {
   return top - above >= bandTop ? above : Math.floor(delta);
 }
 
-/** Scrolls by the whole pixels of `revealDelta` over the current band, `targets.control` and
- * the first rows of `list`, the element `targets.listStart` gave. */
+/** Scrolls the scroller of `list`, the element `targets.listStart` gave, by the whole pixels of
+ * `revealDelta` over that scroller's band, `targets.control` and the first rows of `list`. */
 function scrollToTargets(targets: ViewTargets, list: Element) {
+  const scroller = scrollerOf(list);
   const control = targets.control();
-  const band = bandTop();
+  const band = bandOf(scroller);
   const input = {
     bandTop: band.top,
     bandBottom: band.bottom,
@@ -83,7 +94,7 @@ function scrollToTargets(targets: ViewTargets, list: Element) {
   };
   const edges = input.control ? [input.control, ...input.rows] : input.rows;
   const top = Math.min(...edges.map((edge) => edge.top));
-  window.scrollBy(0, wholePixels(revealDelta(input), top, input.bandTop));
+  scroller.scrollBy(0, wholePixels(revealDelta(input), top, input.bandTop));
 }
 
 /** The one way a page reads and writes its own URL search params. A write replaces the

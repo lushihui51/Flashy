@@ -732,7 +732,6 @@ function DeckEditorBody({
           mode="create"
           subjectId={undefined}
           original={undefined}
-          inOverlay
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);
