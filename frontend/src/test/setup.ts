@@ -19,6 +19,12 @@ globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObse
 if (typeof window !== 'undefined') {
   window.scrollTo = () => {};
   window.scrollBy = () => {};
+  // jsdom has no Element.scrollBy. On <html> it moves the window, as it does in a browser, so a
+  // spy on the window sees a reveal of the page and not one of an overlay.
+  Element.prototype.scrollBy = () => {};
+  document.documentElement.scrollBy = ((x: number, y: number) =>
+    window.scrollBy(x, y)) as Element['scrollBy'];
+  document.documentElement.setAttribute('data-reveal-scroller', '');
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

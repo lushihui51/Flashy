@@ -160,32 +160,44 @@ export function boardToPayload(state: BoardState): ConfigPayloadArrays {
   };
 }
 
-/**
- * The backend's rules, restated for the form's Create or Save button
- * (`app/services/deck_practice_config.py` stays authoritative — this only decides whether
- * it is worth asking).
- *
- * Disjointness is absent on purpose: the board cannot express an overlap, so there is
- * nothing to check. Returns the first unmet rule as a sentence to show under the button,
- * or null when the config is saveable.
- */
-export function boardValidationError(state: BoardState): string | null {
+export const BOARD_PARTS = ['prompt_side', 'prompt_counts', 'answer_side', 'answer_counts'] as const;
+export type BoardPart = (typeof BOARD_PARTS)[number];
+export type BoardProblem = { part: BoardPart; sentence: string };
+
+/** The board's first problem in page order, prompt side, prompt counts, answer side,
+ * answer counts, or null when the board can be saved. */
+export function boardProblem(state: BoardState): BoardProblem | null {
+  // The backend's rules, restated only to decide whether a save is worth asking for;
+  // `app/services/deck_practice_config.py` stays authoritative. Disjointness is absent because
+  // the board cannot express an overlap.
   const promptFields = fieldsIn(state, 'prompt_fields');
   const answerFields = fieldsIn(state, 'answer_fields');
   const promptPool = fieldsIn(state, 'prompt_pool');
   const answerPool = fieldsIn(state, 'answer_pool');
 
-  if (promptPool.length > 0 && state.counts.prompt_pool.length === 0) {
-    return 'Check how many random prompt fields each card shows.';
-  }
-  if (answerPool.length > 0 && state.counts.answer_pool.length === 0) {
-    return 'Check how many random answer fields each card shows.';
-  }
   if (promptFields.length === 0 && promptPool.length === 0) {
-    return 'The prompt side needs at least one field — always shown or random draw.';
+    return {
+      part: 'prompt_side',
+      sentence: 'The prompt side needs at least one field — always shown or random draw.',
+    };
+  }
+  if (promptPool.length > 0 && state.counts.prompt_pool.length === 0) {
+    return {
+      part: 'prompt_counts',
+      sentence: 'Check how many random prompt fields each card shows.',
+    };
   }
   if (answerFields.length === 0 && answerPool.length === 0) {
-    return 'The answer side needs at least one field — always shown or random draw.';
+    return {
+      part: 'answer_side',
+      sentence: 'The answer side needs at least one field — always shown or random draw.',
+    };
+  }
+  if (answerPool.length > 0 && state.counts.answer_pool.length === 0) {
+    return {
+      part: 'answer_counts',
+      sentence: 'Check how many random answer fields each card shows.',
+    };
   }
   return null;
 }

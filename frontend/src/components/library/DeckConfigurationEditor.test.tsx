@@ -527,6 +527,9 @@ describe('DeckConfigurationEditor — create', () => {
     const create = screen.getByRole('button', { name: 'Create' });
 
     expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Name'), 'Recall');
     expect(screen.getByText(/prompt side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_fields');
@@ -537,7 +540,6 @@ describe('DeckConfigurationEditor — create', () => {
     expect(create).toHaveAttribute('aria-disabled', 'true');
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    // The name is derived once both sides have a field, so nothing is left to do.
     expect(create).not.toHaveAttribute('aria-disabled');
 
     await user.clear(screen.getByLabelText('Name'));
@@ -906,6 +908,82 @@ describe('DeckConfigurationEditor — bringing a part of the form and its senten
 
     expect(scrollBy).toHaveBeenCalledTimes(1);
     expect(bodies).toEqual([]);
+  });
+
+  it("a blank name's sentence renders under the Name input, and says nothing on the board", async () => {
+    mockLibrary();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    const sentence = screen.getByText('Give this configuration a name to create it.');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(screen.getByLabelText('Name'));
+    expect(screen.queryByText(/side needs at least one field/)).not.toBeInTheDocument();
+  });
+
+  it("a side's sentence renders in its side card, the card being the part", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+
+    const side = screen.getByRole('region', { name: 'Prompt side' });
+    const sentence = within(side).getByText(/prompt side needs at least one field/);
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Prompt side' }));
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Always shown' }));
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Random draw' }));
+    expect(screen.queryByText(/answer side needs at least one field/)).not.toBeInTheDocument();
+  });
+
+  it('with the name and a side both wrong, a tap reveals the name, and once a name is typed the side', async () => {
+    mockLibrary();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    const create = screen.getByRole('button', { name: 'Create' });
+
+    await user.click(create);
+
+    const nameSentence = screen.getByText('Give this configuration a name to create it.');
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(nameSentence);
+    expect(measured.mock.contexts).toContain(nameSentence.closest('[data-reveal-part]'));
+
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+    measured.mockClear();
+    await user.click(create);
+
+    const sideSentence = screen.getByText(/prompt side needs at least one field/);
+    expect(scrollBy).toHaveBeenCalledTimes(2);
+    expect(measured.mock.contexts).toContain(sideSentence);
+    expect(measured.mock.contexts).toContain(sideSentence.closest('[data-reveal-part]'));
+    measured.mockRestore();
+  });
+
+  it('a "Check how many…" sentence renders inside its "Each card shows" row, and a tap reveals it', async () => {
+    mockLibrary();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_pool');
+
+    const draw = screen.getByRole('region', { name: 'Answer · random draw' });
+    const sentence = within(draw).getByText('Check how many random answer fields each card shows.');
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(within(draw).getByRole('checkbox', { name: '1' }));
+    expect(part).toHaveTextContent('Each card shows');
+    expect(part).not.toContainElement(within(draw).getByRole('heading', { name: 'Random draw' }));
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(part);
+    measured.mockRestore();
   });
 
   it('a tap of Create with no deck chosen says nothing and moves nothing', async () => {

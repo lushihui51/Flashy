@@ -6,7 +6,8 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import SubjectForm from 'src/components/library/SubjectForm';
+import FullScreenDialog from 'src/components/ui/FullScreenDialog';
+import SubjectForm, { SubjectFormBody } from 'src/components/library/SubjectForm';
 
 const BASE = 'http://localhost:8000';
 
@@ -169,7 +170,7 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
   });
   afterEach(() => scrollBy.mockRestore());
 
-  it('a blank-name Create renders its sentence inside the label and moves the page once', async () => {
+  it("a blank-name Create renders its sentence in the Name input's part, outside the label, and moves the page once", async () => {
     const user = userEvent.setup();
     renderForm('/subjects/new');
 
@@ -177,8 +178,34 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const sentence = await screen.findByText('Name is required.');
-    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
     expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a blank-name Create in the overlay scrolls the dialog's content once and the window not at all", async () => {
+    const dialogScrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    const user = userEvent.setup();
+    renderWithProviders(
+      <FullScreenDialog open onClose={() => {}} ariaLabel="New subject">
+        <SubjectFormBody
+          mode="create"
+          subjectId={undefined}
+          original={undefined}
+          onSuccess={() => {}}
+          onCancel={() => {}}
+        />
+      </FullScreenDialog>,
+    );
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(await within(dialog).findByText('Name is required.')).toBeInTheDocument();
+    expect(dialogScrollBy).toHaveBeenCalledTimes(1);
+    expect(dialogScrollBy.mock.contexts[0]).toBe(dialog);
+    expect(scrollBy).not.toHaveBeenCalled();
+    dialogScrollBy.mockRestore();
   });
 
   it('a blank-name Save on Edit subject moves the page once', async () => {
@@ -193,7 +220,7 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });
 
-  it('a subject_name_taken refusal renders inside the label, not in the bar, and moves the page once', async () => {
+  it("a subject_name_taken refusal renders in the Name input's part, not in the bar, and moves the page once", async () => {
     server.use(
       http.post(`${BASE}/api/subjects`, () =>
         HttpResponse.json(
@@ -210,7 +237,8 @@ describe('SubjectForm — bringing the Name input and its sentence on screen', (
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     const sentence = await screen.findByText('A subject with this name already exists.');
-    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
     expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
     expect(scrollBy).toHaveBeenCalledTimes(1);
   });

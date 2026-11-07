@@ -127,13 +127,13 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Configuration | Moving a field on the board | "Move "<field>" to…" | The board | `BottomSheet`; `BoardSlot` |
 | Configuration | The deck's fields still loading | "Loading fields…" | New configuration; Edit configuration | `DeckConfigurationEditor` |
 | Configuration | A configuration name already taken | "A configuration with this name already exists." | New configuration; Edit configuration | `configuration_name_taken` |
-| Configuration | New configuration with a blank name | "Give this configuration a name to create it." | New configuration | `nameMissing` |
-| Configuration | Edit configuration with a blank name | "Give this configuration a name to save it." | Edit configuration | `nameMissing` |
+| Configuration | New configuration with a blank name | "Give this configuration a name to create it." | New configuration; under the Name input | `nameMissing` |
+| Configuration | Edit configuration with a blank name | "Give this configuration a name to save it." | Edit configuration; under the Name input | `nameMissing` |
 | Configuration | Switching the board's deck | "Fields belong to their own deck, so switching clears everything assigned here." | New configuration | `pendingDeck` |
-| Configuration | The prompt side with no field | "The prompt side needs at least one field — always shown or random draw." | New configuration; Edit configuration | `boardValidationError` |
-| Configuration | The answer side with no field | "The answer side needs at least one field — always shown or random draw." | New configuration; Edit configuration | `boardValidationError` |
-| Configuration | A prompt draw count that does not fit its area | "Check how many random prompt fields each card shows." | New configuration; Edit configuration | `boardValidationError` |
-| Configuration | An answer draw count that does not fit its area | "Check how many random answer fields each card shows." | New configuration; Edit configuration | `boardValidationError` |
+| Configuration | The prompt side with no field | "The prompt side needs at least one field — always shown or random draw." | New configuration; Edit configuration; at the top of the side | `boardProblem` |
+| Configuration | The answer side with no field | "The answer side needs at least one field — always shown or random draw." | New configuration; Edit configuration; at the top of the side | `boardProblem` |
+| Configuration | A prompt draw count that does not fit its area | "Check how many random prompt fields each card shows." | New configuration; Edit configuration; at the side's "Each card shows" row | `boardProblem` |
+| Configuration | An answer draw count that does not fit its area | "Check how many random answer fields each card shows." | New configuration; Edit configuration; at the side's "Each card shows" row | `boardProblem` |
 | Configuration | An empty "Not used" area | "Every field is assigned." | The board's Not used area | `FieldAssignmentBoard`; `unassigned` |
 | Configuration | Any other empty area on the board | "None yet." | The board's Always shown and Random draw areas | `FieldAssignmentBoard` |
 | Configuration | Confirming a configuration's deletion | "Delete this configuration?" | Deck page's Configurations tab | `pendingDelete` |

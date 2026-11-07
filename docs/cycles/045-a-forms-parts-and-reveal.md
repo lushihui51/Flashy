@@ -25,7 +25,7 @@ Judgement: The engineer judges on the live server at 390 wide: on Edit configura
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -39,6 +39,7 @@ None.
 
 - `frontend/index.html`
 - `frontend/src/components/ui/FullScreenDialog.tsx`
+- `frontend/src/lib/revealDelta.ts`
 - `frontend/src/lib/viewParams.ts`
 - `frontend/src/lib/viewParams.test.tsx`
 - `frontend/src/test/setup.ts`
@@ -71,13 +72,31 @@ LCD11 and LPD23, under ADR 097:
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run src/lib/viewParams.test.tsx src/components/library/SubjectForm.test.tsx src/components/library/DeckEditor.test.tsx`: 3 files passed, 116 tests passed.
+- `grep -c "data-reveal-scroller"` printed `1` for each of `frontend/index.html`, `frontend/src/components/ui/FullScreenDialog.tsx` and `frontend/src/test/setup.ts`.
+- `grep -n "window.scrollBy\|inOverlay"` over the three files printed nothing.
+- Live, New deck with New subject opened over it, in headless Chromium, driven by the mouse. The page behind was first scrolled to 120, the overlay then scrolled to its foot.
+  - At 390 by 500: the overlay overflows by only 9 pixels, so at its foot the Name input (96 to 142) already sits in the band above the bar (top 419). Create showed "Name is required." at 148 to 168, the scroll delta was 0 and the overlay stayed at 9. The overlay does not move at this size, because nothing it must show is off screen. The window stayed at 120 and was still at 120 after Cancel closed the overlay.
+  - At 390 by 300, added because 500 tall cannot show movement: the overlay moved from 209 to 105, the Name input landed at 0 to 46 and the sentence at 52 to 72, above the bar (top 219). The window stayed at 120 and was still at 120 after the overlay closed.
+  - Also added, the page as scroller: routed New subject at 390 by 300, scrolled to its foot, Create moved the window from 291 to 89 with the Name input at 114, under the header.
+
+Commit checks over the whole frontend: `npx vitest run` 70 files and 838 tests passed; `npm run lint` clean; `npm run build` exit 0.
+
+Departures from guidance: none. Additions the file does not state:
+
+- `frontend/src/test/setup.ts` stubs `Element.prototype.scrollBy`, which jsdom lacks, and makes `document.documentElement.scrollBy` call `window.scrollBy`, as Chromium does. `CardStandaloneForm.test.tsx`, `DeckConfigurationEditor.test.tsx` and `PracticeCreatePage.test.tsx` spy on `window.scrollBy` and are outside these Files; they stay green unchanged, and their spies still see only a page reveal.
+- `frontend/src/lib/revealDelta.ts` joined Files with the engineer's approval, for its interface comment alone, which named `window.scrollBy`.
+- The existing DeckEditor test "moves nothing" is replaced by the overlay test the Details name. The "no marked ancestor" test calls `reveal` on a detached element through `renderHook`.
+
+Read in the code: nothing beyond the Debrief. The 500-tall result above bears on the cycle's Judgement and on T3's Done when, whose New deck line says Create moves the overlay at 500 tall; the Name input and the sentence are on screen there, with no movement.
 
 ### T2 — FormPart and SubmitButton
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -167,13 +186,37 @@ type SubmitButtonProps = {
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run` over the seven named files: 7 files passed, 157 tests passed, 2 todo, the two being `DeckEditor.tsx` and `DeckConfigurationEditor.tsx` in `formParts.test.ts`.
+- The `grep -n` over the three forms printed nothing, exit 1.
+
+Commit checks over the whole frontend: `npx vitest run` 73 files passed, 857 tests passed, 2 todo; `npm run lint` clean; `npm run build` exit 0.
+
+Live, in headless Chromium by the mouse at 390 by 300, the bar's top at 219, no page errors:
+
+- New subject, scrolled to the foot: Create moved the window from 291 to 63, "Name is required." at 192 to 212. Enter in the Name input gave the same result and stayed on the page. A taken name gave the same place with "A subject with this name already exists."
+- New subject over New deck: Create moved the overlay from 209 to 79, the sentence at 78, and the window stayed at 120.
+- New card, at the foot: "Choose a deck to create a card." appeared at 193 to 213, in view, with the window unmoved at 37.
+- New practice with a blank name, at the foot: Create moved the window from 1471 to 63, the name's sentence at 192 to 212, over the Selected sentence also showing. With a name and nothing selected, the Selected sentence was already in view at 181 to 203 and nothing moved.
+
+Departures from guidance: none. Additions and consequences the file does not state:
+
+- `FormPart`'s `aside` look is `text-sm`, but "Select at least one configuration to practice." is `text-body` today, and the file also says no sentence's look changes. Both constraints hold: `PracticeCreatePage` overrides the size on that one sentence through the wrapper's `className`, and Chromium measures it at 15px over 22.5px, its size before this task. A one-pixel change to `text-sm` would drop the override.
+- The scan forbids `role="alert"` in the form files, so the sentences that are not about a part also go through `FormPart`, with no children: "Could not load this subject.", "Could not load this card." and "Could not load configurations."
+- "Could not load configurations." therefore carries the sentence mark. With a name typed, nothing selected and the list failed, Create now brings that sentence on screen rather than the Selected section's.
+- `ConfigurationPickList`'s row sentence, the stale configuration's, keeps its own `role="alert"` and no mark, since that file is outside Files. A tap never reveals it, as before; its refusal moved nothing before this task either.
+- Two tests in `SubjectForm.test.tsx` asserted the sentence sits inside the label. The Details put it outside, so they now assert it sits in the Name input's part and outside the label.
+- `handleSubmit` in `SubjectForm` no longer checks for a blank name: Enter reaches `SubmitButton` as a click on the form's default button, which the live run above shows.
+- `revealFirstSentence` always asks for a commit through a reducer in `useViewParams`, and looks once on that commit. This chooses after a sentence set in the same tap, still scrolls on a tap that changes nothing, and never fires later when a sentence appears with no tap behind it.
+
+Read in the code: the Selected section in `PracticeCreatePage`, for the size override above.
 
 ### T3 — The deck and configuration forms' parts
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -233,4 +276,35 @@ export function boardProblem(state: BoardState): BoardProblem | null;
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run` over the four named files: 4 files passed, 143 tests passed, no `todo`.
+- `grep -rn "boardValidationError" frontend/src docs/vocabulary.md` printed nothing, exit 1.
+- The `grep -n` over `DeckEditor.tsx` and `DeckConfigurationEditor.tsx` printed nothing, exit 1.
+- Live, in headless Chromium by the mouse, no page errors. The header's bottom is at 114. Edit configuration ran at 390 by 844, its bar's top at 763:
+  - Name cleared and the answer side emptied, at the foot: Save moved the window from 133 to 98, the Name input at 140 to 186 and "Give this configuration a name to save it." at 192 to 212. The answer side's sentence did not show.
+  - With a name typed, at the foot: the Answer side's card at 515 to 747 and its sentence at 556 to 606, under the heading and above "Always shown". They were already on screen, so Save moved nothing. At 390 by 500 from the top of the page, Save moved the window from 0 to 485, the card's top at 187 and the sentence at 228 to 278, above the bar's top at 419.
+  - A field in the answer side's random draw with no count checked: the "Each card shows" row at 669 to 688 and the sentence right under it at 700 to 740. From the top of the page, Save moved the window from 0 to 134, the sentence at 723 to 763.
+  - **The 500-tall line does not hold as written; it needs your judgement.** New deck at 390 by 500, page at 120, New subject over it at its foot: the overlay overflows by 9 pixels, so the Name input (96 to 142) and "Name is required." (148 to 168) are on screen at its foot and Create moved it 0. A reveal moves only as far as it takes, so I changed no code for this. At 390 by 300 Create moved the overlay from 209 to 79, the Name input at 26 to 72 and the sentence at 78 to 98. The window stayed at 120 in both, and after the overlay closed.
+  - A not-ready Create from the foot: New practice with the name cleared, 927 to 63, sentence at 192 to 212. New card at 300 tall, sentence at 193 to 213, in view, window unmoved. New subject at 300 tall, 291 to 63, sentence at 192 to 212. New deck at 500 tall, 194 to 63, sentence at 192 to 212. New deck with a field's name blanked, at 500 tall: the sentence at 247 to 279, in view, window unmoved.
+  - The bar at the foot, lowest content against the bar's top: New practice 747 against 763, New card 187 against 219, New subject 170 against 219, New deck 338 against 419, Edit configuration 390 against 419. With a failed save's sentence in the bar: New deck 290 against 371, Edit configuration 342 against 371.
+- `npx vitest run`: 73 files passed, 864 tests passed.
+
+Commit checks over the whole frontend: `npx vitest run` as above; `npm run lint` clean; `npm run build` exit 0.
+
+**A row the check wrote to the dev database.** My script tapped Create on New deck expecting it not to be ready, but the form starts with Term and Definition filled in, so it saved a deck: "X", id `064674c2-ffc3-4d41-8fbc-9284d5c04c0f`, in subject CompTIA A+, no cards. AGENTS.md forbids deleting rows after a browser check, so it is still there, for you to keep or delete. From then on the script failed every write in the browser with a 500, and the failed-save results above come from that.
+
+How the check was set up: no seeded configuration belongs to a deck of five fields, and I wrote none. The browser served Edit configuration a made-up configuration on the real deck Reformer Repertoire, which has five fields, and no Save reached the server.
+
+Departures from guidance: none. Consequences and additions the file does not state:
+
+- New configuration now says the name first. A new form's name stays blank until both sides have a field, so with a deck chosen it reads "Give this configuration a name to create it." where it used to read the prompt side's sentence, and a tap with only the prompt side filled still asks for a name. The Details require this. "Create reads not ready…" in `DeckConfigurationEditor.test.tsx` now types a name first, to reach each board sentence.
+- A side's sentence comes after the side's two areas in the DOM and is drawn above them through `order-1`. `FormPart` draws its sentence after its children, and the whole side card must be the part. A screen reader therefore reads the sentence after the areas, while the screen shows it under the heading. The other way to keep the sentence's place is a change to `FormPart`, which is outside Files.
+- Each field's "Name is required." and "Duplicate name" now carry `role="alert"`, as `FormPart`'s `wrong` look has it; they had none, so a screen reader now announces them.
+- The Name input on the configuration form lost `aria-describedby`, since `FormPart` gives its sentence no id. It keeps `aria-invalid`, and the sentence is still announced as an alert.
+- "Could not load this deck." and "Could not load this deck configuration." go through `FormPart` with no children, since the scan forbids `role="alert"` in these files, so they carry the sentence mark.
+- Drawings 4 and 31 draw the Name above the Deck and "Not used" below the sides. The form has the Deck first and "Not used" above the sides, and I left that order as it is: the Details place only the sentences, and cycle 027 kept the same order. Moving them would not change which sentence comes first.
+- Two tests in `DeckEditor.test.tsx` asserted the sentence sits inside the label. They now assert it sits in the input's part and outside the label, as T2 did for `SubjectForm`. A new test covers a field's row as its part.
+- `docs/vocabulary.md` quotes "Each card shows" inside the Where text, as `docs/rules/vocabulary-rules.md` requires of words on screen.
+
+Read in the code: `sideCard` in `FieldAssignmentBoard.tsx`, for the `order-1` above.

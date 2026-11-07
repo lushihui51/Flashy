@@ -12,8 +12,8 @@ import DeckPicker from 'src/components/library/DeckPicker';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import {
   boardFromConfig,
+  boardProblem,
   boardToPayload,
-  boardValidationError,
   defaultConfigurationName,
   emptyBoard,
   hasAnyAssignment,
@@ -30,6 +30,8 @@ import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
@@ -82,9 +84,9 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
         {isNotFound(configQuery.error) ? (
           <p className="text-(--color-aside)">Deck configuration not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-wrong)">
-            Could not load this deck configuration.
-          </p>
+          <FormPart sentence="Could not load this deck configuration." look="wrong">
+            {null}
+          </FormPart>
         )}
       </div>
     );
@@ -136,11 +138,8 @@ function DeckConfigurationEditorBody({
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
-  const { reveal } = useViewParams();
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const nameErrorRef = useRef<HTMLSpanElement>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const hintRef = useRef<HTMLParagraphElement>(null);
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
@@ -211,7 +210,7 @@ function DeckConfigurationEditorBody({
       // the input rather than in the bar.
       if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
         setNameError(sentence);
-        reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
+        revealFirstSentence(rootRef.current);
       } else {
         setSaveError(sentence);
       }
@@ -230,35 +229,32 @@ function DeckConfigurationEditorBody({
     else applyDeck(next);
   };
 
-  const validationError = board ? boardValidationError(board) : 'Choose a deck first.';
   const nameMissing = name.trim() === '';
-  const canSave =
-    !!deckId && !!board && !nameMissing && !validationError && !saveMutation.isPending;
+  // A blank name is said first, at the top of the page; the board says its problem once there is
+  // a name. Neither is said until the chosen deck's board has loaded.
+  const nameSentence =
+    nameError ??
+    (board && nameMissing
+      ? mode === 'edit'
+        ? 'Give this configuration a name to save it.'
+        : 'Give this configuration a name to create it.'
+      : null);
+  const problem = board && !nameMissing ? boardProblem(board) : null;
+  const ready = board !== null && !nameMissing && problem === null;
 
-  const handleSaveClick = () => {
-    if (!canSave) {
-      // No hint shows until the chosen deck's board has loaded, so such a tap moves nothing.
-      if (!hintRef.current) return;
-      reveal({
-        control: () => (validationError ? boardRef.current : nameInputRef.current),
-        listStart: () => hintRef.current,
-      });
-      return;
-    }
+  const handleSave = () => {
     setNameError(null);
     setSaveError(null);
     saveMutation.mutate();
   };
 
   return (
-    <div className="p-4">
+    <div ref={rootRef} className="p-4">
       <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
         {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
       </h1>
 
       <div className="mt-4 flex flex-col gap-3">
-        {/* Label and control are siblings, not a wrapping <label>: the inline error below
-            would otherwise become part of the field's own accessible name. */}
         <div
           className={mode === 'edit' ? 'flex items-baseline gap-2.5' : 'flex flex-col gap-1.5'}
         >
@@ -290,12 +286,15 @@ function DeckConfigurationEditorBody({
         </div>
 
         {deckId && (
-          <div className="flex flex-col gap-1.5">
+          <FormPart
+            sentence={nameSentence}
+            look={nameError ? 'wrong' : 'aside'}
+            className="flex flex-col gap-1.5"
+          >
             <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
               Name
             </label>
             <input
-              ref={nameInputRef}
               id={nameInputId}
               type="text"
               value={name}
@@ -304,30 +303,20 @@ function DeckConfigurationEditorBody({
                 setNameError(null);
               }}
               aria-invalid={nameError !== null}
-              aria-describedby={nameError ? `${nameInputId}-error` : undefined}
               className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
-            {nameError && (
-              <span
-                ref={nameErrorRef}
-                id={`${nameInputId}-error`}
-                role="alert"
-                className="text-sm text-(--color-wrong)"
-              >
-                {nameError}
-              </span>
-            )}
-          </div>
+          </FormPart>
         )}
       </div>
 
       {deckId && !deck && <p className="mt-4 text-(--color-aside)">Loading fields…</p>}
 
       {deck && board && (
-        <div ref={boardRef} className="mt-4">
+        <div className="mt-4">
           <FieldAssignmentBoard
             fieldDefs={deck.field_defs}
             state={board}
+            problem={problem}
             onMove={(fieldId: string, to: BoardSlot) =>
               setBoard((current) => (current ? moveField(current, fieldId, to) : current))
             }
@@ -336,15 +325,6 @@ function DeckConfigurationEditorBody({
             }
           />
         </div>
-      )}
-
-      {deck && board && (validationError || nameMissing) && (
-        <p ref={hintRef} className="mt-3 text-sm text-(--color-aside)">
-          {validationError ??
-            (mode === 'edit'
-              ? 'Give this configuration a name to save it.'
-              : 'Give this configuration a name to create it.')}
-        </p>
       )}
 
       <FormBar sentence={saveError}>
@@ -357,15 +337,9 @@ function DeckConfigurationEditorBody({
         >
           Cancel
         </button>
-        <button
-          type="button"
-          disabled={saveMutation.isPending}
-          aria-disabled={!canSave || undefined}
-          onClick={handleSaveClick}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
-        >
+        <SubmitButton ready={ready} busy={saveMutation.isPending} onPress={handleSave}>
           {mode === 'edit' ? 'Save' : 'Create'}
-        </button>
+        </SubmitButton>
       </FormBar>
 
       <ConfirmDialog
