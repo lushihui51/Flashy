@@ -110,7 +110,7 @@ To read in the code:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -150,4 +150,18 @@ Drawing 16 is the sheet.
 
 **Debrief**
 
-None.
+Evidence, by Done-when line:
+
+- `npx vitest run src/components/practice/RunBreakdown.test.tsx`: 1 file and 35 tests passed.
+- `grep -c "Edit card" frontend/src/components/practice/RunBreakdown.tsx` prints `1`.
+- Headless Chromium at 390 by 844, driven by a mouse, signed out of Clerk, on the completed practice "Sep 29, 2026 at 8:41 AM" at its own page, with the count "53 no change" chosen and the order Drops, which wrote `?kind=no_change&order=drops`. The row "format" opened its sheet and wrote `&card=<cardId>`. "Edit card" with a pencil sits under the record card, 16px below its bottom edge and flush with its left edge, 120 by 40, as drawing 16. A tap landed on `/cards/<cardId>/edit` with `cancelTo` and `returnTo` both the summary's pathname and search, `kind`, `order` and `card` included. Save after " (edited)" was appended to Command purpose returned to that address with the sheet open on "format", the new value showing, "53 no change" still pressed, Drops still checked and the 53 rows beneath. After a reload of that address the sheet was open; Cancel from the form returned the same way with the value as saved; a second Save with the seeded value returned the card to what it was.
+
+Checks for the commit: `npx vitest run` over the whole frontend, 70 files and 835 tests passed; `npm run lint` and `npm run build` both exit 0. The dev database holds the card as it was seeded.
+
+Departures and additions: none from the Details. The pill sits after the record card's scrolling area rather than inside it, so it stays in reach under a card whose fields scroll; Details fixes neither. Beyond the tests Details names, the first also checks the pill's classes and that it follows the "Answer" heading.
+
+To read in the code:
+
+- `CardSheetContent` in `frontend/src/components/practice/RunBreakdown.tsx` takes `onEdit`, and `RunBreakdown` builds the address from `useLocation`, since `useViewParams` gives the search alone.
+
+A finding outside this task's Files, raised and not fixed: `CardStandaloneForm` in `frontend/src/components/library/CardStandaloneForm.tsx` seeds its values from the cached card on mount, and its Save invalidates the deck queries but not the card's, so the form reopened straight after a Save, from the summary or the run page alike, seeds from the stale card, refetches, and then reads itself as dirty: Cancel with nothing changed asks "Discard this card?". Observed in Chromium; a reload between the Save and the reopening avoids it.

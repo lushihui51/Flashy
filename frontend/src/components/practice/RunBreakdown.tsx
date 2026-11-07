@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Pencil } from 'lucide-react';
 import { startChosenCards } from 'src/api/practice_run';
 import FieldValue from 'src/components/practice/FieldValue';
 import { RATING_TIERS } from 'src/components/practice/ratingTiers';
@@ -15,6 +15,7 @@ import type { components } from 'src/api/types';
 import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
@@ -152,7 +153,15 @@ function MarksKey() {
   );
 }
 
-function CardSheetContent({ card, titleId }: { card: BreakdownCard; titleId: string }) {
+function CardSheetContent({
+  card,
+  titleId,
+  onEdit,
+}: {
+  card: BreakdownCard;
+  titleId: string;
+  onEdit: () => void;
+}) {
   const [keyOpen, setKeyOpen] = useState(false);
 
   const shownFields = card.fields.flatMap((field) => {
@@ -205,6 +214,14 @@ function CardSheetContent({ card, titleId }: { card: BreakdownCard; titleId: str
           {fieldsOf('answer')}
         </div>
       </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="tappable-sm flex h-10 shrink-0 items-center gap-1.5 self-start rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
+      >
+        <Pencil aria-hidden="true" className="size-4" />
+        Edit card
+      </button>
     </>
   );
 }
@@ -213,7 +230,8 @@ function CardSheetContent({ card, titleId }: { card: BreakdownCard; titleId: str
  * practice of the listed cards once a kind is chosen, the list narrowed to the kinds chosen and
  * ordered by mastery, gains or drops, one row per card, and the sheet of the card a row opens.
  * The chosen kinds, the order and the open card are the page's `kind`, `order` and `card` URL
- * params, so the page must render it under a router and keep those params. A practice started
+ * params, so the page must render it under a router and keep those params. The sheet's "Edit
+ * card" opens the card's form, which returns to the page's full address. A practice started
  * here opens its own page. */
 export default function RunBreakdown({
   breakdown,
@@ -223,6 +241,7 @@ export default function RunBreakdown({
   practiceSessionId: string;
 }): ReactNode {
   const { params, setParams, changeView } = useViewParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const titleId = useId();
@@ -282,6 +301,13 @@ export default function RunBreakdown({
     const next = new URLSearchParams(params);
     next.delete('card');
     setParams(next);
+  };
+
+  const editCard = (cardId: string) => {
+    navigate({
+      pathname: `/cards/${cardId}/edit`,
+      search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+    });
   };
 
   return (
@@ -379,7 +405,13 @@ export default function RunBreakdown({
         triggerRef={rowRef}
         ariaLabelledBy={titleId}
       >
-        {openCard && <CardSheetContent card={openCard} titleId={titleId} />}
+        {openCard && (
+          <CardSheetContent
+            card={openCard}
+            titleId={titleId}
+            onEdit={() => editCard(openCard.card_id)}
+          />
+        )}
       </BottomSheet>
     </div>
   );

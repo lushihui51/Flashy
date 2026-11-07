@@ -101,7 +101,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Card | A deck's cards | "Cards"; "Cards in <deck>", spoken | Deck page | `CardList` |
 | Card | Adding a card to the list in view | "Add card" | Deck page's Cards tab | `AddButton` |
 | Card | The page where a card is made | "New card" | Its heading | `/cards/new`; `CardStandaloneForm` |
-| Card | The page where a card is changed | "Edit card" | Its heading; the run page's button beside the card's main action, with a pencil, not ready while the answers are hidden | `/cards/:cardId/edit`; `CardStandaloneForm` |
+| Card | The page where a card is changed | "Edit card" | Its heading; the run page's button beside the card's main action, with a pencil, not ready while the answers are hidden; the sheet's button under the record card | `/cards/:cardId/edit`; `CardStandaloneForm` |
 | Card | A blank value | "empty" | Deck page's Cards tab | `CardList` |
 | Card | A card named in a list | its deck's first field's value alone, as "netstat" | Summary | `primary_field`; `cardTitle` |
 | Card | A card whose first field is blank | "Untitled card" | Summary | `primary_field` |
