@@ -13,10 +13,10 @@ export default function PracticeStatusBadge({ status }: PracticeStatusBadgeProps
   const active = status === 'active';
   return (
     <span
-      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+      className={`shrink-0 rounded-tight text-xs ${
         active
-          ? 'bg-(--color-primary) text-(--color-primary-contrast)'
-          : 'bg-(--color-surface-elevated) text-(--color-text-secondary)'
+          ? 'bg-(--color-ink) px-badge-x py-badge-y font-semibold text-(--color-surface)'
+          : 'border border-(--color-line) bg-(--color-surface) px-2 py-0.5 font-medium text-(--color-aside)'
       }`}
     >
       {active ? 'Active' : 'Completed'}

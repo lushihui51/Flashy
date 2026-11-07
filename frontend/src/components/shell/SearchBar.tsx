@@ -16,11 +16,9 @@ export default function SearchBar({ placeholder = 'Search' }: SearchBarProps) {
   };
 
   return (
-    <div className="relative flex w-full items-center">
-      <Search
-        aria-hidden="true"
-        className="pointer-events-none absolute left-3 h-4 w-4 text-(--color-text-muted)"
-      />
+    // A label, so a click on the icon or the padding still lands in the input.
+    <label className="flex h-field w-full cursor-text items-center gap-2.75 rounded-full bg-(--color-surface) pr-3.5 pl-3.25 outlined-line focus-within:ring-2 focus-within:ring-(--color-ink)">
+      <Search aria-hidden="true" className="size-icon shrink-0 text-(--color-aside)" />
       <input
         type="search"
         value={value}
@@ -28,8 +26,8 @@ export default function SearchBar({ placeholder = 'Search' }: SearchBarProps) {
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-11 w-full rounded-full bg-(--color-surface-elevated) pl-10 pr-4 text-(--color-text) placeholder:text-(--color-text-muted) focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
+        className="min-w-0 flex-1 bg-transparent text-(--color-ink) placeholder:text-(--color-aside) focus:outline-none"
       />
-    </div>
+    </label>
   );
 }

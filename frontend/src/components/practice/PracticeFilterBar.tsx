@@ -1,8 +1,9 @@
+import DeckPicker from 'src/components/library/DeckPicker';
 import PickerCombobox from 'src/components/ui/PickerCombobox';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 
 type SubjectOption = { id: string; name: string; icon?: string | null };
-type DeckOption = { id: string; name: string; subject_id: string };
+type DeckOption = { id: string; name: string; subject_id: string; subject_name: string };
 
 type PracticeFilterBarProps = {
   /** Both lists arrive already fetched — this component takes its data as props like
@@ -33,9 +34,10 @@ export default function PracticeFilterBar({
   const selectedSubject = subjects.find((subject) => subject.id === subjectId) ?? null;
   const selectedDeck = decks.find((deck) => deck.id === deckId) ?? null;
 
+  // The picker's input is a form field's height wherever it stands; a filter sits 0.25rem shorter.
   return (
-    <div className="flex flex-col gap-2 sm:flex-row" data-testid="practice-filters">
-      <div className="flex-1">
+    <div className="flex gap-2.5 [&_input]:h-10.5" data-testid="practice-filters">
+      <div className="min-w-0 flex-1">
         <PickerCombobox<SubjectOption>
           purpose="filter"
           items={subjects}
@@ -53,8 +55,8 @@ export default function PracticeFilterBar({
           renderLeading={(subject) => <SubjectIcon icon={subject.icon} className="h-4 w-4" />}
         />
       </div>
-      <div className="flex-1">
-        <PickerCombobox<DeckOption>
+      <div className="min-w-0 flex-1">
+        <DeckPicker<DeckOption>
           purpose="filter"
           items={deckOptions}
           selected={selectedDeck}

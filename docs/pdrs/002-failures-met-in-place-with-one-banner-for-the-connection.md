@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Superseded by PDR 031
 
 ## Context
 
@@ -52,7 +52,6 @@ Rejected because it puts the message at the top of the page while the control th
 **Negative**
 
 - The user who is not looking at the place that failed is told nothing until they look there.
-- Whoever designs a new screen decides where each of its failures is met, since no shared place catches them.
 
 **Neutral**
 

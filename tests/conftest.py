@@ -45,7 +45,7 @@ class _StatementCounter:
     """A resettable counter of statements whose compiled SQL names a given table,
     issued against the module-level test `engine`. For a statement-count test: reset
     immediately before the request under test, read immediately after, to prove a
-    fixed statement count against `mastery_log` regardless of run size."""
+    fixed statement count against that table regardless of run size."""
 
     def __init__(self, table_name: str):
         self._table_name = table_name
@@ -64,11 +64,24 @@ class _StatementCounter:
 
 
 @pytest.fixture
-def mastery_log_statement_counter():
-    counter = _StatementCounter("mastery_log")
-    event.listen(engine, "before_cursor_execute", counter._before_cursor_execute)
-    yield counter
-    event.remove(engine, "before_cursor_execute", counter._before_cursor_execute)
+def statement_counter():
+    """A function from a table name to a new `_StatementCounter` listening on the engine."""
+    counters = []
+
+    def _make(table_name: str) -> _StatementCounter:
+        counter = _StatementCounter(table_name)
+        event.listen(engine, "before_cursor_execute", counter._before_cursor_execute)
+        counters.append(counter)
+        return counter
+
+    yield _make
+    for counter in counters:
+        event.remove(engine, "before_cursor_execute", counter._before_cursor_execute)
+
+
+@pytest.fixture
+def mastery_log_statement_counter(statement_counter):
+    return statement_counter("mastery_log")
 
 
 @pytest.fixture

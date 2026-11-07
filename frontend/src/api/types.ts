@@ -124,29 +124,16 @@ export interface paths {
         get: operations["read_field_def_api_fields__field_id__get"];
         put?: never;
         post?: never;
-        /** Archive Field Def */
-        delete: operations["archive_field_def_api_fields__field_id__delete"];
+        /**
+         * Delete Field Def
+         * @description 404 for a field that is not the user's; 422 with code `too_few_fields` when the
+         *     deck would keep fewer than two fields.
+         */
+        delete: operations["delete_field_def_api_fields__field_id__delete"];
         options?: never;
         head?: never;
         /** Update Field Def */
         patch: operations["update_field_def_api_fields__field_id__patch"];
-        trace?: never;
-    };
-    "/api/fields/{field_id}/hard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Hard Delete Field Def */
-        delete: operations["hard_delete_field_def_api_fields__field_id__hard_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/cards": {
@@ -184,23 +171,6 @@ export interface paths {
         head?: never;
         /** Update Card */
         patch: operations["update_card_api_cards__card_id__patch"];
-        trace?: never;
-    };
-    "/api/cards/{card_id}/mastery": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Card Mastery */
-        get: operations["read_card_mastery_api_cards__card_id__mastery_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/deck_practice_configs": {
@@ -393,6 +363,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/practice_runs/{practice_run_id}/chosen_cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Chosen Cards
+         * @description Creates a new practice of exactly the chosen cards, from the completed practice's
+         *     own snapshots; the original is untouched. 404 for an unknown or foreign practice; 400
+         *     `run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a
+         *     chosen card still validates; 400 `no_cards` if the survivors generate no practice card;
+         *     400 with a string detail for an empty list or a card the practice did not hold.
+         */
+        post: operations["start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/practice_cards/{practice_card_id}/rate": {
         parameters: {
             query?: never;
@@ -404,6 +398,23 @@ export interface paths {
         put?: never;
         /** Rate Practice Card */
         post: operations["rate_practice_card_api_practice_cards__practice_card_id__rate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Home */
+        get: operations["read_home_api_home_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -436,44 +447,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BreakdownAttempt */
+        /**
+         * BreakdownAttempt
+         * @description One go at a card, by what it showed and what it asked.
+         */
         BreakdownAttempt: {
             /**
              * Practice Card Id
              * Format: uuid
              */
             practice_card_id: string;
-            status: components["schemas"]["PracticeCardStatus"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
             /** Prompts */
             prompts: components["schemas"]["ResolvedFieldValue"][];
             /** Answers */
             answers: components["schemas"]["RatedFieldValue"][];
         };
         /**
-         * BreakdownBucket
-         * @description The completion-time refinement of the chain fold: `passed` splits by chain
-         *     length so the breakdown can distinguish a card that took retries from one that
-         *     didn't; `still_failed` — a chain whose last row is `failed` with no successor,
-         *     because nothing was left to generate a retry from — is unaffected by length and stays one
-         *     bucket, displayed to the user as "Failed".
-         * @enum {string}
-         */
-        BreakdownBucket: "passed_first_try" | "passed_after_one_fail" | "passed_after_many_fails" | "still_failed";
-        /**
          * BreakdownCard
-         * @description One card's whole outcome chain for the completion breakdown: `attempts` is
-         *     chronological, so `attempts[-1]` is the determining attempt that decided `bucket`.
-         *     `mastery`/`delta`/`fields` are the session deltas: `mastery` is the card fold
-         *     (`strategy.card_score`) over every active field's after-state score; `delta` is
-         *     that same fold's after-state minus its before-state, exact (the client rounds);
-         *     `fields` lists every
-         *     currently active field_def of the card's deck, field_def.position ascending —
-         *     not just the ones this run's attempts happened to touch.
+         * @description One card on the summary. `readiness` is the card's readiness after the run, from 0 to
+         *     1, over every live field of its deck, and `delta` that figure minus the same fold before
+         *     the run, so a field the run never showed or asked counts here though `fields` omits it.
+         *     `fields` is in field_def.position order; `attempts` is oldest first.
          */
         BreakdownCard: {
             /**
@@ -481,18 +475,16 @@ export interface components {
              * Format: uuid
              */
             card_id: string;
-            bucket: components["schemas"]["BreakdownBucket"];
-            /** Attempt Count */
-            attempt_count: number;
             primary_field: components["schemas"]["ResolvedFieldValue"];
-            /** Attempts */
-            attempts: components["schemas"]["BreakdownAttempt"][];
-            /** Mastery */
-            mastery: number;
+            /** Readiness */
+            readiness: number;
             /** Delta */
             delta: number;
+            change: components["schemas"]["ChangeKind"];
             /** Fields */
-            fields: components["schemas"]["FieldMasteryDelta"][];
+            fields: components["schemas"]["FieldReadinessDelta"][];
+            /** Attempts */
+            attempts: components["schemas"]["BreakdownAttempt"][];
         };
         /**
          * CardBatchCreate
@@ -545,17 +537,6 @@ export interface components {
                 [key: string]: string;
             };
         };
-        /**
-         * CardMasteryRead
-         * @description Display-only aggregate — never stored, computed fresh from mastery_log
-         *     via the active MasteryStrategy on every request.
-         */
-        CardMasteryRead: {
-            /** Mastery */
-            mastery: number;
-            /** Reviewed Field Count */
-            reviewed_field_count: number;
-        };
         /** CardRead */
         CardRead: {
             /**
@@ -573,10 +554,47 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
             /** Values */
             values: {
                 [key: string]: string;
             };
+        };
+        /**
+         * CardSummary
+         * @description A card as a deck's page lists it.
+         */
+        CardSummary: {
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
+            /** Readiness */
+            readiness: number;
         };
         /** CardUpdate */
         CardUpdate: {
@@ -585,6 +603,11 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * ChangeKind
+         * @enum {string}
+         */
+        ChangeKind: "up_a_lot" | "up" | "no_change" | "down" | "down_a_lot";
         /** CurrentRunCard */
         CurrentRunCard: {
             /**
@@ -655,10 +678,12 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Readiness */
+            readiness: number | null;
             /** Field Defs */
             field_defs: components["schemas"]["DeckFieldDefRead"][];
             /** Cards */
-            cards: components["schemas"]["CardRead"][];
+            cards: components["schemas"]["CardSummary"][];
         };
         /** DeckFieldDefRead */
         DeckFieldDefRead: {
@@ -726,6 +751,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
         };
         /**
          * DeckPracticeConfigSummary
@@ -763,6 +793,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
             /** Deck Name */
             deck_name: string;
             /**
@@ -792,11 +827,10 @@ export interface components {
         };
         /**
          * DeckSummary
-         * @description DeckRead plus preview data for a list row — card_count and
-         *     field_names (position order, active fields only). Only `GET /api/decks` returns
-         *     this; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the
-         *     richer `DeckDetail` instead, which already includes everything here except these
-         *     two list-row-only fields.
+         * @description A deck as a list row shows it. The single-deck reads
+         *     (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which
+         *     already includes everything here except the subject's name, card_count and
+         *     field_names.
          */
         DeckSummary: {
             /**
@@ -821,10 +855,14 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Subject Name */
+            subject_name: string;
             /** Card Count */
             card_count: number;
             /** Field Names */
             field_names: string[];
+            /** Readiness */
+            readiness: number | null;
         };
         /**
          * DeletionImpactRead
@@ -908,8 +946,6 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Archived At */
-            archived_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -923,13 +959,12 @@ export interface components {
             type?: components["schemas"]["FieldType"] | null;
         };
         /**
-         * FieldMasteryDelta
-         * @description One active field's session-delta entry:
-         *     `mastery` is the after-state field score (`strategy.field_score`, the existing
-         *     (prompt+answer)/2), None if the field has never been reviewed by anyone. `delta`
-         *     is always a float, never None — 0.0 for a field this run's card left untouched.
+         * FieldReadinessDelta
+         * @description One field an attempt of the run showed or asked: `readiness` is the field's readiness
+         *     after the run, from 0 to 1, and `delta` that readiness minus its readiness before the
+         *     run, exact.
          */
-        FieldMasteryDelta: {
+        FieldReadinessDelta: {
             /**
              * Field Def Id
              * Format: uuid
@@ -938,11 +973,20 @@ export interface components {
             /** Name */
             name: string;
             type: components["schemas"]["FieldType"];
-            /** Mastery */
-            mastery: number | null;
+            side: components["schemas"]["FieldSide"];
+            /** Readiness */
+            readiness: number;
             /** Delta */
             delta: number;
+            change: components["schemas"]["ChangeKind"];
         };
+        /**
+         * FieldSide
+         * @description Where a card opened from the summary lists a field: `prompt` when any attempt showed
+         *     it, `answer` when attempts only asked it.
+         * @enum {string}
+         */
+        FieldSide: "prompt" | "answer";
         /**
          * FieldType
          * @enum {string}
@@ -952,6 +996,53 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HomeActivePractice */
+        HomeActivePractice: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decks */
+            decks: components["schemas"]["PracticeRunDeckSummary"][];
+            progress: components["schemas"]["RunProgress"];
+        };
+        /** HomeRead */
+        HomeRead: {
+            steps: components["schemas"]["HomeSteps"] | null;
+            /** Active Practices */
+            active_practices: components["schemas"]["HomeActivePractice"][];
+            /** Recent Decks */
+            recent_decks: components["schemas"]["DeckSummary"][];
+        };
+        /**
+         * HomeSteps
+         * @description Whether each of the first four things exists; the fifth, a practice, never does
+         *     while the steps show.
+         */
+        HomeSteps: {
+            /** Has Subject */
+            has_subject: boolean;
+            /** Has Deck */
+            has_deck: boolean;
+            /** Has Card */
+            has_card: boolean;
+            /** Has Configuration */
+            has_configuration: boolean;
         };
         /** PracticeCardRead */
         PracticeCardRead: {
@@ -990,24 +1081,26 @@ export interface components {
         PracticeCardStatus: "pending" | "passed" | "failed";
         /**
          * PracticeRunBreakdown
-         * @description The whole `GET .../breakdown` payload: bucket counts, and
-         *     every card's full resolved history, so the completion screen's row-tap detail needs
-         *     no second request. Only ever built for a completed session — the router
+         * @description The whole `GET .../breakdown` payload: every card and what the run did to it, so the
+         *     summary needs no second request. Only ever built for a completed session; the router
          *     409s an active one before this is composed.
          */
         PracticeRunBreakdown: {
             /** Total Cards */
             total_cards: number;
-            /** Passed First Try */
-            passed_first_try: number;
-            /** Passed After One Fail */
-            passed_after_one_fail: number;
-            /** Passed After Many Fails */
-            passed_after_many_fails: number;
-            /** Still Failed */
-            still_failed: number;
             /** Cards */
             cards: components["schemas"]["BreakdownCard"][];
+        };
+        /**
+         * PracticeRunChosenCards
+         * @description Body of POST .../chosen_cards: the client-formatted name for the new run, stored
+         *     verbatim, and the cards to practice, each one a card of the completed practice.
+         */
+        PracticeRunChosenCards: {
+            /** Name */
+            name: string;
+            /** Card Ids */
+            card_ids: string[];
         };
         /** PracticeRunCreate */
         PracticeRunCreate: {
@@ -1123,9 +1216,7 @@ export interface components {
         /**
          * RatedFieldValue
          * @description A resolved answer field plus the rating it was given, joined from `review_log`
-         *     on `review_group_id == practice_card.id` and `field_def_id`. `rating` is `None`
-         *     exactly for a removed field's placeholder, because its review rows cascaded with
-         *     the field.
+         *     on `review_group_id == practice_card.id` and `field_def_id`.
          */
         RatedFieldValue: {
             /**
@@ -1138,13 +1229,8 @@ export interface components {
             type: components["schemas"]["FieldType"];
             /** Value */
             value: string;
-            /**
-             * Removed
-             * @default false
-             */
-            removed?: boolean;
             /** Rating */
-            rating: number | null;
+            rating: number;
         };
         /** RatingSubmission */
         RatingSubmission: {
@@ -1166,9 +1252,6 @@ export interface components {
          *     when no card_field_value row exists for this (card, field) pair; it is passed
          *     through as-is even if blank, since a value can go blank *after* the practice_card
          *     was generated (the blank filter governs generation-time candidacy, not later edits).
-         *     `removed` is True only for a placeholder the breakdown emits for a stored id whose
-         *     field_def row no longer exists; every other resolution, including the
-         *     live run's current card, leaves it False.
          */
         ResolvedFieldValue: {
             /**
@@ -1181,11 +1264,6 @@ export interface components {
             type: components["schemas"]["FieldType"];
             /** Value */
             value: string;
-            /**
-             * Removed
-             * @default false
-             */
-            removed?: boolean;
         };
         /**
          * RunProgress
@@ -1266,10 +1344,7 @@ export interface components {
         };
         /**
          * SubjectSummary
-         * @description SubjectRead plus a deck count for a library list row. Only
-         *     `GET /api/subjects` returns this — the subject detail page derives its own deck/
-         *     card counts from the (separately-fetched, already-enriched) deck list instead of
-         *     needing this here too.
+         * @description A subject as a library row and its own page show it.
          */
         SubjectSummary: {
             /** Name */
@@ -1306,6 +1381,8 @@ export interface components {
             last_activity_at: string;
             /** Deck Count */
             deck_count: number;
+            /** Readiness */
+            readiness: number | null;
         };
         /** SubjectUpdate */
         SubjectUpdate: {
@@ -1426,7 +1503,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubjectRead"];
+                    "application/json": components["schemas"]["SubjectSummary"];
                 };
             };
             /** @description Validation Error */
@@ -1686,9 +1763,7 @@ export interface operations {
     };
     read_field_defs_api_decks__deck_id__fields_get: {
         parameters: {
-            query?: {
-                include_archived?: boolean;
-            };
+            query?: never;
             header?: {
                 authorization?: string | null;
                 "x-timezone"?: string | null;
@@ -1830,7 +1905,7 @@ export interface operations {
             };
         };
     };
-    archive_field_def_api_fields__field_id__delete: {
+    delete_field_def_api_fields__field_id__delete: {
         parameters: {
             query?: never;
             header?: {
@@ -1845,13 +1920,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["FieldDefRead"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1890,38 +1963,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FieldDefRead"];
                 };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    hard_delete_field_def_api_fields__field_id__hard_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2095,40 +2136,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CardRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_card_mastery_api_cards__card_id__mastery_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                card_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CardMasteryRead"];
                 };
             };
             /** @description Validation Error */
@@ -2597,6 +2604,44 @@ export interface operations {
             };
         };
     };
+    start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeRunChosenCards"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeRunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     rate_practice_card_api_practice_cards__practice_card_id__rate_post: {
         parameters: {
             query?: never;
@@ -2622,6 +2667,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RatingSubmissionResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_home_api_home_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeRead"];
                 };
             };
             /** @description Validation Error */

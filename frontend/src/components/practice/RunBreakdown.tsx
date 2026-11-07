@@ -1,103 +1,366 @@
-import { useId, useRef, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { useId, useRef, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ChevronRight, Pencil } from 'lucide-react';
+import { startChosenCards } from 'src/api/practice_run';
 import FieldValue from 'src/components/practice/FieldValue';
 import { RATING_TIERS } from 'src/components/practice/ratingTiers';
 import BottomSheet from 'src/components/ui/BottomSheet';
+import ChangeBadge from 'src/components/ui/ChangeBadge';
+import KeyButton from 'src/components/ui/KeyButton';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
+import PromptMark from 'src/components/ui/PromptMark';
+import RatingMark from 'src/components/ui/RatingMark';
 import type { components } from 'src/api/types';
+import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
+import { formatDateTime } from 'src/lib/datetime';
+import { failureSentence } from 'src/lib/failureSentence';
+import { returnAddressParams } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type PracticeRunBreakdown = components['schemas']['PracticeRunBreakdown'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
-type BreakdownBucket = components['schemas']['BreakdownBucket'];
-type FieldMasteryDelta = components['schemas']['FieldMasteryDelta'];
+type BreakdownAttempt = components['schemas']['BreakdownAttempt'];
+type FieldReadinessDelta = components['schemas']['FieldReadinessDelta'];
+type ResolvedFieldValue = components['schemas']['ResolvedFieldValue'];
 
-const BUCKET_LABELS: Record<BreakdownBucket, string> = {
-  passed_first_try: 'First try',
-  passed_after_one_fail: 'One retry',
-  passed_after_many_fails: '2+ retries',
-  still_failed: 'Failed',
-};
+type OrderKey = 'mastery' | 'gains' | 'drops';
 
-type SortKey = 'gains' | 'drops' | 'mastery';
-
-// Labeled exactly this way, `gains` the default. No tie-breaking rule is defined —
-// Array.prototype.sort is stable, so equal values keep the server's first-attempt
-// position order, but nothing here relies on that being the case.
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'gains', label: 'Gains first' },
-  { key: 'drops', label: 'Drops first' },
+const ORDER_OPTIONS: { key: OrderKey; label: string }[] = [
   { key: 'mastery', label: 'Mastery' },
+  { key: 'gains', label: 'Gains' },
+  { key: 'drops', label: 'Drops' },
 ];
 
-function sortCards(cards: BreakdownCard[], sort: SortKey): BreakdownCard[] {
+const BLOCK_CLASS = 'tappable-sm bg-(--color-surface) text-(--color-ink)';
+const BLOCK_PRESSED_CLASS = 'tappable-sm tappable-pressed bg-(--color-ink) text-(--color-surface)';
+const SIDE_HEADING_CLASS = 'ruled-bottom pt-2.5 pb-2 text-sm font-semibold';
+const NOT_ASKED = 'not asked';
+
+function readOrder(params: URLSearchParams): OrderKey {
+  const order = params.get('order');
+  return order === 'gains' || order === 'drops' ? order : 'mastery';
+}
+
+function orderCards(cards: BreakdownCard[], order: OrderKey): BreakdownCard[] {
   const sorted = [...cards];
-  if (sort === 'gains') sorted.sort((a, b) => b.delta - a.delta);
-  else if (sort === 'drops') sorted.sort((a, b) => a.delta - b.delta);
-  else sorted.sort((a, b) => a.mastery - b.mastery);
+  if (order === 'gains') sorted.sort((a, b) => b.delta - a.delta);
+  else if (order === 'drops') sorted.sort((a, b) => a.delta - b.delta);
+  else sorted.sort((a, b) => a.readiness - b.readiness);
   return sorted;
 }
 
-// A rounded integer, "—" for a field that's never been reviewed. Card-level mastery is
-// never null (BreakdownCard.mastery is a plain float), so this only ever takes that
-// branch for a field entry.
-function formatMastery(mastery: number | null): string {
-  return mastery === null ? '—' : String(Math.round(mastery));
-}
-
-// The exact difference rounded to a signed integer, "±0" at zero. Rounding happens
-// first and the sign is read off the rounded value, not the original float — otherwise
-// a delta like -0.3 would round to -0 and misprint as "−0" instead of "±0".
-function formatDelta(delta: number): string {
-  const rounded = Math.round(delta);
-  if (rounded === 0) return '±0';
-  return rounded > 0 ? `+${rounded}` : `−${Math.abs(rounded)}`;
-}
-
-/** The card's name in its row and its detail sheet's heading: the value of its deck's
- * first field alone, or "Untitled card" when that value is blank. */
+/** The card's name in its row: the value of its deck's first field alone, or "Untitled card"
+ * when that value is blank. */
 function cardTitle(card: BreakdownCard): string {
   return card.primary_field.value || 'Untitled card';
 }
 
-type RunBreakdownProps = {
-  breakdown: PracticeRunBreakdown;
-};
+function ratingWord(rating: number | null): string {
+  return RATING_TIERS.find((tier) => tier.rating === rating)?.label ?? NOT_ASKED;
+}
 
-/** The one retrospective view: a summary line, a sort control, one compact row per
- * card (outcome badge, mastery, delta), and a row tap opening the full
- * attempt-by-attempt detail plus every active field's mastery/delta. Doesn't fetch —
- * the run page (once nothing is pending) and the details page (for any completed
- * session) each own the breakdown query and pass the same payload down here, so the
- * view itself can't drift between the two places it's shown. */
-export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('gains');
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  // One shared trigger ref, reassigned to whichever row was tapped most recently, so
-  // BottomSheet's onCloseAutoFocus returns focus to that exact row (mirrors
-  // FieldAssignmentBoard's identical need).
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const titleId = useId();
+/** The field's value as the attempts carry it, or undefined when no attempt names the field. */
+function fieldValue(card: BreakdownCard, field: FieldReadinessDelta): ResolvedFieldValue | undefined {
+  for (const attempt of card.attempts) {
+    const named = [...attempt.prompts, ...attempt.answers].find(
+      (value) => value.field_def_id === field.field_def_id,
+    );
+    if (named) return named;
+  }
+  return undefined;
+}
 
-  const cards = sortCards(breakdown.cards, sortKey);
-  const selectedCard = breakdown.cards.find((card) => card.card_id === selectedCardId) ?? null;
+function SheetField({
+  field,
+  value,
+  attempts,
+}: {
+  field: FieldReadinessDelta;
+  value: ResolvedFieldValue;
+  attempts: BreakdownAttempt[];
+}) {
+  const named = (candidate: ResolvedFieldValue) => candidate.field_def_id === field.field_def_id;
+  const marks = attempts.map((attempt) => {
+    if (field.side === 'prompt') {
+      const shown = attempt.prompts.some(named);
+      return {
+        id: attempt.practice_card_id,
+        word: shown ? 'shown' : 'not shown',
+        mark: <PromptMark shown={shown} />,
+      };
+    }
+    const rating = attempt.answers.find(named)?.rating ?? null;
+    return {
+      id: attempt.practice_card_id,
+      word: ratingWord(rating),
+      mark: <RatingMark rating={rating} />,
+    };
+  });
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-(--color-text-muted)">
-        {breakdown.total_cards} card{breakdown.total_cards === 1 ? '' : 's'} practiced
-      </p>
+    <div className="flex flex-col gap-1 pt-2.5 pb-3">
+      <div className="flex items-center gap-2.5">
+        <span className="min-w-0 flex-1 text-label text-(--color-aside)">{field.name}</span>
+        <span
+          role="img"
+          aria-label={`${field.name}: ${marks.map((mark) => mark.word).join(', then ')}`}
+          className="flex flex-none items-center gap-1"
+        >
+          {marks.map((mark) => (
+            <span key={mark.id} className="flex w-[0.8125rem] justify-center">
+              {mark.mark}
+            </span>
+          ))}
+        </span>
+        <span aria-hidden="true" className="w-1" />
+        <MasteryCircle readiness={field.readiness} size="row" change={field.change} />
+      </div>
+      <FieldValue field={value} labeled={false} />
+    </div>
+  );
+}
 
-      <div role="radiogroup" aria-label="Sort" className="flex gap-2 overflow-x-auto">
-        {SORT_OPTIONS.map((option) => (
+function KeyEntry({ mark, word }: { mark: ReactNode; word: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {mark}
+      <span>{word}</span>
+    </span>
+  );
+}
+
+function MarksKey() {
+  return (
+    <div
+      role="dialog"
+      aria-label="Key"
+      className="tappable absolute top-3.5 left-3 z-2 flex w-60 flex-col gap-2 rounded-2xl bg-(--color-surface) px-3.5 py-3 text-label text-(--color-ink)"
+    >
+      <div className="font-semibold">Prompt</div>
+      <div className="flex flex-wrap gap-x-3.5 gap-y-1.5">
+        <KeyEntry mark={<PromptMark shown />} word="shown" />
+        <KeyEntry mark={<PromptMark shown={false} />} word="not shown" />
+      </div>
+      <div className="mt-1 font-semibold">Answer</div>
+      <div className="flex flex-wrap gap-x-3.5 gap-y-1.5">
+        {RATING_TIERS.map((tier) => (
+          <KeyEntry key={tier.rating} mark={<RatingMark rating={tier.rating} />} word={tier.label} />
+        ))}
+        <KeyEntry mark={<RatingMark rating={null} />} word={NOT_ASKED} />
+      </div>
+    </div>
+  );
+}
+
+function CardSheetContent({
+  card,
+  titleId,
+  onEdit,
+}: {
+  card: BreakdownCard;
+  titleId: string;
+  onEdit: () => void;
+}) {
+  const [keyOpen, setKeyOpen] = useState(false);
+
+  const shownFields = card.fields.flatMap((field) => {
+    const value = fieldValue(card, field);
+    return value ? [{ field, value }] : [];
+  });
+  const fieldsOf = (side: FieldReadinessDelta['side']) => (
+    <div className="divide-y divide-(--color-line)">
+      {shownFields
+        .filter(({ field }) => field.side === side)
+        .map(({ field, value }) => (
+          <SheetField
+            key={field.field_def_id}
+            field={field}
+            value={value}
+            attempts={card.attempts}
+          />
+        ))}
+    </div>
+  );
+
+  return (
+    <>
+      {/* The sheet's panel is the stacking context, so the "i" and the key, inside the scrolling
+          area, still rise above this layer. */}
+      {keyOpen && (
+        <div
+          aria-hidden="true"
+          data-testid="key-layer"
+          onClick={() => setKeyOpen(false)}
+          className="absolute inset-0 z-1 rounded-t-block bg-(--color-ink)/35"
+        />
+      )}
+      <div className="flex items-center gap-3">
+        <h2 id={titleId} className="min-w-0 flex-1 text-2xl font-bold break-words text-(--color-ink)">
+          {cardTitle(card)}
+        </h2>
+        <MasteryCircle readiness={card.readiness} size="sheet" change={card.change} />
+      </div>
+      {/* Padded out to the sheet's edge, or scrolling would clip the "i" off the card's corner. */}
+      <div className="-mx-4 -mt-3.25 max-h-[65vh] overflow-y-auto px-4 pt-3.25">
+        <div className="outlined-ink relative rounded-block bg-(--color-surface) px-4 text-(--color-ink)">
+          <span className="absolute -top-3.25 -left-3.25 z-3 block rounded-[0.9375rem] bg-(--color-surface) p-0.5">
+            <KeyButton open={keyOpen} onClick={() => setKeyOpen((open) => !open)} />
+          </span>
+          {keyOpen && <MarksKey />}
+          <h3 className={SIDE_HEADING_CLASS}>Prompt</h3>
+          {fieldsOf('prompt')}
+          <h3 className={`${SIDE_HEADING_CLASS} border-t border-(--color-line)`}>Answer</h3>
+          {fieldsOf('answer')}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="tappable-sm flex h-10 shrink-0 items-center gap-1.5 self-start rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
+      >
+        <Pencil aria-hidden="true" className="size-4" />
+        Edit card
+      </button>
+    </>
+  );
+}
+
+/** A completed practice's summary: how many cards had each kind of change, the way to start a
+ * practice of the listed cards once a kind is chosen, the list narrowed to the kinds chosen and
+ * ordered by mastery, gains or drops, one row per card, and the sheet of the card a row opens.
+ * The chosen kinds, the order and the open card are the page's `kind`, `order` and `card` URL
+ * params, so the page must render it under a router and keep those params. The sheet's "Edit
+ * card" opens the card's form, which returns to the page's full address. A practice started
+ * here opens its own page. */
+export default function RunBreakdown({
+  breakdown,
+  practiceSessionId,
+}: {
+  breakdown: PracticeRunBreakdown;
+  practiceSessionId: string;
+}): ReactNode {
+  const { params, setParams, changeView } = useViewParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const titleId = useId();
+  const rowRef = useRef<HTMLButtonElement | null>(null);
+  const countsRef = useRef<HTMLDivElement>(null);
+  const orderRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const requested = params.getAll('kind');
+  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind));
+  const order = readOrder(params);
+
+  const narrowed =
+    chosen.length === 0
+      ? breakdown.cards
+      : breakdown.cards.filter((card) => chosen.includes(card.change));
+  const cards = orderCards(narrowed, order);
+  const openCard = breakdown.cards.find((card) => card.card_id === params.get('card'));
+
+  const practiceThese = useMutation({
+    mutationFn: () =>
+      startChosenCards(practiceSessionId, {
+        name: formatDateTime(new Date()),
+        card_ids: cards.map((card) => card.card_id),
+      }),
+    onSuccess: async (newSession) => {
+      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
+      navigate(`/practice/${newSession.id}`);
+    },
+  });
+
+  const toggleKind = (kind: ChangeKind) => {
+    practiceThese.reset();
+    const next = new URLSearchParams(params);
+    next.delete('kind');
+    for (const other of CHANGE_KINDS) {
+      if (chosen.includes(other) !== (other === kind)) next.append('kind', other);
+    }
+    changeView(next, { control: () => countsRef.current, listStart: () => listRef.current });
+  };
+
+  const chooseOrder = (key: OrderKey) => {
+    const next = new URLSearchParams(params);
+    if (key === 'mastery') next.delete('order');
+    else next.set('order', key);
+    changeView(next, { control: () => orderRef.current, listStart: () => listRef.current });
+  };
+
+  const open = (cardId: string, row: HTMLButtonElement) => {
+    rowRef.current = row;
+    const next = new URLSearchParams(params);
+    next.set('card', cardId);
+    setParams(next);
+  };
+
+  const close = () => {
+    const next = new URLSearchParams(params);
+    next.delete('card');
+    setParams(next);
+  };
+
+  const editCard = (cardId: string) => {
+    navigate({
+      pathname: `/cards/${cardId}/edit`,
+      search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div ref={countsRef} role="group" className="flex gap-1.5 pb-0.5">
+        {CHANGE_KINDS.map((kind) => {
+          const pressed = chosen.includes(kind);
+          const count = breakdown.cards.filter((card) => card.change === kind).length;
+          return (
+            <button
+              key={kind}
+              type="button"
+              aria-pressed={pressed}
+              aria-label={`${count} ${CHANGE_WORDS[kind]}`}
+              onClick={() => toggleKind(kind)}
+              className={`flex flex-1 flex-col items-center gap-1 rounded-field py-2 ${
+                pressed ? BLOCK_PRESSED_CLASS : BLOCK_CLASS
+              }`}
+            >
+              <ChangeBadge kind={kind} />
+              <span className="text-base font-bold">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {chosen.length > 0 && cards.length > 0 && (
+        <button
+          type="button"
+          disabled={practiceThese.isPending}
+          onClick={() => practiceThese.mutate()}
+          className="tappable -mt-1 h-action w-full shrink-0 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
+        >
+          Practice these
+        </button>
+      )}
+      {practiceThese.isError && (
+        <p role="alert" className="-mt-1.5 text-sm leading-[1.35] font-medium text-(--color-wrong)">
+          {failureSentence(practiceThese.error, 'Practice not found.')}
+        </p>
+      )}
+
+      <div ref={orderRef} role="radiogroup" aria-label="Order by" className="flex items-center gap-2">
+        <span className="mr-0.5 text-body font-medium text-(--color-aside)">Order by:</span>
+        {ORDER_OPTIONS.map((option) => (
           <button
             key={option.key}
             type="button"
             role="radio"
-            aria-checked={sortKey === option.key}
-            onClick={() => setSortKey(option.key)}
-            className={`h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-sm font-medium ${
-              sortKey === option.key
-                ? 'border-(--color-primary) bg-(--color-primary) text-(--color-primary-contrast)'
-                : 'border-(--color-surface-elevated) text-(--color-text-muted)'
+            aria-checked={order === option.key}
+            onClick={() => chooseOrder(option.key)}
+            className={`h-9.5 rounded-full px-4 text-sm font-semibold ${
+              order === option.key ? BLOCK_PRESSED_CLASS : BLOCK_CLASS
             }`}
           >
             {option.label}
@@ -105,32 +368,31 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
         ))}
       </div>
 
-      <ul className="flex flex-col">
+      {/* Drawn with no block when empty, so a list narrowed to nothing shows nothing, while a
+          reveal still finds where the list starts. */}
+      <ul
+        ref={listRef}
+        className={
+          cards.length > 0
+            ? 'tappable divide-y divide-(--color-line) overflow-hidden rounded-block bg-(--color-surface)'
+            : undefined
+        }
+      >
         {cards.map((card) => (
           <li key={card.card_id}>
             <button
               type="button"
-              onClick={(event) => {
-                triggerRef.current = event.currentTarget;
-                setSelectedCardId(card.card_id);
-              }}
-              className="flex min-h-16 w-full items-center gap-3 py-[14px] text-left"
+              onClick={(event) => open(card.card_id, event.currentTarget)}
+              className="flex w-full items-center gap-3 py-2.75 pr-3 pl-4 text-left text-(--color-ink)"
             >
-              <span className="min-w-0 flex-1 truncate text-[15px] leading-5 text-(--color-text)">
+              <span className="min-w-0 flex-1 text-base font-semibold break-words">
                 {cardTitle(card)}
               </span>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-(--color-surface-elevated) px-2 text-xs text-(--color-text-muted)">
-                {BUCKET_LABELS[card.bucket]}
-              </span>
-              <span className="shrink-0 text-sm font-medium text-(--color-text)">
-                {formatMastery(card.mastery)}
-              </span>
-              <span className="shrink-0 text-sm font-medium text-(--color-text)">
-                {formatDelta(card.delta)}
-              </span>
+              <MasteryCircle readiness={card.readiness} size="summary" change={card.change} />
               <ChevronRight
                 aria-hidden="true"
-                className="h-4 w-4 shrink-0 text-(--color-text-muted)"
+                strokeWidth={2.2}
+                className="size-icon shrink-0 text-(--color-aside)"
               />
             </button>
           </li>
@@ -138,100 +400,19 @@ export default function RunBreakdown({ breakdown }: RunBreakdownProps) {
       </ul>
 
       <BottomSheet
-        open={selectedCard !== null}
-        onClose={() => setSelectedCardId(null)}
-        triggerRef={triggerRef}
+        open={openCard !== undefined}
+        onClose={close}
+        triggerRef={rowRef}
         ariaLabelledBy={titleId}
       >
-        {selectedCard && (
-          <>
-            <h2 id={titleId} className="text-base font-semibold text-(--color-text)">
-              {cardTitle(selectedCard)}
-            </h2>
-            <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto">
-              {selectedCard.attempts.map((attempt, index) => (
-                <div key={attempt.practice_card_id} className="flex flex-col gap-3">
-                  {selectedCard.attempts.length > 1 && (
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
-                      Attempt {index + 1} of {selectedCard.attempts.length} ·{' '}
-                      {attempt.status === 'passed' ? 'Passed' : 'Failed'}
-                    </h3>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    {attempt.prompts.map((field) => (
-                      <FieldValue key={field.field_def_id} field={field} labeled />
-                    ))}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {attempt.answers.map((field) => (
-                      <div
-                        key={field.field_def_id}
-                        className="flex items-start justify-between gap-3"
-                      >
-                        <FieldValue field={field} labeled />
-                        {field.removed !== true && (
-                          <div className="mt-4 shrink-0">
-                            <RatingBadge rating={field.rating} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="flex flex-col gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
-                  Fields
-                </h3>
-                <ul className="flex flex-col gap-2">
-                  {selectedCard.fields.map((field) => (
-                    <FieldMasteryRow key={field.field_def_id} field={field} />
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </>
+        {openCard && (
+          <CardSheetContent
+            card={openCard}
+            titleId={titleId}
+            onEdit={() => editCard(openCard.card_id)}
+          />
         )}
       </BottomSheet>
     </div>
-  );
-}
-
-/** One entry of the detail sheet's Fields section: every currently active field of the
- * card's deck, not just the ones this run's attempts happened to touch — an untouched
- * field still shows its current mastery, at ±0. */
-function FieldMasteryRow({ field }: { field: FieldMasteryDelta }) {
-  return (
-    <li className="flex items-center justify-between gap-3">
-      <span className="min-w-0 flex-1 truncate text-sm text-(--color-text)">{field.name}</span>
-      <span className="shrink-0 text-sm font-medium text-(--color-text)">
-        {formatMastery(field.mastery)}
-      </span>
-      <span className="shrink-0 text-sm font-medium text-(--color-text)">
-        {formatDelta(field.delta)}
-      </span>
-    </li>
-  );
-}
-
-/** A read-only rendering of one answer's rating, drawing its label/color from the same
- * tier ramp `RatingChip` uses — this is history, so unlike `RatingChip` it never opens
- * anything on tap. `rating: null` arrives only on a removed field's placeholder, which
- * the sheet never hands to `RatingBadge`, so the "Unrated" fallback is defensive. */
-function RatingBadge({ rating }: { rating: number | null }) {
-  const tier = RATING_TIERS.find((t) => t.rating === rating);
-  if (!tier) {
-    return (
-      <span className="inline-flex h-7 shrink-0 items-center rounded-full border border-(--color-text-muted) px-2 text-xs text-(--color-text-muted)">
-        Unrated
-      </span>
-    );
-  }
-  return (
-    <span
-      className={`inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium ${tier.chipClass}`}
-    >
-      {tier.label}
-    </span>
   );
 }

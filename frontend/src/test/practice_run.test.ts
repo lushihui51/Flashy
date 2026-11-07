@@ -8,6 +8,7 @@ import {
   readPracticeRunState,
   readPracticeRunBreakdown,
   rerunPracticeRun,
+  startChosenCards,
   ratePracticeCard,
 } from 'src/api/practice_run';
 import type { components } from 'src/api/types';
@@ -252,25 +253,40 @@ describe('readPracticeRunBreakdown', () => {
     let requestedSessionId: string | readonly string[] | undefined;
     const breakdown = {
       total_cards: 1,
-      passed_first_try: 1,
-      passed_after_one_fail: 0,
-      passed_after_many_fails: 0,
-      still_failed: 0,
       cards: [
         {
           card_id: 'card_1',
-          bucket: 'passed_first_try',
-          attempt_count: 1,
           primary_field: { field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' },
           attempts: [
             {
               practice_card_id: 'pc_1',
-              status: 'passed',
-              created_at: '2026-01-01T00:00:00Z',
               prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' }],
               answers: [
                 { field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
               ],
+            },
+          ],
+          readiness: 0.65,
+          delta: 0.15,
+          change: 'up',
+          fields: [
+            {
+              field_def_id: 'front',
+              name: 'Front',
+              type: 'text',
+              side: 'prompt',
+              readiness: 0.6,
+              delta: 0.1,
+              change: 'up',
+            },
+            {
+              field_def_id: 'back',
+              name: 'Back',
+              type: 'text',
+              side: 'answer',
+              readiness: 0.7,
+              delta: 0.2,
+              change: 'up',
             },
           ],
         },
@@ -313,6 +329,40 @@ describe('readPracticeRunBreakdown', () => {
     );
 
     await expect(readPracticeRunBreakdown('ps_7')).rejects.toThrow('Practice not found');
+  });
+});
+
+describe('startChosenCards', () => {
+  it('posts the name and the ids to the right practice and returns the created run', async () => {
+    const payload: components['schemas']['PracticeRunChosenCards'] = {
+      name: 'Evening run',
+      card_ids: ['00000000-0000-0000-0000-000000000501', '00000000-0000-0000-0000-000000000502'],
+    };
+    const created = {
+      id: '00000000-0000-0000-0000-000000000403',
+      user_id: '00000000-0000-0000-0000-000000000001',
+      name: 'Evening run',
+      status: 'active',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+    let requestedSessionId: string | readonly string[] | undefined;
+    let requestedBody: unknown;
+    server.use(
+      http.post(
+        `${BASE}/api/practice_runs/:practice_run_id/chosen_cards`,
+        async ({ params, request }) => {
+          requestedSessionId = params.practice_run_id;
+          requestedBody = await request.json();
+          return HttpResponse.json(created, { status: 201 });
+        },
+      ),
+    );
+
+    const result = await startChosenCards('ps_7', payload);
+
+    expect(requestedSessionId).toBe('ps_7');
+    expect(requestedBody).toEqual(payload);
+    expect(result).toEqual(created);
   });
 });
 

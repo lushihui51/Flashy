@@ -1,4 +1,4 @@
-# 023 — A shared breadcrumb row
+# 023 — Shared breadcrumb row
 
 ## Goal
 

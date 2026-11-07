@@ -1,17 +1,19 @@
 import dataclasses
 import uuid
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import timedelta
 
 from sqlmodel import Session
 
-from app.database_ops.card import db_read_card_ids_for_decks
 from app.database_ops.mastery_log import (
     db_stage_append_mastery_log,
     db_stage_clear_mastery,
     db_stage_clear_mastery_for_deck,
+    db_fetch_deck_mastery_read_rows,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
+    db_fetch_subject_mastery_read_rows,
     db_lock_card,
 )
 from app.database_ops.practice_card import db_read_run_ids_for_practice_cards
@@ -21,8 +23,9 @@ from app.database_ops.review_log import (
     db_stage_log_review_group,
     db_read_latest_reviewed_at,
 )
+from app.mastery.readiness import fold_card_readiness, fold_collection_readiness
 from app.mastery.strategy import MasteryStrategy
-from app.mastery.types import CardScore, FieldMasteryState, ReviewGroup
+from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.review_log import ReviewLog
 
 
@@ -143,35 +146,67 @@ def _row_state(row) -> FieldMasteryState | None:
     )
 
 
-def card_mastery(
+@dataclass(frozen=True)
+class CardReadiness:
+    readiness: float
+    reviewed: bool  # some field of the card has a mastery_log row
+
+
+def card_readiness(
     db: Session,
     strategy: MasteryStrategy,
     card_ids: list[uuid.UUID],
     field_ids: list[uuid.UUID] | None = None,
-) -> dict[uuid.UUID, CardScore]:
-    """Read path. The fetch drives from field_def, so a never-reviewed pair is present
-    with no state; this function only folds the already-fetched rows through the
-    strategy — no scoring in SQL."""
+) -> dict[uuid.UUID, CardReadiness]:
+    """Each asked-for card's readiness and whether it has been reviewed, over every field
+    of its deck or, given `field_ids`, over those alone. Every id in `card_ids` has an
+    entry; a card with no field among them reads 0, not reviewed."""
     rows = db_fetch_mastery_read_rows(db, card_ids, field_ids)
-    scores_by_card: dict[uuid.UUID, list[float | None]] = {cid: [] for cid in card_ids}
+    field_readiness_by_card: dict[uuid.UUID, list[float]] = {cid: [] for cid in card_ids}
+    reviewed_cards: set[uuid.UUID] = set()
     for row in rows:
-        scores_by_card[row.card_id].append(strategy.field_score(_row_state(row)))
-    return {cid: strategy.card_score(scores) for cid, scores in scores_by_card.items()}
+        state = _row_state(row)
+        field_readiness_by_card[row.card_id].append(strategy.readiness(state))
+        if state is not None:
+            reviewed_cards.add(row.card_id)
+    return {
+        cid: CardReadiness(readiness=fold_card_readiness(values), reviewed=cid in reviewed_cards)
+        for cid, values in field_readiness_by_card.items()
+    }
 
 
-def deck_mastery(
+def _fold_collections(
+    strategy: MasteryStrategy, rows: list, owner_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, float | None]:
+    field_readiness: dict[uuid.UUID, dict[uuid.UUID, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    for row in rows:
+        field_readiness[row.owner_id][row.card_id].append(strategy.readiness(_row_state(row)))
+    return {
+        owner_id: fold_collection_readiness(
+            [fold_card_readiness(values) for values in field_readiness[owner_id].values()]
+        )
+        for owner_id in owner_ids
+    }
+
+
+def deck_readiness(
     db: Session, strategy: MasteryStrategy, deck_ids: list[uuid.UUID]
-) -> dict[uuid.UUID, CardScore]:
-    """Same fetch as card_mastery, grouped by deck in Python. Display-only — never
-    stored, never a trigger."""
-    if not deck_ids:
-        return {}
-    card_ids = list(db_read_card_ids_for_decks(db, deck_ids))
-    rows = db_fetch_mastery_read_rows(db, card_ids)
-    scores_by_deck: dict[uuid.UUID, list[float | None]] = {did: [] for did in deck_ids}
-    for row in rows:
-        scores_by_deck[row.deck_id].append(strategy.field_score(_row_state(row)))
-    return {did: strategy.card_score(scores) for did, scores in scores_by_deck.items()}
+) -> dict[uuid.UUID, float | None]:
+    """Each deck's readiness: every card's fold over every field of the deck, then the
+    deck's fold over its cards; None for a deck with no card."""
+    return _fold_collections(strategy, db_fetch_deck_mastery_read_rows(db, deck_ids), deck_ids)
+
+
+def subject_readiness(
+    db: Session, strategy: MasteryStrategy, subject_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, float | None]:
+    """Each subject's readiness: the fold over every card of its decks, each card once;
+    None for a subject whose decks hold no card."""
+    return _fold_collections(
+        strategy, db_fetch_subject_mastery_read_rows(db, subject_ids), subject_ids
+    )
 
 
 def _group_review_log_rows(rows: list[ReviewLog]) -> list[ReviewGroup]:

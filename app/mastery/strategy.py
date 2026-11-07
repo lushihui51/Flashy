@@ -1,9 +1,7 @@
 import uuid
-from collections.abc import Sequence
 from typing import Protocol
 
 from app.mastery.types import (
-    CardScore,
     FieldMasteryState,
     MasteryUpdate,
     ReviewGroup,
@@ -15,6 +13,12 @@ class MasteryStrategy(Protocol):
     @property
     def name(self) -> str:
         """Persisted nowhere yet; used for logging and test parametrization."""
+        ...
+
+    @property
+    def reach(self) -> float:
+        """The furthest one rating can move one side's readiness, from this strategy's
+        own constants."""
         ...
 
     def prior(self) -> FieldMasteryState:
@@ -40,12 +44,7 @@ class MasteryStrategy(Protocol):
         the weight, never the count."""
         ...
 
-    def field_score(self, state: FieldMasteryState | None) -> float | None:
-        """Collapse one field's state to a scalar. None in, None out — a field with no
-        mastery row has no score of its own; card_score decides how to fold that in."""
-        ...
-
-    def card_score(self, field_scores: Sequence[float | None]) -> CardScore:
-        """Aggregate one card's per-field scores (None entries are fields with no
-        mastery row) into (mastery, reviewed_field_count)."""
+    def readiness(self, state: FieldMasteryState | None) -> float:
+        """One field's readiness, 0 to 1: how likely the user is to recall it now. None,
+        a field never reviewed, is 0."""
         ...

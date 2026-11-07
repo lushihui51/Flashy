@@ -1,25 +1,34 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useRef, type Ref } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import DeckRow from 'src/components/library/DeckRow';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import ListRow from 'src/components/ui/ListRow';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
 import AddButton from 'src/components/ui/AddButton';
+import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
 
 const TABS = ['subjects', 'decks'] as const;
 type Tab = (typeof TABS)[number];
+
+const TAB_ITEMS: { value: Tab; label: string }[] = [
+  { value: 'subjects', label: 'Subjects' },
+  { value: 'decks', label: 'Decks' },
+];
 
 function isTab(value: string | null): value is Tab {
   return value !== null && (TABS as readonly string[]).includes(value);
 }
 
-function EmptyState({ copy }: { copy: string }) {
+function EmptyState({ copy, ref }: { copy: string; ref?: Ref<HTMLDivElement> }) {
   return (
-    <div className="py-8">
-      <p className="text-(--color-text-muted)">{copy}</p>
+    <div ref={ref} className="py-8">
+      <p className="text-body text-(--color-aside)">{copy}</p>
     </div>
   );
 }
@@ -29,77 +38,78 @@ export default function LibraryPage() {
   const navigate = useNavigate();
   // In the URL rather than component state: a return to the library — via browser back
   // or the deck page's crumb — should restore whichever tab was open.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as Tab) : 'subjects';
+  const { params, changeView } = useViewParams();
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'subjects';
+
+  const tabsRef = useRef<HTMLDivElement>(null);
+  // The open tab's list, its empty sentence or its failure sentence: whichever shows, so a
+  // reveal after a tab change finds where the list starts, and nothing until one does.
+  const listRef = useRef<HTMLUListElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLParagraphElement>(null);
 
   const setTab = (next: Tab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'subjects') params.delete('tab');
-    else params.set('tab', next);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next === 'subjects') nextParams.delete('tab');
+    else nextParams.set('tab', next);
+    changeView(nextParams, {
+      // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
+      // others by the press travel: at the band's top it would leave them under the header.
+      control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
+      listStart: () => listRef.current ?? emptyRef.current ?? failureRef.current,
+    });
   };
 
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
-  const subjectNameById = new Map((subjectsQuery.data ?? []).map((s) => [s.id, s.name]));
-
   return (
     <div className="p-4">
-      <h1 className="text-xl font-semibold text-(--color-text)">Your library</h1>
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        Your library
+      </h1>
 
-      <div
-        role="tablist"
-        aria-label="Library"
-        className="mt-4 flex gap-4 border-b border-(--color-surface-elevated)"
-      >
-        {(['subjects', 'decks'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`h-11 border-b-2 px-1 text-sm font-medium ${
-              tab === t
-                ? 'border-(--color-primary) text-(--color-text)'
-                : 'border-transparent text-(--color-text-muted)'
-            }`}
-          >
-            {t === 'subjects' ? 'Subjects' : 'Decks'}
-          </button>
-        ))}
+      <div ref={tabsRef} className="mt-4">
+        <Tabs ariaLabel="Library" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>
 
       {tab === 'subjects' ? (
         <section aria-label="Subjects">
-          <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+          <div className="mt-4 flex items-center justify-between">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
             </h2>
             <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
           </div>
           {subjectsQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load subjects.
             </p>
           )}
 
           {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
-            <EmptyState copy="No subjects yet." />
+            <EmptyState ref={emptyRef} copy="No subjects yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul ref={subjectsQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
               {(subjectsQuery.data ?? []).map((subject) => (
                 <li key={subject.id}>
                   <ListRow
                     leading={
-                      <span className="flex h-8 w-8 items-center justify-center">
-                        <SubjectIcon icon={subject.icon} className="h-5 w-5 text-(--color-text)" />
+                      <span className="flex size-field items-center justify-center rounded-field outlined-ink">
+                        <SubjectIcon
+                          icon={subject.icon}
+                          className="size-icon-lg text-(--color-ink)"
+                        />
                       </span>
                     }
                     title={subject.name}
                     subtitle={subject.description || undefined}
                     meta={pluralize(subject.deck_count, 'deck')}
+                    trailing={
+                      subject.readiness !== null ? (
+                        <MasteryCircle readiness={subject.readiness} size="row" />
+                      ) : undefined
+                    }
                     to={`/subjects/${subject.id}`}
                   />
                 </li>
@@ -109,25 +119,25 @@ export default function LibraryPage() {
         </section>
       ) : (
         <section aria-label="Decks">
-          <div className="flex items-center justify-between py-3">
-            <h2 className="text-sm font-medium text-(--color-text-muted)">
+          <div className="mt-4 flex items-center justify-between">
+            <h2 className="text-body font-medium text-(--color-aside)">
               {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
             </h2>
             <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
           </div>
           {decksQuery.isError && (
-            <p role="alert" className="mt-2 text-sm text-(--color-danger)">
+            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
               Could not load decks.
             </p>
           )}
 
           {decksQuery.data && decksQuery.data.length === 0 ? (
-            <EmptyState copy="No decks yet." />
+            <EmptyState ref={emptyRef} copy="No decks yet." />
           ) : (
-            <ul className="flex flex-col divide-y divide-(--color-surface-elevated)">
+            <ul ref={decksQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
               {(decksQuery.data ?? []).map((deck) => (
                 <li key={deck.id}>
-                  <DeckRow deck={deck} subjectName={subjectNameById.get(deck.subject_id)} />
+                  <DeckRow deck={deck} subjectName={deck.subject_name} />
                 </li>
               ))}
             </ul>

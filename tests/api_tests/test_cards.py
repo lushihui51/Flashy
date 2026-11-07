@@ -86,28 +86,30 @@ class TestCardCRUD:
         )
         assert response.status_code == 404
 
-    def test_card_create_rejects_archived_field_key(self, client, existing_deck, existing_field_defs):
-        # A third field keeps two active after archiving one below: a deck always
-        # has at least two active fields.
+    def test_card_create_after_a_field_delete_fills_the_remaining_fields(
+        self, client, existing_deck, existing_field_defs
+    ):
+        # A third field keeps two after deleting one below: a deck always has at
+        # least two fields.
         extra_field = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "extra", "type": "text"}
         ).json()
-        archived_field = existing_field_defs[0]
-        client.delete(f"/api/fields/{archived_field['id']}")
+        deleted_field = existing_field_defs[0]
+        client.delete(f"/api/fields/{deleted_field['id']}")
 
-        # The dense write fills the omitted active field — no need to pass every active
-        # id, just proving a non-archived subset still works.
-        remaining = {fd["id"]: "v" for fd in existing_field_defs if fd["id"] != archived_field["id"]}
+        # The dense write fills the omitted field — no need to pass every id, just
+        # proving a subset of the remaining fields still works.
+        remaining = {fd["id"]: "v" for fd in existing_field_defs if fd["id"] != deleted_field["id"]}
         response = client.post(
             "/api/cards", json={"deck_id": existing_deck["id"], "values": remaining}
         )
         assert response.status_code == 201, response.text
         assert response.json()["values"][extra_field["id"]] == ""
 
-        with_archived = dict(remaining)
-        with_archived[archived_field["id"]] = "v"
+        with_deleted = dict(remaining)
+        with_deleted[deleted_field["id"]] = "v"
         rejected = client.post(
-            "/api/cards", json={"deck_id": existing_deck["id"], "values": with_archived}
+            "/api/cards", json={"deck_id": existing_deck["id"], "values": with_deleted}
         )
         assert rejected.status_code == 422
 
@@ -161,21 +163,3 @@ class TestCardCRUD:
 
         get_response = client.get(f"/api/cards/{existing_card['id']}")
         assert get_response.status_code == 404
-
-
-class TestCardMastery:
-    def test_unreviewed_card_reports_prior_and_zero_reviewed(self, client, existing_card):
-        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
-        assert response.status_code == 200, response.text
-        data = response.json()
-        assert data["reviewed_field_count"] == 0
-        assert data["mastery"] == 50.0  # EmaStrategy's MASTERY_PRIOR
-
-    def test_foreign_card_not_found(self, client, other_user, act_as, existing_card):
-        act_as(other_user)
-        response = client.get(f"/api/cards/{existing_card['id']}/mastery")
-        assert response.status_code == 404
-
-    def test_missing_card_not_found(self, client):
-        response = client.get(f"/api/cards/{uuid.uuid4()}/mastery")
-        assert response.status_code == 404

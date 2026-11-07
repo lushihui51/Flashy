@@ -35,6 +35,7 @@ const deck = {
   name: 'Vocab Deck',
   subject_id: 's1',
   created_at: '',
+  readiness: 0.5 as number | null,
   field_defs: twoFields,
   cards: [
     {
@@ -42,6 +43,7 @@ const deck = {
       deck_id: 'd1',
       created_at: '',
       values: { f1: 'Bonjour', f2: 'Hello' } as Record<string, string>,
+      readiness: 0.5,
     },
   ],
 };
@@ -52,6 +54,8 @@ const subject = {
   description: '',
   user_id: 'u1',
   created_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 
 function configuration(overrides: Record<string, unknown> = {}) {
@@ -123,17 +127,54 @@ afterEach(() => {
 });
 
 describe('DeckDetailPage', () => {
-  it('renders name, breadcrumb, table, and card values with no console errors', async () => {
+  it('renders name, breadcrumb, card list, and card values with no console errors', async () => {
     mockDeck();
     renderAtDeckRoute();
 
     expect(await screen.findByRole('heading', { name: 'Vocab Deck' })).toBeInTheDocument();
     expect(await screen.findByText(/French/)).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Cards in Vocab Deck' })).toBeInTheDocument();
+    expect(screen.getByText('Front')).toBeInTheDocument();
+    expect(screen.getByText('Back')).toBeInTheDocument();
     expect(screen.getByText('Bonjour')).toBeInTheDocument();
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('shows the mastery circle directly after the name, before Practice', async () => {
+    mockDeck({ deckData: { ...deck, readiness: 0.42 } });
+    renderAtDeckRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Vocab Deck' });
+    const circle = heading.nextElementSibling!;
+    expect(circle).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
+    expect(
+      circle.compareDocumentPosition(screen.getByRole('button', { name: 'Practice' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(heading).toHaveClass('flex-1');
+  });
+
+  it('shows no mastery circle for a deck with no card', async () => {
+    mockDeck({ deckData: { ...deck, readiness: null, cards: [] } });
+    renderAtDeckRoute();
+
+    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it("shows each card's mastery on its row", async () => {
+    mockDeck({
+      deckData: {
+        ...deck,
+        readiness: 0.2,
+        cards: [{ ...deck.cards[0]!, readiness: 0.42 }],
+      },
+    });
+    renderAtDeckRoute();
+
+    const list = await screen.findByRole('list', { name: 'Cards in Vocab Deck' });
+    expect(within(list).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
   });
 
   it('the breadcrumb renders the subject icon as a real icon (not raw text) and links to the subject page', async () => {
@@ -201,7 +242,7 @@ describe('DeckDetailPage', () => {
         deckData: {
           ...deck,
           field_defs: [twoFields[0]!],
-          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' } }],
+          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' }, readiness: 0.5 }],
         },
       });
       renderAtDeckRoute();
@@ -224,7 +265,7 @@ describe('DeckDetailPage', () => {
     });
   });
 
-  it('shows an empty state when the deck has no cards, and still renders the field header', async () => {
+  it('shows an empty state and no card list when the deck has no cards', async () => {
     mockDeck({ deckData: { ...deck, cards: [] } });
     renderAtDeckRoute();
 
@@ -232,13 +273,10 @@ describe('DeckDetailPage', () => {
     // The tab's toolbar button is the only add control; the empty state is its text
     // alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
-    // the table (and its field header) is not replaced by the empty state.
-    expect(screen.getByRole('columnheader', { name: 'Front' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Back' })).toBeInTheDocument();
-    expect(screen.queryAllByRole('row')).toHaveLength(1); // header row only, no card rows
+    expect(screen.queryByRole('list', { name: 'Cards in Vocab Deck' })).not.toBeInTheDocument();
   });
 
-  it('a zero-card deck with 8+ fields renders a scrollable header with the empty state beneath', async () => {
+  it('a zero-card deck with 8+ fields counts its fields over the empty state', async () => {
     const manyFields = Array.from({ length: 8 }, (_, i) => ({
       id: `f${i}`,
       name: `Field ${i}`,
@@ -249,7 +287,7 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     expect(await screen.findByText('No cards in this deck yet.')).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    expect(screen.getByText('0 cards · 8 fields')).toBeInTheDocument();
   });
 
   it('the header carries deck-level actions only — no bare + whose meaning depends on a tab', async () => {
@@ -330,6 +368,7 @@ describe('DeckDetailPage', () => {
             deck_id: 'd1',
             created_at: '',
             values: Object.fromEntries(manyFields.map((f) => [f.id, `v-${f.id}`])),
+            readiness: 0.5,
           },
         ],
       },
@@ -337,7 +376,8 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     await screen.findByRole('heading', { name: 'Vocab Deck' });
-    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    const card = screen.getByRole('link', { name: /v-f0/ });
+    manyFields.forEach((f) => expect(within(card).getByText(`v-${f.id}`)).toBeInTheDocument());
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -374,7 +414,7 @@ describe('DeckDetailPage', () => {
       await user.click(screen.getByRole('tab', { name: 'Configurations' }));
 
       expect(await screen.findByText('Front to Back')).toBeInTheDocument();
-      expect(screen.queryByRole('columnheader', { name: 'Front' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Bonjour')).not.toBeInTheDocument();
       // Scoped to this deck — a configuration belongs to exactly one.
       expect(configRequests[0]!.get('deck_id')).toBe('d1');
     });

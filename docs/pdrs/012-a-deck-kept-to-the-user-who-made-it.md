@@ -46,4 +46,3 @@ Rejected because there are no two users yet, and whether a receiver wants a view
 **Neutral**
 
 - The user sees in the library only the subjects and decks they made.
-- The product owner decides what the Home page and notifications show with nothing arriving from another user.

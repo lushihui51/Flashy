@@ -19,6 +19,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -34,6 +35,8 @@ const mathSubject = {
   user_id: 'u1',
   created_at: '',
   last_activity_at: '',
+  deck_count: 1,
+  readiness: 0.5,
 };
 
 const deckDetail = {
@@ -42,6 +45,7 @@ const deckDetail = {
   subject_id: 's1',
   created_at: '',
   last_activity_at: '',
+  readiness: 0.5,
   field_defs: [
     { id: 'front-id', name: 'Front', type: 'text', position: 0 },
     { id: 'back-id', name: 'Back', type: 'text', position: 1 },
@@ -52,6 +56,7 @@ const deckDetail = {
       deck_id: 'd1',
       created_at: '',
       values: { 'front-id': 'Bonjour', 'back-id': 'Hello' },
+      readiness: 0.5,
     },
   ],
 };
@@ -64,14 +69,14 @@ function mockEditDeck(data: typeof deckDetail = deckDetail) {
   );
 }
 
-function renderEditDeck(deckId = 'd1') {
+function renderEditDeck(deckId = 'd1', search = '') {
   return renderWithProviders(
     <Routes>
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
       <Route path="/decks/:deckId" element={<LocationProbe />} />
       <Route path="/subjects/:subjectId" element={<LocationProbe />} />
     </Routes>,
-    [`/decks/${deckId}/edit`],
+    [`/decks/${deckId}/edit${search}`],
   );
 }
 
@@ -105,13 +110,13 @@ afterEach(() => {
 });
 
 describe('DeckEditor — create mode', () => {
-  it('starts with Term and Definition fields and a disabled Create', async () => {
+  it('starts with Term and Definition fields and a Create that reads not ready', async () => {
     mockSubjects();
     renderEditor();
 
     expect(await screen.findByDisplayValue('Term')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Definition')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('the field type select offers only Text', async () => {
@@ -152,14 +157,13 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Definition' })).toBeDisabled();
   });
 
-  it('renaming a field via up/down overflow menu reorders the fields', async () => {
+  it("a field's Move up button reorders the fields", async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderEditor();
 
     await screen.findByDisplayValue('Term');
-    await user.click(screen.getByRole('button', { name: 'Reorder Definition' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move up' }));
+    await user.click(screen.getByRole('button', { name: 'Move Definition up' }));
 
     const nameInputs = screen.getAllByRole('textbox', { name: 'Field name' });
     expect(nameInputs.map((i) => (i as HTMLInputElement).value)).toEqual(['Definition', 'Term']);
@@ -239,11 +243,32 @@ describe('DeckEditor — create mode', () => {
     await user.click(await screen.findByRole('option', { name: /New subject…/ }));
 
     const dialog = await screen.findByRole('dialog', { name: 'New subject' });
-    // Scoped to the dialog: the editor's own header has a Cancel button too.
+    // Scoped to the dialog: the editor's own bar has a Cancel button too.
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog', { name: 'New subject' })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Subject')).toHaveValue('Math');
+  });
+
+  it('the New subject overlay has a bar of its own, with its heading outside it', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+      </Routes>,
+      ['/decks/new'],
+    );
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject…/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    const heading = within(dialog).getByRole('heading', { name: 'New subject' });
+    expect(heading.closest('[data-reveal-clear]')).toBeNull();
+    const bar = within(within(dialog).getByTestId('form-bar'));
+    expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Create' })).toBeInTheDocument();
   });
 
   it('creating a subject in the overlay selects it immediately, without waiting for a refetch', async () => {
@@ -300,7 +325,7 @@ describe('DeckEditor — create mode', () => {
     ).toBeInTheDocument();
   });
 
-  it('opened via a "New deck…" round-trip: Create navigates back to returnTo with the new deck id', async () => {
+  it('opened via a "New deck…" round-trip: Create navigates to returnTo with the new deck id', async () => {
     mockSubjects();
     server.use(
       http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
@@ -311,8 +336,8 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      // returnTo rides the URL, not state.
-      ['/decks/new?returnTo=%2Fcards%2Fnew'],
+      // Both addresses ride the URL, not state; a different cancelTo shows Create ignores it.
+      ['/decks/new?cancelTo=%2Flibrary&returnTo=%2Fcards%2Fnew'],
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
@@ -327,7 +352,7 @@ describe('DeckEditor — create mode', () => {
     );
   });
 
-  it('opened via a "New deck…" round-trip: Cancel with no changes navigates back to returnTo with no state', async () => {
+  it('opened via a "New deck…" round-trip: Cancel with no changes navigates to cancelTo with no state', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
@@ -335,7 +360,8 @@ describe('DeckEditor — create mode', () => {
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
         <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      ['/decks/new?returnTo=%2Fcards%2Fnew'],
+      // A different returnTo shows Cancel ignores it.
+      ['/decks/new?cancelTo=%2Fcards%2Fnew&returnTo=%2Flibrary'],
     );
 
     await screen.findByDisplayValue('Term');
@@ -345,21 +371,77 @@ describe('DeckEditor — create mode', () => {
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
   });
 
-  it('a non-internal returnTo is treated as absent — Cancel falls back to /library', async () => {
+  it('a confirmed Cancel navigates to cancelTo', async () => {
     mockSubjects();
     const user = userEvent.setup();
     renderWithProviders(
       <Routes>
         <Route path="/decks/new" element={<DeckEditor mode="create" />} />
-        <Route path="/library" element={<LocationProbe />} />
+        <Route path="/cards/new" element={<LocationProbe />} />
       </Routes>,
-      ['/decks/new?returnTo=https%3A%2F%2Fevil.com'],
+      ['/decks/new?cancelTo=%2Fcards%2Fnew'],
     );
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
+  });
+
+  it('with returnTo alone, Cancel lands on /library — returnTo never stands in for cancelTo', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor('/decks/new?returnTo=%2Fcards%2Fnew');
 
     await screen.findByDisplayValue('Term');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('with cancelTo alone, Create lands on the new deck — cancelTo never stands in for returnTo', async () => {
+    mockSubjects();
+    server.use(
+      http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
+    );
+    const user = userEvent.setup();
+    renderEditor('/decks/new?cancelTo=%2Fsubjects%2Fs1');
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+  });
+
+  it('a non-internal cancelTo is treated as absent — Cancel falls back to /library', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor('/decks/new?cancelTo=https%3A%2F%2Fevil.com');
+
+    await screen.findByDisplayValue('Term');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('a non-internal returnTo is treated as absent — Create falls back to the new deck', async () => {
+    mockSubjects();
+    server.use(
+      http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
+    );
+    const user = userEvent.setup();
+    renderEditor('/decks/new?returnTo=https%3A%2F%2Fevil.com');
+
+    await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
   });
 
   it('saves name, subject and fields — no cards field at all — and lands on the new deck', async () => {
@@ -479,16 +561,47 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Back' })).toBeDisabled();
   });
 
-  it('change nothing: Save and Undo both start disabled (nothing to save/undo)', async () => {
+  it('change nothing: Save reads not ready and Undo starts disabled (nothing to save/undo)', async () => {
     mockEditDeck();
     renderEditDeck();
 
     await screen.findByDisplayValue('French Vocab');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
-  it('header reads Done (not Cancel) when the editor is clean; Done exits with no prompt', async () => {
+  it('the bar reads Done, Undo, Save when clean, and Cancel, Undo, Save once a field is renamed', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    const barButtons = () =>
+      within(screen.getByTestId('form-bar'))
+        .getAllByRole('button')
+        .map((button) => button.textContent);
+    expect(barButtons()).toEqual(['Done', 'Undo', 'Save']);
+
+    const [firstField] = screen.getAllByRole('textbox', { name: 'Field name' });
+    await user.type(firstField!, 'x');
+
+    expect(barButtons()).toEqual(['Cancel', 'Undo', 'Save']);
+  });
+
+  it('New deck has only Cancel and Create in the bar', async () => {
+    mockSubjects();
+    renderWithProviders(
+      <Routes>
+        <Route path="/decks/new" element={<DeckEditor mode="create" />} />
+      </Routes>,
+      ['/decks/new'],
+    );
+
+    const buttons = within(await screen.findByTestId('form-bar')).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['Cancel', 'Create']);
+  });
+
+  it('the bar reads Done (not Cancel) when the editor is clean; Done exits with no prompt', async () => {
     mockEditDeck();
     const user = userEvent.setup();
     renderEditDeck();
@@ -501,7 +614,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.queryByText('Discard this deck?')).not.toBeInTheDocument();
   });
 
-  it('header switches to Cancel once dirty, and Cancel still prompts to discard', async () => {
+  it('the bar switches to Cancel once dirty, and Cancel still prompts to discard', async () => {
     mockEditDeck();
     const user = userEvent.setup();
     renderEditDeck();
@@ -512,6 +625,52 @@ describe('DeckEditor — edit mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(await screen.findByText('Discard this deck?')).toBeInTheDocument();
+  });
+
+  it('a confirmed Cancel goes to cancelTo, ignoring returnTo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1&returnTo=%2Fdecks%2Fother');
+
+    await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+  });
+
+  it('with returnTo alone, a confirmed Cancel lands on the deck’s page', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?returnTo=%2Fsubjects%2Fs1');
+
+    await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+  });
+
+  it('Done goes to returnTo, ignoring cancelTo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fdecks%2Fother&returnTo=%2Fsubjects%2Fs1');
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+  });
+
+  it('with cancelTo alone, Done lands on the deck’s page', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1');
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
   });
 
   it('Undo reverts a mix of edits (rename + added field + field removal) in one click', async () => {
@@ -532,7 +691,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByDisplayValue('French Vocab')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Back')).toBeEnabled();
     expect(screen.queryAllByDisplayValue('')).toHaveLength(0); // the added blank field is gone too
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
@@ -614,8 +773,7 @@ describe('DeckEditor — edit mode', () => {
 
     // Reorder: move Front down below Back, then stage Back for removal — the staged
     // field drops out of `order` while staying visible, struck through.
-    await user.click(screen.getByRole('button', { name: 'Reorder Front' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move down' }));
+    await user.click(screen.getByRole('button', { name: 'Move Front down' }));
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -639,7 +797,7 @@ describe('DeckEditor — edit mode', () => {
     // Rebuilt from the response: the removed field is really gone.
     expect(screen.queryByDisplayValue('Back')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('Notes')).toBeInTheDocument();
-    expect(screen.getByText('Saved ✓').closest('button')).toBeDisabled();
+    expect(screen.getByText('Saved ✓').closest('button')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
   });
@@ -723,7 +881,8 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Back' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent('Something went wrong.');
     expect(screen.queryByText('Save changes?')).not.toBeInTheDocument();
     expect(patchCallCount).toBe(0);
   });
@@ -877,6 +1036,172 @@ describe('DeckEditor — edit mode', () => {
   });
 });
 
+describe('DeckEditor — bringing a part of the form and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  it('Save with a blank field name is pressable, reads not ready, and a tap moves the page once', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await user.clear(await screen.findByDisplayValue('Back'));
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(save).toHaveAttribute('aria-disabled', 'true');
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a blank-name Create in the New subject overlay scrolls the dialog's content once and the window not at all", async () => {
+    mockSubjects();
+    const dialogScrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(await screen.findByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: /New subject/ }));
+    const dialogElement = await screen.findByRole('dialog');
+    const dialog = within(dialogElement);
+    await user.click(dialog.getByRole('button', { name: 'Create' }));
+
+    expect(await dialog.findByText('Name is required.')).toBeInTheDocument();
+    expect(dialogScrollBy).toHaveBeenCalledTimes(1);
+    expect(dialogScrollBy.mock.contexts[0]).toBe(dialogElement);
+    expect(scrollBy).not.toHaveBeenCalled();
+    dialogScrollBy.mockRestore();
+  });
+
+  it('Create with a blank Deck name and no subject says both, and moves the page once', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    const name = await screen.findByRole('textbox', { name: 'Deck name' });
+    const picker = screen.getByPlaceholderText('Subject');
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).toBeEnabled();
+
+    await user.click(create);
+
+    const nameSentence = await screen.findByText('Name is required.');
+    expect(nameSentence).toHaveAttribute('role', 'alert');
+    expect(nameSentence.closest('[data-reveal-part]')).toContainElement(name);
+    expect(nameSentence.closest('label')).toBeNull();
+    const subjectSentence = screen.getByText('Choose a subject to create a deck.');
+    expect(subjectSentence).toHaveAttribute('role', 'alert');
+    expect(picker.compareDocumentPosition(subjectSentence)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Create with a Deck name and no subject says only the subject, and choosing one clears it', async () => {
+    mockSubjects();
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.type(await screen.findByRole('textbox', { name: 'Deck name' }), 'Verbs');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await screen.findByText('Choose a subject to create a deck.');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByPlaceholderText('Subject'));
+    await user.click(await screen.findByRole('option', { name: 'Math' }));
+    expect(screen.queryByText('Choose a subject to create a deck.')).not.toBeInTheDocument();
+  });
+
+  it('editing the Deck name clears its sentence, and so does Undo', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    const input = await screen.findByDisplayValue('French Vocab');
+    await user.clear(input);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText('Name is required.');
+    await user.type(input, 'F');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByText('Name is required.');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+  });
+
+  it("a field's sentence is its row's part, and a tap brings that part on screen", async () => {
+    mockEditDeck();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    const field = await screen.findByDisplayValue('Back');
+    await user.clear(field);
+    const sentence = screen.getByText('Name is required.');
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(field);
+    expect(part).toContainElement(screen.getByRole('button', { name: 'Remove field' }));
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(sentence);
+    expect(measured.mock.contexts).toContain(part);
+    measured.mockRestore();
+  });
+
+  it('Save with nothing changed moves nothing', async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  async function refuseSave(detail: unknown, status: number) {
+    mockEditDeck();
+    server.use(http.patch(`${BASE}/api/decks/:id`, () => HttpResponse.json({ detail }, { status })));
+    const user = userEvent.setup();
+    renderEditDeck();
+    const input = await screen.findByDisplayValue('French Vocab');
+    await user.type(input, ' II');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    return { user, input };
+  }
+
+  it('a deck_name_taken refusal renders under the Deck name input, not in the bar, until the name is edited', async () => {
+    const { user, input } = await refuseSave({ code: 'deck_name_taken', message: 'taken' }, 400);
+
+    const sentence = await screen.findByText('A deck with this name already exists.');
+    expect(sentence).toHaveAttribute('role', 'alert');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
+    expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+
+    await user.type(input, '!');
+    expect(screen.queryByText('A deck with this name already exists.')).not.toBeInTheDocument();
+  });
+
+  it('a 500 renders in the bar and leaves the page where it is', async () => {
+    await refuseSave('boom', 500);
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+});
+
 describe('DeckEditor — primary field marker', () => {
   it('the first field carries the Primary marker, and no other field does', async () => {
     mockSubjects();
@@ -908,8 +1233,7 @@ describe('DeckEditor — primary field marker', () => {
       within(screen.getByText('Primary').closest('li')!).getByDisplayValue('Term'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Reorder Definition' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Move up' }));
+    await user.click(screen.getByRole('button', { name: 'Move Definition up' }));
 
     const pills = screen.getAllByText('Primary');
     expect(pills).toHaveLength(1);

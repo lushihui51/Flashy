@@ -1,4 +1,4 @@
-# 019 — New practice: a cancellable selection, a draft that survives, edit from the list
+# 019 — New practice page
 
 ## Goal
 

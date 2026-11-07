@@ -45,14 +45,13 @@ Rejected because the same word would then be spelled two ways on two screens.
 **Positive**
 
 - A user finds the same act under the same word on every screen.
-- Whoever writes the next sentence has one reference to take its words from, and a reviewer has one reference to check it against.
-- A name from the code that reaches a screen is a defect by this record, not a matter of taste.
+- The user meets every new sentence in words they already know from other screens.
+- The user never meets a name from the code on a screen.
 
 **Negative**
 
-- A concept new to the app cannot be named on a screen until the reference names it.
-- A screen whose words differ from the reference contradicts this record until it is changed.
+- The user meets a word chosen to fit every screen, which may fit the screen in front of them less well than a word of its own.
 
 **Neutral**
 
-- The reference begins as the practice table AGENTS.md points at, extended to the whole app.
+- The user reads American spelling on every screen, whatever English they write themselves.

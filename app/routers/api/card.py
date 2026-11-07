@@ -11,12 +11,12 @@ from app.database_ops.card import (
 )
 from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import db_read_field_defs
+from app.database_ops.subject import db_read_subject
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
-from app.models.card import CardCreate, CardMasteryRead, CardRead, CardUpdate
+from app.models.card import CardCreate, CardRead, CardUpdate
 from app.services.activity import touch
 from app.services.deletion import delete_card as delete_card_service
-from app.services.mastery import card_mastery
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
 
@@ -27,14 +27,13 @@ def _is_blank(value: str) -> bool:
 
 def _card_read(card, active_field_ids: set[uuid.UUID]) -> CardRead:
     """Dense over active_field_ids regardless of what rows actually exist —
-    every active field gets a key, "" if there's no row for it. An archived field's
-    row is kept in the database as inert history (AGENTS.md) but never surfaced on a
-    read."""
+    every active field gets a key, "" if there's no row for it."""
     existing = {v.field_def_id: v.value for v in card.values if v.field_def_id in active_field_ids}
     return CardRead(
         id=card.id,
         deck_id=card.deck_id,
         created_at=card.created_at,
+        last_activity_at=card.last_activity_at,
         values={field_id: existing.get(field_id, "") for field_id in active_field_ids},
     )
 
@@ -65,7 +64,9 @@ def create_card(db: SessionDep, current_user: CurrentUserDep, card: CardCreate):
     if all(_is_blank(v) for v in dense_values.values()):
         raise HTTPException(status_code=422, detail="card has no values")
 
-    touch(db, deck)  # A card create bubbles to the deck's recency.
+    subject = db_read_subject(db, deck.subject_id, current_user.id)
+    assert subject is not None, "a deck's subject always exists"
+    touch(db, deck, subject)
     new_card = db_create_card(db, card.deck_id, dense_values)
     return _card_read(new_card, active_field_ids)
 
@@ -110,19 +111,12 @@ def update_card(
         raise HTTPException(status_code=422, detail="card has no values")
 
     deck = db_read_deck(db, card.deck_id, current_user.id)
-    if deck:
-        touch(db, deck)  # A card edit bubbles to the deck's recency, not the subject's.
+    assert deck is not None, "a card's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, current_user.id)
+    assert subject is not None, "a deck's subject always exists"
+    touch(db, card, deck, subject)
     updated_card = db_update_card_values(db, card, payload.values)
     return _card_read(updated_card, active_field_ids)
-
-
-@router.get("/{card_id}/mastery", response_model=CardMasteryRead, status_code=200)
-def read_card_mastery(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID):
-    if not db_read_card(db, card_id, current_user.id):
-        raise HTTPException(status_code=404, detail="Card not found")
-    strategy = get_mastery_strategy()
-    score = card_mastery(db, strategy, [card_id])[card_id]
-    return CardMasteryRead(mastery=score.mastery, reviewed_field_count=score.reviewed_field_count)
 
 
 @router.delete("/{card_id}", status_code=204)

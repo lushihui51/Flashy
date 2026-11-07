@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BOARD_PARTS,
   boardFromConfig,
+  boardProblem,
   boardToPayload,
-  boardValidationError,
   defaultConfigurationName,
   emptyBoard,
   fieldsIn,
@@ -128,16 +129,16 @@ describe('boardFromConfig', () => {
   });
 
   it('drops ids the deck no longer has live, and prunes counts to what survived', () => {
-    // 'archived' was archived after the config was saved: it must not appear anywhere in
+    // 'deleted' was deleted after the config was fetched: it must not appear anywhere in
     // the builder, and the count of 2 it made possible goes with it.
     const board = boardFromConfig(fieldDefs, {
       ...emptyConfigArrays,
       answer_field_ids: ['f1'],
-      prompt_pool_ids: ['f2', 'archived'],
+      prompt_pool_ids: ['f2', 'deleted'],
       prompt_pool_counts: [1, 2],
     });
 
-    expect(board.order).not.toContain('archived');
+    expect(board.order).not.toContain('deleted');
     expect(fieldsIn(board, 'prompt_pool')).toEqual(['f2']);
     expect(board.counts.prompt_pool).toEqual([1]);
   });
@@ -163,7 +164,7 @@ describe('boardToPayload', () => {
   });
 });
 
-describe('boardValidationError', () => {
+describe('boardProblem', () => {
   function boardWith(
     assignments: [string, Parameters<typeof moveField>[2]][],
     counts: [Parameters<typeof toggleCount>[1], number][] = [],
@@ -176,7 +177,7 @@ describe('boardValidationError', () => {
 
   it('accepts fixed fields on both sides', () => {
     expect(
-      boardValidationError(
+      boardProblem(
         boardWith([
           ['f1', 'prompt_fields'],
           ['f2', 'answer_fields'],
@@ -196,36 +197,59 @@ describe('boardValidationError', () => {
         ['answer_pool', 1],
       ],
     );
-    expect(boardValidationError(board)).toBeNull();
+    expect(boardProblem(board)).toBeNull();
   });
 
-  it('rejects a pool with fields but no checked counts — it would draw nothing', () => {
+  it("reports a prompt pool with no checked count at the prompt side's counts", () => {
     const board = boardWith([
       ['f1', 'prompt_pool'],
       ['f2', 'answer_fields'],
     ]);
-    expect(boardValidationError(board)).toMatch(/how many random prompt fields/);
+    expect(boardProblem(board)).toEqual({
+      part: 'prompt_counts',
+      sentence: 'Check how many random prompt fields each card shows.',
+    });
   });
 
-  it('rejects an answer pool with fields but no checked counts', () => {
+  it("reports an answer pool with no checked count at the answer side's counts", () => {
     const board = boardWith([
       ['f1', 'prompt_fields'],
       ['f2', 'answer_pool'],
     ]);
-    expect(boardValidationError(board)).toMatch(/how many random answer fields/);
+    expect(boardProblem(board)).toEqual({
+      part: 'answer_counts',
+      sentence: 'Check how many random answer fields each card shows.',
+    });
   });
 
-  it('rejects a side with nothing on it at all', () => {
-    expect(boardValidationError(boardWith([['f2', 'answer_fields']]))).toMatch(
-      /prompt side needs at least one field/,
-    );
-    expect(boardValidationError(boardWith([['f1', 'prompt_fields']]))).toMatch(
-      /answer side needs at least one field/,
-    );
+  it('reports a side with nothing on it at that side', () => {
+    expect(boardProblem(boardWith([['f2', 'answer_fields']]))).toEqual({
+      part: 'prompt_side',
+      sentence: 'The prompt side needs at least one field — always shown or random draw.',
+    });
+    expect(boardProblem(boardWith([['f1', 'prompt_fields']]))).toEqual({
+      part: 'answer_side',
+      sentence: 'The answer side needs at least one field — always shown or random draw.',
+    });
   });
 
-  it('rejects an empty board', () => {
-    expect(boardValidationError(emptyBoard(fieldDefs))).not.toBeNull();
+  it('reports the first problem in page order, however many there are', () => {
+    expect(BOARD_PARTS).toEqual(['prompt_side', 'prompt_counts', 'answer_side', 'answer_counts']);
+
+    // An empty prompt side comes before an unchecked answer count.
+    expect(boardProblem(boardWith([['f2', 'answer_pool']]))?.part).toBe('prompt_side');
+    // An unchecked prompt count comes before an empty answer side.
+    expect(boardProblem(boardWith([['f1', 'prompt_pool']]))?.part).toBe('prompt_counts');
+    // An unchecked prompt count comes before an unchecked answer count.
+    expect(
+      boardProblem(
+        boardWith([
+          ['f1', 'prompt_pool'],
+          ['f2', 'answer_pool'],
+        ]),
+      )?.part,
+    ).toBe('prompt_counts');
+    expect(boardProblem(emptyBoard(fieldDefs))?.part).toBe('prompt_side');
   });
 });
 

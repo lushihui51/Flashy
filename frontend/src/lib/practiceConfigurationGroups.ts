@@ -10,11 +10,11 @@ export type ConfigurationGroup = {
 };
 
 /**
- * Configs come back subject → deck → name ordered (the backend contract), so grouping
- * by first-seen `deck_id` preserves that order without a second sort. Two decks that
- * share a name in different subjects still land in separate groups — each keyed by
- * `deck_id` and carrying its own `subject_name` — so the group header can tell them
- * apart (a deck name alone is not unique).
+ * Configs come back ordered by their deck's most recent change, then by their own (the
+ * backend contract), so grouping by first-seen `deck_id` preserves that order without a
+ * second sort. Two decks that share a name in different subjects still land in separate
+ * groups — each keyed by `deck_id` and carrying its own `subject_name` — so the group
+ * header can tell them apart (a deck name alone is not unique).
  */
 export function groupConfigurationsByDeck(
   configs: DeckPracticeConfigSummary[],

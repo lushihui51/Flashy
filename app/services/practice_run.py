@@ -6,9 +6,15 @@ from datetime import UTC, datetime
 
 from sqlmodel import Session
 
-from app.database_ops.card import db_read_card, db_read_card_ids_for_deck
+from app.database_ops import app_user as app_user_ops
+from app.database_ops.card import (
+    db_read_card,
+    db_read_card_ids_for_deck,
+    db_read_cards_with_values,
+    db_read_deck_id_by_card,
+)
 from app.database_ops.deck_practice_config import db_read_deck_practice_config
-from app.database_ops.field_def import db_read_field_defs
+from app.database_ops.field_def import db_read_field_defs, db_read_field_defs_for_decks
 from app.database_ops.mastery_log import (
     db_fetch_mastery_before_bound,
     db_fetch_mastery_read_rows,
@@ -36,18 +42,20 @@ from app.database_ops.practice_run import (
     db_read_practice_run,
     db_update_practice_run_status,
 )
+from app.mastery.readiness import classify_change, fold_card_readiness
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
-from app.models.field_def import FieldDef, FieldType
+from app.models.base import utcnow
+from app.models.field_def import FieldDef
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.practice_run_payloads import (
     BreakdownAttempt,
-    BreakdownBucket,
     BreakdownCard,
     CurrentRunCard,
-    FieldMasteryDelta,
+    FieldReadinessDelta,
+    FieldSide,
     PracticeRunState,
     PracticeRunBreakdown,
     RatedFieldValue,
@@ -56,7 +64,7 @@ from app.models.practice_run_payloads import (
 )
 from app.refusals import Refusal
 from app.services.deck_practice_config import validate_deck_practice_config
-from app.services.mastery import card_mastery, record_review_group
+from app.services.mastery import card_readiness, record_review_group
 from app.services.practice_generation import generate_practice_card_fields
 
 _ARRAY_FIELDS = (
@@ -70,8 +78,8 @@ _ARRAY_FIELDS = (
 
 _POSITION_GAP = 1000
 # A retry may not surface until this many other pending cards have had their turn,
-# clamping the mastery-ordered insertion point rather than replacing it — a card whose
-# mastery already puts it deeper than the floor stays at its deeper slot (ADR 037).
+# clamping the readiness-ordered insertion point rather than replacing it — a card whose
+# readiness already puts it deeper than the floor stays at its deeper slot (ADR 037).
 # Must stay >= 1: _insertion_position always reads a predecessor.
 RETRY_SPACING_FLOOR = 3
 
@@ -80,7 +88,7 @@ class RunStartError(Exception):
     """A session-start failure that names the config responsible.
 
     The creation page lists several configs at once and must render a failure against
-    the offending row rather than as a bare toast — a stale config (a field archived
+    the offending row rather than as a bare toast — a stale config (a field deleted
     since it was saved) is fixable, but only if the user is told *which* one to fix. A
     plain message string can't carry that, so the id travels on the exception and is
     serialized into the error body by the router. Codes: `config_not_found`,
@@ -105,9 +113,8 @@ class RunStartError(Exception):
 
 class RunActiveError(Exception):
     """Raised by get_practice_run_breakdown for a session that hasn't completed
-    yet (the router answers 409 `run_active`): the breakdown's bucket refinement and
-    terminal-only attempts only make sense once nothing is pending — mid-run, there is
-    no in-app history view at all."""
+    yet (the router answers 409 `run_active`): the summary's terminal-only attempts only
+    make sense once nothing is pending — mid-run, there is no in-app history view at all."""
 
     code = "run_active"
 
@@ -142,6 +149,22 @@ class RerunError(Exception):
         return {"code": self.code, "message": self.message}
 
 
+class ChosenCardsError(Exception):
+    """A failure to start a practice of chosen cards, detail `{code, message}`:
+    `run_active` while the practice has not completed; `nothing_to_practice` when no
+    snapshot holding a chosen card still validates against its deck's live fields;
+    `no_cards` when the surviving snapshots generated no practice card."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+    @property
+    def detail(self) -> dict:
+        return {"code": self.code, "message": self.message}
+
+
 def _config_field_ids(config) -> list[uuid.UUID]:
     return list(
         set(config.prompt_field_ids)
@@ -159,21 +182,25 @@ def _snapshot_and_generate_deck(
     array_values: dict[str, list],
     source_config_id: uuid.UUID | None,
     source_config_name: str | None,
+    card_ids: list[uuid.UUID] | None,
     rng: random.Random,
     next_position: int,
 ) -> int:
     """One deck's worth of session-start work: cut an immutable practice_deck snapshot
     from `array_values` (already validated by the caller), then generate its
-    practice_cards ordered unseen-first-then-ascending-mastery with sparse positions
+    practice_cards ordered unseen-first-then-ascending-readiness with sparse positions
     starting at `next_position`. Returns the position to continue from for
     the next deck. Shared by start_practice_run (fed from a live
-    deck_practice_config) and the re-run path (fed from a completed session's
-    own frozen practice_deck arrays) — both need exactly this step, just from different
-    sources. `source_config_id` rides along into the snapshot purely for
-    attribution — start_practice_run passes the live config's id, rerun_practice_run
+    deck_practice_config), the re-run path and a practice of chosen cards (both fed from
+    a completed session's own frozen practice_deck arrays) — all need exactly this step,
+    just from different sources. `source_config_id` rides along into the snapshot purely
+    for attribution — start_practice_run passes the live config's id, the other two
     the original snapshot's value verbatim — and is never read back by anything below this
     function. `source_config_name` rides into the snapshot next to it, the
-    same way, and is likewise read by nothing below."""
+    same way, and is likewise read by nothing below. `card_ids` is written onto the
+    snapshot and selects the cards generated: null is every card of the deck, a list is
+    those of the deck's cards it names, and an id naming no card of the deck selects
+    nothing."""
     practice_deck = db_stage_create_practice_deck(
         db,
         {
@@ -181,16 +208,20 @@ def _snapshot_and_generate_deck(
             "deck_id": deck_id,
             "source_config_id": source_config_id,
             "source_config_name": source_config_name,
+            "card_ids": card_ids,
             **array_values,
         },
     )
 
-    card_ids = db_read_card_ids_for_deck(db, deck_id)
+    selected_card_ids = db_read_card_ids_for_deck(db, deck_id)
+    if card_ids is not None:
+        chosen = set(card_ids)
+        selected_card_ids = [cid for cid in selected_card_ids if cid in chosen]
     field_ids = _config_field_ids(practice_deck)
-    scores = card_mastery(db, strategy, card_ids, field_ids)
+    readiness = card_readiness(db, strategy, selected_card_ids, field_ids)
     ordered_card_ids = sorted(
-        card_ids,
-        key=lambda cid: (scores[cid].reviewed_field_count != 0, scores[cid].mastery),
+        selected_card_ids,
+        key=lambda cid: (readiness[cid].reviewed, readiness[cid].readiness),
     )
 
     for card_id in ordered_card_ids:
@@ -234,12 +265,12 @@ def start_practice_run(
 ) -> PracticeRun:
     """One explicit transaction: the session, one practice_deck per config (a
     revalidated, immutable snapshot), and the generated practice_cards, ordered
-    unseen-first-then-ascending-mastery per deck with sparse positions. `name` is
+    unseen-first-then-ascending-readiness per deck with sparse positions. `name` is
     stored verbatim; the client formats it. Raises
     RunStartError — `config_not_found` for an unknown config id, `duplicate_deck`
     for two configs naming the same deck, `stale_config` for a config that no longer
     validates against its deck's live fields, `no_cards` when generation produced
-    nothing across all of them."""
+    nothing across all of them. Stamps the user's first practice while it is unset."""
     rng = rng or random.Random()
 
     configs = []
@@ -268,7 +299,7 @@ def start_practice_run(
     next_position = 0
     for config in configs:
         # Session start is the second of the two call sites that must validate — a
-        # config can go stale (a field archived) between template save and now, and
+        # config can go stale (a field deleted) between template save and now, and
         # the snapshot about to become immutable must be valid at the moment it's cut.
         try:
             validate_deck_practice_config(
@@ -293,6 +324,7 @@ def start_practice_run(
             array_values,
             config.id,
             config.name,
+            None,
             rng,
             next_position,
         )
@@ -306,6 +338,7 @@ def start_practice_run(
             "no_cards", "generation produced no practice cards across the selected decks"
         )
 
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     db.refresh(session)
     return session
@@ -326,13 +359,14 @@ def rerun_practice_run(
     regenerated exactly like session start, via the same _snapshot_and_generate_deck
     helper, each carrying its old snapshot's `source_config_id` forward verbatim
     (attribution only, possibly already null; never looked up fresh), and its
-    `source_config_name` likewise. `name` is stored verbatim on the new run —
+    `source_config_name` and `card_ids` likewise. `name` is stored verbatim on the new run —
     the client formats it, same as start_practice_run. Raises LookupError for an
     unknown/foreign session (the router 404s); RerunError('run_active') if the session
     hasn't completed; RerunError('nothing_to_rerun') if every snapshot was dropped;
     RerunError('no_cards') if the survivors generated nothing. A plain
     create: the original run is never touched, so there is nothing to order against a
-    delete — one explicit commit at the end, same shape as start_practice_run."""
+    delete — one explicit commit at the end, same shape as start_practice_run, which
+    stamps the user's first practice the same way."""
     rng = rng or random.Random()
 
     session = db_read_practice_run(db, practice_run_id, user_id)
@@ -342,7 +376,7 @@ def rerun_practice_run(
         raise RerunError("run_active", "practice is still active")
 
     surviving_decks: list[
-        tuple[uuid.UUID, dict[str, list], uuid.UUID | None, str | None]
+        tuple[uuid.UUID, dict[str, list], uuid.UUID | None, str | None, list[uuid.UUID] | None]
     ] = []
     for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
         array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
@@ -356,6 +390,7 @@ def rerun_practice_run(
                 array_values,
                 practice_deck.source_config_id,
                 practice_deck.source_config_name,
+                practice_deck.card_ids,
             )
         )
 
@@ -368,7 +403,7 @@ def rerun_practice_run(
     new_session = db_stage_create_practice_run(db, user_id, name)
 
     next_position = 0
-    for deck_id, array_values, source_config_id, source_config_name in surviving_decks:
+    for deck_id, array_values, source_config_id, source_config_name, card_ids in surviving_decks:
         next_position = _snapshot_and_generate_deck(
             db,
             strategy,
@@ -377,6 +412,7 @@ def rerun_practice_run(
             array_values,
             source_config_id,
             source_config_name,
+            card_ids,
             rng,
             next_position,
         )
@@ -388,6 +424,87 @@ def rerun_practice_run(
             "no_cards", "generation produced no practice cards across the surviving decks"
         )
 
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
+    db.commit()
+    db.refresh(new_session)
+    return new_session
+
+
+def start_chosen_cards_run(
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    practice_run_id: uuid.UUID,
+    name: str,
+    card_ids: list[uuid.UUID],
+    rng: random.Random | None = None,
+) -> PracticeRun:
+    """A new practice of exactly `card_ids`, each asked through the snapshot its deck had in
+    the completed practice `practice_run_id`. Raises LookupError for an unknown or foreign
+    practice, ValueError when `card_ids` is empty or names a card the practice did not
+    hold, and ChosenCardsError for the three coded refusals. Stamps the user's first
+    practice while it is unset."""
+    rng = rng or random.Random()
+
+    session = db_read_practice_run(db, practice_run_id, user_id)
+    if session is None:
+        raise LookupError(f"practice_run {practice_run_id} not found")
+    if session.status != RunStatus.completed:
+        raise ChosenCardsError("run_active", "practice is still active")
+
+    if not card_ids:
+        raise ValueError("no cards chosen")
+    held_card_ids = {card.card_id for card in db_read_practice_cards_for_run(db, practice_run_id)}
+    if not held_card_ids.issuperset(card_ids):
+        raise ValueError("a chosen card is not a card of this practice")
+
+    chosen_by_deck: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    deck_id_by_card = db_read_deck_id_by_card(db, card_ids)
+    for card_id in dict.fromkeys(card_ids):
+        chosen_by_deck[deck_id_by_card[card_id]].append(card_id)
+
+    surviving_decks: list[PracticeDeck] = []
+    for practice_deck in db_read_practice_decks_for_run(db, practice_run_id):
+        if practice_deck.deck_id not in chosen_by_deck:
+            continue
+        array_values = {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS}
+        try:
+            validate_deck_practice_config(db, practice_deck.deck_id, **array_values)
+        except ValueError:
+            continue
+        surviving_decks.append(practice_deck)
+
+    if not surviving_decks:
+        raise ChosenCardsError(
+            "nothing_to_practice",
+            "no deck holding a chosen card still has a live, valid snapshot",
+        )
+
+    new_session = db_stage_create_practice_run(db, user_id, name)
+
+    next_position = 0
+    for practice_deck in surviving_decks:
+        next_position = _snapshot_and_generate_deck(
+            db,
+            strategy,
+            new_session.id,
+            practice_deck.deck_id,
+            {field: getattr(practice_deck, field) for field in _ARRAY_FIELDS},
+            practice_deck.source_config_id,
+            practice_deck.source_config_name,
+            chosen_by_deck[practice_deck.deck_id],
+            rng,
+            next_position,
+        )
+
+    # Same check as start: every chosen card can be blank on one side of its snapshot, and
+    # only generation knows. Raised before the commit, so nothing of the run persists.
+    if next_position == 0:
+        raise ChosenCardsError(
+            "no_cards", "generation produced no practice cards from the chosen cards"
+        )
+
+    app_user_ops.db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     db.refresh(new_session)
     return new_session
@@ -414,8 +531,8 @@ def get_current_practice_card(
 
 def _chains_by_card_id(cards: list[PracticeCard]) -> dict[uuid.UUID, list[PracticeCard]]:
     """Groups a session's rows by card_id, preserving `cards`' own order within each
-    group. Callers (run_progress, the run-state attempt count, and eventually the
-    breakdown) all require `cards` to already be created_at-ascending — the ordering
+    group. Callers (run_progress, the run-state attempt count, and the breakdown) all
+    require `cards` to already be created_at-ascending — the ordering
     db_read_practice_cards_for_run returns — so a chain's last item is always its
     last-written row and its index is a 1-based attempt count."""
     chains: dict[uuid.UUID, list[PracticeCard]] = {}
@@ -425,8 +542,7 @@ def _chains_by_card_id(cards: list[PracticeCard]) -> dict[uuid.UUID, list[Practi
 
 
 def run_progress(cards: list[PracticeCard]) -> RunProgress:
-    """The chain-bucket fold, pure and shared by the run state and the breakdown's
-    counts: `cards` — every practice_card row a session has produced, created_at
+    """The chain-bucket fold, pure, behind the run state's progress: `cards` — every practice_card row a session has produced, created_at
     ascending (db_read_practice_cards_for_run) — is grouped into chains by card_id,
     and each chain's *last* row decides its bucket: pending with one row is unseen,
     pending with more is a retry, passed is passed, failed is failed. `total_cards` is
@@ -450,32 +566,18 @@ def _resolve_field_values(
     field_defs_by_id: dict[uuid.UUID, FieldDef],
     values_by_field: dict[uuid.UUID, str],
     field_ids: list[uuid.UUID],
-    *,
-    keep_removed: bool = False,
 ) -> list[ResolvedFieldValue]:
     """One side (prompts or answers) of a practice_card's stored id array, resolved
-    against this deck's field_defs (archived included — a field only drops out here if
-    its row no longer exists at all) and this card's current values, then reordered to
+    against this deck's field_defs and this card's current values, then reordered to
     field_def.position ascending regardless of what order the ids were stored in. An id
-    with no field_def row is dropped, unless keep_removed is True (the breakdown only),
-    in which case it trails the live entries as a placeholder — empty name and value,
-    type text, removed=True — in the order those ids appear in field_ids."""
+    with no field_def row is dropped."""
     live = (fd for fid in field_ids if (fd := field_defs_by_id.get(fid)) is not None)
-    resolved = [
+    return [
         ResolvedFieldValue(
             field_def_id=fd.id, name=fd.name, type=fd.type, value=values_by_field.get(fd.id, "")
         )
         for fd in sorted(live, key=lambda fd: fd.position)
     ]
-    if keep_removed:
-        resolved += [
-            ResolvedFieldValue(
-                field_def_id=fid, name="", type=FieldType.text, value="", removed=True
-            )
-            for fid in field_ids
-            if fid not in field_defs_by_id
-        ]
-    return resolved
 
 
 def _resolve_current_run_card(
@@ -483,8 +585,7 @@ def _resolve_current_run_card(
 ) -> CurrentRunCard:
     """Builds the run payload's one live card: attempt is read off the chain fold
     (run_progress's same grouping) rather than stored anywhere, and field
-    resolution goes through the card's own deck so archived prompt/answer fields still
-    resolve."""
+    resolution goes through the card's own deck."""
     chain = _chains_by_card_id(cards)[current.card_id]
     attempt = chain.index(current) + 1
 
@@ -492,7 +593,7 @@ def _resolve_current_run_card(
     assert card is not None, "a practice_card's card_id cascades on card delete"
     values_by_field = {v.field_def_id: v.value for v in card.values}
     field_defs_by_id = {
-        fd.id: fd for fd in db_read_field_defs(db, card.deck_id, user_id, include_archived=True)
+        fd.id: fd for fd in db_read_field_defs(db, card.deck_id, user_id)
     }
 
     return CurrentRunCard(
@@ -532,21 +633,6 @@ def get_practice_run_state(
     )
 
 
-def _breakdown_bucket(chain: list[PracticeCard]) -> BreakdownBucket:
-    """The completion-time refinement of the chain fold — only ever applied to
-    a completed session's chains, where the last row is always `passed` or `failed`
-    (never `pending`: a session can't be completed while anything is still queued, per
-    get_current_practice_card's transition)."""
-    last = chain[-1]
-    if last.status == PracticeCardStatus.failed:
-        return BreakdownBucket.still_failed
-    if len(chain) == 1:
-        return BreakdownBucket.passed_first_try
-    if len(chain) == 2:
-        return BreakdownBucket.passed_after_one_fail
-    return BreakdownBucket.passed_after_many_fails
-
-
 def _resolve_rated_field_values(
     field_defs_by_id: dict[uuid.UUID, FieldDef],
     values_by_field: dict[uuid.UUID, str],
@@ -555,15 +641,11 @@ def _resolve_rated_field_values(
 ) -> list[RatedFieldValue]:
     """The breakdown's answer-side resolution: the same id->field_def->value join as
     _resolve_field_values, with each entry's rating attached from the review_log join
-    (db_read_ratings_by_review_group). keep_removed=True so a deleted answer field
-    still resolves, as a placeholder; ratings_by_field.get(...) returns None for it,
-    since its review rows cascaded away with the field — the one case
-    RatedFieldValue.rating's None carries."""
-    resolved = _resolve_field_values(
-        field_defs_by_id, values_by_field, field_ids, keep_removed=True
-    )
+    (db_read_ratings_by_review_group). Every answer field a completed practice card
+    holds was rated, so a missing rating raises KeyError rather than resolving."""
+    resolved = _resolve_field_values(field_defs_by_id, values_by_field, field_ids)
     return [
-        RatedFieldValue(**value.model_dump(), rating=ratings_by_field.get(value.field_def_id))
+        RatedFieldValue(**value.model_dump(), rating=ratings_by_field[value.field_def_id])
         for value in resolved
     ]
 
@@ -583,13 +665,13 @@ def _row_to_field_state(row) -> FieldMasteryState | None:
     )
 
 
-def _compute_field_mastery_deltas(
+def _compute_field_readiness_deltas(
     db: Session,
     strategy: MasteryStrategy,
     practice_run_id: uuid.UUID,
     domain: list[tuple[uuid.UUID, uuid.UUID]],
-) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]]:
-    """{(card_id, field_def_id): (before_score, after_score, delta)} for every pair in
+) -> dict[tuple[uuid.UUID, uuid.UUID], tuple[float, float, float]]:
+    """{(card_id, field_def_id): (before, after, delta)} of readiness for every pair in
     `domain`, under the breakdown's delta semantics for a run R:
 
     - The domain is every card in R's breakdown × every active field of that card's
@@ -599,21 +681,18 @@ def _compute_field_mastery_deltas(
     - bound(c, f) is the earliest reviewed_at of attributed(c, f) when it is
       non-empty, else first(R).
     - before(c, f) is the pair's latest row with reviewed_at < bound(c, f); absent
-      means never reviewed, score None.
+      means never reviewed, readiness 0.
     - after(c, f) is the latest row of attributed(c, f) when it is non-empty, else
       before(c, f).
-    - A score is `strategy.field_score`. A pair first reviewed inside R has delta =
-      after score − prior score, matching what the card fold sees; otherwise delta =
-      after score − before score. Exact floats, never rounded here.
+    - before and after are each `strategy.readiness` of the state selected, and delta
+      is after − before. Exact floats, never rounded here.
     - If R has no rows at all, before = after = the pair's overall latest row and
       every delta is 0.
 
-    The caller's card-level mastery and delta are `strategy.card_score` over the
-    domain's before scores and after scores respectively. Reads only R's own rows
-    plus one bounded before-lookup covering every pair at once — never a history
-    replay — so the statement count against mastery_log is fixed at 2 regardless of
-    len(domain)."""
-    prior_score = strategy.field_score(strategy.prior())
+    The caller's card-level readiness and delta are `fold_card_readiness` over the
+    domain's befores and afters respectively. Reads only R's own rows plus one bounded
+    before-lookup covering every pair at once — never a history replay — so the
+    statement count against mastery_log is fixed at 2 regardless of len(domain)."""
     run_rows = db_fetch_run_mastery_log_rows(db, practice_run_id)
 
     if not run_rows:
@@ -623,11 +702,11 @@ def _compute_field_mastery_deltas(
         # every delta is 0.
         card_ids = list({card_id for card_id, _ in domain})
         read_rows = db_fetch_mastery_read_rows(db, card_ids)
-        score_by_pair = {
-            (row.card_id, row.field_def_id): strategy.field_score(_row_to_field_state(row))
+        readiness_by_pair = {
+            (row.card_id, row.field_def_id): strategy.readiness(_row_to_field_state(row))
             for row in read_rows
         }
-        return {pair: (score_by_pair.get(pair), score_by_pair.get(pair), 0.0) for pair in domain}
+        return {pair: (readiness_by_pair[pair], readiness_by_pair[pair], 0.0) for pair in domain}
 
     attributed_by_pair: dict[tuple[uuid.UUID, uuid.UUID], list] = defaultdict(list)
     for row in run_rows:
@@ -653,32 +732,27 @@ def _compute_field_mastery_deltas(
 
     before_state_by_pair = db_fetch_mastery_before_bound(db, bounds)
 
-    result: dict[tuple[uuid.UUID, uuid.UUID], tuple[float | None, float | None, float]] = {}
+    result: dict[tuple[uuid.UUID, uuid.UUID], tuple[float, float, float]] = {}
     for pair in domain:
         before_state = before_state_by_pair.get(pair)
         # Untouched by this run: after == before by construction, not a fallback —
         # this run contributed no movement to this pair, so its "after" is whatever
         # the field already was.
         after_state = after_state_by_pair.get(pair, before_state)
-        before_score = strategy.field_score(before_state)
-        after_score = strategy.field_score(after_state)
-        if after_score is None:
-            delta = 0.0
-        else:
-            delta = after_score - (before_score if before_score is not None else prior_score)
-        result[pair] = (before_score, after_score, delta)
+        before = strategy.readiness(before_state)
+        after = strategy.readiness(after_state)
+        result[pair] = (before, after, after - before)
     return result
 
 
 def get_practice_run_breakdown(
     db: Session, strategy: MasteryStrategy, practice_run_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeRunBreakdown | None:
-    """The whole `GET .../breakdown` payload: every card's full resolved, rated attempt
-    history, grouped into the completion-time buckets, plus each card's mastery/delta
-    and its per-field detail. None for an unknown or foreign session (the router 404s). Raises
-    RunActiveError if the session hasn't completed yet (the router 409s) — the bucket
-    refinement and terminal-only attempts below only make sense once nothing is
-    pending."""
+    """The whole `GET .../breakdown` payload: every card's resolved, rated attempts, and the
+    readiness, delta and kind of change of the card and of each field its attempts showed or
+    asked. None for an unknown or foreign session (the router 404s). Raises RunActiveError if
+    the session hasn't completed yet (the router 409s): terminal-only attempts only make
+    sense once nothing is pending."""
     session = db_read_practice_run(db, practice_run_id, user_id)
     if session is None:
         return None
@@ -689,49 +763,27 @@ def get_practice_run_breakdown(
     chains = _chains_by_card_id(cards)
     ratings_by_group = db_read_ratings_by_review_group(db, [c.id for c in cards])
 
-    # Per-deck caches: a session's cards cluster onto however many decks it snapshotted
-    # (practice_deck), not one per card, so this keeps field resolution to one pair of
-    # queries per deck rather than per card.
-    field_defs_by_deck: dict[uuid.UUID, dict[uuid.UUID, FieldDef]] = {}
-    active_field_defs_by_deck: dict[uuid.UUID, list[FieldDef]] = {}
-    primary_field_by_deck: dict[uuid.UUID, FieldDef] = {}
-    deck_id_by_card: dict[uuid.UUID, uuid.UUID] = {}
+    card_rows = db_read_cards_with_values(db, chains.keys())
+    card_row_by_id = {card.id: card for card in card_rows}
+    active_field_defs_by_deck: dict[uuid.UUID, list[FieldDef]] = defaultdict(list)
+    for fd in db_read_field_defs_for_decks(db, {card.deck_id for card in card_rows}):
+        active_field_defs_by_deck[fd.deck_id].append(fd)
 
-    counts = dict.fromkeys(BreakdownBucket, 0)
-    # Built in two passes: this one resolves everything but the mastery/delta fields
-    # (which need every card's active-field domain gathered first, so the delta
-    # computation below can read mastery_log in one fixed-size batch instead of once
-    # per card).
+    # Built in two passes: this one resolves everything but the readiness figures, which need
+    # every card's active-field domain gathered first, so the delta computation below can
+    # read mastery_log in one fixed-size batch instead of once per card.
     raw_cards = []
     for card_id, chain in chains.items():
-        bucket = _breakdown_bucket(chain)
-        counts[bucket] += 1
-
-        card = db_read_card(db, card_id, user_id)
-        assert card is not None, "a practice_card's card_id cascades on card delete"
-        deck_id = card.deck_id
-        deck_id_by_card[card_id] = deck_id
-        if deck_id not in field_defs_by_deck:
-            field_defs_by_deck[deck_id] = {
-                fd.id: fd
-                for fd in db_read_field_defs(db, deck_id, user_id, include_archived=True)
-            }
-            # db_read_field_defs is already active-only and position-sorted; the
-            # primary field is index 0, the mastery domain is every entry.
-            active_field_defs_by_deck[deck_id] = db_read_field_defs(db, deck_id, user_id)
-            primary_field_by_deck[deck_id] = active_field_defs_by_deck[deck_id][0]
-        field_defs_by_id = field_defs_by_deck[deck_id]
-        primary = primary_field_by_deck[deck_id]
+        card = card_row_by_id[card_id]
+        active_fields = active_field_defs_by_deck[card.deck_id]
+        field_defs_by_id = {fd.id: fd for fd in active_fields}
+        primary = active_fields[0]
         values_by_field = {v.field_def_id: v.value for v in card.values}
 
         attempts = [
             BreakdownAttempt(
                 practice_card_id=pc.id,
-                status=pc.status,
-                created_at=pc.created_at,
-                prompts=_resolve_field_values(
-                    field_defs_by_id, values_by_field, pc.prompts, keep_removed=True
-                ),
+                prompts=_resolve_field_values(field_defs_by_id, values_by_field, pc.prompts),
                 answers=_resolve_rated_field_values(
                     field_defs_by_id, values_by_field, ratings_by_group.get(pc.id, {}), pc.answers
                 ),
@@ -742,8 +794,6 @@ def get_practice_run_breakdown(
         raw_cards.append(
             {
                 "card_id": card_id,
-                "bucket": bucket,
-                "attempt_count": len(chain),
                 "primary_field": ResolvedFieldValue(
                     field_def_id=primary.id,
                     name=primary.name,
@@ -755,35 +805,45 @@ def get_practice_run_breakdown(
         )
 
     domain = [
-        (card_id, fd.id)
-        for card_id, deck_id in deck_id_by_card.items()
-        for fd in active_field_defs_by_deck[deck_id]
+        (card.id, fd.id)
+        for card in card_rows
+        for fd in active_field_defs_by_deck[card.deck_id]
     ]
-    field_deltas = _compute_field_mastery_deltas(db, strategy, practice_run_id, domain)
+    field_deltas = _compute_field_readiness_deltas(db, strategy, practice_run_id, domain)
 
     breakdown_cards = []
     for raw in raw_cards:
         card_id = raw["card_id"]
-        active_fields = active_field_defs_by_deck[deck_id_by_card[card_id]]
+        shown = {f.field_def_id for a in raw["attempts"] for f in a.prompts}
+        asked = {f.field_def_id for a in raw["attempts"] for f in a.answers}
         fields = []
-        before_scores = []
-        after_scores = []
-        for fd in active_fields:
-            before_score, after_score, delta = field_deltas[(card_id, fd.id)]
-            before_scores.append(before_score)
-            after_scores.append(after_score)
-            fields.append(
-                FieldMasteryDelta(
-                    field_def_id=fd.id, name=fd.name, type=fd.type, mastery=after_score, delta=delta
+        befores = []
+        afters = []
+        for fd in active_field_defs_by_deck[card_row_by_id[card_id].deck_id]:
+            before, after, delta = field_deltas[(card_id, fd.id)]
+            befores.append(before)
+            afters.append(after)
+            if fd.id in shown or fd.id in asked:
+                fields.append(
+                    FieldReadinessDelta(
+                        field_def_id=fd.id,
+                        name=fd.name,
+                        type=fd.type,
+                        side=FieldSide.prompt if fd.id in shown else FieldSide.answer,
+                        readiness=after,
+                        delta=delta,
+                        change=classify_change(delta, strategy.reach),
+                    )
                 )
-            )
-        card_before = strategy.card_score(before_scores)
-        card_after = strategy.card_score(after_scores)
+        card_before = fold_card_readiness(befores)
+        card_after = fold_card_readiness(afters)
+        card_delta = card_after - card_before
         breakdown_cards.append(
             BreakdownCard(
                 **raw,
-                mastery=card_after.mastery,
-                delta=card_after.mastery - card_before.mastery,
+                readiness=card_after,
+                delta=card_delta,
+                change=classify_change(card_delta, strategy.reach),
                 fields=fields,
             )
         )
@@ -792,14 +852,7 @@ def get_practice_run_breakdown(
     # once written (only pending rows are ever renumbered, db_stage_renumber_pending_practice_cards).
     breakdown_cards.sort(key=lambda bc: chains[bc.card_id][0].position)
 
-    return PracticeRunBreakdown(
-        total_cards=len(chains),
-        passed_first_try=counts[BreakdownBucket.passed_first_try],
-        passed_after_one_fail=counts[BreakdownBucket.passed_after_one_fail],
-        passed_after_many_fails=counts[BreakdownBucket.passed_after_many_fails],
-        still_failed=counts[BreakdownBucket.still_failed],
-        cards=breakdown_cards,
-    )
+    return PracticeRunBreakdown(total_cards=len(chains), cards=breakdown_cards)
 
 
 def _end_of_queue_position(run_max_position: int) -> int:
@@ -809,23 +862,23 @@ def _end_of_queue_position(run_max_position: int) -> int:
     return run_max_position + _POSITION_GAP // 2
 
 
-def _insertion_position(pending: list[tuple[PracticeCard, float]], new_score: float) -> int:
+def _insertion_position(pending: list[tuple[PracticeCard, float]], new_readiness: float) -> int:
     """pending: a run's pending cards in position order, each paired with its current
-    mastery score; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
+    readiness; at least RETRY_SPACING_FLOOR of them (with fewer, the retry goes to
     `_end_of_queue_position` instead). Four steps:
 
-    1. `mastery_index`, the count of pending cards whose score is strictly below
-       `new_score`, is where the ascending-mastery order alone would insert.
+    1. `readiness_index`, the count of pending cards whose readiness is strictly below
+       `new_readiness`, is where the ascending-readiness order alone would insert.
     2. The index is clamped up to at least RETRY_SPACING_FLOOR: a clamp, not a
-       fixed placement, so a card whose mastery already puts it deeper stays at that
+       fixed placement, so a card whose readiness already puts it deeper stays at that
        deeper slot.
     3. With no successor at the resulting index, the retry goes 500 above the last
        pending card.
     4. Otherwise it takes the midpoint between its predecessor and successor. A
        predecessor always exists because RETRY_SPACING_FLOOR >= 1."""
     assert len(pending) >= RETRY_SPACING_FLOOR
-    mastery_index = sum(1 for _, score in pending if score < new_score)
-    final_index = max(mastery_index, RETRY_SPACING_FLOOR)
+    readiness_index = sum(1 for _, readiness in pending if readiness < new_readiness)
+    final_index = max(readiness_index, RETRY_SPACING_FLOOR)
 
     if final_index == len(pending):
         return pending[-1][0].position + _POSITION_GAP // 2
@@ -841,15 +894,15 @@ def _requeue_failed_card(
     failed_field_ids: Sequence[uuid.UUID] = (),
 ) -> PracticeCard | None:
     """Inserts a fresh practice_card row for the same card_id — never mutates
-    old_card, which stays 'failed'. Position reflects the card's mastery *after* this
+    old_card, which stays 'failed'. Position reflects the card's readiness *after* this
     submission's blend, so a badly-missed card resurfaces sooner, when at least
     RETRY_SPACING_FLOOR cards are pending; with fewer, the retry goes to the end of the
     queue. `failed_field_ids` (the answer fields rated "Again") are forced into the new
     row's answer set ahead of pool sampling, so the retry always re-asks what was
     missed — a failed
-    field archived or blanked since drops out of the generation filters like any other.
+    field deleted or blanked since drops out of the generation filters like any other.
     Returns None if the card can no longer be generated at all (e.g. every remaining
-    field archived since the snapshot was cut) — nothing to requeue with, same as at
+    field deleted since the snapshot was cut) — nothing to requeue with, same as at
     session start."""
     resolved = generate_practice_card_fields(
         db,
@@ -888,12 +941,12 @@ def _requeue_failed_card(
             assert run_max is not None, "the row just rated exists in this transaction"
             position = _end_of_queue_position(run_max)
         else:
-            scores = card_mastery(
+            readiness = card_readiness(
                 db, strategy, [c.card_id for c in pending] + [old_card.card_id], field_ids
             )
             position = _insertion_position(
-                [(c, scores[c.card_id].mastery) for c in pending],
-                scores[old_card.card_id].mastery,
+                [(c, readiness[c.card_id].readiness) for c in pending],
+                readiness[old_card.card_id].readiness,
             )
 
         new_card = db_try_stage_create_practice_card(

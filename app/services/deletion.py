@@ -29,11 +29,13 @@ from app.database_ops.deck_practice_config import (
     db_read_config_ids_naming_fields,
 )
 from app.database_ops.field_def import (
-    db_stage_delete_field_defs,
-    db_read_active_field_ids_for_decks,
     db_read_deck_id_by_field,
+    db_read_field_defs,
+    db_read_field_ids_for_decks,
     db_read_owned_field_ids,
+    db_stage_delete_field_defs,
 )
+from app.database_ops.practice_card import db_stage_scrub_practice_card_field_ids
 from app.database_ops.practice_run import (
     db_stage_delete_practice_runs,
     db_read_active_run_ids_naming_fields,
@@ -48,7 +50,9 @@ from app.database_ops.subject import (
 from app.mastery.strategy import MasteryStrategy
 from app.models.card import Card
 from app.models.deck import Deck
+from app.models.field_def import FieldDef
 from app.models.subject import Subject
+from app.refusals import Refusal
 from app.services.activity import touch
 from app.services.mastery import rebuild_deck_mastery
 
@@ -109,7 +113,7 @@ def compute_deletion_impact(
     deck_id_by_field = db_read_deck_id_by_field(db, field_ids)
     explicit_fields = {fid for fid in field_ids if deck_id_by_field[fid] not in decks}
 
-    fields = explicit_fields | db_read_active_field_ids_for_decks(db, decks)
+    fields = explicit_fields | db_read_field_ids_for_decks(db, decks)
 
     cards = card_ids | set(db_read_card_ids_for_decks(db, decks))
 
@@ -155,6 +159,7 @@ def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpac
     db_stage_delete_deck_practice_configs(db, impact.configuration_ids)
     for deck_id, field_ids in impact.explicit_fields_by_deck.items():
         db_stage_scrub_shown_prompt_ids(db, deck_id, field_ids)
+        db_stage_scrub_practice_card_field_ids(db, deck_id, field_ids)
     db_stage_delete_cards(db, impact.card_ids)
     db_stage_delete_field_defs(db, impact.field_ids)
     db_stage_delete_decks(db, impact.deck_ids)
@@ -188,7 +193,27 @@ def delete_card(
 ) -> None:
     deck = db_read_deck(db, card.deck_id, user_id)
     assert deck is not None, "a card's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, user_id)
+    assert subject is not None, "a deck's subject always exists"
     impact = compute_deletion_impact(db, user_id, card_ids=[card.id])
     apply_deletion(db, strategy, impact)
-    touch(db, deck)
+    touch(db, deck, subject)
+    db.commit()
+
+
+def delete_field(
+    db: Session, strategy: MasteryStrategy, user_id: uuid.UUID, field_def: FieldDef
+) -> None:
+    """Raises Refusal("too_few_fields", ...) before anything is staged when the deck
+    has two fields; otherwise compute_deletion_impact over the one field, apply_deletion,
+    touch(deck, subject), commit."""
+    deck = db_read_deck(db, field_def.deck_id, user_id)
+    assert deck is not None, "a field's deck always exists"
+    subject = db_read_subject(db, deck.subject_id, user_id)
+    assert subject is not None, "a deck's subject always exists"
+    if len(db_read_field_defs(db, deck.id, user_id)) <= 2:
+        raise Refusal("too_few_fields", "the deck would keep fewer than two active field_defs")
+    impact = compute_deletion_impact(db, user_id, field_ids=[field_def.id])
+    apply_deletion(db, strategy, impact)
+    touch(db, deck, subject)
     db.commit()

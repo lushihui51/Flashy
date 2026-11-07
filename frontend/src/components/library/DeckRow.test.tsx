@@ -7,10 +7,12 @@ import DeckRow from 'src/components/library/DeckRow';
 const deck = {
   id: 'd1',
   subject_id: 's1',
+  subject_name: 'Math',
   name: 'Algebra',
   created_at: '',
   last_activity_at: '',
   card_count: 6,
+  readiness: 0.5,
   field_names: ['Front', 'Back'],
 };
 
@@ -29,7 +31,7 @@ describe('DeckRow', () => {
   });
 
   it('counts one card and one field in the singular', () => {
-    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, field_names: ['Front'] }} />);
+    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />);
 
     expect(screen.getByText('1 card · 1 field')).toBeInTheDocument();
   });
@@ -39,6 +41,18 @@ describe('DeckRow', () => {
 
     expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Back/)).not.toBeInTheDocument();
+  });
+
+  it('shows its mastery beside a deck with a card', () => {
+    renderWithRouter(<DeckRow deck={{ ...deck, readiness: 0.42 }} />);
+
+    expect(screen.getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+  });
+
+  it('shows no mastery on a deck with no card', () => {
+    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 0, readiness: null }} />);
+
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
   });
 
   it("links to the deck's page", () => {

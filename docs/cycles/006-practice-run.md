@@ -1,4 +1,4 @@
-# 006 — Practice run: the session experience
+# 006 — Practice run
 
 ## Goal
 

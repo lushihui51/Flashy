@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Superseded by ADR 088
 
 ## Context
 

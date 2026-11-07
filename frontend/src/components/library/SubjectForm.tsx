@@ -1,17 +1,23 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
 import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import SubjectIcon from 'src/components/library/SubjectIcon';
 import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { internalReturnTo } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type SubjectFormProps = {
   mode: 'create' | 'edit';
@@ -23,6 +29,9 @@ type SubjectFormProps = {
 export default function SubjectForm({ mode }: SubjectFormProps) {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
+  const { params } = useViewParams();
+  const cancelTo = internalReturnTo(params, 'cancelTo');
+  const returnTo = internalReturnTo(params, 'returnTo');
 
   const subjectQuery = useQuery({
     queryKey: ['subject', subjectId],
@@ -36,11 +45,11 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       return (
         <div className="p-4">
           {isNotFound(subjectQuery.error) ? (
-            <p className="text-(--color-text-muted)">Subject not found.</p>
+            <p className="text-(--color-aside)">Subject not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
-              Could not load this subject.
-            </p>
+            <FormPart sentence="Could not load this subject." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -56,8 +65,10 @@ export default function SubjectForm({ mode }: SubjectFormProps) {
       mode={mode}
       subjectId={subjectId}
       original={mode === 'edit' ? subjectQuery.data : undefined}
-      onSuccess={(subject) => navigate(`/subjects/${subject.id}`)}
-      onCancel={() => navigate(mode === 'create' ? '/library' : `/subjects/${subjectId}`)}
+      onSuccess={(subject) => navigate(returnTo ?? `/subjects/${subject.id}`)}
+      onCancel={() =>
+        navigate(cancelTo ?? (mode === 'create' ? '/library' : `/subjects/${subjectId}`))
+      }
       onDelete={() => navigate('/library')}
     />
   );
@@ -90,6 +101,9 @@ export function SubjectFormBody({
   onDelete,
 }: SubjectFormBodyProps) {
   const queryClient = useQueryClient();
+  const formId = useId();
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const [name, setName] = useState(original?.name ?? '');
   const [description, setDescription] = useState(original?.description ?? '');
@@ -125,10 +139,6 @@ export function SubjectFormBody({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      setNameError('Name is required.');
-      return;
-    }
     setNameError(null);
     setFormError(null);
     setSubmitting(true);
@@ -155,7 +165,14 @@ export function SubjectFormBody({
         onSuccess(updated);
       }
     } catch (err) {
-      setFormError(failureSentence(err, 'Subject not found.'));
+      const sentence = failureSentence(err, 'Subject not found.');
+      // A taken name is fixed at the input, so it is said there rather than in the bar.
+      if (err instanceof ApiDetailError && err.detail.code === 'subject_name_taken') {
+        setNameError(sentence);
+        revealFirstSentence(rootRef.current);
+      } else {
+        setFormError(sentence);
+      }
       setSubmitting(false);
     }
   };
@@ -192,59 +209,40 @@ export function SubjectFormBody({
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
-          {mode === 'create' ? 'New subject' : 'Edit subject'}
-        </h1>
-        <span aria-hidden="true" className="w-[42px]" />
-      </div>
+    <div ref={rootRef} className="flex flex-col gap-4 p-4">
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'create' ? 'New subject' : 'Edit subject'}
+      </h1>
 
-      {formError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
-          {formError}
-        </p>
-      )}
+      <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <FormPart sentence={nameError} look="wrong" className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-(--color-aside)">Name</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameError(null);
+              }}
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            />
+          </label>
+        </FormPart>
 
-      {/* No fixed/sticky positioning on the submit button — it sits in normal
-          document flow so a mobile keyboard opening (which shrinks the visual
-          viewport) never overlaps it; the page just scrolls. */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Name</span>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
-          />
-          {nameError && (
-            <span role="alert" className="text-sm text-(--color-danger)">
-              {nameError}
-            </span>
-          )}
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Description</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label text-(--color-aside)">Description</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="rounded-lg border border-(--color-surface-elevated) px-3 py-2 text-(--color-text)"
+            className="rounded-field outlined-line bg-(--color-surface) px-3.5 py-2.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
           />
         </label>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {/* Hidden from screen readers: the button's own name already says "Icon". */}
-          <span aria-hidden="true" className="text-sm font-medium text-(--color-text)">
+          <span aria-hidden="true" className="text-label text-(--color-aside)">
             Icon
           </span>
           <button
@@ -252,19 +250,11 @@ export function SubjectFormBody({
             type="button"
             aria-label={`Icon: ${subjectIconName(icon)}`}
             onClick={() => setIconPickerOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-(--color-surface-elevated) text-(--color-text)"
+            className="tappable flex size-action items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)"
           >
             <SubjectIcon icon={icon} className="h-6 w-6" />
           </button>
         </div>
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </button>
       </form>
 
       {mode === 'edit' && (
@@ -272,11 +262,27 @@ export function SubjectFormBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={checkingDeletionImpact}
-          className="h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
+          className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete subject
         </button>
       )}
+
+      <FormBar sentence={formError}>
+        <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
+          Cancel
+        </button>
+        {/* Pressing it while the name is blank is how "Name is required." appears. */}
+        <SubmitButton
+          ready={name.trim() !== ''}
+          busy={submitting}
+          onNotReady={() => setNameError('Name is required.')}
+          form={formId}
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </SubmitButton>
+      </FormBar>
 
       <SubjectIconPicker
         open={iconPickerOpen}
@@ -294,7 +300,6 @@ export function SubjectFormBody({
         title="Discard changes?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
         onConfirm={onCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
@@ -305,7 +310,6 @@ export function SubjectFormBody({
           title="Delete subject?"
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

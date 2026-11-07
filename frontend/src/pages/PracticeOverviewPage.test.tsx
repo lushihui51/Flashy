@@ -22,6 +22,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -32,6 +33,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -39,19 +41,23 @@ const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Shared Deck Name',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
 ];
@@ -116,15 +122,45 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
+/** Rendered outside `<Routes>`, so it reports the page's own URL writes. */
+function CurrentLocationProbe() {
+  const location = useLocation();
+  return <span data-testid="current-location">{location.search}</span>;
+}
+
 function renderOverview(initialPath = '/practice') {
   return renderWithProviders(
-    <Routes>
-      <Route path="/practice" element={<PracticeOverviewPage />} />
-      <Route path="/practice/new" element={<LocationProbe />} />
-      <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
-    </Routes>,
+    <>
+      <CurrentLocationProbe />
+      <Routes>
+        <Route path="/practice" element={<PracticeOverviewPage />} />
+        <Route path="/practice/new" element={<LocationProbe />} />
+        <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
+      </Routes>
+    </>,
     [initialPath],
   );
+}
+
+/** Serves Beta run unfiltered, and holds any filtered answer until `release` is called,
+ * so a test can look at the page between the filter's write and the new list. */
+function holdFilteredSessions(respond: () => Response) {
+  mockLibrary();
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const filteredRequests: URLSearchParams[] = [];
+  server.use(
+    http.get(`${BASE}/api/practice_runs`, async ({ request }) => {
+      const query = new URL(request.url).searchParams;
+      if (query.get('subject_id') === null) return HttpResponse.json([betaRun]);
+      filteredRequests.push(query);
+      await released;
+      return respond();
+    }),
+  );
+  return { filteredRequests, release };
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -236,6 +272,21 @@ describe('PracticeOverviewPage', () => {
     // Both decks share a name, so the count is what proves the narrowing: one deck
     // option plus the "All decks" clear row.
     expect(screen.getAllByRole('option')).toHaveLength(2);
+  });
+
+  it("each deck's row in the deck filter reads its name with its subject's name beneath", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderOverview('/practice');
+    await screen.findByText('Beta run');
+
+    await user.click(screen.getByPlaceholderText('All decks'));
+    const rows = screen.getAllByRole('option');
+    // Two decks of one name, told apart by the line beneath; the first row is "All decks".
+    expect(within(rows[1]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('Alpha')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('Beta')).toBeInTheDocument();
   });
 
   it('clearing the subject drops it from the URL', async () => {
@@ -355,5 +406,48 @@ describe('PracticeOverviewPage', () => {
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     expect(await screen.findByText('No practices yet.')).toBeInTheDocument();
+  });
+
+  it('a filter whose list is loading keeps the old row until the new list arrives', async () => {
+    const newRun = session({ id: 'ps3', name: 'Gamma run' });
+    const { filteredRequests, release } = holdFilteredSessions(() =>
+      HttpResponse.json([newRun]),
+    );
+    const user = userEvent.setup();
+    renderOverview();
+    await screen.findByText('Beta run');
+
+    await user.click(screen.getByPlaceholderText('All subjects'));
+    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
+
+    await waitFor(() => expect(filteredRequests).toHaveLength(1));
+    expect(screen.getByTestId('current-location')).toHaveTextContent('?subject=s1');
+    expect(screen.getByText('Beta run')).toBeInTheDocument();
+    expect(screen.queryByText('Gamma run')).not.toBeInTheDocument();
+
+    release();
+
+    expect(await screen.findByText('Gamma run')).toBeInTheDocument();
+    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
+  });
+
+  it('a filter whose list fails removes the old row and says so', async () => {
+    const { filteredRequests, release } = holdFilteredSessions(() =>
+      HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+    );
+    const user = userEvent.setup();
+    renderOverview();
+    await screen.findByText('Beta run');
+
+    await user.click(screen.getByPlaceholderText('All subjects'));
+    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
+
+    await waitFor(() => expect(filteredRequests).toHaveLength(1));
+    expect(screen.getByText('Beta run')).toBeInTheDocument();
+
+    release();
+
+    expect(await screen.findByText('Could not load practices.')).toBeInTheDocument();
+    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
   });
 });

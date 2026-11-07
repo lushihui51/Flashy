@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -14,17 +14,21 @@ const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Languages',
     name: 'French Vocab',
     created_at: '',
     card_count: 1,
+    readiness: 0.5,
     field_names: ['Front', 'Back'],
   },
   {
     id: 'd2',
     subject_id: 's1',
+    subject_name: 'Languages',
     name: 'Spanish Vocab',
     created_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Word'],
   },
 ];
@@ -34,6 +38,7 @@ const deckD1 = {
   name: 'French Vocab',
   subject_id: 's1',
   created_at: '',
+  readiness: null,
   field_defs: [
     { id: 'f1', name: 'Front', type: 'text', position: 0 },
     { id: 'f2', name: 'Back', type: 'text', position: 1 },
@@ -45,6 +50,7 @@ const deckD2 = {
   name: 'Spanish Vocab',
   subject_id: 's1',
   created_at: '',
+  readiness: null,
   field_defs: [{ id: 'g1', name: 'Word', type: 'text', position: 0 }],
   cards: [],
 };
@@ -80,7 +86,7 @@ function LocationProbe() {
   );
 }
 
-function renderForm(initialPath: string | { pathname: string; state?: unknown }) {
+function renderForm(initialPath: string | { pathname: string; search?: string; state?: unknown }) {
   return renderWithProviders(
     <Routes>
       <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
@@ -88,6 +94,7 @@ function renderForm(initialPath: string | { pathname: string; state?: unknown })
       <Route path="/decks/:deckId" element={<LocationProbe />} />
       <Route path="/library" element={<LocationProbe />} />
       <Route path="/decks/new" element={<LocationProbe />} />
+      <Route path="/opener" element={<LocationProbe />} />
     </Routes>,
     [initialPath],
   );
@@ -102,7 +109,116 @@ afterEach(() => {
   server.resetHandlers();
 });
 
+// Each address is asked for alone or not at all, so a landing on the deck's page shows the
+// other address did not stand in for it.
+describe.each([
+  { mode: 'create', pathname: '/cards/new', leaveLabel: 'Create' },
+  { mode: 'edit', pathname: '/cards/c1/edit', leaveLabel: 'Save' },
+])('CardStandaloneForm — return addresses, $mode', ({ pathname, leaveLabel }) => {
+  beforeEach(() => {
+    mockAll();
+    server.use(
+      http.post(`${BASE}/api/cards`, () =>
+        HttpResponse.json(
+          { id: 'new-card', deck_id: 'd1', created_at: '', values: {} },
+          { status: 201 },
+        ),
+      ),
+    );
+  });
+
+  const open = async (search: string) => {
+    renderForm({ pathname, search, state: { deckId: 'd1' } });
+    await screen.findByRole('textbox', { name: 'Front' });
+  };
+
+  it.each([
+    { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', search: '?returnTo=%2Fopener', cancel: '/decks/d1' },
+    { given: 'neither', search: '', cancel: '/decks/d1' },
+  ])('with $given, Cancel lands on $cancel', async ({ search, cancel }) => {
+    const user = userEvent.setup();
+    await open(search);
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(cancel));
+  });
+
+  it.each([
+    { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', save: '/decks/d1' },
+    { given: 'returnTo alone', search: '?returnTo=%2Fopener', save: '/opener' },
+    { given: 'neither', search: '', save: '/decks/d1' },
+  ])(`with $given, ${leaveLabel} lands on $save`, async ({ search, save }) => {
+    const user = userEvent.setup();
+    await open(search);
+
+    await user.click(screen.getByRole('button', { name: leaveLabel }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(save));
+  });
+
+  it('a confirmed Cancel lands on cancelTo', async () => {
+    const user = userEvent.setup();
+    await open('?cancelTo=%2Fopener&returnTo=%2Fother');
+
+    await user.type(screen.getByRole('textbox', { name: 'Front' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/opener'));
+  });
+});
+
+describe('CardStandaloneForm — the heading and the bar', () => {
+  it.each([
+    { path: '/cards/new', heading: 'New card', leaveLabel: 'Create' },
+    { path: '/cards/c1/edit', heading: 'Edit card', leaveLabel: 'Save' },
+  ])(
+    '$heading has its heading outside the bar, and Cancel and $leaveLabel in it',
+    async ({ path, heading, leaveLabel }) => {
+      mockAll();
+      renderForm(path);
+
+      const title = await screen.findByRole('heading', { name: heading });
+      expect(title.closest('[data-reveal-clear]')).toBeNull();
+      const bar = within(screen.getByTestId('form-bar'));
+      expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(bar.getByRole('button', { name: leaveLabel })).toBeInTheDocument();
+    },
+  );
+
+  it('a failed Save puts its sentence in the bar', async () => {
+    mockAll();
+    server.use(
+      http.patch(`${BASE}/api/cards/:id`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/cards/c1/edit');
+
+    await user.type(await screen.findByRole('textbox', { name: 'Front' }), '!');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
+  });
+});
+
 describe('CardStandaloneForm — create mode', () => {
+  it("each deck's row in the picker reads its name with its subject's name beneath", async () => {
+    mockAll();
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    await user.click(await screen.findByPlaceholderText('Deck'));
+    const row = (await screen.findByText('French Vocab')).closest('[role="option"]') as HTMLElement;
+    expect(within(row).getByText('Languages')).toBeInTheDocument();
+  });
+
   it('with no decks yet, the picker still offers "New deck…" and leads to deck creation', async () => {
     server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.json([])));
     const user = userEvent.setup();
@@ -111,12 +227,13 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // returnTo rides the URL, not state — decoded via URLSearchParams, not compared as
-    // an encoded string literal.
+    // Both addresses ride the URL, not state — decoded via URLSearchParams, not compared
+    // as an encoded string literal.
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
     const locationEl = screen.getByTestId('location');
     const params = new URLSearchParams(locationEl.dataset.search);
+    expect(params.get('cancelTo')).toBe('/cards/new');
     expect(params.get('returnTo')).toBe('/cards/new');
   });
 
@@ -128,12 +245,69 @@ describe('CardStandaloneForm — create mode', () => {
     expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
   });
 
-  it('Create is disabled until a deck is chosen', async () => {
+  it('Create reads not ready until a deck is chosen', async () => {
     mockAll();
     renderForm('/cards/new');
 
     await screen.findByPlaceholderText('Deck');
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).toBeEnabled();
+  });
+
+  it('a tap on Create with no deck chosen posts nothing, says so under the picker and moves the page once', async () => {
+    mockAll();
+    let posted = false;
+    server.use(
+      http.post(`${BASE}/api/cards`, () => {
+        posted = true;
+        return HttpResponse.json(card1);
+      }),
+    );
+    const scrollBy = vi.spyOn(window, 'scrollBy');
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    const picker = await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('Choose a deck to create a card.');
+    expect(sentence).toHaveAttribute('role', 'alert');
+    expect(picker.compareDocumentPosition(sentence)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(posted).toBe(false);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    scrollBy.mockRestore();
+  });
+
+  it('choosing a deck clears the sentence', async () => {
+    mockAll();
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('Choose a deck to create a card.');
+
+    await user.click(screen.getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+
+    expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
+  });
+
+  it('a tap on Create while the chosen deck\'s fields load says nothing and moves nothing', async () => {
+    mockAll();
+    server.use(http.get(`${BASE}/api/decks/:id`, () => new Promise<Response>(() => {})));
+    const scrollBy = vi.spyOn(window, 'scrollBy');
+    const user = userEvent.setup();
+    renderForm('/cards/new');
+
+    await user.click(await screen.findByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+    scrollBy.mockRestore();
   });
 
   it('picking a deck loads its fields; typing values and saving creates the card and navigates to the deck', async () => {
@@ -153,7 +327,7 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
 
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
     await user.type(screen.getByRole('textbox', { name: 'Back' }), 'Hello');
@@ -168,11 +342,11 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'Spanish Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
 
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -186,11 +360,11 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'Spanish Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
 
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
     const dialogs = screen.getAllByRole('button', { name: 'Cancel' });
@@ -206,9 +380,9 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'French Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: 'Spanish Vocab' }));
+    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
 
     expect(screen.queryByText('Change deck?')).not.toBeInTheDocument();
     expect(await screen.findByRole('textbox', { name: 'Word' })).toBeInTheDocument();
@@ -223,6 +397,17 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+  });
+
+  it('with returnTo alone and no deck chosen, Cancel lands on /library', async () => {
+    mockAll();
+    const user = userEvent.setup();
+    renderForm('/cards/new?returnTo=%2Fopener');
+
+    await screen.findByPlaceholderText('Deck');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/library'));
   });
 
   it('an unsupported field type renders read-only and does not crash', async () => {

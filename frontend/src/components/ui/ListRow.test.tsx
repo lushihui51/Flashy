@@ -25,9 +25,9 @@ describe('ListRow', () => {
     renderWithRouter(<ListRow title="Cells" meta="3 cards" to="/decks/d2" />);
 
     const row = screen.getByRole('link', { name: /Cells/ });
-    // only one text node under the text column (the title) — no empty/placeholder
+    // only the title and the meta under the text column — no empty/placeholder
     // subtitle span rendered.
-    expect(row.querySelectorAll('span > span')).toHaveLength(1);
+    expect(row.querySelectorAll('span > span')).toHaveLength(2);
   });
 
   it('rows with and without a subtitle share the same min-height class', () => {
@@ -40,8 +40,8 @@ describe('ListRow', () => {
 
     const rowWith = withSub.querySelector('a')!;
     const rowWithout = withoutSub.querySelector('a')!;
-    expect(rowWith.className).toMatch(/min-h-16/);
-    expect(rowWithout.className).toMatch(/min-h-16/);
+    expect(rowWith.className).toMatch(/min-h-\[4\.875rem\]/);
+    expect(rowWithout.className).toMatch(/min-h-\[4\.875rem\]/);
   });
 
   it('meta is not truncated (no truncate class) while subtitle is', () => {
@@ -117,6 +117,16 @@ describe('ListRow', () => {
 
     expect(screen.getByRole('link', { name: 'Algebra' })).toHaveAttribute('href', '/decks/a');
     expect(screen.getByRole('link', { name: 'Geometry' })).toHaveAttribute('href', '/decks/b');
+  });
+
+  it('sets `trailing` between the text column and the chevron', () => {
+    renderWithRouter(<ListRow title="Algebra" trailing={<i data-testid="trailing" />} to="/decks/d1" />);
+
+    const row = screen.getByRole('link', { name: 'Algebra' });
+    const trailing = screen.getByTestId('trailing').parentElement!;
+    expect(trailing).toHaveClass('shrink-0');
+    expect(trailing.previousElementSibling).toContainElement(screen.getByText('Algebra'));
+    expect(trailing.nextElementSibling).toBe(row.querySelector('svg'));
   });
 
   describe('onClick mode (Phase 4)', () => {

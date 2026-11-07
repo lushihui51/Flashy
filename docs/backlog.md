@@ -1,10 +1,12 @@
 # Backlog
 
+Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
+
 - B1. How does a picture or audio value show on a card during a practice and in a practice's summary?
   - Reason: a field's only type is "Text", so the question waits for pictures and audio to exist; `FieldValue` in `frontend/src/components/practice/FieldValue.tsx` renders a picture or audio value as a small chip that opens the value over the page, so a zone's size stays predictable whatever the card holds
   - Owner: /product-decide
-- B2. Does a summary's sort order survive a refresh, browser back, and a shared address, as a page's open tab and filters do?
-  - Reason: PDR 005 keeps the open tab and filters across browser back and PDR 010 gives the summary three sort orders; neither says whether the chosen order is kept, and today it resets to "Gains first".
+- B2. Do a summary's order and chosen counts survive a refresh, browser back, and a shared address, as a page's open tab and filters do?
+  - Reason: PDR 017 keeps the open tab and filters across browser back and PDR 024 gives the summary three orders and counts the user can choose; neither says whether the chosen order or counts are kept. ADR 097 names the chosen counts and the order among the writes that change what a list shows, so the summary keeps them in its address, where they survive a refresh, browser back and a shared address, with no product record saying that is wanted.
   - Owner: /product-decide
 - B3. Does the app have a dark appearance, and what are its colours?
   - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
@@ -12,23 +14,14 @@
 - B4. What does the top bar's search find, and where do its results appear?
   - Reason: `SearchBar` in `frontend/src/components/shell/SearchBar.tsx` takes typing, and Enter does nothing.
   - Owner: /product-decide
-- B5. What does the Home page show?
-  - Reason: `HomePage` in `frontend/src/pages/HomePage.tsx` reads "Coming soon.", and it is where the app opens; a practice starts only from New practice, reached from the Practice page and the top bar's shortcut.
-  - Owner: /product-decide
-- B6. What is a notification, and what does the Notifications page show?
-  - Reason: `NotificationsPage` in `frontend/src/pages/NotificationsPage.tsx` reads "Coming soon.", and nothing in the app produces a notification.
-  - Owner: /product-decide
-- B7. What is the app's mark?
-  - Reason: `Logo` in `frontend/src/components/shell/Logo.tsx` renders a placeholder.
-  - Owner: /product-decide
 - B8. On a wide screen, are a deck's cards shown and edited as a table, one column per field, with a field's type and order set from its column header?
-  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form.
+  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form. The answer turns on what the user does on this page on a wide screen: blocks in columns suit finding a card and opening it, and a table suits checking one field across many cards.
   - Owner: /product-decide
 - B9. Can the user create many cards at once by pasting rows of text?
   - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
   - Owner: /product-decide
 - B10. Does an unsaved deck form survive leaving the page or closing the browser?
-  - Reason: `DeckEditor` keeps its draft in `useReducer` state and loses it on leaving, while New practice's draft lives in its address (ADR 061).
+  - Reason: `DeckEditor` keeps its draft in `useReducer` state and loses it on leaving, while New practice's draft lives in its address.
   - Owner: /product-decide
 - B11. Which kinds of value can a field hold besides text, and how does the user enter each on a card?
   - Reason: `FieldType` in `app/models/field_def.py` has `text`, `image` and `audio`; `SUPPORTED_FIELD_TYPES` in `frontend/src/lib/fieldTypes.ts` allows `text` alone, and `CardFieldsForm` in `frontend/src/components/library/CardFieldsForm.tsx` has no widget for the other two.
@@ -37,16 +30,13 @@
   - Reason: A practice's name is typed on New practice or defaults to the date and time, and `app/routers/api/practice_run.py` has no route that changes it.
   - Owner: /product-decide
 - B13. Does the app work out from a card's ratings when it should next be reviewed, and tell the user what is due and when?
-  - Reason: A scheduler, FSRS, is wanted later; today the user starts every practice themselves (PDR 011).
+  - Reason: A scheduler, FSRS, is wanted later; today the user starts every practice themselves (PDR 027).
   - Owner: /product-decide
 - B14. Can the user work a deck toward a date, such as a test, with the app pacing practices to reach it?
-  - Reason: Wanted later; today the user starts every practice themselves (PDR 011).
+  - Reason: Wanted later; today the user starts every practice themselves (PDR 027).
   - Owner: /product-decide
 - B15. Can the user share a deck with another user, and does the other user get a copy of their own or a view of the original?
   - Reason: Wanted later; today a deck reaches no other user (PDR 012).
-  - Owner: /product-decide
-- B16. Where and how are a deck's and a subject's mastery numbers shown?
-  - Reason: The numbers exist (PDR 013); the places in question are the deck and subject rows in the library and on a subject's page, and the header of a deck's or a subject's own page.
   - Owner: /product-decide
 - B17. How is Flashy hosted and deployed: the provider for the API and for the frontend, whether they share an origin, the managed PostgreSQL, Clerk's production keys, where `alembic upgrade` runs on a deploy, and where secrets live?
   - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 072); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 072); and a startup check that the database is at alembic head (ADR 045).
@@ -55,5 +45,29 @@
   - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in `start_practice_run`'s docstring in `app/services/practice_run.py`, while the retry's placement is ADR 037 and ADR 058.
   - Owner: /product-decide
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
-  - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 010) is the only change the user sees.
+  - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 024) is the only change the user sees.
   - Owner: /product-decide
+- B24. When the browser's text size makes a row's contents wider than the screen, the top bar's items, a row of tabs, a page's heading beside its buttons, a field's row on Edit deck, the Practice page's two filters or a list row's title beside what stands next to it, does the row wrap, scroll sideways on its own, or shrink what it holds, and how small may what it holds become?
+  - Reason: PDR 030 has everything grow with the browser's text size; at a 24px root on a 390-wide screen the top bar's "Log in", the Practice page's "Completed" tab and a deck's "Add configuration" run past the edge, and the whole page scrolls sideways; a deck's heading breaks inside its word, "Commands" taking five lines, Edit deck's field name inputs narrow to about one character, the Practice page's two filters cut their own words to "All subj" and "All deck", and a row's title truncates to a few characters, "Sep 28, …" on the Practice page, where several rows then look alike, and "CompTI…" on Your library.
+  - Owner: /product-decide
+- B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
+  - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
+  - Owner: /product-decide
+- B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
+  - Reason: a fading circle can feel like being told you're behind, which PDR 027 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 027's "nothing due".
+  - Owner: /product-decide
+- B28. What does the summary say when the chosen counts list no card, and does "Practice these" show then?
+  - Reason: a count of zero can be chosen and narrows the list to nothing; PDR 026 offers a practice only of the cards the list shows, so "Practice these" does not show then, and no record gives words for a list narrowed to nothing or for a tap with nothing to practice, which would also need a refusal code (ADR 070).
+  - Owner: /product-decide
+- B29. On Home, what does tapping an active practice's row do, and does the most recent one still need "Start practice" beside it?
+  - Reason: tapping a row on Home reached the practice with or without "Start practice", so the button reads as useless. PDR 016 makes starting the most recent active practice Home's main action and does not say what a row does. `ActivePractices` in `frontend/src/pages/HomePage.tsx` links a row to the practice's own page, which has a "Start practice" of its own, and links Home's "Start practice" to the run page, so only the most recent practice is one tap from the run page.
+  - Owner: /product-decide
+- B30. Does Home's "Recently practiced" list the user's most recently completed practices rather than their decks, and what does tapping a row or its action do?
+  - Reason: the user reading "Recently practiced" expects practices and finds decks. PDR 016 shows the decks of the most recently completed practices and weighs no alternative that shows the practices themselves. A row's "Practice" opens the Practice page filtered to the deck and starts nothing (`RecentDecks` in `frontend/src/pages/HomePage.tsx`), and a deck also in an active practice shows in both of Home's lists.
+  - Owner: /product-decide
+- B31. Does a form opened from Home or from the top bar's New back out to the page that opened it, rather than to the list its thing belongs to?
+  - Reason: Cancel on New practice opened from Home lands on the Practice page, not on Home. PDR 017 has a form back out to what opened it, and ADR 103 sends a create form with no `cancelTo` to its list and lets any opener pass one; no record says why these do not. The "New practice" link and `STEPS` in `frontend/src/pages/HomePage.tsx` and `CreateSheet` in `frontend/src/components/shell/CreateSheet.tsx` pass no return address, and `cancel` in `frontend/src/pages/PracticeCreatePage.tsx` goes to the Practice page without reading `cancelTo`, unlike every other form.
+  - Owner: /product-decide
+- B32. How does a form leave so that, once the user has left it by Cancel, Create or Save, the "<" on the page they land on goes back past the form, as PDR 017 means, without Cancel relying on the browser's history, which ADR 103 rejected?
+  - Reason: on the run page, opening "Edit card" and tapping Cancel returns to the run page, and its "<" then opens Edit card rather than the page the user reached the run page from. PDR 017 has the "<" do what the browser's back does and return to the page the user came from, which for a user who has backed out of a form is not the form; PDR 019 returns the user from the form and does not mention the "<". Replacing the form's history entry on leaving would leave the run page twice in a row, so the "<" would seem to do nothing. `CardStandaloneForm` in `frontend/src/components/library/CardStandaloneForm.tsx` leaves by a new history entry and `Breadcrumb` in `frontend/src/components/ui/Breadcrumb.tsx` steps back one, so the form stays one step behind; the form has no "<" and its Cancel comes forward again, so the "<" alone never gets past it. `SubjectForm`, `DeckEditor` and `DeckConfigurationEditor` leave the same way.
+  - Owner: /code-decide

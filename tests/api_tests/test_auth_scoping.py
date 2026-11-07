@@ -103,7 +103,6 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/fields/{field_id}").status_code == 404
         assert client.patch(f"/api/fields/{field_id}", json={"name": "x"}).status_code == 404
         assert client.delete(f"/api/fields/{field_id}").status_code == 404
-        assert client.delete(f"/api/fields/{field_id}/hard").status_code == 404
 
     def test_card_endpoints(self, client, other_user, act_as, owned):
         deck_id = owned["deck"]["id"]
@@ -160,6 +159,7 @@ class TestForeignResourcesAreNotFound:
         config_id = owned["config"]["id"]
         session_id = owned["session"]["id"]
         current_card_id = owned["current_card"]["practice_card_id"]
+        card_id = owned["card"]["id"]
         act_as(other_user)
 
         assert (
@@ -172,6 +172,13 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/practice_runs/{session_id}").status_code == 404
         assert (
             client.get(f"/api/practice_runs/{session_id}/state").status_code
+            == 404
+        )
+        assert (
+            client.post(
+                f"/api/practice_runs/{session_id}/chosen_cards",
+                json={"name": "Scoping run", "card_ids": [card_id]},
+            ).status_code
             == 404
         )
         assert (
@@ -189,6 +196,16 @@ class TestForeignResourcesAreNotFound:
 
         assert client.get("/api/subjects").json() == []
         assert client.get("/api/decks", params={"subject_id": deck_id}).json() == []
+        assert client.get("/api/home").json() == {
+            "steps": {
+                "has_subject": False,
+                "has_deck": False,
+                "has_card": False,
+                "has_configuration": False,
+            },
+            "active_practices": [],
+            "recent_decks": [],
+        }
 
 
 class TestOwnerStillHasAccess:

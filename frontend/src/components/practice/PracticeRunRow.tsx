@@ -16,17 +16,19 @@ type PracticeRunRowProps = {
  * grammar. No date: the name already is one unless typed. */
 export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 py-3 pr-1 pl-4">
       <Link
         to={`/practice/${session.id}`}
-        className="flex min-h-16 min-w-0 flex-1 flex-col justify-center gap-1 py-2"
+        className="flex min-w-0 flex-1 flex-col gap-1"
       >
         <span className="flex items-center gap-2">
-          <span className="truncate text-[15px] leading-5 text-(--color-text)">{session.name}</span>
+          <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
+            {session.name}
+          </span>
           <PracticeStatusBadge status={session.status} />
         </span>
 
-        <span className="flex flex-wrap items-center gap-1">
+        <span className="flex flex-wrap items-center gap-x-2">
           <SessionDeckChips decks={session.decks} variant="summary" />
         </span>
       </Link>
@@ -35,7 +37,7 @@ export default function PracticeRunRow({ session, onDelete }: PracticeRunRowProp
         type="button"
         aria-label={`Delete ${session.name}`}
         onClick={onDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-(--color-text-muted)"
+        className="flex h-11 w-10 shrink-0 items-center justify-center border-none text-(--color-aside)"
       >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
       </button>

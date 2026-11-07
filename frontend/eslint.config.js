@@ -38,11 +38,31 @@ export default defineConfig([
             'use formatDate/formatDateTime from src/lib/datetime.ts rather than constructing Intl.DateTimeFormat, so `timeZone` is always explicit.',
         },
       ],
+      // Holds every write to a page's own URL to the one hook, so that no write can forget
+      // to keep the page's scroll.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-router-dom',
+              importNames: ['useSearchParams'],
+              message:
+                "read and write a page's search params through useViewParams in src/lib/viewParams.ts, whose writes never reset scroll (ADR 097)",
+            },
+          ],
+        },
+      ],
     },
   },
   {
     // The sanctioned exception — this module exists to apply the user's zone explicitly.
     files: ['src/lib/datetime.ts'],
     rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
+    // The sanctioned exception — this module exists to make every write keep the scroll.
+    files: ['src/lib/viewParams.ts'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 ]);

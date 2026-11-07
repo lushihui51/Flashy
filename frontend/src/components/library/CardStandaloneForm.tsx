@@ -1,15 +1,21 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
 import { createCard, deleteCard, readCard, updateCard } from 'src/api/card';
 import { readDeck, readDecks } from 'src/api/deck';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
+import DeckPicker from 'src/components/library/DeckPicker';
 import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -22,6 +28,7 @@ type LocationState = { deckId?: string } | null;
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
+  const { params } = useViewParams();
 
   const cardQuery = useQuery({
     queryKey: ['card', cardId],
@@ -35,11 +42,11 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
       return (
         <div className="p-4">
           {isNotFound(cardQuery.error) ? (
-            <p className="text-(--color-text-muted)">Card not found.</p>
+            <p className="text-(--color-aside)">Card not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
-              Could not load this card.
-            </p>
+            <FormPart sentence="Could not load this card." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -60,6 +67,8 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
       cardId={cardId}
       original={mode === 'edit' ? cardQuery.data : undefined}
       initialDeckId={initialDeckId}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -69,6 +78,8 @@ type CardStandaloneFormBodyProps = {
   cardId: string | undefined;
   original: components['schemas']['CardRead'] | undefined;
   initialDeckId: string | null;
+  cancelTo: string | null;
+  returnTo: string | null;
 };
 
 function CardStandaloneFormBody({
@@ -76,12 +87,16 @@ function CardStandaloneFormBody({
   cardId,
   original,
   initialDeckId,
+  cancelTo,
+  returnTo,
 }: CardStandaloneFormBodyProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const formId = useId();
 
   const [deckId, setDeckId] = useState(initialDeckId);
+  const [deckError, setDeckError] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>(original?.values ?? {});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -95,22 +110,22 @@ function CardStandaloneFormBody({
     queryFn: () => readDeck(deckId!),
     enabled: !!deckId,
   });
-  // The combobox's own options. Fetched here rather than inside a picker component,
-  // because a shared component takes its data as props (AGENTS.md) — and with the fetch
-  // here there is nothing left for a wrapper to hold.
+  // The combobox's own options. Fetched here rather than inside the picker, because a
+  // shared component takes its data as props (AGENTS.md).
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
   // Derived from `deckId` rather than kept as its own state: reverting `deckId` after a
   // cancelled "Change deck?" confirm then redisplays the previous deck by itself, with no
   // remount needed to tell the combobox its selection moved back. Falls back to the
-  // single-deck fetch for the initial preselection, which lands before the list does.
+  // single-deck fetch for the initial preselection, which lands before the list does. That
+  // read carries no subject's name; a chosen deck shows only its own name, so none is missed.
   const selectedDeck =
     decksQuery.data?.find((deck) => deck.id === deckId) ??
-    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
+    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name, subject_name: '' } : null);
 
-  // A card can't move between decks once it exists — that's the only case the deck
-  // combobox is ever locked for. A contextual "New card" and the deck-editor round-trip
-  // both just preselect it, still fully editable.
+  // A card can't move between decks once it exists, so editing one shows its deck as a
+  // fixed value. A contextual "New card" and the deck-editor round-trip both just
+  // preselect the combobox, still fully editable.
   const deckLocked = mode === 'edit';
 
   // Gate on the preselected deck's own fetch landing, so the combobox shows the real
@@ -124,19 +139,19 @@ function CardStandaloneFormBody({
       ? Object.values(values).some((v) => v.trim() !== '')
       : !!original && Object.entries(values).some(([k, v]) => v !== (original.values[k] ?? ''));
 
-  const canSubmit = deckId !== null && !!deckQuery.data && !submitting;
 
-  const goBack = () => (deckId ? navigate(`/decks/${deckId}`) : navigate('/library'));
+  const leaveByCancel = () => navigate(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
 
   const handleCancel = () => {
     if (dirty) {
       setConfirmCancelOpen(true);
       return;
     }
-    goBack();
+    leaveByCancel();
   };
 
   const handleDeckChange = (newDeckId: string) => {
+    setDeckError(null);
     const hasTypedValues = Object.values(values).some((v) => v.trim() !== '');
     if (deckId && newDeckId !== deckId && hasTypedValues) {
       setDeckChange({ previousDeckId: deckId });
@@ -148,9 +163,7 @@ function CardStandaloneFormBody({
   };
 
   const goToCreateDeck = () => {
-    // returnTo rides the URL, not router state.
-    const params = new URLSearchParams();
-    params.set('returnTo', `${location.pathname}${location.search}`);
+    const params = returnAddressParams(location, 'cancelTo', 'returnTo');
     navigate({ pathname: '/decks/new', search: params.toString() });
   };
 
@@ -189,7 +202,7 @@ function CardStandaloneFormBody({
         }
       }
       await invalidateAfterWrite(deckId, deckQuery.data.subject_id);
-      navigate(`/decks/${deckId}`);
+      navigate(returnTo ?? `/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
@@ -217,39 +230,33 @@ function CardStandaloneFormBody({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
-          {mode === 'create' ? 'New card' : 'Edit card'}
-        </h1>
-        <span aria-hidden="true" className="w-[42px]" />
-      </div>
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'create' ? 'New card' : 'Edit card'}
+      </h1>
 
-      {formError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
-          {formError}
-        </p>
-      )}
-
-      <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
-        <PickerCombobox
-          items={decksQuery.data ?? []}
-          selected={selectedDeck}
-          onSelect={(item) => handleDeckChange(item.id)}
-          // No inline create (creating a card never creates a deck) — a deck editor is too
-          // heavy to nest in a dialog, so this always means leaving the page, and only this
-          // form knows whether there are typed values to confirm away first.
-          onSelectCreate={handleCreateNewDeck}
-          createLabel="New deck…"
-          placeholder="Deck"
-          locked={deckLocked}
-        />
+      <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
+        {deckLocked ? (
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-label text-(--color-aside)">Deck</span>
+            <span className="text-body font-semibold text-(--color-ink)">
+              {selectedDeck?.name ?? ''}
+            </span>
+          </div>
+        ) : (
+          <FormPart sentence={deckError} look="wrong" className="flex flex-col gap-1.5">
+            <DeckPicker
+              items={decksQuery.data ?? []}
+              selected={selectedDeck}
+              onSelect={(item) => handleDeckChange(item.id)}
+              // No inline create (creating a card never creates a deck) — a deck editor is too
+              // heavy to nest in a dialog, so this always means leaving the page, and only this
+              // form knows whether there are typed values to confirm away first.
+              onSelectCreate={handleCreateNewDeck}
+              createLabel="New deck…"
+              placeholder="Deck"
+            />
+          </FormPart>
+        )}
 
         {deckId && deckQuery.data && (
           <CardFieldsForm
@@ -258,33 +265,41 @@ function CardStandaloneFormBody({
             onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
           />
         )}
-
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="h-12 w-full rounded-full bg-(--color-primary) text-sm font-semibold text-(--color-primary-contrast) disabled:opacity-60"
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </button>
       </form>
 
       {mode === 'edit' && (
         <button
           type="button"
           onClick={() => setConfirmDeleteOpen(true)}
-          className="h-11 text-sm font-semibold text-(--color-danger)"
+          className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete card
         </button>
       )}
+
+      <FormBar sentence={formError}>
+        <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
+          Cancel
+        </button>
+        <SubmitButton
+          ready={deckId !== null && !!deckQuery.data}
+          busy={submitting}
+          onNotReady={() => {
+            if (!deckId) setDeckError('Choose a deck to create a card.');
+          }}
+          form={formId}
+        >
+          {mode === 'create' ? 'Create' : 'Save'}
+        </SubmitButton>
+      </FormBar>
 
       <ConfirmDialog
         open={confirmCancelOpen}
         title="Discard this card?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
-        onConfirm={goBack}
+        onConfirm={leaveByCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
 
@@ -293,7 +308,6 @@ function CardStandaloneFormBody({
         title="Change deck?"
         description="Switching decks will clear the card you were filling in."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => {
           setValues({});
           setDeckChange(null);
@@ -309,7 +323,6 @@ function CardStandaloneFormBody({
         title="Create a new deck?"
         description="This will clear the card you were filling in."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => {
           setValues({});
           goToCreateDeck();
@@ -323,7 +336,6 @@ function CardStandaloneFormBody({
           title="Delete card?"
           description="This can't be undone."
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

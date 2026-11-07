@@ -28,12 +28,20 @@ class DeckRead(DeckBase):
     last_activity_at: datetime
 
 
-class DeckSummary(DeckRead):
-    """DeckRead plus preview data for a list row — card_count and
-    field_names (position order, active fields only). Only `GET /api/decks` returns
-    this; the single-deck reads (`GET`/`POST`/`PATCH /api/decks/{id}`) return the
-    richer `DeckDetail` instead, which already includes everything here except these
-    two list-row-only fields."""
+class DeckListing(DeckRead):
+    """DeckRead plus what the tables give for a list row: its subject's name, card_count,
+    and field_names in position order, active fields only."""
 
+    subject_name: str
     card_count: int
     field_names: list[str]
+
+
+class DeckSummary(DeckListing):
+    """A deck as a list row shows it. The single-deck reads
+    (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which
+    already includes everything here except the subject's name, card_count and
+    field_names."""
+
+    # 0 to 1, over the deck's cards; None with no card.
+    readiness: float | None

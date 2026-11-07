@@ -6,9 +6,11 @@ from sqlmodel import Session, col, select
 
 from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig
+from app.models.practice_card import PracticeCard
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.practice_run_payloads import PracticeRunDeckSummary, PracticeRunSummary
+from app.models.review_log import ReviewLog
 from app.models.subject import Subject
 
 
@@ -34,9 +36,9 @@ def db_read_practice_run(
 def _summaries_for_runs(
     db: Session, sessions: list[PracticeRun]
 ) -> list[PracticeRunSummary]:
-    """Two queries regardless of how many sessions are passed in — shared by the list
-    read and the single-session read below, so a detail fetch is a narrowed instance of
-    the same read rather than a per-row loop over it."""
+    """Two queries regardless of how many sessions are passed in — shared by every read
+    of summaries below, so a detail fetch is a narrowed instance of the same read rather
+    than a per-row loop over it."""
     if not sessions:
         return []
 
@@ -92,7 +94,7 @@ def db_read_practice_runs_with_decks(
 ) -> list[PracticeRunSummary]:
     """The user's sessions, newest first, each with the decks it snapshotted — two
     queries regardless of how many sessions there are, never one per session (the same
-    shape as db_read_decks_with_summary).
+    shape as db_read_deck_listings).
 
     `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
     matches if *any* of its snapshots points at a matching deck. A run left with no
@@ -115,6 +117,38 @@ def db_read_practice_runs_with_decks(
     query = query.order_by(col(PracticeRun.created_at).desc(), col(PracticeRun.id))
     sessions = list(db.exec(query).all())
     return _summaries_for_runs(db, sessions)
+
+
+def db_read_active_practice_runs_with_decks(
+    db: Session, user_id: uuid.UUID, limit: int
+) -> list[PracticeRunSummary]:
+    """The user's `limit` most recently created active runs, newest first, each with the
+    decks it snapshotted."""
+    sessions = db.exec(
+        select(PracticeRun)
+        .where(PracticeRun.user_id == user_id, PracticeRun.status == RunStatus.active)
+        .order_by(col(PracticeRun.created_at).desc(), col(PracticeRun.id))
+        .limit(limit)
+    ).all()
+    return _summaries_for_runs(db, list(sessions))
+
+
+def db_read_recent_deck_ids(db: Session, user_id: uuid.UUID, limit: int) -> list[uuid.UUID]:
+    """Up to `limit` decks of the user's completed runs, each once, the deck whose run
+    holds the newest rating first. A completed run with no rating contributes nothing."""
+    return list(
+        db.exec(
+            select(PracticeDeck.deck_id)
+            .join(PracticeRun, PracticeRun.id == PracticeDeck.practice_run_id)
+            .join(PracticeCard, PracticeCard.practice_run_id == PracticeRun.id)
+            # A practice_card's id is the review_group_id of the ratings given to it.
+            .join(ReviewLog, ReviewLog.review_group_id == PracticeCard.id)
+            .where(PracticeRun.user_id == user_id, PracticeRun.status == RunStatus.completed)
+            .group_by(col(PracticeDeck.deck_id))
+            .order_by(func.max(ReviewLog.reviewed_at).desc(), col(PracticeDeck.deck_id))
+            .limit(limit)
+        ).all()
+    )
 
 
 def db_read_practice_run_with_decks(

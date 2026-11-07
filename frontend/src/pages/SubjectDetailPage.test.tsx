@@ -33,6 +33,8 @@ const subject = {
   description: 'Numbers and shapes',
   user_id: 'u1',
   created_at: '',
+  deck_count: 1,
+  readiness: 0.5 as number | null,
 };
 const decks = [
   {
@@ -41,6 +43,7 @@ const decks = [
     name: 'Algebra',
     created_at: '',
     card_count: 6,
+    readiness: 0.5 as number | null,
     field_names: ['Front', 'Back'],
   },
 ];
@@ -112,6 +115,38 @@ describe('SubjectDetailPage', () => {
     expect(screen.queryByText('Numbers and shapes')).not.toBeInTheDocument();
   });
 
+  it('shows the mastery circle after the name in the heading row', async () => {
+    mockSubject({ subjectData: { ...subject, readiness: 0.42 }, decksData: [] });
+    renderAtSubjectRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Math' });
+    expect(heading.nextElementSibling).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
+  });
+
+  it('shows no mastery circle for a subject with no card', async () => {
+    mockSubject({ subjectData: { ...subject, readiness: null }, decksData: [] });
+    renderAtSubjectRoute();
+
+    await screen.findByRole('heading', { name: 'Math' });
+    expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('a deck row shows its mastery, and a deck with no card shows none', async () => {
+    mockSubject({
+      subjectData: { ...subject, readiness: null },
+      decksData: [
+        { ...decks[0]!, readiness: 0.42 },
+        { ...decks[0]!, id: 'd2', name: 'Empty', card_count: 0, readiness: null },
+      ],
+    });
+    renderAtSubjectRoute();
+
+    const withCards = await screen.findByRole('link', { name: /Algebra/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Empty/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
   it('breadcrumb links to /library', async () => {
     mockSubject();
     renderAtSubjectRoute();
@@ -142,8 +177,8 @@ describe('SubjectDetailPage', () => {
     it('reads plural counts for multiple decks, summed cards', async () => {
       mockSubject({
         decksData: [
-          { id: 'd1', subject_id: 's1', name: 'Algebra', created_at: '', card_count: 6, field_names: [] },
-          { id: 'd2', subject_id: 's1', name: 'Geometry', created_at: '', card_count: 3, field_names: [] },
+          { id: 'd1', subject_id: 's1', name: 'Algebra', created_at: '', card_count: 6, readiness: 0.5, field_names: [] },
+          { id: 'd2', subject_id: 's1', name: 'Geometry', created_at: '', card_count: 3, readiness: 0.5, field_names: [] },
         ],
       });
       renderAtSubjectRoute();
@@ -163,7 +198,7 @@ describe('SubjectDetailPage', () => {
     it('reads "0 cards · 1 field" for a deck with zero cards and one field', async () => {
       mockSubject({
         decksData: [
-          { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, field_names: ['Front'] },
+          { id: 'd1', subject_id: 's1', name: 'Empty Deck', created_at: '', card_count: 0, readiness: null, field_names: ['Front'] },
         ],
       });
       renderAtSubjectRoute();
@@ -180,6 +215,7 @@ describe('SubjectDetailPage', () => {
             name: 'Solo',
             created_at: '',
             card_count: 1,
+            readiness: 0.5,
             field_names: ['Front', 'Back'],
           },
         ],
@@ -198,6 +234,7 @@ describe('SubjectDetailPage', () => {
             name: 'Algebra',
             created_at: '',
             card_count: 2,
+            readiness: 0.5,
             field_names: ['Front', 'Back', 'Notes', 'Extra'],
           },
         ],
@@ -257,6 +294,19 @@ describe('SubjectDetailPage', () => {
     );
   });
 
+  it('Add deck passes this page as cancelTo and no returnTo', async () => {
+    mockSubject();
+    const user = userEvent.setup();
+    renderAtSubjectRoute(<LocationProbe />, '/subjects/s1?from=here');
+
+    await screen.findByRole('heading', { name: 'Math' });
+    await user.click(screen.getByRole('button', { name: 'Add deck' }));
+
+    const params = new URLSearchParams(screen.getByTestId('location').dataset.search);
+    expect(params.get('cancelTo')).toBe('/subjects/s1?from=here');
+    expect(params.has('returnTo')).toBe(false);
+  });
+
   it('Practice opens the overview pre-filtered to this subject', async () => {
     mockSubject();
     const user = userEvent.setup();
@@ -308,6 +358,7 @@ describe('SubjectDetailPage', () => {
         name: `Deck ${i}`,
         created_at: '',
         card_count: i,
+        readiness: null,
         field_names: [],
       })),
     });

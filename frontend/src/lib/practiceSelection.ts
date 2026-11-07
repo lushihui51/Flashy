@@ -1,7 +1,7 @@
 /**
  * New practice's selection as it rides the URL: one `config=<id>` param per selected
  * deck configuration, in the order they were ticked. Pure helpers over
- * `URLSearchParams` — the page owns the `setSearchParams(…, { replace: true })`.
+ * `URLSearchParams` — the page owns the `setParams(…)`.
  */
 
 const PARAM = 'config';

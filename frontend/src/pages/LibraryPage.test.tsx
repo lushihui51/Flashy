@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { useLocation } from 'react-router-dom';
@@ -28,6 +28,7 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 2,
+    readiness: 0.5 as number | null,
   },
   {
     id: 's2',
@@ -37,23 +38,28 @@ const subjects = [
     user_id: 'u1',
     created_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Math',
     name: 'Algebra',
     created_at: '',
     card_count: 3,
+    readiness: 0.5,
     field_names: ['Term', 'Definition'],
   },
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Bio',
     name: 'Cells',
     created_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Front'],
   },
 ];
@@ -99,15 +105,15 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
   });
 
-  it("a deck row shows its counts alone while its subject's name is unknown", async () => {
+  it("a deck row shows its subject's name from the row, whatever the subjects read is doing", async () => {
     server.use(
       http.get(`${BASE}/api/subjects`, () => new Promise(() => {})),
       http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     );
     renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
 
-    expect(await screen.findByText('3 cards · 2 fields')).toBeInTheDocument();
-    expect(screen.getByText('0 cards · 1 field')).toBeInTheDocument();
+    expect(await screen.findByText('Math · 3 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
   });
 
   it('opens straight onto the Decks tab when ?tab=decks is in the URL', async () => {
@@ -196,7 +202,7 @@ describe('LibraryPage', () => {
     await screen.findByText('Math');
     const button = screen.getByRole('button', { name: 'Add subject' });
     expect(button).toBeInTheDocument();
-    expect(button.className).toMatch(/h-9/);
+    expect(button.className).toMatch(/h-10/);
   });
 
   it('navigates to /subjects/new when the Subjects create button is clicked', async () => {
@@ -222,6 +228,31 @@ describe('LibraryPage', () => {
     await screen.findByText('Math');
     expect(screen.getByText('2 decks')).toBeInTheDocument();
     expect(screen.getByText('1 deck')).toBeInTheDocument();
+  });
+
+  it('a subject row shows its mastery, and a subject with no card shows none', async () => {
+    mockLibrary({
+      subjectsData: [
+        { ...subjects[0]!, readiness: 0.42 },
+        { ...subjects[1]!, readiness: null },
+      ],
+    });
+    renderWithProviders(<LibraryPage />);
+
+    const withCards = await screen.findByRole('link', { name: /Math/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Bio/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('a deck row shows its mastery, and a deck with no card shows none', async () => {
+    mockLibrary({ decksData: [{ ...decks[0]!, readiness: 0.42 }, decks[1]!] });
+    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+
+    const withCards = await screen.findByRole('link', { name: /Algebra/ });
+    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
+    const withoutCards = screen.getByRole('link', { name: /Cells/ });
+    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
   });
 
   it('a failed subjects load says so instead of rendering an empty list', async () => {

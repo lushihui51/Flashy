@@ -3,58 +3,40 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
+import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
-
-const subjects = [
-  {
-    id: 's1',
-    name: 'Alpha',
-    icon: 'brain',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-  },
-  {
-    id: 's2',
-    name: 'Beta',
-    icon: 'music',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-  },
-];
 
 const decks = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
+    readiness: 0.5,
     field_names: [],
   },
 ];
 
-// The deck endpoint returns live fields only — an archived field never reaches the
+// The deck endpoint returns live fields only — a deleted field never reaches the
 // client at all, which is why the builder can't show one.
 const deckDetail = {
   id: 'd1',
@@ -62,6 +44,7 @@ const deckDetail = {
   subject_id: 's1',
   created_at: '',
   last_activity_at: '',
+  readiness: null,
   field_defs: [
     { id: 'f1', name: 'Term', type: 'text', position: 0 },
     { id: 'f2', name: 'Meaning', type: 'text', position: 1 },
@@ -85,7 +68,6 @@ const savedConfig = {
 
 function mockLibrary(deck: typeof deckDetail = deckDetail) {
   server.use(
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/decks/:deckId`, ({ params }) =>
       params.deckId === deck.id
@@ -116,11 +98,16 @@ function StateProbe() {
   );
 }
 
-// returnTo rides the URL, not state — decoded via URLSearchParams.get(), never
+// Both addresses ride the URL, not state — decoded via URLSearchParams.get(), never
 // compared as an encoded string literal.
 function ReturnToProbe() {
-  const [searchParams] = useSearchParams();
-  return <span data-testid="return-to">{searchParams.get('returnTo') ?? ''}</span>;
+  const { params } = useViewParams();
+  return (
+    <>
+      <span data-testid="cancel-to">{params.get('cancelTo') ?? ''}</span>
+      <span data-testid="return-to">{params.get('returnTo') ?? ''}</span>
+    </>
+  );
 }
 
 function renderCreate(path = '/deck-configurations/new') {
@@ -172,6 +159,121 @@ afterEach(() => {
   server.resetHandlers();
 });
 
+function mockConfig(config = savedConfig) {
+  server.use(http.get(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(config)));
+}
+
+/** The landing route's path and search, for a landing on a deck's Configurations tab. */
+function FullLocationProbe() {
+  const location = useLocation();
+  return <span data-testid="full-location">{`${location.pathname}${location.search}`}</span>;
+}
+
+function renderAddressed(path: string) {
+  return renderWithProviders(
+    <Routes>
+      <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
+      <Route
+        path="/deck-configurations/:configId/edit"
+        element={<DeckConfigurationEditor mode="edit" />}
+      />
+      <Route path="/decks/:deckId" element={<FullLocationProbe />} />
+      <Route path="/library" element={<FullLocationProbe />} />
+      <Route path="/opener" element={<FullLocationProbe />} />
+    </Routes>,
+    [path],
+  );
+}
+
+// Each address is asked for alone or not at all, so a landing on the default shows the
+// other address did not stand in for it.
+describe('DeckConfigurationEditor — return addresses', () => {
+  const TAB = '/decks/d1?tab=configurations';
+
+  it.each([
+    { given: 'cancelTo alone', search: '&cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', search: '&returnTo=%2Fopener', cancel: TAB },
+    { given: 'neither', search: '', cancel: TAB },
+  ])('create with $given: Cancel lands on $cancel', async ({ search, cancel }) => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/new?deck=d1${search}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(cancel);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', search: '&cancelTo=%2Fopener', create: TAB },
+    { given: 'returnTo alone', search: '&returnTo=%2Fopener', create: '/opener' },
+    { given: 'neither', search: '', create: TAB },
+  ])('create with $given: Create lands on $create', async ({ search, create }) => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json(savedConfig, { status: 201 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/new?deck=d1${search}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(create);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', full: '?cancelTo=%2Fopener', cancel: '/opener' },
+    { given: 'returnTo alone', full: '?returnTo=%2Fopener', cancel: TAB },
+    { given: 'neither', full: '', cancel: TAB },
+  ])('edit with $given: Cancel lands on $cancel', async ({ full, cancel }) => {
+    mockLibrary();
+    mockConfig();
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/c1/edit${full}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(cancel);
+  });
+
+  it.each([
+    { given: 'cancelTo alone', full: '?cancelTo=%2Fopener', save: TAB },
+    { given: 'returnTo alone', full: '?returnTo=%2Fopener', save: '/opener' },
+    { given: 'neither', full: '', save: TAB },
+  ])('edit with $given: Save lands on $save', async ({ full, save }) => {
+    mockLibrary();
+    mockConfig();
+    server.use(
+      http.patch(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(savedConfig)),
+    );
+    const user = userEvent.setup();
+    renderAddressed(`/deck-configurations/c1/edit${full}`);
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe(save);
+  });
+
+  it('with returnTo alone and no deck chosen, Cancel lands on /library', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderAddressed('/deck-configurations/new?returnTo=%2Fopener');
+    await screen.findByPlaceholderText('Deck');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect((await screen.findByTestId('full-location')).textContent).toBe('/library');
+  });
+});
+
 describe('DeckConfigurationEditor — create', () => {
   it('shows nothing below the deck picker until a deck is chosen', async () => {
     mockLibrary();
@@ -186,6 +288,21 @@ describe('DeckConfigurationEditor — create', () => {
 
     expect(await screen.findByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
+  });
+
+  it("each deck's row in the picker reads its name with its subject's name beneath, and nowhere else", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(await screen.findByPlaceholderText('Deck'));
+    const row = (await screen.findByText('Alpha Deck')).closest('[role="option"]') as HTMLElement;
+    const subject = within(row).getByText('Alpha');
+    // The subject stands after the deck's name in the row, not before it.
+    expect(within(row).getByText('Alpha Deck').compareDocumentPosition(subject)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getAllByText('Alpha')).toHaveLength(1);
   });
 
   it('starts with every live field unassigned, in deck order', async () => {
@@ -244,6 +361,9 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(
+      '/deck-configurations/new?subject=s1',
+    );
     expect(screen.getByTestId('return-to')).toHaveTextContent(
       '/deck-configurations/new?subject=s1',
     );
@@ -271,9 +391,10 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
-    // Decoded via URLSearchParams.get(): the deck editor's own returnTo is the
+    // Decoded via URLSearchParams.get(): each of the deck editor's addresses is the
     // builder's exact location, nested returnTo and all — nothing was dropped, and
     // nothing had to be hand-encoded or forwarded explicitly to make that true.
+    expect(screen.getByTestId('cancel-to')).toHaveTextContent(builderPath);
     expect(screen.getByTestId('return-to')).toHaveTextContent(builderPath);
   });
 
@@ -398,14 +519,17 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByRole('checkbox', { name: '1' })).not.toBeChecked();
   });
 
-  it('Create stays disabled with the reason shown, for each rule the backend enforces', async () => {
+  it('Create reads not ready with the reason shown, for each rule the backend enforces', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
     const create = screen.getByRole('button', { name: 'Create' });
 
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Name'), 'Recall');
     expect(screen.getByText(/prompt side needs at least one field/)).toBeInTheDocument();
 
     await assign(user, 'Term', 'prompt_fields');
@@ -413,18 +537,17 @@ describe('DeckConfigurationEditor — create', () => {
 
     await assign(user, 'Meaning', 'answer_pool');
     expect(screen.getByText(/how many random answer fields/)).toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
 
     await user.click(screen.getByRole('checkbox', { name: '1' }));
-    // The name is derived once both sides have a field, so nothing is left to do.
-    expect(create).toBeEnabled();
+    expect(create).not.toHaveAttribute('aria-disabled');
 
     await user.clear(screen.getByLabelText('Name'));
     expect(screen.getByText('Give this configuration a name to create it.')).toBeInTheDocument();
-    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute('aria-disabled', 'true');
 
     await user.type(screen.getByLabelText('Name'), 'Recall');
-    expect(create).toBeEnabled();
+    expect(create).not.toHaveAttribute('aria-disabled');
   });
 
   it('saves the board as the six arrays, uuids only, and returns to the configs list', async () => {
@@ -522,9 +645,43 @@ describe('DeckConfigurationEditor — create', () => {
     const error = await screen.findByRole('alert');
     expect(error).toHaveTextContent('A configuration with this name already exists.');
     expect(screen.getByLabelText('Name')).toHaveAttribute('aria-invalid', 'true');
+    expect(error.closest('[data-testid="form-bar"]')).toBeNull();
     // Still on the form, board intact.
     expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+  });
+
+  it('renders a failed save in the bar, keeping the board', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
+    expect(screen.getByRole('region', { name: 'Not used' })).toBeInTheDocument();
+    expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+  });
+
+  it('holds its heading outside the bar, and Cancel and Create in it', async () => {
+    mockLibrary();
+    renderCreate('/deck-configurations/new?deck=d1');
+
+    const heading = await screen.findByRole('heading', { name: 'New configuration' });
+    expect(heading.closest('[data-reveal-clear]')).toBeNull();
+    const buttons = within(screen.getByTestId('form-bar')).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['Cancel', 'Create']);
   });
 
   it('changing deck after assigning asks first, and clears the board on confirm', async () => {
@@ -564,10 +721,6 @@ describe('DeckConfigurationEditor — create', () => {
 });
 
 describe('DeckConfigurationEditor — edit', () => {
-  function mockConfig(config = savedConfig) {
-    server.use(http.get(`${BASE}/api/deck_practice_configs/:id`, () => HttpResponse.json(config)));
-  }
-
   it('pre-populates the name and every row from the saved config', async () => {
     mockLibrary();
     mockConfig();
@@ -591,7 +744,7 @@ describe('DeckConfigurationEditor — edit', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
   });
 
-  it('a cleared name keeps Save disabled with the reason shown', async () => {
+  it('a cleared name keeps Save not ready with the reason shown', async () => {
     mockLibrary();
     mockConfig();
     const user = userEvent.setup();
@@ -601,16 +754,16 @@ describe('DeckConfigurationEditor — edit', () => {
     await user.clear(screen.getByLabelText('Name'));
 
     expect(screen.getByText('Give this configuration a name to save it.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('never shows a field the config references but the deck has since archived', async () => {
+  it('never shows a field the config references but the deck has since deleted', async () => {
     mockLibrary();
-    mockConfig({ ...savedConfig, prompt_pool_ids: ['archived-field'], prompt_pool_counts: [1] });
+    mockConfig({ ...savedConfig, prompt_pool_ids: ['deleted-field'], prompt_pool_counts: [1] });
     renderEdit();
 
     await screen.findByRole('region', { name: 'Not used' });
-    expect(screen.queryByText('archived-field')).not.toBeInTheDocument();
+    expect(screen.queryByText('deleted-field')).not.toBeInTheDocument();
     // The pool area is empty, so its frequency row has nothing to offer either.
     const promptRandom = screen.getByRole('region', { name: 'Prompt · random draw' });
     expect(within(promptRandom).getByText('None yet.')).toBeInTheDocument();
@@ -704,5 +857,188 @@ describe('DeckConfigurationEditor — edit', () => {
       'Could not load this deck configuration.',
     );
     expect(screen.queryByText('Deck configuration not found.')).not.toBeInTheDocument();
+  });
+});
+
+describe('DeckConfigurationEditor — bringing a part of the form and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  const posted = () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+      }),
+    );
+    return bodies;
+  };
+
+  it('a tap of Create with a blank name on a chosen deck posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+    await user.clear(screen.getByLabelText('Name'));
+
+    const create = screen.getByRole('button', { name: 'Create' });
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    expect(create).not.toBeDisabled();
+    await user.click(create);
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
+  });
+
+  it('a tap of Create with a board not yet valid posts nothing and moves the page once', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(bodies).toEqual([]);
+  });
+
+  it("a blank name's sentence renders under the Name input, and says nothing on the board", async () => {
+    mockLibrary();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+
+    const sentence = screen.getByText('Give this configuration a name to create it.');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(screen.getByLabelText('Name'));
+    expect(screen.queryByText(/side needs at least one field/)).not.toBeInTheDocument();
+  });
+
+  it("a side's sentence renders in its side card, the card being the part", async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+
+    const side = screen.getByRole('region', { name: 'Prompt side' });
+    const sentence = within(side).getByText(/prompt side needs at least one field/);
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Prompt side' }));
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Always shown' }));
+    expect(part).toContainElement(within(side).getByRole('heading', { name: 'Random draw' }));
+    expect(screen.queryByText(/answer side needs at least one field/)).not.toBeInTheDocument();
+  });
+
+  it('with the name and a side both wrong, a tap reveals the name, and once a name is typed the side', async () => {
+    mockLibrary();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    const create = screen.getByRole('button', { name: 'Create' });
+
+    await user.click(create);
+
+    const nameSentence = screen.getByText('Give this configuration a name to create it.');
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(nameSentence);
+    expect(measured.mock.contexts).toContain(nameSentence.closest('[data-reveal-part]'));
+
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+    measured.mockClear();
+    await user.click(create);
+
+    const sideSentence = screen.getByText(/prompt side needs at least one field/);
+    expect(scrollBy).toHaveBeenCalledTimes(2);
+    expect(measured.mock.contexts).toContain(sideSentence);
+    expect(measured.mock.contexts).toContain(sideSentence.closest('[data-reveal-part]'));
+    measured.mockRestore();
+  });
+
+  it('a "Check how many…" sentence renders inside its "Each card shows" row, and a tap reveals it', async () => {
+    mockLibrary();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await user.type(screen.getByLabelText('Name'), 'Recall');
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_pool');
+
+    const draw = screen.getByRole('region', { name: 'Answer · random draw' });
+    const sentence = within(draw).getByText('Check how many random answer fields each card shows.');
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(within(draw).getByRole('checkbox', { name: '1' }));
+    expect(part).toHaveTextContent('Each card shows');
+    expect(part).not.toContainElement(within(draw).getByRole('heading', { name: 'Random draw' }));
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(part);
+    measured.mockRestore();
+  });
+
+  it('a tap of Create with no deck chosen says nothing and moves nothing', async () => {
+    mockLibrary();
+    const bodies = posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new');
+    const create = await screen.findByRole('button', { name: 'Create' });
+
+    expect(create).toHaveAttribute('aria-disabled', 'true');
+    await user.click(create);
+
+    expect(scrollBy).not.toHaveBeenCalled();
+    expect(bodies).toEqual([]);
+  });
+
+  it('a configuration_name_taken refusal moves the page once', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/deck_practice_configs`, () =>
+        HttpResponse.json(
+          {
+            detail: {
+              code: 'configuration_name_taken',
+              message: 'deck_practice_config (deck_id, name) already exists',
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await screen.findByText('A configuration with this name already exists.');
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed save stays in the bar and moves nothing', async () => {
+    mockLibrary();
+    posted();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d1');
+    await screen.findByRole('region', { name: 'Not used' });
+    await assign(user, 'Term', 'prompt_fields');
+    await assign(user, 'Meaning', 'answer_fields');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(await within(screen.getByTestId('form-bar')).findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
   });
 });

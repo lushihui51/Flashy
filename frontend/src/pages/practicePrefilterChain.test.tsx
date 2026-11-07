@@ -32,6 +32,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
   {
     id: 's2',
@@ -42,6 +43,7 @@ const subjects = [
     created_at: '',
     last_activity_at: '',
     deck_count: 1,
+    readiness: 0.5,
   },
 ];
 
@@ -49,19 +51,23 @@ const initialDeckSummaries = [
   {
     id: 'd1',
     subject_id: 's1',
+    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Term', 'Meaning'],
   },
   {
     id: 'd2',
     subject_id: 's2',
+    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
     card_count: 0,
+    readiness: null,
     field_names: ['Note', 'Tune'],
   },
 ];
@@ -73,6 +79,7 @@ const initialDeckDetails: Record<string, object> = {
     subject_id: 's1',
     created_at: '',
     last_activity_at: '',
+    readiness: null,
     field_defs: [
       { id: 'f1', name: 'Term', type: 'text', position: 0 },
       { id: 'f2', name: 'Meaning', type: 'text', position: 1 },
@@ -85,6 +92,7 @@ const initialDeckDetails: Record<string, object> = {
     subject_id: 's2',
     created_at: '',
     last_activity_at: '',
+    readiness: null,
     field_defs: [
       { id: 'f3', name: 'Note', type: 'text', position: 0 },
       { id: 'f4', name: 'Tune', type: 'text', position: 1 },
@@ -208,6 +216,7 @@ function mockLibrary() {
         subject_id: body.subject_id,
         created_at: '',
         last_activity_at: '',
+        readiness: null,
         field_defs: body.field_defs.map((field, index) => ({
           id: `nf${index + 1}`,
           name: field.name,
@@ -220,10 +229,12 @@ function mockLibrary() {
       decks.push({
         id: 'd9',
         subject_id: body.subject_id,
+        subject_name: subjects.find((subject) => subject.id === body.subject_id)!.name,
         name: body.name,
         created_at: '',
         last_activity_at: '',
         card_count: 0,
+        readiness: null,
         field_names: body.field_defs.map((field) => field.name),
       });
       return HttpResponse.json(detail, { status: 201 });
@@ -333,12 +344,13 @@ describe('practice pre-filter chains', () => {
     expect(screen.queryByText('Recall')).not.toBeInTheDocument();
     expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
 
-    // New practice → the builder: subject param and returnTo both ride along, and the
+    // New practice → the builder: subject param and both addresses ride along, and the
     // context subject's decks sort first in the picker.
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s2');
+    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s2');
     expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s2');
 
     await user.click(await screen.findByPlaceholderText('Deck'));
@@ -382,6 +394,7 @@ describe('practice pre-filter chains', () => {
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('subject')).toBe('s1');
     expect(builder.params.get('deck')).toBe('d1');
+    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
     expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
 
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
@@ -399,12 +412,18 @@ describe('practice pre-filter chains', () => {
     await screen.findByRole('region', { name: 'Not used' });
     const builderLocation = currentLocation().full;
 
-    // Builder → "New deck…": the deck editor's returnTo is the builder's exact
-    // location — context params and the builder's own nested returnTo included.
+    // Builder → "New deck…": each of the deck editor's addresses is the builder's exact
+    // location — context params and the builder's own nested addresses included.
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
     expect(currentLocation().pathname).toBe('/decks/new');
+    expect(currentLocation().params.get('cancelTo')).toBe(builderLocation);
     expect(currentLocation().params.get('returnTo')).toBe(builderLocation);
+    for (const address of ['cancelTo', 'returnTo']) {
+      const nested = new URLSearchParams(currentLocation().params.get(address)!.split('?')[1]);
+      expect(nested.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
+      expect(nested.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+    }
 
     // Cancel in the deck editor → back on the builder, nothing dropped.
     await screen.findByDisplayValue('Term');
@@ -413,6 +432,7 @@ describe('practice pre-filter chains', () => {
     const backOnBuilder = currentLocation();
     expect(backOnBuilder.params.get('subject')).toBe('s1');
     expect(backOnBuilder.params.get('deck')).toBe('d1');
+    expect(backOnBuilder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
     expect(backOnBuilder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Alpha Deck'));
@@ -491,6 +511,8 @@ describe('practice pre-filter chains', () => {
     // Edit → Cancel: back on exactly the draft left behind.
     await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
     expect(currentLocation().pathname).toBe('/deck-configurations/c3/edit');
+    expect(currentLocation().params.get('cancelTo')).toBe(draft);
+    expect(currentLocation().params.get('returnTo')).toBe(draft);
     await screen.findByRole('region', { name: 'Not used' });
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 

@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MoreVertical, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
 import { readSubject, readSubjects } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
@@ -26,9 +26,13 @@ import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
-import { isNotFound } from 'src/api/unwrap';
+import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
+import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -39,81 +43,12 @@ type SubjectRead = components['schemas']['SubjectRead'];
  * than any of them so none needs reshaping to pass through. */
 type SubjectItem = { id: string; name: string; icon?: string | null };
 
-function FieldOverflowMenu({
-  fieldName,
-  canMoveUp,
-  canMoveDown,
-  onMoveUp,
-  onMoveDown,
-}: {
-  fieldName: string;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleDocPointerDown(event: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener('pointerdown', handleDocPointerDown);
-    return () => document.removeEventListener('pointerdown', handleDocPointerDown);
-  }, [open]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        type="button"
-        aria-label={`Reorder ${fieldName || 'field'}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center"
-      >
-        <MoreVertical aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
-      </button>
-      {open && (
-        <ul
-          role="menu"
-          className="absolute right-0 z-10 mt-1 w-36 rounded-lg border border-(--color-surface-elevated) bg-(--color-surface) py-1 shadow-lg"
-        >
-          <li role="none">
-            <button
-              role="menuitem"
-              type="button"
-              disabled={!canMoveUp}
-              onClick={() => {
-                onMoveUp();
-                setOpen(false);
-              }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-text) disabled:opacity-40"
-            >
-              Move up
-            </button>
-          </li>
-          <li role="none">
-            <button
-              role="menuitem"
-              type="button"
-              disabled={!canMoveDown}
-              onClick={() => {
-                onMoveDown();
-                setOpen(false);
-              }}
-              className="flex w-full px-3 py-2 text-left text-sm text-(--color-text) disabled:opacity-40"
-            >
-              Move down
-            </button>
-          </li>
-        </ul>
-      )}
-    </div>
-  );
-}
+// Centres a control's h-9 box on the field name input beside it, in a row aligned to its bottom.
+const FIELD_ICON_MARGIN = 'my-1.25';
+const FIELD_ICON_BUTTON =
+  `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
+const FIELD_TYPE_SELECT =
+  'h-field shrink-0 appearance-none rounded-field outlined-line bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
 
 type FieldsSectionProps = {
   fields: EditorField[];
@@ -123,7 +58,7 @@ type FieldsSectionProps = {
   onAdd: () => void;
 };
 
-/** Reorder via the Move up/down overflow menu only — no drag. A pointer-events drag
+/** Reorder via each row's Move up and Move down buttons only — no drag. A pointer-events drag
  * handle can be exercised under Playwright's *mouse*-simulated events, but that only
  * covers the "engage immediately" branch; the touch-specific long-press gate (the part
  * real phone users would actually hit) cannot be verified here on a real or
@@ -131,7 +66,7 @@ type FieldsSectionProps = {
  * gesture, the buttons — fully tested and keyboard-operable — are the only mechanism.
  *
  * Removing a *saved* field (one with an `id`) stages the row pending-removal in place
- * (struck through, ghosted, every control disabled) until Save or the header's single
+ * (struck through, every control disabled) until Save or the bar's single
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
@@ -145,30 +80,30 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
 
   return (
     <section className="mt-6">
-      <h2 className="text-sm font-medium text-(--color-text-muted)">Fields</h2>
-      <p className="text-[13px] text-(--color-text-muted)">
+      <h2 className="text-sm font-medium text-(--color-aside)">Fields</h2>
+      <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="mt-1 flex flex-col">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
               <li key={field.key}>
-                <div className="flex h-14 items-center gap-2 opacity-50">
+                <div className="flex items-end gap-1 py-3">
                   <div className="min-w-0 flex-1">
                     <input
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       disabled
-                      className="h-9 w-full rounded-lg border border-(--color-surface-elevated) px-2 text-(--color-text) line-through"
+                      className="h-field w-full rounded-field outlined-line bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
                     />
                   </div>
                   <select
                     aria-label="Field type"
                     value={field.type}
                     disabled
-                    className="h-9 shrink-0 rounded-lg border border-(--color-surface-elevated) px-2 text-sm text-(--color-text)"
+                    className={FIELD_TYPE_SELECT}
                   >
                     {SUPPORTED_FIELD_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -178,17 +113,22 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                   </select>
                   <button
                     type="button"
-                    aria-label={`Reorder ${field.name || 'field'}`}
+                    aria-label={`Move ${field.name || 'field'} up`}
                     disabled
-                    className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40"
+                    className={FIELD_ICON_BUTTON}
                   >
-                    <MoreVertical
-                      aria-hidden="true"
-                      className="h-4 w-4 text-(--color-text-muted)"
-                    />
+                    <ArrowUp aria-hidden="true" className="size-icon" />
                   </button>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center opacity-40">
-                    <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} down`}
+                    disabled
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowDown aria-hidden="true" className="size-icon" />
+                  </button>
+                  <span className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}>
+                    <X aria-hidden="true" className="size-icon" />
                   </span>
                 </div>
               </li>
@@ -209,56 +149,63 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
 
           return (
             <li key={field.key}>
-              <div className="flex h-14 items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <input
-                    type="text"
-                    aria-label="Field name"
-                    value={field.name}
-                    onChange={(e) => onRename(field.key, e.target.value)}
-                    className="h-9 w-full rounded-lg border border-(--color-surface-elevated) px-2 text-(--color-text)"
-                  />
+              <FormPart sentence={error} look="wrong" className="[&>[data-reveal-sentence]]:pb-3">
+                <div className="flex items-end gap-1 py-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
+                    <input
+                      type="text"
+                      aria-label="Field name"
+                      value={field.name}
+                      onChange={(e) => onRename(field.key, e.target.value)}
+                      className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
+                    />
+                  </div>
+  
+                  <select
+                    aria-label="Field type"
+                    value={field.type}
+                    disabled
+                    className={FIELD_TYPE_SELECT}
+                  >
+                    {SUPPORTED_FIELD_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t === 'text' ? 'Text' : t}
+                      </option>
+                    ))}
+                  </select>
+  
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} up`}
+                    disabled={index === 0}
+                    onClick={() => onMove(field.key, index - 1)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowUp aria-hidden="true" className="size-icon" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} down`}
+                    disabled={index === fields.length - 1}
+                    onClick={() => onMove(field.key, index + 1)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowDown aria-hidden="true" className="size-icon" />
+                  </button>
+  
+                  <button
+                    type="button"
+                    aria-label={`Remove ${field.name || 'field'}`}
+                    title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
+                    disabled={activeCount <= 2}
+                    onClick={() => onRemove(field.key)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <X aria-hidden="true" className="size-icon" />
+                  </button>
                 </div>
-
-                {index === primaryIndex && (
-                  <span className="shrink-0 rounded-full bg-(--color-surface-elevated) px-2 py-0.5 text-[11px] font-medium text-(--color-text-muted)">
-                    Primary
-                  </span>
-                )}
-
-                <select
-                  aria-label="Field type"
-                  value={field.type}
-                  disabled
-                  className="h-9 shrink-0 rounded-lg border border-(--color-surface-elevated) px-2 text-sm text-(--color-text)"
-                >
-                  {SUPPORTED_FIELD_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t === 'text' ? 'Text' : t}
-                    </option>
-                  ))}
-                </select>
-
-                <FieldOverflowMenu
-                  fieldName={field.name}
-                  canMoveUp={index > 0}
-                  canMoveDown={index < fields.length - 1}
-                  onMoveUp={() => onMove(field.key, index - 1)}
-                  onMoveDown={() => onMove(field.key, index + 1)}
-                />
-
-                <button
-                  type="button"
-                  aria-label={`Remove ${field.name || 'field'}`}
-                  title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
-                  disabled={activeCount <= 2}
-                  onClick={() => onRemove(field.key)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center disabled:opacity-40"
-                >
-                  <X aria-hidden="true" className="h-4 w-4 text-(--color-text-muted)" />
-                </button>
-              </div>
-              {error && <p className="text-sm text-(--color-danger)">{error}</p>}
+              </FormPart>
             </li>
           );
         })}
@@ -266,7 +213,7 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
       <button
         type="button"
         onClick={onAdd}
-        className="mt-2 flex h-9 items-center gap-1 text-sm font-semibold text-(--color-primary)"
+        className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
       >
         <Plus aria-hidden="true" className="h-4 w-4" />
         Add field
@@ -291,7 +238,7 @@ type DeckEditorProps = {
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -313,11 +260,11 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       return (
         <div className="p-4">
           {isNotFound(deckQuery.error) ? (
-            <p className="text-(--color-text-muted)">Deck not found.</p>
+            <p className="text-(--color-aside)">Deck not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-danger)">
-              Could not load this deck.
-            </p>
+            <FormPart sentence="Could not load this deck." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -334,9 +281,8 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
       deck={mode === 'edit' ? deckQuery.data : undefined}
       subject={mode === 'edit' ? subjectQuery.data : undefined}
       contextualSubject={createLocationState?.subject ?? null}
-      // returnTo rides the URL, not state — create mode only; an edit is never entered
-      // via a "New deck…" round-trip.
-      returnTo={mode === 'create' ? internalReturnTo(searchParams) : null}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -347,6 +293,7 @@ type DeckEditorBodyProps = {
   deck: DeckDetail | undefined;
   subject: SubjectRead | undefined;
   contextualSubject: { id: string; name: string; icon: string } | null;
+  cancelTo: string | null;
   returnTo: string | null;
 };
 
@@ -392,10 +339,13 @@ function DeckEditorBody({
   deck,
   subject,
   contextualSubject,
+  cancelTo,
   returnTo,
 }: DeckEditorBodyProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   // Computed once, at mount — the same rule as the subject combobox's own initial
@@ -422,6 +372,8 @@ function DeckEditorBody({
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
   // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
@@ -432,28 +384,30 @@ function DeckEditorBody({
 
   const valid = isDeckEditorValid(state);
   // Nothing to save/undo when the form hasn't changed since it was loaded (or since
-  // the last successful save, once `original` has been rebased) — Save and Undo
-  // disable exactly then, rather than staying clickable for a no-op.
+  // the last successful save, once `original` has been rebased) — Save reads not ready
+  // and Undo disables exactly then.
   const canSave = valid && state.dirty && !saving;
   const canUndo = state.dirty && !saving;
 
-  // Create mode opened via the card form's "New deck…" round-trip → both Create and
-  // Cancel go back to wherever that picker lives. Edit mode always returns to the
-  // deck's own detail page — there's no round-trip to return to.
-  const goBack = () => navigate(mode === 'edit' ? `/decks/${deckId}` : (returnTo ?? '/library'));
+  const leaveByCancel = () =>
+    navigate(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
+  const leaveByDone = () => navigate(returnTo ?? `/decks/${deckId}`);
 
   const handleCancel = () => {
     if (state.dirty) {
       setConfirmCancelOpen(true);
       return;
     }
-    goBack();
+    leaveByCancel();
   };
 
   // The single global Undo — discards every uncommitted change (renames, reorders,
   // added rows, and every staged removal) in one step, back to `original`. No confirm:
   // nothing has reached the server yet.
-  const handleUndo = () => dispatch({ type: 'LOAD', state: original });
+  const handleUndo = () => {
+    dispatch({ type: 'LOAD', state: original });
+    setNameError(null);
+  };
 
   const handleSaveCreate = async () => {
     const created = await createDeck(buildDeckCreatePayload(state));
@@ -471,7 +425,7 @@ function DeckEditorBody({
 
   const handleSaveEdit = async () => {
     const payload = buildDeckBatchEditPayload(original, state);
-    if (Object.keys(payload).length === 0) return; // Save is disabled in this state; nothing to do.
+    if (Object.keys(payload).length === 0) return; // Save reads not ready in this state; nothing to do.
     const updated = await updateDeck(deckId!, payload);
     // Stay on the page. Rebuild both the live state and the baseline from the
     // response, one call — this resolves every client_key to a real id and clears
@@ -495,10 +449,18 @@ function DeckEditorBody({
     if (!canSave) return;
     setSaving(true);
     setSaveError(null);
+    setNameError(null);
     try {
       await (mode === 'edit' ? handleSaveEdit() : handleSaveCreate());
     } catch (err) {
-      setSaveError(failureSentence(err, 'Deck not found.'));
+      const sentence = failureSentence(err, 'Deck not found.');
+      // A taken name is fixed at the input, so it is said there rather than in the bar.
+      if (err instanceof ApiDetailError && err.detail.code === 'deck_name_taken') {
+        setNameError(sentence);
+        revealFirstSentence(rootRef.current);
+      } else {
+        setSaveError(sentence);
+      }
     } finally {
       setSaving(false);
     }
@@ -559,7 +521,6 @@ function DeckEditorBody({
   // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
   // so the check reads it symmetrically with field_defs.delete.
   const handleSaveClick = async () => {
-    if (!canSave) return;
     if (mode === 'edit') {
       const payload = buildDeckBatchEditPayload(original, state);
       const fieldIds = payload.field_defs?.delete ?? [];
@@ -600,6 +561,11 @@ function DeckEditorBody({
     void handleSave();
   };
 
+  const sayWhatIsMissing = () => {
+    if (state.name.trim() === '') setNameError('Name is required.');
+    if (state.subjectId === null) setSubjectError('Choose a subject to create a deck.');
+  };
+
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
 
   const subjectDefaultValue: SubjectItem | null =
@@ -627,71 +593,42 @@ function DeckEditorBody({
   const showDone = mode === 'edit' && !state.dirty;
 
   return (
-    <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
-        <button
-          type="button"
-          onClick={showDone ? goBack : handleCancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
-        >
-          {showDone ? 'Done' : 'Cancel'}
-        </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
-          {mode === 'edit' ? 'Edit deck' : 'New deck'}
-        </h1>
-        <div className="flex items-center gap-3">
-          {mode === 'edit' && (
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className="text-sm font-semibold text-(--color-text-secondary) disabled:text-(--color-text-muted) disabled:opacity-50"
-            >
-              Undo
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void handleSaveClick()}
-            disabled={!canSave || checkingSaveImpact}
-            className="text-sm font-semibold text-(--color-primary) disabled:text-(--color-text-muted)"
-          >
-            {/* Reverts the instant a new edit re-dirties the form, not just after the
-                2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
-            {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
-          </button>
-        </div>
-      </div>
-
-      {saveError && (
-        <p role="alert" className="mt-2 text-sm text-(--color-danger)">
-          {saveError}
-        </p>
-      )}
+    <div ref={rootRef} className="p-4">
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'edit' ? 'Edit deck' : 'New deck'}
+      </h1>
 
       <div className="mt-4 flex flex-col gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Deck name</span>
-          <input
-            type="text"
-            value={state.name}
-            onChange={(e) => dispatch({ type: 'SET_NAME', name: e.target.value })}
-            className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+        <FormPart sentence={nameError} look="wrong" className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-(--color-aside)">Deck name</span>
+            <input
+              type="text"
+              value={state.name}
+              onChange={(e) => {
+                dispatch({ type: 'SET_NAME', name: e.target.value });
+                setNameError(null);
+              }}
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            />
+          </label>
+        </FormPart>
+        <FormPart sentence={subjectError} look="wrong" className="flex flex-col gap-1.5">
+          <PickerCombobox<SubjectItem>
+            items={subjectsQuery.data ?? []}
+            selected={selectedSubject}
+            onSelect={(item) => {
+              setSelectedSubject(item);
+              setSubjectError(null);
+              dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
+            }}
+            onSelectCreate={() => setSubjectOverlayOpen(true)}
+            createLabel="New subject…"
+            placeholder="Subject"
+            renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
+            inputRef={subjectInputRef}
           />
-        </label>
-        <PickerCombobox<SubjectItem>
-          items={subjectsQuery.data ?? []}
-          selected={selectedSubject}
-          onSelect={(item) => {
-            setSelectedSubject(item);
-            dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
-          }}
-          onSelectCreate={() => setSubjectOverlayOpen(true)}
-          createLabel="New subject…"
-          placeholder="Subject"
-          renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
-          inputRef={subjectInputRef}
-        />
+        </FormPart>
       </div>
 
       <FieldsSection
@@ -707,11 +644,42 @@ function DeckEditorBody({
           type="button"
           onClick={() => void handleDeleteClick()}
           disabled={deleting || checkingDeletionImpact}
-          className="mt-6 h-11 text-sm font-semibold text-(--color-danger) disabled:opacity-60"
+          className="mt-6 tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
           Delete deck
         </button>
       )}
+
+      <FormBar sentence={saveError}>
+        <button
+          type="button"
+          onClick={showDone ? leaveByDone : handleCancel}
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          {showDone ? 'Done' : 'Cancel'}
+        </button>
+        {mode === 'edit' && (
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          >
+            Undo
+          </button>
+        )}
+        <SubmitButton
+          ready={valid && state.dirty}
+          busy={saving || checkingSaveImpact}
+          onNotReady={sayWhatIsMissing}
+          onPress={() => void handleSaveClick()}
+        >
+          {/* Reverts the instant a new edit re-dirties the form, not just after the
+              2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
+          {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
+        </SubmitButton>
+      </FormBar>
 
       {/* Creating a subject from the combobox's create row happens *over* this editor
           rather than navigating away — unlike "New deck…" in the card form, there is
@@ -729,6 +697,7 @@ function DeckEditorBody({
           onSuccess={(subject) => {
             void queryClient.invalidateQueries({ queryKey: ['subjects'] });
             setSelectedSubject(subject);
+            setSubjectError(null);
             dispatch({ type: 'SET_SUBJECT', subjectId: subject.id });
             setSubjectOverlayOpen(false);
           }}
@@ -741,8 +710,7 @@ function DeckEditorBody({
         title="Discard this deck?"
         description="You have unsaved changes. Leaving now will discard them."
         confirmLabel="Discard"
-        destructive
-        onConfirm={goBack}
+        onConfirm={leaveByCancel}
         onCancel={() => setConfirmCancelOpen(false)}
       />
 
@@ -751,7 +719,6 @@ function DeckEditorBody({
         title="Save changes?"
         description={saveConfirm ? impactSummaryText(saveConfirm) : ''}
         confirmLabel="Save"
-        destructive
         onConfirm={() => {
           setSaveConfirm(null);
           void handleSave();
@@ -767,7 +734,6 @@ function DeckEditorBody({
           // included — nothing about it survives the delete.
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          destructive
           onConfirm={() => void handleDeleteDeck()}
           onCancel={() => setConfirmDeleteOpen(false)}
         />

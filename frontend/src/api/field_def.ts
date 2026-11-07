@@ -13,11 +13,9 @@ export const createFieldDef = async (
     }),
   );
 
-export const readFieldDefs = async (deckId: string, includeArchived = false) =>
+export const readFieldDefs = async (deckId: string) =>
   unwrap(
-    await client.GET('/api/decks/{deck_id}/fields', {
-      params: { path: { deck_id: deckId }, query: { include_archived: includeArchived } },
-    }),
+    await client.GET('/api/decks/{deck_id}/fields', { params: { path: { deck_id: deckId } } }),
   );
 
 export const reorderFieldDefs = async (deckId: string, orderedIds: string[]) =>
@@ -42,10 +40,7 @@ export const updateFieldDef = async (
     }),
   );
 
-export const archiveFieldDef = async (fieldId: string) =>
-  unwrap(await client.DELETE('/api/fields/{field_id}', { params: { path: { field_id: fieldId } } }));
-
-export const hardDeleteFieldDef = async (fieldId: string) =>
+export const deleteFieldDef = async (fieldId: string): Promise<void> =>
   unwrapVoid(
-    await client.DELETE('/api/fields/{field_id}/hard', { params: { path: { field_id: fieldId } } }),
+    await client.DELETE('/api/fields/{field_id}', { params: { path: { field_id: fieldId } } }),
   );

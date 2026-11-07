@@ -1,12 +1,10 @@
 import uuid
 from collections.abc import Collection
-from datetime import UTC, datetime
 
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
-from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
 from app.models.subject import Subject
@@ -25,30 +23,40 @@ def db_read_field_def(
 
 
 def db_read_field_defs(
-    db: Session, deck_id: uuid.UUID, user_id: uuid.UUID, include_archived: bool = False
+    db: Session, deck_id: uuid.UUID, user_id: uuid.UUID
 ) -> list[FieldDef]:
-    query = (
-        select(FieldDef)
-        .join(Deck, Deck.id == FieldDef.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(FieldDef.deck_id == deck_id, Subject.user_id == user_id)
-    )
-    if not include_archived:
-        query = query.where(col(FieldDef.archived_at).is_(None))
-    query = query.order_by(col(FieldDef.position))
-    return list(db.exec(query).all())
-
-
-def db_read_field_defs_for_copy(db: Session, deck_id: uuid.UUID) -> list[FieldDef]:
-    """Deliberately unscoped, live fields only — see db_read_deck_for_copy. Archived
-    fields never propagate into a copy: there's no review_log/mastery history for them
-    to protect on the new deck, and deck_practice_config validation already restricts
-    configs to live field ids, so field_map only ever needs to cover these."""
     return list(
         db.exec(
             select(FieldDef)
-            .where(FieldDef.deck_id == deck_id, col(FieldDef.archived_at).is_(None))
+            .join(Deck, Deck.id == FieldDef.deck_id)
+            .join(Subject, Subject.id == Deck.subject_id)
+            .where(FieldDef.deck_id == deck_id, Subject.user_id == user_id)
             .order_by(col(FieldDef.position))
+        ).all()
+    )
+
+
+def db_read_field_defs_for_copy(db: Session, deck_id: uuid.UUID) -> list[FieldDef]:
+    """Deliberately unscoped — see db_read_deck_for_copy."""
+    return list(
+        db.exec(
+            select(FieldDef)
+            .where(FieldDef.deck_id == deck_id)
+            .order_by(col(FieldDef.position))
+        ).all()
+    )
+
+
+def db_read_field_defs_for_decks(
+    db: Session, deck_ids: Collection[uuid.UUID]
+) -> list[FieldDef]:
+    """Unscoped: the caller has already ownership-checked the practice these decks came
+    from. Ordered by deck, then position."""
+    return list(
+        db.exec(
+            select(FieldDef)
+            .where(col(FieldDef.deck_id).in_(deck_ids))
+            .order_by(col(FieldDef.deck_id), col(FieldDef.position))
         ).all()
     )
 
@@ -86,35 +94,11 @@ def db_rename_field_def(db: Session, field_def: FieldDef, name: str) -> FieldDef
     return field_def
 
 
-def db_archive_field_def(db: Session, field_def: FieldDef) -> FieldDef:
-    if field_def.archived_at is None:
-        field_def.archived_at = datetime.now(UTC)
-        db.add(field_def)
-        db.commit()
-        db.refresh(field_def)
-    return field_def
-
-
-def db_count_card_field_values(db: Session, field_def_id: uuid.UUID) -> int:
-    return db.exec(
-        select(func.count())
-        .select_from(CardFieldValue)
-        .where(CardFieldValue.field_def_id == field_def_id)
-    ).one()
-
-
-def db_hard_delete_field_def(db: Session, field_def: FieldDef) -> None:
-    db.delete(field_def)
-    db.commit()
-
-
 def db_read_owned_field_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
     """The subset of `ids` that exist and belong to user_id (via the subject chain) —
-    compute_deletion_impact's ownership check. Archived fields count
-    as owned here — a field id is a field id regardless of archived_at; nothing about
-    ownership depends on it."""
+    compute_deletion_impact's ownership check."""
     if not ids:
         return set()
     return set(
@@ -142,19 +126,13 @@ def db_read_deck_id_by_field(
     )
 
 
-def db_read_active_field_ids_for_decks(
+def db_read_field_ids_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """Active (non-archived) fields of these decks, for the deletion closure. Archived
-    fields cascade with the deck too but are never counted: the user never sees them."""
     if not deck_ids:
         return set()
     return set(
-        db.exec(
-            select(FieldDef.id).where(
-                col(FieldDef.deck_id).in_(deck_ids), col(FieldDef.archived_at).is_(None)
-            )
-        ).all()
+        db.exec(select(FieldDef.id).where(col(FieldDef.deck_id).in_(deck_ids))).all()
     )
 
 

@@ -1,15 +1,20 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import event
 
-from app.database_ops.deck import db_read_decks_with_summary
+from app.database_ops.deck import db_read_deck_listings
+from app.mastery.config import get_mastery_strategy
+from app.mastery.types import ReviewGroup
+from app.models.card import Card
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
+from app.services.mastery import apply_rating
 
 
 class TestDeckSummaryQueryBounds:
     def test_query_count_does_not_scale_with_deck_count(self, db, existing_user, existing_subject):
-        """db_read_decks_with_summary must use grouped aggregate queries, never one
+        """db_read_deck_listings must use grouped aggregate queries, never one
         query per deck — proven directly by counting statements, not just by
         eyeballing the implementation."""
         subject_id = uuid.UUID(existing_subject["id"])
@@ -29,7 +34,7 @@ class TestDeckSummaryQueryBounds:
 
         event.listen(engine, "before_cursor_execute", _record)
         try:
-            summaries = db_read_decks_with_summary(db, user_id)
+            summaries = db_read_deck_listings(db, user_id)
         finally:
             event.remove(engine, "before_cursor_execute", _record)
 
@@ -37,6 +42,92 @@ class TestDeckSummaryQueryBounds:
         # decks + grouped card-count + grouped field-names = 3, regardless of deck
         # count — not 1 (decks) + 5 (counts) + 5 (field names) as N+1 would produce.
         assert len(statements) <= 3, statements
+
+
+class TestDeckReadiness:
+    @staticmethod
+    def _count_statements(db, request):
+        engine = db.get_bind()
+        statements: list[str] = []
+
+        def _record(conn, cursor, statement, *args):
+            statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", _record)
+        try:
+            response = request()
+        finally:
+            event.remove(engine, "before_cursor_execute", _record)
+        assert response.status_code == 200
+        return response.json(), statements
+
+    def test_list_runs_a_fixed_number_of_statements(
+        self, client, db, existing_user, existing_subject
+    ):
+        subject_id = uuid.UUID(existing_subject["id"])
+        for i in range(5):
+            deck = Deck(subject_id=subject_id, name=f"Deck {i}")
+            db.add(deck)
+            db.flush()
+            db.add(FieldDef(deck_id=deck.id, name="Front", type=FieldType.text, position=0))
+            db.add(Card(deck_id=deck.id))
+        empty = Deck(subject_id=subject_id, name="No cards")
+        db.add(empty)
+        db.commit()
+        empty_id = str(empty.id)
+        db.refresh(existing_user)
+
+        data, statements = self._count_statements(db, lambda: client.get("/api/decks"))
+
+        by_id = {row["id"]: row for row in data}
+        assert len(by_id) == 6
+        assert by_id[empty_id]["readiness"] is None
+        assert [row["readiness"] for key, row in by_id.items() if key != empty_id] == [0.0] * 5
+        # decks + grouped card-count + grouped field-names + the one fold over every deck.
+        assert len(statements) <= 4, statements
+
+    def test_detail_runs_a_fixed_number_of_statements(
+        self, client, db, existing_user, existing_subject
+    ):
+        deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Five cards")
+        db.add(deck)
+        db.flush()
+        fields = [
+            FieldDef(deck_id=deck.id, name=name, type=FieldType.text, position=position)
+            for position, name in enumerate(["Front", "Back"])
+        ]
+        cards = [Card(deck_id=deck.id) for _ in range(5)]
+        db.add_all([*fields, *cards])
+        db.flush()
+        apply_rating(
+            db,
+            get_mastery_strategy(),
+            ReviewGroup(
+                review_group_id=uuid.uuid4(),
+                card_id=cards[0].id,
+                reviewed_at=datetime.now(UTC),
+                ratings=((fields[0].id, 3),),
+                shown_prompt_ids=(),
+            ),
+            None,
+        )
+        db.commit()
+        deck_id, rated_card_id = str(deck.id), str(cards[0].id)
+        db.refresh(existing_user)
+
+        data, statements = self._count_statements(
+            db, lambda: client.get(f"/api/decks/{deck_id}")
+        )
+
+        readiness = {card["id"]: card["readiness"] for card in data["cards"]}
+        assert len(readiness) == 5
+        assert abs(readiness[rated_card_id] - 0.15) < 1e-9
+        assert abs(data["readiness"] - sum(readiness.values()) / 5) < 1e-9
+        # deck + field defs + cards + their values + the deck's fold + the cards' fold.
+        assert len(statements) <= 6, statements
+
+    def test_detail_of_a_deck_with_no_card_reads_null(self, client, existing_deck):
+        assert client.get(f"/api/decks/{existing_deck['id']}").json()["readiness"] is None
 
 
 class TestDeckCRUD:
@@ -81,13 +172,26 @@ class TestDeckCRUD:
             )
             assert card_res.status_code == 201, card_res.text
         front_id = fields["Front"]
-        client.delete(f"/api/fields/{front_id}")  # archived — must not appear below
+        client.delete(f"/api/fields/{front_id}")  # deleted — must not appear below
 
         response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
         assert response.status_code == 200
         [summary] = response.json()
+        assert summary["subject_name"] == "Test Subject"
         assert summary["card_count"] == 2
         assert summary["field_names"] == ["Back", "Notes"]
+
+    def test_read_decks_tells_same_named_decks_apart_by_subject_name(
+        self, client, multi_subject_library
+    ):
+        lib = multi_subject_library
+
+        rows = client.get("/api/decks").json()
+
+        assert {row["id"]: (row["name"], row["subject_name"]) for row in rows} == {
+            lib["decks"]["a"]["id"]: ("Shared Deck Name", "Alpha"),
+            lib["decks"]["b"]["id"]: ("Shared Deck Name", "Beta"),
+        }
 
     def test_read_decks_empty_deck_has_zero_card_count(self, client, existing_deck):
         response = client.get("/api/decks", params={"subject_id": existing_deck["subject_id"]})

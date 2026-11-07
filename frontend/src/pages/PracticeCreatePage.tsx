@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { readDeckPracticeConfigs } from 'src/api/deck_practice_config';
@@ -10,10 +10,14 @@ import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
 import ConfigurationPickList from 'src/components/practice/ConfigurationPickList';
 import SelectedConfigurationList from 'src/components/practice/SelectedConfigurationList';
 import AddButton from 'src/components/ui/AddButton';
+import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { MISSING_CONFIGURATION_MESSAGE } from 'src/lib/practiceCopy';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
   readSelectedConfigIds,
@@ -21,6 +25,7 @@ import {
   toggleConfig,
   withSelectedConfigIds,
 } from 'src/lib/practiceSelection';
+import { useViewParams } from 'src/lib/viewParams';
 
 type RowError = { configId: string; sentence: string };
 
@@ -36,16 +41,24 @@ const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { params, setParams, changeView } = useViewParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
   const selectedHeadingId = useId();
 
-  const subjectId = searchParams.get('subject');
-  const deckId = searchParams.get('deck');
-  const selectedIds = readSelectedConfigIds(searchParams);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  // The pick list, its empty sentence or its failure sentence: whichever shows for the
+  // current filters, so a reveal after a filter change finds where the list starts, and
+  // nothing while the old list stands in for the new one.
+  const pickListRef = useRef<HTMLDivElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
+
+  const subjectId = params.get('subject');
+  const deckId = params.get('deck');
+  const selectedIds = readSelectedConfigIds(params);
   const selectedIdSet = new Set(selectedIds);
 
   // Read from the URL once, at mount: the `name` param is absent until the first edit,
@@ -54,7 +67,7 @@ export default function PracticeCreatePage() {
   // refresh comes back to whatever was typed, empty included. The input stays bound to
   // this local buffer, which mirrors each change to the URL; binding it to the URL
   // would route every keystroke through a navigation.
-  const [name, setName] = useState(() => searchParams.get('name') ?? formatDateTime(new Date()));
+  const [name, setName] = useState(() => params.get('name') ?? formatDateTime(new Date()));
   const [rowError, setRowError] = useState<RowError | null>(null);
   const [topError, setTopError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -75,6 +88,9 @@ export default function PracticeCreatePage() {
     queryKey: ['deck_practice_configs', subjectId, deckId],
     queryFn: () =>
       readDeckPracticeConfigs({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+    // An empty list while a filter's new one loads would shrink the page and lose the
+    // user's place on it.
+    placeholderData: keepPreviousData,
   });
 
   // Every configuration, unfiltered: the Selected section resolves ids against this,
@@ -86,7 +102,8 @@ export default function PracticeCreatePage() {
   });
 
   const groups = groupConfigurationsByDeck(configsQuery.data ?? []);
-  // Filtering keeps the backend's subject → deck → name order.
+  // Filtering keeps the backend's order, decks by their most recent change, then
+  // configurations by theirs.
   const selectedConfigs = (allConfigsQuery.data ?? []).filter((config) =>
     selectedIdSet.has(config.id),
   );
@@ -100,8 +117,8 @@ export default function PracticeCreatePage() {
   const missingIds = useMemo(() => {
     if (!settledConfigs) return [];
     const knownIds = new Set(settledConfigs.map((config) => config.id));
-    return readSelectedConfigIds(searchParams).filter((id) => !knownIds.has(id));
-  }, [settledConfigs, searchParams]);
+    return readSelectedConfigIds(params).filter((id) => !knownIds.has(id));
+  }, [settledConfigs, params]);
 
   // Adjusting state during render, as DeckConfigurationEditor does once a deck's
   // fields land, so no setState runs in the effect below. Stays until the next Create
@@ -111,10 +128,10 @@ export default function PracticeCreatePage() {
   }
 
   // The one effect that writes the URL in reaction to fetched data: two
-  // `setSearchParams` calls after one render both start from that render's params, and
+  // `setParams` calls after one render both start from that render's params, and
   // the second would overwrite the first. It drops `missingIds`, then applies the
   // returned-configuration one-shot if due, then writes once — an effect because
-  // `setSearchParams` is a navigation.
+  // `setParams` is a navigation.
   //
   // The "New configuration…" one-shot is consumed only once the returned config
   // actually appears in the filtered list: after the builder round trip this page
@@ -128,7 +145,7 @@ export default function PracticeCreatePage() {
         : undefined;
     if (missingIds.length === 0 && !match) return;
 
-    let ids = readSelectedConfigIds(searchParams).filter((id) => !missingIds.includes(id));
+    let ids = readSelectedConfigIds(params).filter((id) => !missingIds.includes(id));
     if (match && configsQuery.data) {
       appliedReturnedConfig.current = true;
       const deckConfigIds = configsQuery.data
@@ -136,8 +153,8 @@ export default function PracticeCreatePage() {
         .map((config) => config.id);
       ids = selectConfig(ids, deckConfigIds, match.id);
     }
-    setSearchParams(withSelectedConfigIds(searchParams, ids), { replace: true });
-  }, [missingIds, returnedConfigId, configsQuery.data, searchParams, setSearchParams]);
+    setParams(withSelectedConfigIds(params, ids));
+  }, [missingIds, returnedConfigId, configsQuery.data, params, setParams]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -150,7 +167,7 @@ export default function PracticeCreatePage() {
       navigate(`/practice/${session.id}`);
     },
     // The code decides only where the sentence renders: against the offending row for
-    // `stale_config`, above the list for everything else.
+    // `stale_config`, in the bar for everything else.
     onError: (error: Error) => {
       const sentence = failureSentence(error, 'Deck configuration not found.');
       if (error instanceof ApiDetailError) {
@@ -165,12 +182,11 @@ export default function PracticeCreatePage() {
           setTopError(sentence);
           const goneId = error.detail.config_id;
           if (goneId) {
-            setSearchParams(
+            setParams(
               withSelectedConfigIds(
-                searchParams,
+                params,
                 selectedIds.filter((id) => id !== goneId),
               ),
-              { replace: true },
             );
           }
           queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
@@ -183,60 +199,65 @@ export default function PracticeCreatePage() {
 
   // Changes only its own params, so the draft's `config` ids ride along.
   const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
-    const params = new URLSearchParams(searchParams);
-    if (next.subjectId) params.set('subject', next.subjectId);
-    else params.delete('subject');
-    if (next.deckId) params.set('deck', next.deckId);
-    else params.delete('deck');
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    if (next.subjectId) nextParams.set('subject', next.subjectId);
+    else nextParams.delete('subject');
+    if (next.deckId) nextParams.set('deck', next.deckId);
+    else nextParams.delete('deck');
+    changeView(nextParams, {
+      control: () => filtersRef.current?.firstElementChild ?? null,
+      listStart: () =>
+        pickListRef.current?.firstElementChild ?? emptyRef.current ?? failureRef.current,
+    });
   };
 
   const changeName = (value: string) => {
     setName(value);
-    const params = new URLSearchParams(searchParams);
-    params.set('name', value);
-    setSearchParams(params, { replace: true });
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('name', value);
+    setParams(nextParams);
   };
 
   const newConfiguration = () => {
-    const params = new URLSearchParams();
-    if (subjectId) params.set('subject', subjectId);
-    if (deckId) params.set('deck', deckId);
-    // returnTo rides the URL, not router state — it has to survive a further forward if
-    // the builder itself opens "New deck…" before coming back here.
-    params.set('returnTo', `${location.pathname}${location.search}`);
-    navigate({ pathname: '/deck-configurations/new', search: params.toString() });
+    // Both addresses ride the URL, not router state: they have to survive a further forward
+    // if the builder itself opens "New deck…" before coming back here.
+    const builderParams = returnAddressParams(location, 'cancelTo', 'returnTo');
+    if (subjectId) builderParams.set('subject', subjectId);
+    if (deckId) builderParams.set('deck', deckId);
+    navigate({ pathname: '/deck-configurations/new', search: builderParams.toString() });
   };
 
   const removeSelection = (configId: string) =>
-    setSearchParams(
+    setParams(
       withSelectedConfigIds(
-        searchParams,
+        params,
         selectedIds.filter((id) => id !== configId),
       ),
-      { replace: true },
     );
 
-  // The draft rides this page's URL, so a returnTo of the full location brings it back
-  // intact. An edit's Save hands back no result, so nothing gets auto-selected.
+  // The draft rides this page's URL, so addresses of the full location bring it back intact
+  // after Cancel and after Save. An edit's Save hands back no result, so nothing gets
+  // auto-selected.
   const editConfiguration = (configId: string) => {
-    const params = new URLSearchParams();
-    params.set('returnTo', `${location.pathname}${location.search}`);
-    navigate({ pathname: `/deck-configurations/${configId}/edit`, search: params.toString() });
+    const builderParams = returnAddressParams(location, 'cancelTo', 'returnTo');
+    navigate({
+      pathname: `/deck-configurations/${configId}/edit`,
+      search: builderParams.toString(),
+    });
   };
 
   const cancel = () => {
-    const params = new URLSearchParams();
+    const overviewParams = new URLSearchParams();
     for (const key of OVERVIEW_PARAMS) {
-      const value = searchParams.get(key);
-      if (value !== null) params.set(key, value);
+      const value = params.get(key);
+      if (value !== null) overviewParams.set(key, value);
     }
-    navigate({ pathname: '/practice', search: params.toString() });
+    navigate({ pathname: '/practice', search: overviewParams.toString() });
   };
 
   const selectedCount = selectedIds.length;
+  const nothingSelected = selectedCount === 0;
   const nameMissing = name.trim() === '';
-  const canCreate = selectedCount > 0 && !nameMissing && !createMutation.isPending;
   const filtered = subjectId !== null || deckId !== null;
 
   const submit = () => {
@@ -248,32 +269,16 @@ export default function PracticeCreatePage() {
 
   return (
     <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
-        <button
-          type="button"
-          onClick={cancel}
-          className="text-sm font-medium text-(--color-text-secondary)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-base font-semibold text-(--color-text)">New practice</h1>
-        <div className="flex items-center gap-2">
-          {selectedCount > 0 && (
-            <span className="text-sm text-(--color-text-muted)">{selectedCount} selected</span>
-          )}
-          <button
-            type="button"
-            disabled={!canCreate}
-            onClick={submit}
-            className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
-          >
-            Create
-          </button>
-        </div>
-      </div>
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        New practice
+      </h1>
 
-      <div className="mt-3 flex flex-col gap-1">
-        <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+      <FormPart
+        sentence={nameMissing ? 'Give this practice a name to create it.' : null}
+        look="aside"
+        className="mt-4 flex flex-col gap-1.5"
+      >
+        <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
           Name
         </label>
         <input
@@ -281,33 +286,11 @@ export default function PracticeCreatePage() {
           type="text"
           value={name}
           onChange={(event) => changeName(event.target.value)}
-          className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+          className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
         />
-        {nameMissing && (
-          <p className="text-sm text-(--color-text-muted)">
-            Give this practice a name to create it.
-          </p>
-        )}
-      </div>
+      </FormPart>
 
-      <section aria-labelledby={selectedHeadingId} className="mt-3 flex flex-col gap-1">
-        <h2 id={selectedHeadingId} className="text-sm font-medium text-(--color-text)">
-          Selected
-        </h2>
-        {selectedCount === 0 ? (
-          <p className="text-sm text-(--color-text-muted)">
-            Select at least one configuration to practice.
-          </p>
-        ) : allConfigsQuery.isError ? (
-          <p role="alert" className="text-sm text-(--color-danger)">
-            Could not load your selected configurations.
-          </p>
-        ) : (
-          <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
-        )}
-      </section>
-
-      <div className="mt-3">
+      <div ref={filtersRef} className="mt-3">
         <PracticeFilterBar
           subjects={subjectsQuery.data ?? []}
           decks={decksQuery.data ?? []}
@@ -322,26 +305,19 @@ export default function PracticeCreatePage() {
       </div>
 
       {configsQuery.isError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
-          Could not load configurations.
-        </p>
-      )}
-
-      {topError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
-          {topError}
-        </p>
-      )}
-
-      {saveError && (
-        <p role="alert" className="text-sm text-(--color-danger)">
-          {saveError}
-        </p>
+        <div ref={failureRef}>
+          <FormPart sentence="Could not load configurations." look="wrong">
+            {null}
+          </FormPart>
+        </div>
       )}
 
       {configsQuery.data && groups.length === 0 ? (
-        <div className="flex flex-col items-start gap-3 py-8">
-          <p className="text-(--color-text-muted)">
+        <div
+          ref={configsQuery.isPlaceholderData ? undefined : emptyRef}
+          className="flex flex-col items-start gap-3 py-8"
+        >
+          <p className="text-body text-(--color-aside)">
             {filtered ? 'No configurations match these filters.' : 'No configurations yet.'}
           </p>
           {/* No New configuration… button here — the toolbar's is always on screen. */}
@@ -349,33 +325,82 @@ export default function PracticeCreatePage() {
             <button
               type="button"
               onClick={() => setFilters({ subjectId: null, deckId: null })}
-              className="h-9 rounded-full border border-(--color-text-muted) px-3 text-sm font-medium text-(--color-text)"
+              className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
             >
               Clear filters
             </button>
           )}
         </div>
       ) : (
-        <ConfigurationPickList
-          groups={groups}
-          selectedIds={selectedIdSet}
-          rowError={rowError}
-          onToggle={(group, configId) =>
-            setSearchParams(
-              withSelectedConfigIds(
-                searchParams,
-                toggleConfig(
-                  selectedIds,
-                  group.configs.map((config) => config.id),
-                  configId,
+        <div ref={configsQuery.data && !configsQuery.isPlaceholderData ? pickListRef : undefined}>
+          <ConfigurationPickList
+            groups={groups}
+            selectedIds={selectedIdSet}
+            rowError={rowError}
+            onToggle={(group, configId) =>
+              setParams(
+                withSelectedConfigIds(
+                  params,
+                  toggleConfig(
+                    selectedIds,
+                    group.configs.map((config) => config.id),
+                    configId,
+                  ),
                 ),
-              ),
-              { replace: true },
-            )
-          }
-          onEdit={editConfiguration}
-        />
+              )
+            }
+            onEdit={editConfiguration}
+          />
+        </div>
       )}
+
+      <section aria-labelledby={selectedHeadingId} className="mt-3">
+        <FormPart
+          sentence={
+            nothingSelected
+              ? 'Select at least one configuration to practice.'
+              : allConfigsQuery.isError
+                ? 'Could not load your selected configurations.'
+                : null
+          }
+          look={nothingSelected ? 'aside' : 'wrong'}
+          // This sentence reads at body size, larger than a form's other sentences.
+          className={
+            nothingSelected
+              ? 'flex flex-col gap-1.5 [&>[data-reveal-sentence]]:text-body [&>[data-reveal-sentence]]:[line-height:inherit]'
+              : 'flex flex-col gap-1.5'
+          }
+        >
+          <h2 id={selectedHeadingId} className="text-label text-(--color-aside)">
+            Selected
+          </h2>
+          {/* Nothing to hold until the selected ids resolve, and an empty block would draw a
+              bare outline. */}
+          {!allConfigsQuery.isError && selectedConfigs.length > 0 && (
+            <SelectedConfigurationList configs={selectedConfigs} onRemove={removeSelection} />
+          )}
+        </FormPart>
+      </section>
+
+      <FormBar
+        sentence={saveError ?? topError}
+        count={selectedCount > 0 ? `${selectedCount} selected` : null}
+      >
+        <button
+          type="button"
+          onClick={cancel}
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          Cancel
+        </button>
+        <SubmitButton
+          ready={selectedCount > 0 && !nameMissing}
+          busy={createMutation.isPending}
+          onPress={submit}
+        >
+          Create
+        </SubmitButton>
+      </FormBar>
     </div>
   );
 }

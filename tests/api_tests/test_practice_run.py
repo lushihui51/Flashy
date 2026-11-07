@@ -7,13 +7,13 @@ from sqlmodel import col, select
 
 from app.database_ops.practice_card import db_read_current_practice_card
 from app.mastery.ema import EmaStrategy
+from app.mastery.readiness import classify_change
 from app.mastery.types import FieldMasteryState, ReviewGroup
 from app.models.card import Card
 from app.models.field_def import FieldDef, FieldType
 from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
-from app.models.practice_run_payloads import ResolvedFieldValue
 from app.models.review_log import ReviewLog
 from app.services.mastery import record_review_group
 from app.services.practice_generation import (
@@ -259,7 +259,7 @@ class TestPracticeRunHTTPFlow:
 
 class TestPracticeRunAcceptance:
     """Start, rate, fail, requeue — the requeued card is a new row with a different
-    prompt/answer combination and a position consistent with its updated mastery; the
+    prompt/answer combination and a position consistent with its updated readiness; the
     original row stays failed."""
 
     def test_full_fail_requeue_cycle(
@@ -289,7 +289,7 @@ class TestPracticeRunAcceptance:
 
         ratings = {answer_id: 1 for answer_id in original.answers}  # force a fail
         rated, requeued = submit_rating(
-            db, strategy, existing_user.id, original_id, ratings, rng=random.Random(99)
+            db, strategy, existing_user.id, original_id, ratings, rng=random.Random(101)
         )
         db.commit()
 
@@ -305,15 +305,15 @@ class TestPracticeRunAcceptance:
             original_answers,
         )
 
-        # Every other card in this fixture is still unreviewed (fresh MASTERY_PRIOR), so
-        # a forced fail always drops the requeued card's mastery to index 0 — the front
-        # of the mastery order. But only 2 other pending cards remain once the original
+        # Every other card in this fixture is still unreviewed, reading 0, and a forced
+        # fail leaves the requeued card at 0 too, so it sits at index 0 — the front of
+        # the readiness order. But only 2 other pending cards remain once the original
         # is marked failed, so the retry spacing floor (RETRY_SPACING_FLOOR=3) clamps
         # that index up to min(3, len(pending)) = 2: the end of the queue, not the
         # front. This is a hard guarantee of the clamp, not an approximation — assert
         # the guarantee itself (new back of the pending queue), not just "position
         # changed". TestRetrySpacingFloor covers the floor directly with ≥4 pending
-        # cards, where the clamp and the mastery index can disagree either way.
+        # cards, where the clamp and the readiness index can disagree either way.
         assert requeued.position != original_position
         pending_positions = db.exec(
             select(PracticeCard.position).where(
@@ -446,44 +446,11 @@ class TestForcedFailedAnswerFields:
         assert len(requeued.answers) == 2
         assert requeued.answers[1] in {f["pool_a1"], f["pool_a2"], f["pool_a3"]}
 
-    def test_archived_failed_pool_field_drops_out_and_card_still_requeues(
-        self, db, client, existing_user, session_cards, session_config, session_fields
-    ):
-        strategy, original = self._start_and_first_pending(
-            db, existing_user, session_config["id"], seed=1
-        )
-        fixed = session_fields["answer1"]
-        [failed_pool] = [fid for fid in original.answers if fid != fixed]
-
-        archived = client.delete(f"/api/fields/{failed_pool}")
-        assert archived.status_code == 200, archived.text
-
-        _, requeued = submit_rating(
-            db,
-            strategy,
-            existing_user.id,
-            original.id,
-            {fixed: 4, failed_pool: 1},
-            rng=random.Random(4),
-        )
-        db.commit()
-
-        assert requeued is not None
-        assert failed_pool not in requeued.answers
-        # The card still generates: the fixed answer survives, and the pool draw fills
-        # its one slot from the two remaining live pool fields.
-        assert requeued.answers[0] == fixed
-        assert len(requeued.answers) == 2
-        assert requeued.answers[1] in {
-            fid for name, fid in session_fields.items() if name.startswith("pool_a")
-        } - {failed_pool}
-
     def test_blanked_failed_pool_field_drops_out_and_card_still_requeues(
         self, db, client, existing_user, session_cards, session_config, session_fields
     ):
-        """The archived-field test's twin through the one path a user reaches: the
-        force-include is conditional on the failed field being live and non-blank, so a
-        value cleared after it was shown drops out of the retry."""
+        """The force-include is conditional on the failed field being live and
+        non-blank, so a value cleared after it was shown drops out of the retry."""
         strategy, original = self._start_and_first_pending(
             db, existing_user, session_config["id"], seed=1
         )
@@ -517,7 +484,7 @@ class TestForcedFailedAnswerFields:
 
 
 class TestRetrySpacingFloor:
-    """RETRY_SPACING_FLOOR=3 clamps the mastery-ordered insertion index up, never down
+    """RETRY_SPACING_FLOOR=3 clamps the readiness-ordered insertion index up, never down
     — a retry surfaces only after that many other pending cards have had their turn,
     or at the end of the queue with fewer than that remaining. The "2 pending cards ->
     retry is last" case is already covered by
@@ -661,15 +628,15 @@ class TestRetrySpacingFloor:
         assert len(pending) == 5
         assert pending[3].id == requeued.id  # exactly 3 pending cards ahead of it
 
-    def test_mastery_index_deeper_than_the_floor_wins(self):
+    def test_readiness_index_deeper_than_the_floor_wins(self):
         """Direct test of `_insertion_position`: six pending cards at strictly
-        ascending mastery, a new_score above every one of them (mastery_index=6, well
+        ascending readiness, a new_readiness above every one of them (readiness_index=6, well
         past RETRY_SPACING_FLOOR=3) must land after all six — the clamp only ever
         raises the floor, it never caps a deeper index back down to it (a clamp, not a
         fixed placement)."""
-        pending = [(self._card_at(i * _POSITION_GAP), float(i)) for i in range(6)]
+        pending = [(self._card_at(i * _POSITION_GAP), i / 10) for i in range(6)]
 
-        position = _insertion_position(pending, new_score=100.0)
+        position = _insertion_position(pending, new_readiness=1.0)
 
         assert position > pending[-1][0].position
 
@@ -793,7 +760,7 @@ class TestPositionCollisionFallback:
         card's position, so the requeue must hit db_stage_renumber_pending_practice_cards
         and succeed on the retry. The natural (non-stubbed) insertion formula never
         collides on its own with the gaps a fresh run leaves, so the stub makes the
-        collision deterministic instead of trying to engineer mastery scores precisely
+        collision deterministic instead of trying to engineer readiness precisely
         enough to collide. Five cards, so four stay pending after the fail and the
         requeue takes the enough-cards branch that calls `_insertion_position`."""
         import app.services.practice_run as practice_run_module
@@ -1114,23 +1081,22 @@ class TestRunStartErrorShape:
         assert res.json()["detail"]["code"] == "duplicate_deck"
         assert res.json()["detail"]["config_id"] == second.json()["id"]
 
-    def test_config_gone_stale_since_saving_400s_with_the_config_id(
+    def test_config_deleted_with_its_field_is_not_found_at_start(
         self, client, session_cards, session_config, session_fields
     ):
-        # Archiving a field the config still references is exactly how a saved config
-        # goes stale — validation runs again at session start for this reason.
-        archived = client.delete(f"/api/fields/{session_fields['prompt1']}")
-        assert archived.status_code == 200, archived.text
+        # Deleting a field the config names deletes the config with it, so a start
+        # that still names the config finds nothing.
+        deleted = client.delete(f"/api/fields/{session_fields['prompt1']}")
+        assert deleted.status_code == 204, deleted.text
 
         res = client.post(
             "/api/practice_runs",
             json={"name": "Run", "deck_practice_config_ids": [session_config["id"]]},
         )
-        assert res.status_code == 400
+        assert res.status_code == 404
         detail = res.json()["detail"]
-        assert detail["code"] == "stale_config"
+        assert detail["code"] == "config_not_found"
         assert detail["config_id"] == session_config["id"]
-        assert "not live" in detail["message"]
 
     def test_uncounted_pool_config_cannot_start_a_session(
         self, client, db, existing_deck, session_cards, session_fields
@@ -1578,7 +1544,6 @@ class TestRunState:
                 "name": "answer",
                 "type": "text",
                 "value": "Answer value",
-                "removed": False,
             }
         ]
 
@@ -1623,18 +1588,17 @@ class TestRunState:
                 "name": "answer",
                 "type": "text",
                 "value": "",
-                "removed": False,
             }
         ]
 
-    def test_archived_field_still_resolves(self, client, existing_deck):
+    def test_deleting_a_field_deletes_the_active_practice_naming_it(self, client, existing_deck):
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
         ).json()
         answer = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
         ).json()
-        # A third active field so archiving `answer` doesn't hit the deck's two-field floor.
+        # A third field so deleting `answer` doesn't hit the deck's two-field floor.
         client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "filler", "type": "text"}
         )
@@ -1646,7 +1610,7 @@ class TestRunState:
             "/api/deck_practice_configs",
             json={
                 "deck_id": existing_deck["id"],
-                "name": "Archive config",
+                "name": "Delete config",
                 "prompt_field_ids": [prompt["id"]],
                 "answer_field_ids": [answer["id"]],
                 "prompt_pool_ids": [],
@@ -1655,21 +1619,13 @@ class TestRunState:
                 "answer_pool_counts": [],
             },
         ).json()
-        session = _start(client, "Archive run", [config["id"]])
+        session = _start(client, "Delete run", [config["id"]])
+        assert client.get(f"/api/practice_runs/{session['id']}/state").status_code == 200
 
-        archived = client.delete(f"/api/fields/{answer['id']}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{answer['id']}")
+        assert deleted.status_code == 204, deleted.text
 
-        run = client.get(f"/api/practice_runs/{session['id']}/state").json()
-        assert run["current_card"]["answers"] == [
-            {
-                "field_def_id": answer["id"],
-                "name": "answer",
-                "type": "text",
-                "value": "A",
-                "removed": False,
-            }
-        ]
+        assert client.get(f"/api/practice_runs/{session['id']}/state").status_code == 404
 
     def test_attempt_increments_on_a_requeued_row(
         self, client, existing_user, session_cards, session_config
@@ -1729,13 +1685,13 @@ class TestRunState:
         assert final["session_status"] == "completed"
 
     def test_progress_counts_all_four_buckets_end_to_end(self, client, db, existing_deck):
-        """Exercises the stale-snapshot case for real: a card fails after its only
-        answer field is archived mid-session, so the requeue finds nothing to generate
+        """Exercises the stranded-card case for real: a card fails after its only
+        answer value is blanked mid-session, so the requeue finds nothing to generate
         from and the chain ends on `failed` with no successor — still_failed, alongside
         one untouched (unseen), one failed-then-requeued (retry_pending), and one
         passed-first-try card, all counted against the same fixed `total_cards`. Roles
         go by queue position, since only the current card can be rated: the front card
-        fails and requeues, the second passes, the third fails after the archive, the
+        fails and requeues, the second passes, the third fails after the blanking, the
         fourth is never seen mid-run."""
         prompt = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "prompt", "type": "text"}
@@ -1743,10 +1699,6 @@ class TestRunState:
         answer = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
         ).json()
-        # A third active field so archiving `answer` later doesn't hit the two-field floor.
-        client.post(
-            f"/api/decks/{existing_deck['id']}/fields", json={"name": "filler", "type": "text"}
-        )
 
         def make_card(tag):
             res = client.post(
@@ -1807,11 +1759,14 @@ class TestRunState:
         )
         assert pass_res.status_code == 200, pass_res.text
 
-        # Archive the only answer field: a future requeue has nothing left to draw from.
-        archive_res = client.delete(f"/api/fields/{answer['id']}")
-        assert archive_res.status_code == 200, archive_res.text
+        # Blank the third card's only answer value: its requeue has nothing left to
+        # draw from.
+        blank_res = client.patch(
+            f"/api/cards/{queue[2].card_id}", json={"values": {answer["id"]: ""}}
+        )
+        assert blank_res.status_code == 200, blank_res.text
 
-        # queue[2]: fails after the archival -> zero surviving answer candidates ->
+        # queue[2]: fails after the blanking -> zero surviving answer candidates ->
         # no successor -> still_failed.
         fail_stuck = client.post(
             f"/api/practice_cards/{queue[2].id}/rate",
@@ -1874,8 +1829,8 @@ class TestBreakdown:
         """A 4-field deck: `title` (position 0, the primary field, kept out of the
         practice config so its value never changes across attempts), `prompt` and
         `answer` (the config's only fixed fields — no pool, so generation is
-        deterministic), and `filler` (keeps the deck at 4 active fields so archiving
-        `answer` later doesn't hit the two-field floor)."""
+        deterministic), and `filler` (never named by the config and never set on a
+        card)."""
         title = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
         ).json()
@@ -1921,12 +1876,12 @@ class TestBreakdown:
         assert res.status_code == 201, res.text
         return res.json()["id"]
 
-    def test_full_breakdown_all_four_buckets(self, client, db, existing_deck, existing_subject):
-        """The stuck card lives in a second deck whose answer field is archived right
-        after the run starts: only the current card can be rated, and a single deck of
-        four cannot fail one card twice before the archive and still leave another
-        unrated until after it. The run is driven from the state endpoint with a
-        per-card rating script, so any starting order gives the same outcome."""
+    def test_full_breakdown_lists_every_card_once(self, client, db, existing_deck, existing_subject):
+        """The stuck card lives in a second deck, and its only answer value is blanked
+        right after the run starts: only the current card can be rated, and a single
+        deck of four cannot fail one card twice before the blanking and still leave
+        another unrated until after it. The run is driven from the state endpoint with
+        a per-card rating script, so any starting order gives the same outcome."""
         title, prompt, answer, config = self._setup_deck(client, existing_deck)
 
         first_card = self._make_card(client, existing_deck, title, prompt, answer, "first", "")
@@ -1982,10 +1937,12 @@ class TestBreakdown:
         session = _start(client, "Breakdown run", [config["id"], stuck_config["id"]])
         session_id = uuid.UUID(session["id"])
 
-        # Archive the stuck deck's only answer field: its card's requeue has nothing to
-        # draw from, while the first deck's requeues are unaffected.
-        archived = client.delete(f"/api/fields/{stuck_fields['answer']}")
-        assert archived.status_code == 200, archived.text
+        # Blank the stuck card's only answer value: its requeue has nothing to draw
+        # from, while the first deck's requeues are unaffected.
+        blanked = client.patch(
+            f"/api/cards/{stuck_card}", json={"values": {stuck_fields["answer"]: ""}}
+        )
+        assert blanked.status_code == 200, blanked.text
 
         by_card_id = {
             str(pc.card_id): pc.id
@@ -1995,8 +1952,7 @@ class TestBreakdown:
         }
         assert set(by_card_id) == {first_card, retry_card, many_card, stuck_card}
 
-        # first: passed_first_try; retry: passed_after_one_fail; many:
-        # passed_after_many_fails; stuck: still_failed (its requeue is blocked).
+        # Each card's ratings in turn; the stuck card's requeue is blocked.
         script = {
             first_card: [4],
             retry_card: [1, 4],
@@ -2031,50 +1987,67 @@ class TestBreakdown:
         data = res.json()
 
         assert data["total_cards"] == 4
-        assert data["passed_first_try"] == 1
-        assert data["passed_after_one_fail"] == 1
-        assert data["passed_after_many_fails"] == 1
-        assert data["still_failed"] == 1
+        assert set(data) == {"total_cards", "cards"}
 
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
+        assert len(data["cards"]) == 4
         assert set(cards_by_id) == {first_card, retry_card, many_card, stuck_card}
 
-        assert cards_by_id[first_card]["bucket"] == "passed_first_try"
-        assert cards_by_id[first_card]["attempt_count"] == 1
+        # Nothing says how many attempts a card took or whether it passed.
+        for card in data["cards"]:
+            assert set(card) == {
+                "card_id",
+                "primary_field",
+                "readiness",
+                "delta",
+                "change",
+                "fields",
+                "attempts",
+            }
+            for attempt in card["attempts"]:
+                assert set(attempt) == {"practice_card_id", "prompts", "answers"}
+
         # The blank-primary-field case: value is passed through as "", not a fallback.
         assert cards_by_id[first_card]["primary_field"] == {
             "field_def_id": title["id"],
             "name": "title",
             "type": "text",
             "value": "",
-            "removed": False,
         }
 
-        assert cards_by_id[retry_card]["bucket"] == "passed_after_one_fail"
-        assert cards_by_id[retry_card]["attempt_count"] == 2
         assert cards_by_id[retry_card]["primary_field"]["value"] == "Retry Card"
         retry_attempts = cards_by_id[retry_card]["attempts"]
-        assert [a["status"] for a in retry_attempts] == ["failed", "passed"]
-        assert [a["created_at"] for a in retry_attempts] == sorted(
-            a["created_at"] for a in retry_attempts
-        )
+        retry_rows = db.exec(
+            select(PracticeCard)
+            .where(
+                PracticeCard.practice_run_id == session_id,
+                PracticeCard.card_id == uuid.UUID(retry_card),
+            )
+            .order_by(PracticeCard.created_at)
+        ).all()
+        assert [a["practice_card_id"] for a in retry_attempts] == [str(r.id) for r in retry_rows]
         assert [a["answers"][0]["rating"] for a in retry_attempts] == [1, 4]
         assert all(a["prompts"][0]["value"] == "retry prompt" for a in retry_attempts)
         assert all(a["answers"][0]["value"] == "retry answer" for a in retry_attempts)
 
-        assert cards_by_id[many_card]["bucket"] == "passed_after_many_fails"
-        assert cards_by_id[many_card]["attempt_count"] == 3
+        # Only the fields an attempt named, with their sides: never `title` or `filler`.
+        for card_id in (first_card, retry_card, many_card):
+            assert [(f["name"], f["side"]) for f in cards_by_id[card_id]["fields"]] == [
+                ("prompt", "prompt"),
+                ("answer", "answer"),
+            ]
+
         many_attempts = cards_by_id[many_card]["attempts"]
-        assert [a["status"] for a in many_attempts] == ["failed", "failed", "passed"]
         assert [a["answers"][0]["rating"] for a in many_attempts] == [1, 1, 4]
 
-        assert cards_by_id[stuck_card]["bucket"] == "still_failed"
-        assert cards_by_id[stuck_card]["attempt_count"] == 1
         stuck_attempts = cards_by_id[stuck_card]["attempts"]
-        assert [a["status"] for a in stuck_attempts] == ["failed"]
         assert stuck_attempts[0]["answers"][0]["rating"] == 1
-        # `answer` was archived before this attempt but still resolves.
+        # `answer` was blanked before this attempt; the field still resolves.
         assert stuck_attempts[0]["answers"][0]["name"] == "answer"
+        assert [(f["name"], f["side"]) for f in cards_by_id[stuck_card]["fields"]] == [
+            ("prompt", "prompt"),
+            ("answer", "answer"),
+        ]
 
         # Ordered by first attempt's position ascending.
         first_rows_by_card: dict[str, PracticeCard] = {}
@@ -2120,19 +2093,19 @@ class TestBreakdown:
         act_as(other_user)
         assert client.get(f"/api/practice_runs/{session['id']}/breakdown").status_code == 404
 
-    def test_delta_computation_statement_count_is_fixed(
+    def test_breakdown_statement_count_is_fixed(
         self,
         client,
         existing_user,
         existing_subject,
         session_cards,
         session_config,
-        mastery_log_statement_counter,
+        statement_counter,
     ):
-        """The breakdown's mastery_log statement count is fixed — it must not grow with
-        the run's card count or the decks' active-field count. One card on a fresh
-        two-field deck and three cards on session_fields' eight-field deck
-        (session_cards + session_config) must report the same nonzero count."""
+        """The breakdown's statements against card, field_def and mastery_log are fixed:
+        they must not grow with the run's cards, its decks or their fields. One card on a
+        fresh two-field deck, and that deck's card with three more on session_fields'
+        eight-field deck, must report the same nonzero counts."""
         small_deck = client.post(
             "/api/decks",
             json={
@@ -2179,26 +2152,30 @@ class TestBreakdown:
         small_session = _start(client, "Small breakdown run", [small_config["id"]])
         _complete(small_session["id"])
 
-        large_session = _start(client, "Large breakdown run", [session_config["id"]])
+        large_session = _start(
+            client, "Large breakdown run", [session_config["id"], small_config["id"]]
+        )
         _complete(large_session["id"])
 
-        mastery_log_statement_counter.reset()
-        small_res = client.get(f"/api/practice_runs/{small_session['id']}/breakdown")
-        assert small_res.status_code == 200, small_res.text
-        small_count = mastery_log_statement_counter.count
+        counters = {table: statement_counter(table) for table in ("card", "field_def", "mastery_log")}
 
-        mastery_log_statement_counter.reset()
-        large_res = client.get(f"/api/practice_runs/{large_session['id']}/breakdown")
-        assert large_res.status_code == 200, large_res.text
-        large_count = mastery_log_statement_counter.count
+        def _counts(session_id):
+            for counter in counters.values():
+                counter.reset()
+            res = client.get(f"/api/practice_runs/{session_id}/breakdown")
+            assert res.status_code == 200, res.text
+            return res, {table: counter.count for table, counter in counters.items()}
 
-        assert small_count > 0
-        assert small_count == large_count
+        small_res, small_counts = _counts(small_session["id"])
+        large_res, large_counts = _counts(large_session["id"])
 
-    def test_removed_fields_stay_as_placeholders_in_every_attempt(self, client, existing_deck):
-        """A field a completed run's practice_cards still name in `prompts`/`answers`
-        but whose row was later deleted stays visible in the breakdown as a placeholder
-        on both sides, instead of silently vanishing from every attempt."""
+        assert len(small_res.json()["cards"]) < len(large_res.json()["cards"])
+        assert all(count > 0 for count in small_counts.values())
+        assert small_counts == large_counts
+
+    def test_deleted_fields_leave_every_attempt(self, client, existing_deck):
+        """A field deleted after a practice completed leaves the breakdown's attempts
+        on both sides, because the delete scrubs its id from every practice card."""
         title = client.post(
             f"/api/decks/{existing_deck['id']}/fields", json={"name": "title", "type": "text"}
         ).json()
@@ -2219,7 +2196,7 @@ class TestBreakdown:
             "/api/deck_practice_configs",
             json={
                 "deck_id": existing_deck["id"],
-                "name": "Removed field config",
+                "name": "Deleted field config",
                 "prompt_field_ids": [p1["id"], p2["id"]],
                 "answer_field_ids": [a1["id"], a2["id"]],
                 "prompt_pool_ids": [],
@@ -2249,7 +2226,7 @@ class TestBreakdown:
         card_one = make_card("one")
         card_two = make_card("two")
 
-        session = _start(client, "Removed field run", [config["id"]])
+        session = _start(client, "Deleted field run", [config["id"]])
         _finish_session(client, session["id"])
 
         patch = client.patch(
@@ -2269,72 +2246,62 @@ class TestBreakdown:
         res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["passed_first_try"] == 2
+
+        def every_key(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    yield key
+                    yield from every_key(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from every_key(value)
+
+        assert 'removed' not in set(every_key(data))
 
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
         assert set(cards_by_id) == {card_one, card_two}
 
-        p2_placeholder = {
-            "field_def_id": p2["id"],
-            "name": "",
-            "type": "text",
-            "value": "",
-            "removed": True,
-        }
-        a2_placeholder = {**p2_placeholder, "field_def_id": a2["id"], "rating": None}
-
-        for card in cards_by_id.values():
-            assert [fd["name"] for fd in card["fields"]] == ["title", "p1", "a1"]
+        for card_id, card in cards_by_id.items():
+            tag = "one" if card_id == card_one else "two"
+            assert [fd["name"] for fd in card["fields"]] == ["p1", "a1"]
             for attempt in card["attempts"]:
-                prompts = attempt["prompts"]
-                assert len(prompts) == 2
-                assert prompts[0]["field_def_id"] == p1["id"]
-                assert prompts[0]["name"] == "p1"
-                assert prompts[0]["removed"] is False
-                assert prompts[1] == p2_placeholder
+                assert attempt["prompts"] == [
+                    {"field_def_id": p1["id"], "name": "p1", "type": "text", "value": f"{tag} p1"}
+                ]
+                assert attempt["answers"] == [
+                    {
+                        "field_def_id": a1["id"],
+                        "name": "a1",
+                        "type": "text",
+                        "value": f"{tag} a1",
+                        "rating": 4,
+                    }
+                ]
 
-                answers = attempt["answers"]
-                assert len(answers) == 2
-                assert answers[0]["field_def_id"] == a1["id"]
-                assert answers[0]["name"] == "a1"
-                assert answers[0]["removed"] is False
-                assert answers[0]["rating"] == 4
-                assert answers[1] == a2_placeholder
-
-    def test_resolver_drops_unknown_ids_unless_asked_to_keep_them(self):
-        """_resolve_field_values's keep_removed switch, exercised directly: the
-        HTTP-level test above only ever sees keep_removed=True through the breakdown,
-        so this covers the default (False) drop path and the ordering contract — live
-        entries first by position, placeholders after in stored order — with no HTTP
-        round trip needed."""
+    def test_resolver_drops_unknown_ids(self):
+        """_resolve_field_values exercised directly: an id with no field_def row is
+        dropped, and the live entries come out by position."""
         unknown = uuid.uuid4()
         assert _resolve_field_values({}, {}, [unknown]) == []
-        assert _resolve_field_values({}, {}, [unknown], keep_removed=True) == [
-            ResolvedFieldValue(
-                field_def_id=unknown, name="", type=FieldType.text, value="", removed=True
-            )
-        ]
 
-        live = FieldDef(
-            id=uuid.uuid4(), deck_id=uuid.uuid4(), name="live", type=FieldType.text, position=0
+        first = FieldDef(
+            id=uuid.uuid4(), deck_id=uuid.uuid4(), name="first", type=FieldType.text, position=0
         )
-        unknown_a = uuid.uuid4()
-        unknown_b = uuid.uuid4()
-        field_defs_by_id = {live.id: live}
-        field_ids = [unknown_a, unknown_b, live.id]
+        second = FieldDef(
+            id=uuid.uuid4(), deck_id=first.deck_id, name="second", type=FieldType.text, position=1
+        )
+        field_defs_by_id = {first.id: first, second.id: second}
+        field_ids = [second.id, uuid.uuid4(), first.id, uuid.uuid4()]
 
-        resolved = _resolve_field_values(field_defs_by_id, {}, field_ids, keep_removed=True)
-        assert [r.field_def_id for r in resolved] == [live.id, unknown_a, unknown_b]
-        assert resolved[0].removed is False
-        assert resolved[1].removed is True
-        assert resolved[2].removed is True
+        resolved = _resolve_field_values(field_defs_by_id, {}, field_ids)
+        assert [r.field_def_id for r in resolved] == [first.id, second.id]
 
     def test_blanked_only_answer_field_ends_the_card_failed(self, client, existing_deck):
-        """The one path a user reaches to the `still_failed` bucket: archiving is
-        unexposed and a hard field delete removes the active practices naming the
-        field, so clearing a card's only answer value while a practice uses it is what
-        leaves the requeue nothing to generate from. The blank value passes through
-        unlabelled in the breakdown's attempt detail."""
+        """The one path a user reaches to a card that ends failed: a field delete
+        removes the active practices naming the field, so clearing a card's only
+        answer value while a practice uses it is what leaves the requeue nothing to
+        generate from. The blank value passes through unlabelled in the breakdown's
+        attempt detail."""
         fields = {}
         for name in ("prompt", "answer", "filler"):
             res = client.post(
@@ -2420,16 +2387,14 @@ class TestBreakdown:
         res = client.get(f"/api/practice_runs/{session['id']}/breakdown")
         assert res.status_code == 200, res.text
         data = res.json()
-        assert data["still_failed"] == 1
-        assert data["passed_first_try"] == 1
 
         cards_by_id = {c["card_id"]: c for c in data["cards"]}
         assert set(cards_by_id) == set(card_ids)
         entry = cards_by_id[blanked_card["card_id"]]
-        assert entry["bucket"] == "still_failed"
-        assert entry["attempt_count"] == 1
+        assert [c["card_id"] for c in data["cards"]].count(blanked_card["card_id"]) == 1
+        assert "bucket" not in entry
         [attempt] = entry["attempts"]
-        assert attempt["status"] == "failed"
+        assert "status" not in attempt
         [answer] = attempt["answers"]
         assert answer["value"] == ""
         assert answer["rating"] == 1
@@ -2499,8 +2464,8 @@ def _expected_after(strategy, ratings, shown_prompt_ids=(), prior_states=None):
     return states
 
 
-class TestBreakdownMastery:
-    """GET .../breakdown's mastery and delta fields. Built directly against
+class TestBreakdownReadiness:
+    """GET .../breakdown's readiness and delta fields. Built directly against
     practice_run/practice_card/mastery_log rather than through the generation/rating
     HTTP flow — the delta-semantics contract is specifically about row ordering and
     attribution, which this gives exact control over."""
@@ -2530,28 +2495,102 @@ class TestBreakdownMastery:
         pc = _make_appearance(db, run.id, card_id, answers=[answer_id])
         _rate(db, strategy, existing_user.id, run.id, pc, {answer_id: 4})
 
-        expected_score = strategy.field_score(_expected_after(strategy, {answer_id: 4})[answer_id])
+        expected = strategy.readiness(_expected_after(strategy, {answer_id: 4})[answer_id])
 
         breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
-        fields_by_id = {f.field_def_id: f for f in card.fields}
 
-        # field_def.position ascending, not touched-first.
-        assert [f.field_def_id for f in card.fields] == [answer_id, other_id]
+        # Only the field an attempt named is listed; `other_id` counts in the fold alone.
+        [field] = card.fields
+        assert field.field_def_id == answer_id
 
-        # Reviewed for the first time inside this run: delta is against the prior.
-        assert fields_by_id[answer_id].mastery == pytest.approx(expected_score)
-        assert fields_by_id[answer_id].delta == pytest.approx(expected_score - 50.0)
-
-        # Never reviewed by anyone, and untouched by this run: no score, no movement.
-        assert fields_by_id[other_id].mastery is None
-        assert fields_by_id[other_id].delta == 0.0
+        # Reviewed for the first time inside this run: delta is against 0.
+        assert field.readiness == pytest.approx(expected)
+        assert field.delta == pytest.approx(expected)
 
         # The accepted cost of folding over every active field: the untouched field
         # dilutes the card fold — half the per-field movement here, since one of the
         # two active fields moved.
-        assert card.mastery == pytest.approx((expected_score + 50.0) / 2)
-        assert card.delta == pytest.approx((expected_score - 50.0) / 2)
+        assert card.readiness == pytest.approx(expected / 2)
+        assert card.delta == pytest.approx(expected / 2)
+
+    def test_payload_carries_readiness_within_the_scale_and_no_mastery_key(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        answer = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "answer", "type": "text"}
+        ).json()
+        other = client.post(
+            f"/api/decks/{existing_deck['id']}/fields", json={"name": "other", "type": "text"}
+        ).json()
+        answer_id = uuid.UUID(answer["id"])
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {answer["id"]: "a", other["id"]: "o"},
+                },
+            ).json()["id"]
+        )
+        run = _make_run(db, existing_user.id)
+        pc = _make_appearance(db, run.id, card_id, answers=[answer_id])
+        _rate(db, strategy, existing_user.id, run.id, pc, {answer_id: 4})
+
+        response = client.get(f"/api/practice_runs/{run.id}/breakdown")
+
+        assert response.status_code == 200, response.text
+        cards = response.json()["cards"]
+        assert cards
+        for card in cards:
+            assert 0 <= card["readiness"] <= 1
+            assert "mastery" not in card
+            assert card["change"] == classify_change(card["delta"], strategy.reach).value
+            assert card["fields"]
+            for field in card["fields"]:
+                assert 0 <= field["readiness"] <= 1
+                assert "mastery" not in field
+                assert field["change"] == classify_change(field["delta"], strategy.reach).value
+
+    def test_field_shown_by_one_attempt_and_asked_by_another_reads_prompt(
+        self, db, client, existing_user, existing_deck
+    ):
+        strategy = EmaStrategy()
+        names = ("first", "second", "unnamed")
+        ids = [
+            uuid.UUID(
+                client.post(
+                    f"/api/decks/{existing_deck['id']}/fields", json={"name": name, "type": "text"}
+                ).json()["id"]
+            )
+            for name in names
+        ]
+        first_id, second_id, _unnamed_id = ids
+        card_id = uuid.UUID(
+            client.post(
+                "/api/cards",
+                json={
+                    "deck_id": existing_deck["id"],
+                    "values": {str(field_id): "v" for field_id in ids},
+                },
+            ).json()["id"]
+        )
+        run = _make_run(db, existing_user.id)
+        asked_first = _make_appearance(db, run.id, card_id, answers=[first_id], prompts=[second_id])
+        _rate(db, strategy, existing_user.id, run.id, asked_first, {first_id: 1}, (second_id,))
+        asked_again = _make_appearance(
+            db, run.id, card_id, answers=[second_id], prompts=[first_id], position=1
+        )
+        _rate(db, strategy, existing_user.id, run.id, asked_again, {second_id: 4}, (first_id,))
+
+        breakdown = get_practice_run_breakdown(db, strategy, run.id, existing_user.id)
+        card = next(c for c in breakdown.cards if c.card_id == card_id)
+
+        assert [(f.field_def_id, f.side.value) for f in card.fields] == [
+            (first_id, "prompt"),
+            (second_id, "prompt"),
+        ]
 
     def test_per_field_bound_excludes_a_different_runs_intervening_write(
         self, db, client, existing_user, existing_deck
@@ -2584,7 +2623,7 @@ class TestBreakdownMastery:
         # A different, concurrently active run touches field B in between.
         run2 = _make_run(db, existing_user.id, status=RunStatus.active)
         pc2 = _make_appearance(db, run2.id, card_id, answers=[b_id])
-        _rate(db, strategy, existing_user.id, run2.id, pc2, {b_id: 1})
+        _rate(db, strategy, existing_user.id, run2.id, pc2, {b_id: 2})
         run2.status = RunStatus.completed
         db.add(run2)
         db.commit()
@@ -2597,20 +2636,20 @@ class TestBreakdownMastery:
         db.add(run1)
         db.commit()
 
-        run2_after_b = _expected_after(strategy, {b_id: 1})
+        run2_after_b = _expected_after(strategy, {b_id: 2})
         run1_after_b = _expected_after(strategy, {b_id: 4}, prior_states=run2_after_b)
-        expected_before = strategy.field_score(run2_after_b[b_id])
-        expected_after = strategy.field_score(run1_after_b[b_id])
+        expected_before = strategy.readiness(run2_after_b[b_id])
+        expected_after = strategy.readiness(run1_after_b[b_id])
 
         breakdown = get_practice_run_breakdown(db, strategy, run1.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
         fields_by_id = {f.field_def_id: f for f in card.fields}
 
-        assert fields_by_id[b_id].mastery == pytest.approx(expected_after)
+        assert fields_by_id[b_id].readiness == pytest.approx(expected_after)
         assert fields_by_id[b_id].delta == pytest.approx(expected_after - expected_before)
         # The wrong answer a single run-wide bound would give: treating field B as if
         # run1 never saw any prior state for it at all.
-        assert fields_by_id[b_id].delta != pytest.approx(expected_after - 50.0)
+        assert fields_by_id[b_id].delta != pytest.approx(expected_after)
 
     def test_deleted_run_attribution_survives_as_before_state(
         self, db, client, existing_user, existing_deck
@@ -2636,7 +2675,7 @@ class TestBreakdownMastery:
         old_run = _make_run(db, existing_user.id)
         old_pc = _make_appearance(db, old_run.id, card_id, answers=[x_id])
         _rate(db, strategy, existing_user.id, old_run.id, old_pc, {x_id: 2})
-        expected_orphaned = strategy.field_score(_expected_after(strategy, {x_id: 2})[x_id])
+        expected_orphaned = strategy.readiness(_expected_after(strategy, {x_id: 2})[x_id])
 
         # Deleting the run cascades its practice_card; mastery_log's row for field_x
         # survives with practice_run_id SET NULL — orphaned, but still real state.
@@ -2652,12 +2691,14 @@ class TestBreakdownMastery:
 
         breakdown = get_practice_run_breakdown(db, strategy, new_run.id, existing_user.id)
         card = next(c for c in breakdown.cards if c.card_id == card_id)
-        fields_by_id = {f.field_def_id: f for f in card.fields}
+        expected_y = strategy.readiness(_expected_after(strategy, {y_id: 4})[y_id])
 
-        # field_x: untouched by new_run, and its only history's run is gone — must
-        # surface the orphaned row's real value rather than erroring or going missing.
-        assert fields_by_id[x_id].mastery == pytest.approx(expected_orphaned)
-        assert fields_by_id[x_id].delta == 0.0
+        # field_x: untouched by new_run, so unlisted, and its only history's run is gone —
+        # the card's fold must count the orphaned row's real value on both sides rather
+        # than erroring or going missing.
+        assert [f.field_def_id for f in card.fields] == [y_id]
+        assert card.readiness == pytest.approx((expected_orphaned + expected_y) / 2)
+        assert card.delta == pytest.approx(expected_y / 2)
 
 
 def _rerun(client, session_id, name):
@@ -2727,7 +2768,7 @@ class TestRerun:
         assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
     def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db, existing_subject):
-        # Deck A: three fields so `answer` can be archived afterward without hitting
+        # Deck A: three fields so `answer` can be deleted afterward without hitting
         # the deck's two-field floor — this is what makes A's snapshot go stale.
         deck_a = client.post(
             "/api/decks",
@@ -2806,8 +2847,8 @@ class TestRerun:
         session = _start(client, "Two healthy decks", [config_a["id"], config_b["id"]])
         _finish_session(client, session["id"])
 
-        archived = client.delete(f"/api/fields/{fields_a['answer']}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{fields_a['answer']}")
+        assert deleted.status_code == 204, deleted.text
 
         res = _rerun(client, session["id"], "Two healthy decks (rerun)")
         assert res.status_code == 201, res.text
@@ -2821,15 +2862,15 @@ class TestRerun:
     def test_rerun_refuses_when_nothing_survives(
         self, client, session_cards, session_config
     ):
-        """Archiving the config's only answer field, not deleting the deck — a run
-        whose only deck is deleted is gone itself, so there would be no run left to
-        call rerun against at all."""
+        """Deleting the config's only answer field, not the deck — a run whose only
+        deck is deleted is gone itself, so there would be no run left to call rerun
+        against at all."""
         session = _start(client, "Doomed run", [session_config["id"]])
         _finish_session(client, session["id"])
 
         stale_field_id = session_config["answer_field_ids"][0]
-        archived = client.delete(f"/api/fields/{stale_field_id}")
-        assert archived.status_code == 200, archived.text
+        deleted = client.delete(f"/api/fields/{stale_field_id}")
+        assert deleted.status_code == 204, deleted.text
 
         res = _rerun(client, session["id"], "Doomed run (rerun)")
         assert res.status_code == 400, res.text
@@ -2858,6 +2899,248 @@ class TestRerun:
 
         act_as(other_user)
         assert _rerun(client, session["id"], "Rerun").status_code == 404
+
+
+def _chosen(client, session_id, name, card_ids):
+    return client.post(
+        f"/api/practice_runs/{session_id}/chosen_cards",
+        json={"name": name, "card_ids": [str(c) for c in card_ids]},
+    )
+
+
+def _snapshots(db, session_id):
+    return db.exec(
+        select(PracticeDeck).where(PracticeDeck.practice_run_id == uuid.UUID(session_id))
+    ).all()
+
+
+def _practice_card_ids(db, session_id):
+    return {
+        c.card_id
+        for c in db.exec(
+            select(PracticeCard).where(PracticeCard.practice_run_id == uuid.UUID(session_id))
+        ).all()
+    }
+
+
+def _add_card(client, deck, fields):
+    values = {str(fid): f"late-{name}" for name, fid in fields.items()}
+    res = client.post("/api/cards", json={"deck_id": deck["id"], "values": values})
+    assert res.status_code == 201, res.text
+    return uuid.UUID(res.json()["id"])
+
+
+def _two_field_deck(client, subject, name, extra_fields=()):
+    """A deck of one card, with a configuration asking `front` and answering `back`;
+    `extra_fields` lets a test delete `back` without hitting the deck's field floor."""
+    deck = client.post(
+        "/api/decks",
+        json={
+            "name": name,
+            "subject_id": subject["id"],
+            "field_defs": [
+                {"name": field, "type": "text"} for field in ("front", "back", *extra_fields)
+            ],
+        },
+    ).json()
+    fields = {fd["name"]: fd["id"] for fd in deck["field_defs"]}
+    card = client.post(
+        "/api/cards",
+        json={"deck_id": deck["id"], "values": {fid: "v" for fid in fields.values()}},
+    )
+    assert card.status_code == 201, card.text
+    config = client.post(
+        "/api/deck_practice_configs",
+        json={
+            "deck_id": deck["id"],
+            "name": f"{name} config",
+            "prompt_field_ids": [fields["front"]],
+            "answer_field_ids": [fields["back"]],
+            "prompt_pool_ids": [],
+            "prompt_pool_counts": [],
+            "answer_pool_ids": [],
+            "answer_pool_counts": [],
+        },
+    )
+    assert config.status_code == 201, config.text
+    return fields, uuid.UUID(card.json()["id"]), config.json()
+
+
+class TestChosenCards:
+    """POST .../chosen_cards: a new practice of exactly the chosen cards, from a completed
+    practice's own snapshots."""
+
+    def _completed(self, client, session_config):
+        session = _start(client, "Whole deck", [session_config["id"]])
+        _finish_session(client, session["id"])
+        return session
+
+    def test_holds_exactly_the_chosen_cards_on_a_snapshot_copied_from_the_original(
+        self, client, db, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+
+        res = _chosen(client, session["id"], "Chosen", chosen)
+        assert res.status_code == 201, res.text
+        new_session = res.json()
+        assert new_session["name"] == "Chosen"
+        assert new_session["status"] == "active"
+        assert new_session["id"] != session["id"]
+
+        assert _practice_card_ids(db, new_session["id"]) == set(chosen)
+
+        [original] = _snapshots(db, session["id"])
+        [snapshot] = _snapshots(db, new_session["id"])
+        assert snapshot.card_ids == chosen
+        assert snapshot.source_config_id == uuid.UUID(session_config["id"])
+        assert snapshot.source_config_name == session_config["name"]
+        assert snapshot.prompt_field_ids == original.prompt_field_ids
+        assert snapshot.answer_field_ids == original.answer_field_ids
+        assert snapshot.prompt_pool_ids == original.prompt_pool_ids
+        assert snapshot.prompt_pool_counts == original.prompt_pool_counts
+        assert snapshot.answer_pool_ids == original.answer_pool_ids
+        assert snapshot.answer_pool_counts == original.answer_pool_counts
+
+        # A whole-deck practice's own snapshot stays null and the original is untouched.
+        assert original.card_ids is None
+        assert client.get(f"/api/practice_runs/{session['id']}").json()["status"] == "completed"
+
+    def test_a_rerun_holds_the_same_cards_after_a_card_is_added_to_the_deck(
+        self, client, db, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        chosen_session = _chosen(client, session["id"], "Chosen", chosen).json()
+        _finish_session(client, chosen_session["id"])
+
+        _add_card(client, existing_deck, session_fields)
+
+        res = _rerun(client, chosen_session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == set(chosen)
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids == chosen
+
+    def test_a_chosen_card_deleted_since_stays_in_card_ids_and_makes_no_practice_card(
+        self, client, db, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        chosen_session = _chosen(client, session["id"], "Chosen", chosen).json()
+        _finish_session(client, chosen_session["id"])
+
+        deleted = client.delete(f"/api/cards/{chosen[0]}")
+        assert deleted.status_code == 204, deleted.text
+
+        [frozen] = _snapshots(db, chosen_session["id"])
+        db.refresh(frozen)
+        assert frozen.card_ids == chosen
+
+        res = _rerun(client, chosen_session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {chosen[1]}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids == chosen
+
+    def test_an_active_practice_is_refused(self, client, session_cards, session_config):
+        session = _start(client, "Still going", [session_config["id"]])
+
+        res = _chosen(client, session["id"], "Chosen", session_cards[:1])
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "run_active"
+
+    def test_every_snapshot_stale_is_refused_and_writes_no_run(
+        self, client, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        deleted = client.delete(f"/api/fields/{session_config['answer_field_ids'][0]}")
+        assert deleted.status_code == 204, deleted.text
+        before = client.get("/api/practice_runs").json()
+
+        res = _chosen(client, session["id"], "Chosen", session_cards[:2])
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "nothing_to_practice"
+        assert client.get("/api/practice_runs").json() == before
+
+    def test_a_stale_snapshot_is_dropped_with_its_chosen_cards(
+        self, client, db, existing_subject
+    ):
+        fields_a, card_a, config_a = _two_field_deck(
+            client, existing_subject, "Deck A", extra_fields=("filler",)
+        )
+        _, card_b, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
+        _finish_session(client, session["id"])
+
+        deleted = client.delete(f"/api/fields/{fields_a['back']}")
+        assert deleted.status_code == 204, deleted.text
+
+        res = _chosen(client, session["id"], "Chosen", [card_a, card_b])
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {card_b}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.deck_id == uuid.UUID(config_b["deck_id"])
+        assert snapshot.card_ids == [card_b]
+
+    def test_only_the_decks_holding_a_chosen_card_get_a_snapshot(
+        self, client, db, existing_subject
+    ):
+        _, card_a, config_a = _two_field_deck(client, existing_subject, "Deck A")
+        _, _, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
+        _finish_session(client, session["id"])
+
+        res = _chosen(client, session["id"], "Chosen", [card_a])
+        assert res.status_code == 201, res.text
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.deck_id == uuid.UUID(config_a["deck_id"])
+
+    def test_chosen_cards_blank_on_their_answer_side_are_refused_and_write_no_run(
+        self, client, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        chosen = session_cards[:2]
+        blank_answers = {
+            str(session_fields[name]): "" for name in ("answer1", "pool_a1", "pool_a2", "pool_a3")
+        }
+        for card_id in chosen:
+            patched = client.patch(f"/api/cards/{card_id}", json={"values": blank_answers})
+            assert patched.status_code == 200, patched.text
+        before = client.get("/api/practice_runs").json()
+
+        res = _chosen(client, session["id"], "Chosen", chosen)
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "no_cards"
+        assert client.get("/api/practice_runs").json() == before
+
+    def test_an_empty_list_is_refused(self, client, session_cards, session_config):
+        session = self._completed(client, session_config)
+
+        res = _chosen(client, session["id"], "Chosen", [])
+        assert res.status_code == 400, res.text
+
+    def test_a_card_the_practice_never_held_is_refused(
+        self, client, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        added_since = _add_card(client, existing_deck, session_fields)
+
+        for outside in (added_since, uuid.uuid4()):
+            res = _chosen(client, session["id"], "Chosen", [session_cards[0], outside])
+            assert res.status_code == 400, res.text
+
+    def test_a_rerun_of_a_whole_deck_practice_takes_in_a_card_added_since(
+        self, client, db, existing_deck, session_fields, session_cards, session_config
+    ):
+        session = self._completed(client, session_config)
+        added_since = _add_card(client, existing_deck, session_fields)
+
+        res = _rerun(client, session["id"], "Again")
+        assert res.status_code == 201, res.text
+        assert _practice_card_ids(db, res.json()["id"]) == {*session_cards, added_since}
+        [snapshot] = _snapshots(db, res.json()["id"])
+        assert snapshot.card_ids is None
 
 
 class TestConfigLineage:
@@ -3221,3 +3504,77 @@ class TestConfigurationLabel:
         assert res.status_code == 200, res.text
         run = next(r for r in res.json() if r["id"] == created["id"])
         assert [d["configuration_name"] for d in run["decks"]] == ["Config A", "Config B"]
+
+
+class TestFirstPracticeStamp:
+    """Every path that creates a practice stamps the user's first practice while it is
+    null, and leaves a stamp already there alone."""
+
+    @staticmethod
+    def _stamp(db, user):
+        db.refresh(user)
+        return user.first_practice_at
+
+    @staticmethod
+    def _clear_stamp(db, user):
+        # Reloaded first: this row is stale, and assigning the None it still holds would
+        # write nothing.
+        db.refresh(user)
+        assert user.first_practice_at is not None
+        user.first_practice_at = None
+        db.add(user)
+        db.commit()
+
+    def test_start_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        assert self._stamp(db, existing_user) is None
+
+        _start(client, "First", [session_config["id"]])
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        _start(client, "Second", [session_config["id"]])
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_rerun_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+
+        assert _rerun(client, run["id"], "Rerun").status_code == 201
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        assert _rerun(client, run["id"], "Rerun again").status_code == 201
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_chosen_cards_stamps_a_null_once(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+
+        assert _chosen(client, run["id"], "Chosen", session_cards[:1]).status_code == 201
+        stamped = self._stamp(db, existing_user)
+        assert stamped is not None
+
+        assert _chosen(client, run["id"], "Chosen again", session_cards[:1]).status_code == 201
+        assert self._stamp(db, existing_user) == stamped
+
+    def test_a_refused_rerun_leaves_a_null(
+        self, client, db, existing_user, session_cards, session_config
+    ):
+        run = _start(client, "Run", [session_config["id"]])
+        _finish_session(client, run["id"])
+        self._clear_stamp(db, existing_user)
+        for card_id in session_cards:
+            assert client.delete(f"/api/cards/{card_id}").status_code == 204
+
+        res = _rerun(client, run["id"], "Rerun")
+
+        assert res.json()["detail"]["code"] == "no_cards"
+        assert self._stamp(db, existing_user) is None

@@ -3,7 +3,7 @@ import uuid
 from sqlmodel import Session
 
 from app.database_ops.deck_practice_config import db_update_deck_practice_config
-from app.database_ops.field_def import db_read_active_field_ids_for_decks
+from app.database_ops.field_def import db_read_field_ids_for_decks
 from app.database_ops.practice_deck import (
     db_stage_set_practice_deck_source_config_name,
     db_stage_unlink_practice_decks_from_config,
@@ -32,7 +32,7 @@ def validate_deck_practice_config(
 ) -> None:
     """Raises ValueError (message describes the first rule violated) unless the config
     is valid. Run on both template save and session start — a config can go
-    stale between the two if a field gets archived after the config was saved, so both
+    stale between the two if a field gets deleted after the config was saved, so both
     call sites need this, not just creation."""
     groups = [
         ("prompt fields", set(prompt_field_ids)),
@@ -51,7 +51,7 @@ def validate_deck_practice_config(
 
     all_ids = set().union(*(s for _, s in groups))
     if all_ids:
-        live_ids = all_ids & db_read_active_field_ids_for_decks(db, [deck_id])
+        live_ids = all_ids & db_read_field_ids_for_decks(db, [deck_id])
         unknown = all_ids - live_ids
         if unknown:
             raise ValueError(

@@ -19,6 +19,7 @@ from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef, FieldType
 from app.models.mastery_log import MasteryLog
+from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
@@ -69,6 +70,21 @@ def _run(db, user_id, name, status=RunStatus.active):
     db.commit()
     db.refresh(run)
     return run
+
+
+def _practice_card(db, run_id, card_id, position, prompt_ids, answer_ids):
+    pc = PracticeCard(
+        practice_run_id=run_id,
+        card_id=card_id,
+        position=position,
+        prompts=list(prompt_ids),
+        answers=list(answer_ids),
+        status=PracticeCardStatus.passed,
+    )
+    db.add(pc)
+    db.commit()
+    db.refresh(pc)
+    return pc
 
 
 def _snapshot(
@@ -270,6 +286,18 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     completed_run_with_b = _run(db, existing_user.id, "completed-with-b", RunStatus.completed)
     completed_run_with_b_id = completed_run_with_b.id
     _snapshot(db, completed_run_with_b_id, deck1_id, [p_id], [a_id, b_id])
+    # Two practice cards of the completed run name B, one as a prompt and one as an
+    # answer, and a practice card of deck2's run names B too, which proves the scrub
+    # reaches both arrays and only deck1's cards.
+    b_as_prompt_id = _practice_card(
+        db, completed_run_with_b_id, card1_id, 0, [p_id, b_id], [a_id]
+    ).id
+    b_as_answer_id = _practice_card(
+        db, completed_run_with_b_id, card1_id, 1000, [p_id], [a_id, b_id]
+    ).id
+    deck2_run_id = _run(db, existing_user.id, "deck2-completed", RunStatus.completed).id
+    _snapshot(db, deck2_run_id, deck2_id, [x.id], [y.id])
+    deck2_card_id = _practice_card(db, deck2_run_id, card2_id, 0, [x.id, b_id], [y.id, b_id]).id
 
     impact = compute_deletion_impact(db, existing_user.id, field_ids=[b_id])
     apply_deletion(db, strategy, impact)
@@ -329,6 +357,16 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     assert db.get(PracticeRun, active_run_with_b_id) is None
     assert db.get(PracticeRun, active_run_without_b_id) is not None
     assert db.get(PracticeRun, completed_run_with_b_id) is not None
+
+    # Practice cards: deck1's lose B from both arrays, deck2's keeps it.
+    db.expire_all()
+    b_as_prompt = db.get(PracticeCard, b_as_prompt_id)
+    b_as_answer = db.get(PracticeCard, b_as_answer_id)
+    deck2_card = db.get(PracticeCard, deck2_card_id)
+    assert b_as_prompt is not None and b_as_answer is not None and deck2_card is not None
+    assert (b_as_prompt.prompts, b_as_prompt.answers) == ([p_id], [a_id])
+    assert (b_as_answer.prompts, b_as_answer.answers) == ([p_id], [a_id])
+    assert (deck2_card.prompts, deck2_card.answers) == ([x.id, b_id], [y.id, b_id])
 
 
 def test_card_deletion_issues_no_mastery_log_statements_beyond_its_own_cascade(

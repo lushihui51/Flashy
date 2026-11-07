@@ -4,7 +4,11 @@ import {
   CONNECTION_FAILED_MESSAGE,
   SERVER_TROUBLE_MESSAGE,
 } from 'src/api/unwrap';
-import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
+import {
+  MISSING_CONFIGURATION_MESSAGE,
+  NO_CARDS_MESSAGE,
+  NOTHING_TO_PRACTICE_MESSAGE,
+} from 'src/lib/practiceCopy';
 
 const SOMETHING_WENT_WRONG = 'Something went wrong.';
 
@@ -24,6 +28,7 @@ const SENTENCE_BY_CODE: ReadonlyMap<string, string> = new Map(
     duplicate_deck: 'Choose one configuration per deck.',
     nothing_to_rerun:
       "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
+    nothing_to_practice: NOTHING_TO_PRACTICE_MESSAGE,
     database_unavailable: 'Flashy is temporarily unavailable.',
   }),
 );

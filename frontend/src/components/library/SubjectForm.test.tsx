@@ -6,7 +6,8 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import SubjectForm from 'src/components/library/SubjectForm';
+import FullScreenDialog from 'src/components/ui/FullScreenDialog';
+import SubjectForm, { SubjectFormBody } from 'src/components/library/SubjectForm';
 
 const BASE = 'http://localhost:8000';
 
@@ -31,6 +32,7 @@ function renderForm(initialPath: string) {
       <Route path="/subjects/:subjectId/edit" element={<SubjectForm mode="edit" />} />
       <Route path="/subjects/:subjectId" element={<LocationProbe />} />
       <Route path="/library" element={<LocationProbe />} />
+      <Route path="/opener" element={<LocationProbe />} />
     </Routes>,
     [initialPath],
   );
@@ -43,6 +45,244 @@ beforeEach(() => {
 afterEach(() => {
   consoleError.mockRestore();
   server.resetHandlers();
+});
+
+// Each address is asked for alone or not at all, so a landing on the default shows the
+// other address did not stand in for it.
+describe.each([
+  {
+    mode: 'create',
+    path: '/subjects/new',
+    leaveLabel: 'Create',
+    cancelDefault: '/library',
+    saveDefault: '/subjects/s2',
+  },
+  {
+    mode: 'edit',
+    path: '/subjects/s1/edit',
+    leaveLabel: 'Save',
+    cancelDefault: '/subjects/s1',
+    saveDefault: '/subjects/s1',
+  },
+])(
+  'SubjectForm — return addresses, $mode',
+  ({ mode, path, leaveLabel, cancelDefault, saveDefault }) => {
+    beforeEach(() => {
+      server.use(
+        http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)),
+        http.post(`${BASE}/api/subjects`, () =>
+          HttpResponse.json({ ...subject, id: 's2', name: 'Chemistry' }, { status: 201 }),
+        ),
+      );
+    });
+
+    const open = async (search: string) => {
+      renderForm(`${path}${search}`);
+      await screen.findByRole('button', { name: leaveLabel });
+    };
+
+    const leaveBySaving = async (user: ReturnType<typeof userEvent.setup>) => {
+      if (mode === 'create')
+        await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+      await user.click(screen.getByRole('button', { name: leaveLabel }));
+    };
+
+    it.each([
+      { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', cancel: '/opener' },
+      { given: 'returnTo alone', search: '?returnTo=%2Fopener', cancel: cancelDefault },
+      { given: 'neither', search: '', cancel: cancelDefault },
+    ])('with $given, Cancel lands on $cancel', async ({ search, cancel }) => {
+      const user = userEvent.setup();
+      await open(search);
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(cancel));
+    });
+
+    it.each([
+      { given: 'cancelTo alone', search: '?cancelTo=%2Fopener', save: saveDefault },
+      { given: 'returnTo alone', search: '?returnTo=%2Fopener', save: '/opener' },
+      { given: 'neither', search: '', save: saveDefault },
+    ])(`with $given, ${leaveLabel} lands on $save`, async ({ search, save }) => {
+      const user = userEvent.setup();
+      await open(search);
+
+      await leaveBySaving(user);
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(save));
+    });
+
+    it('a confirmed Cancel lands on cancelTo', async () => {
+      const user = userEvent.setup();
+      await open('?cancelTo=%2Fopener&returnTo=%2Fother');
+
+      await user.type(screen.getByRole('textbox', { name: 'Name' }), 'x');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/opener'));
+    });
+  },
+);
+
+describe('SubjectForm — the heading and the bar', () => {
+  it.each([
+    { path: '/subjects/new', heading: 'New subject', leaveLabel: 'Create' },
+    { path: '/subjects/s1/edit', heading: 'Edit subject', leaveLabel: 'Save' },
+  ])(
+    '$heading has its heading outside the bar, and Cancel and $leaveLabel in it',
+    async ({ path, heading, leaveLabel }) => {
+      server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
+      renderForm(path);
+
+      const title = await screen.findByRole('heading', { name: heading });
+      expect(title.closest('[data-reveal-clear]')).toBeNull();
+      const bar = within(screen.getByTestId('form-bar'));
+      expect(bar.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+      expect(bar.getByRole('button', { name: leaveLabel })).toBeInTheDocument();
+    },
+  );
+
+  it('a failed Create puts its sentence in the bar', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Chemistry');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toHaveTextContent(
+      'Flashy is having trouble right now. Try again in a moment.',
+    );
+  });
+});
+
+describe('SubjectForm — bringing the Name input and its sentence on screen', () => {
+  let scrollBy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy');
+  });
+  afterEach(() => scrollBy.mockRestore());
+
+  it("a blank-name Create renders its sentence in the Name input's part, outside the label, and moves the page once", async () => {
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('Name is required.');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a blank-name Create in the overlay scrolls the dialog's content once and the window not at all", async () => {
+    const dialogScrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    const user = userEvent.setup();
+    renderWithProviders(
+      <FullScreenDialog open onClose={() => {}} ariaLabel="New subject">
+        <SubjectFormBody
+          mode="create"
+          subjectId={undefined}
+          original={undefined}
+          onSuccess={() => {}}
+          onCancel={() => {}}
+        />
+      </FullScreenDialog>,
+    );
+
+    const dialog = await screen.findByRole('dialog', { name: 'New subject' });
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(await within(dialog).findByText('Name is required.')).toBeInTheDocument();
+    expect(dialogScrollBy).toHaveBeenCalledTimes(1);
+    expect(dialogScrollBy.mock.contexts[0]).toBe(dialog);
+    expect(scrollBy).not.toHaveBeenCalled();
+    dialogScrollBy.mockRestore();
+  });
+
+  it('a blank-name Save on Edit subject moves the page once', async () => {
+    server.use(http.get(`${BASE}/api/subjects/s1`, () => HttpResponse.json(subject)));
+    const user = userEvent.setup();
+    renderForm('/subjects/s1/edit');
+
+    await user.clear(await screen.findByRole('textbox', { name: 'Name' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Name is required.')).toBeInTheDocument();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a subject_name_taken refusal renders in the Name input's part, not in the bar, and moves the page once", async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json(
+          { detail: { code: 'subject_name_taken', message: 'taken' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.type(input, 'Math');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const sentence = await screen.findByText('A subject with this name already exists.');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
+    expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+  });
+
+  it('editing the name clears a taken name\'s sentence and a blank name\'s', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json(
+          { detail: { code: 'subject_name_taken', message: 'taken' } },
+          { status: 400 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('Name is required.');
+    await user.type(input, 'Math');
+    expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await screen.findByText('A subject with this name already exists.');
+    await user.type(input, '!');
+    expect(screen.queryByText('A subject with this name already exists.')).not.toBeInTheDocument();
+  });
+
+  it('a 500 renders in the bar and leaves the page where it is', async () => {
+    server.use(
+      http.post(`${BASE}/api/subjects`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderForm('/subjects/new');
+
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Math');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(await bar.findByRole('alert')).toBeInTheDocument();
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
 });
 
 describe('SubjectForm — create mode', () => {

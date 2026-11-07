@@ -1,20 +1,19 @@
-import { useId, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useId, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck, readDecks } from 'src/api/deck';
-import { readSubjects } from 'src/api/subject';
 import {
   createDeckPracticeConfig,
   readDeckPracticeConfig,
   updateDeckPracticeConfig,
 } from 'src/api/deck_practice_config';
 import FieldAssignmentBoard from 'src/components/library/FieldAssignmentBoard';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
+import DeckPicker from 'src/components/library/DeckPicker';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import {
   boardFromConfig,
+  boardProblem,
   boardToPayload,
-  boardValidationError,
   defaultConfigurationName,
   emptyBoard,
   hasAnyAssignment,
@@ -24,36 +23,30 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
-import { internalReturnTo } from 'src/lib/returnTo';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useViewParams } from 'src/lib/viewParams';
+import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
 type DeckPracticeConfigRead = components['schemas']['DeckPracticeConfigRead'];
 
-type DeckOption = { id: string; name: string; subject_id: string; subject_name: string };
+type DeckOption = Pick<DeckSummary, 'id' | 'name' | 'subject_id' | 'subject_name'>;
 
 /** Context decks first, then the rest — the picker itself never sorts (it renders items
  * in the order given), so arriving from a subject or a deck page means its decks are the
  * ones already at the top of the list. */
-function orderedDeckOptions(
-  decks: DeckSummary[],
-  subjectNameById: Map<string, string>,
-  contextSubjectId: string | null,
-): DeckOption[] {
-  const options = decks.map((deck) => ({
-    id: deck.id,
-    name: deck.name,
-    subject_id: deck.subject_id,
-    subject_name: subjectNameById.get(deck.subject_id) ?? '',
-  }));
-  if (!contextSubjectId) return options;
+function orderedDeckOptions(decks: DeckSummary[], contextSubjectId: string | null): DeckOption[] {
+  if (!contextSubjectId) return decks;
   return [
-    ...options.filter((deck) => deck.subject_id === contextSubjectId),
-    ...options.filter((deck) => deck.subject_id !== contextSubjectId),
+    ...decks.filter((deck) => deck.subject_id === contextSubjectId),
+    ...decks.filter((deck) => deck.subject_id !== contextSubjectId),
   ];
 }
 
@@ -73,7 +66,7 @@ type DeckConfigurationEditorProps = {
  */
 export default function DeckConfigurationEditor({ mode }: DeckConfigurationEditorProps) {
   const { configId } = useParams<{ configId: string }>();
-  const [searchParams] = useSearchParams();
+  const { params } = useViewParams();
   const location = useLocation();
 
   const configQuery = useQuery({
@@ -89,11 +82,11 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     return (
       <div className="p-4">
         {isNotFound(configQuery.error) ? (
-          <p className="text-(--color-text-muted)">Deck configuration not found.</p>
+          <p className="text-(--color-aside)">Deck configuration not found.</p>
         ) : (
-          <p role="alert" className="text-sm text-(--color-danger)">
-            Could not load this deck configuration.
-          </p>
+          <FormPart sentence="Could not load this deck configuration." look="wrong">
+            {null}
+          </FormPart>
         )}
       </div>
     );
@@ -112,9 +105,10 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     <DeckConfigurationEditorBody
       mode={mode}
       config={configQuery.data}
-      contextSubjectId={searchParams.get('subject')}
-      contextDeckId={state?.deckId ?? searchParams.get('deck')}
-      returnTo={internalReturnTo(searchParams)}
+      contextSubjectId={params.get('subject')}
+      contextDeckId={state?.deckId ?? params.get('deck')}
+      cancelTo={internalReturnTo(params, 'cancelTo')}
+      returnTo={internalReturnTo(params, 'returnTo')}
     />
   );
 }
@@ -124,8 +118,11 @@ type BodyProps = {
   config?: DeckPracticeConfigRead;
   contextSubjectId: string | null;
   contextDeckId: string | null;
-  /** Where Cancel and a successful Create or Save land. Null means "the deck's own page", which
-   * is only knowable once a deck is chosen. */
+  /** Where Cancel lands. Null means the deck's Configurations tab with a deck chosen, and Your
+   * library with none. */
+  cancelTo: string | null;
+  /** Where a successful Create or Save lands. Null means the saved configuration's deck's
+   * Configurations tab. */
   returnTo: string | null;
 };
 
@@ -134,12 +131,15 @@ function DeckConfigurationEditorBody({
   config,
   contextSubjectId,
   contextDeckId,
+  cancelTo,
   returnTo,
 }: BodyProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // A config can never move between decks — its uniqueness and every field id in it are
   // deck-scoped — so edit mode pins the deck instead of offering the picker.
@@ -154,7 +154,6 @@ function DeckConfigurationEditorBody({
   const [nameError, setNameError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -162,10 +161,8 @@ function DeckConfigurationEditorBody({
     enabled: !!deckId,
   });
 
-  const subjectNameById = new Map((subjectsQuery.data ?? []).map((s) => [s.id, s.name]));
   const deckOptions = orderedDeckOptions(
     decksQuery.data ?? [],
-    subjectNameById,
     contextSubjectId ??
       (decksQuery.data ?? []).find((deck) => deck.id === contextDeckId)?.subject_id ??
       null,
@@ -210,9 +207,10 @@ function DeckConfigurationEditorBody({
     onError: (error) => {
       const sentence = failureSentence(error, 'Deck configuration not found.');
       // A duplicate name is the one failure the user fixes in place, so it belongs on
-      // the input rather than in a banner that costs them the rest of the form.
+      // the input rather than in the bar.
       if (error instanceof ApiDetailError && error.detail.code === 'configuration_name_taken') {
         setNameError(sentence);
+        revealFirstSentence(rootRef.current);
       } else {
         setSaveError(sentence);
       }
@@ -231,80 +229,69 @@ function DeckConfigurationEditorBody({
     else applyDeck(next);
   };
 
-  const validationError = board ? boardValidationError(board) : 'Choose a deck first.';
   const nameMissing = name.trim() === '';
-  const canSave =
-    !!deckId && !!board && !nameMissing && !validationError && !saveMutation.isPending;
+  // A blank name is said first, at the top of the page; the board says its problem once there is
+  // a name. Neither is said until the chosen deck's board has loaded.
+  const nameSentence =
+    nameError ??
+    (board && nameMissing
+      ? mode === 'edit'
+        ? 'Give this configuration a name to save it.'
+        : 'Give this configuration a name to create it.'
+      : null);
+  const problem = board && !nameMissing ? boardProblem(board) : null;
+  const ready = board !== null && !nameMissing && problem === null;
+
+  const handleSave = () => {
+    setNameError(null);
+    setSaveError(null);
+    saveMutation.mutate();
+  };
 
   return (
-    <div className="p-4">
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-(--color-surface) px-4 py-2">
-        <button
-          type="button"
-          onClick={() =>
-            navigate(returnTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
-          }
-          className="text-sm font-medium text-(--color-text-secondary)"
-        >
-          Cancel
-        </button>
-        <h1 className="text-base font-semibold text-(--color-text)">
-          {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
-        </h1>
-        <button
-          type="button"
-          disabled={!canSave}
-          onClick={() => {
-            setNameError(null);
-            setSaveError(null);
-            saveMutation.mutate();
-          }}
-          className="text-sm font-semibold text-(--color-primary) disabled:opacity-40"
-        >
-          {mode === 'edit' ? 'Save' : 'Create'}
-        </button>
-      </div>
+    <div ref={rootRef} className="p-4">
+      <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+        {mode === 'edit' ? 'Edit configuration' : 'New configuration'}
+      </h1>
 
-      <div className="mt-3 flex flex-col gap-3">
-        {/* Label and control are siblings, not a wrapping <label>: the inline error below
-            would otherwise become part of the field's own accessible name. */}
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-(--color-text)">Deck</span>
+      <div className="mt-4 flex flex-col gap-3">
+        <div
+          className={mode === 'edit' ? 'flex items-baseline gap-2.5' : 'flex flex-col gap-1.5'}
+        >
+          <span className="text-label text-(--color-aside)">Deck</span>
           {mode === 'edit' ? (
-            <span className="inline-flex h-11 items-center rounded-lg bg-(--color-surface-elevated) px-3 text-sm text-(--color-text)">
+            <span className="text-body font-semibold text-(--color-ink)">
               {selectedDeck
                 ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
                 : (deck?.name ?? '')}
             </span>
           ) : (
-            <PickerCombobox<DeckOption>
+            <DeckPicker<DeckOption>
               items={deckOptions}
               selected={selectedDeck}
               onSelect={chooseDeck}
               // Leaves the page, so it carries back where to return *including* the
               // context params — DeckEditor answers with the new deck's id in state.
-              // returnTo itself rides the URL, not state: this page's own full
-              // location already contains whatever returnTo it was opened with, so a
-              // nested round trip survives with nothing extra to forward by hand.
+              // Both addresses ride the URL, not state: this page's own full location
+              // already contains whatever addresses it was opened with, so a nested
+              // round trip survives with nothing extra to forward by hand.
               onSelectCreate={() => {
-                const params = new URLSearchParams();
-                params.set('returnTo', `${location.pathname}${location.search}`);
+                const params = returnAddressParams(location, 'cancelTo', 'returnTo');
                 navigate({ pathname: '/decks/new', search: params.toString() });
               }}
               createLabel="New deck…"
               placeholder="Deck"
-              renderLeading={(item) => (
-                <span className="shrink-0 text-xs text-(--color-text-muted)">
-                  {item.subject_name}
-                </span>
-              )}
             />
           )}
         </div>
 
         {deckId && (
-          <div className="flex flex-col gap-1">
-            <label htmlFor={nameInputId} className="text-sm font-medium text-(--color-text)">
+          <FormPart
+            sentence={nameSentence}
+            look={nameError ? 'wrong' : 'aside'}
+            className="flex flex-col gap-1.5"
+          >
+            <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
               Name
             </label>
             <input
@@ -316,29 +303,20 @@ function DeckConfigurationEditorBody({
                 setNameError(null);
               }}
               aria-invalid={nameError !== null}
-              aria-describedby={nameError ? `${nameInputId}-error` : undefined}
-              className="h-11 rounded-lg border border-(--color-surface-elevated) px-3 text-(--color-text)"
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
-            {nameError && (
-              <span
-                id={`${nameInputId}-error`}
-                role="alert"
-                className="text-sm text-(--color-danger)"
-              >
-                {nameError}
-              </span>
-            )}
-          </div>
+          </FormPart>
         )}
       </div>
 
-      {deckId && !deck && <p className="mt-4 text-(--color-text-muted)">Loading fields…</p>}
+      {deckId && !deck && <p className="mt-4 text-(--color-aside)">Loading fields…</p>}
 
       {deck && board && (
         <div className="mt-4">
           <FieldAssignmentBoard
             fieldDefs={deck.field_defs}
             state={board}
+            problem={problem}
             onMove={(fieldId: string, to: BoardSlot) =>
               setBoard((current) => (current ? moveField(current, fieldId, to) : current))
             }
@@ -349,27 +327,26 @@ function DeckConfigurationEditorBody({
         </div>
       )}
 
-      {deck && board && (validationError || nameMissing) && (
-        <p className="mt-3 text-sm text-(--color-text-muted)">
-          {validationError ??
-            (mode === 'edit'
-              ? 'Give this configuration a name to save it.'
-              : 'Give this configuration a name to create it.')}
-        </p>
-      )}
-
-      {saveError && (
-        <p role="alert" className="mt-3 text-sm text-(--color-danger)">
-          {saveError}
-        </p>
-      )}
+      <FormBar sentence={saveError}>
+        <button
+          type="button"
+          onClick={() =>
+            navigate(cancelTo ?? (deckId ? `/decks/${deckId}?tab=configurations` : '/library'))
+          }
+          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+        >
+          Cancel
+        </button>
+        <SubmitButton ready={ready} busy={saveMutation.isPending} onPress={handleSave}>
+          {mode === 'edit' ? 'Save' : 'Create'}
+        </SubmitButton>
+      </FormBar>
 
       <ConfirmDialog
         open={pendingDeck !== null}
         title="Change deck?"
         description="Fields belong to their own deck, so switching clears everything assigned here."
         confirmLabel="Continue"
-        destructive
         onConfirm={() => pendingDeck && applyDeck(pendingDeck)}
         onCancel={() => setPendingDeck(null)}
       />

@@ -16,6 +16,12 @@ from app.database_ops.review_log import (
     db_stage_create_review_logs,
 )
 from app.mastery.ema import EmaStrategy
+from app.mastery.readiness import (
+    ChangeKind,
+    classify_change,
+    fold_card_readiness,
+    fold_collection_readiness,
+)
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
 from app.models.card import Card
 from app.models.mastery_log import MasteryLog
@@ -113,6 +119,117 @@ class TestApplyReviewPurity:
         )
 
 
+def _rated_side(strategy, side, target_scores):
+    """The state one side reaches after one update per score, from a field never
+    reviewed."""
+    state = None
+    for target_score in target_scores:
+        state = strategy.apply_review(
+            state, MasteryUpdate(side=side, target_score=target_score, breadth=1)
+        )
+    return state
+
+
+class TestReadiness:
+    def test_never_reviewed_reads_zero(self):
+        assert EmaStrategy().readiness(None) == 0.0
+
+    def test_prior_reads_zero(self):
+        strategy = EmaStrategy()
+        assert strategy.readiness(strategy.prior()) == 0.0
+
+    def test_one_good_on_the_answer_side_from_empty(self):
+        strategy = EmaStrategy()
+        state = _rated_side(strategy, ReviewSide.answer, [67.0])
+        assert strategy.readiness(state) == pytest.approx(0.3, abs=1e-9)
+
+    def test_four_easy_on_one_side_read_one(self):
+        strategy = EmaStrategy()
+        state = _rated_side(strategy, ReviewSide.answer, [100.0] * 4)
+        assert strategy.readiness(state) == 1.0
+
+    def test_eight_good_on_one_side_read_above_0_94(self):
+        strategy = EmaStrategy()
+        state = _rated_side(strategy, ReviewSide.answer, [67.0] * 8)
+        assert strategy.readiness(state) > 0.94
+
+    def test_prompt_side_alone_reads_that_side_alone(self):
+        strategy = EmaStrategy()
+        state = _rated_side(strategy, ReviewSide.prompt, [67.0])
+        assert state.answer_review_count == 0
+        assert strategy.readiness(state) == pytest.approx(0.3, abs=1e-9)
+
+    def test_both_sides_reviewed_read_their_average(self):
+        strategy = EmaStrategy()
+        state = FieldMasteryState(
+            prompt_mastery=33.5, answer_mastery=67.0, prompt_review_count=1, answer_review_count=1
+        )
+        assert strategy.readiness(state) == pytest.approx(0.75, abs=1e-9)
+
+    def test_a_side_at_96_or_more_reads_one_before_and_after_one_again(self):
+        strategy = EmaStrategy()
+        state = None
+        while state is None or state.answer_mastery < 96:
+            state = strategy.apply_review(
+                state, MasteryUpdate(side=ReviewSide.answer, target_score=100.0, breadth=1)
+            )
+        assert strategy.readiness(state) == 1.0
+
+        after_again = strategy.apply_review(
+            state, MasteryUpdate(side=ReviewSide.answer, target_score=0.0, breadth=1)
+        )
+        assert strategy.readiness(after_again) == 1.0
+
+    def test_reach(self):
+        assert EmaStrategy().reach == pytest.approx(0.3 * 100 / 67, abs=1e-9)
+
+
+class TestReadinessFolds:
+    def test_card_averages_every_field_with_a_never_reviewed_field_at_zero(self):
+        assert fold_card_readiness([0.5, 0.0]) == pytest.approx(0.25)
+
+    def test_card_with_no_field_reads_zero(self):
+        assert fold_card_readiness([]) == 0.0
+
+    def test_collection_averages_its_cards(self):
+        assert fold_collection_readiness([1.0, 0.5, 0.0]) == pytest.approx(0.5)
+
+    def test_collection_with_no_card_has_none(self):
+        assert fold_collection_readiness([]) is None
+
+
+class TestClassifyChange:
+    REACH = 0.45
+    JUST_BELOW = 1e-9
+
+    def test_up_a_lot_starts_at_six_tenths_of_the_reach(self):
+        assert classify_change(0.6 * self.REACH, self.REACH) is ChangeKind.up_a_lot
+
+    def test_just_below_six_tenths_is_up(self):
+        assert classify_change(0.6 * self.REACH - self.JUST_BELOW, self.REACH) is ChangeKind.up
+
+    def test_up_starts_at_one_tenth_of_the_reach(self):
+        assert classify_change(0.1 * self.REACH, self.REACH) is ChangeKind.up
+
+    def test_just_below_one_tenth_is_no_change(self):
+        delta = 0.1 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.no_change
+
+    def test_no_change_starts_at_minus_one_tenth_of_the_reach(self):
+        assert classify_change(-0.1 * self.REACH, self.REACH) is ChangeKind.no_change
+
+    def test_just_below_minus_one_tenth_is_down(self):
+        delta = -0.1 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.down
+
+    def test_down_starts_at_minus_six_tenths_of_the_reach(self):
+        assert classify_change(-0.6 * self.REACH, self.REACH) is ChangeKind.down
+
+    def test_just_below_minus_six_tenths_is_down_a_lot(self):
+        delta = -0.6 * self.REACH - self.JUST_BELOW
+        assert classify_change(delta, self.REACH) is ChangeKind.down_a_lot
+
+
 class TestBreadthNotIndependentUpdates:
     """The bug this redesign fixes: a prompt shown alongside n rated answers in one
     appearance must produce one update with breadth n, not n independent blends."""
@@ -200,7 +317,7 @@ class TestBreadthNotIndependentUpdates:
         assert high_result.prompt_mastery > low_result.prompt_mastery
 
     def test_beta_one_matches_n_sequential_plain_alpha_blends(self):
-        """The closed-form identity the breadth formula rests on: at beta=1, one blend
+        """The closed-form identity the breadth formula relies on: at beta=1, one blend
         with alpha_eff = 1-(1-alpha)^n equals n sequential plain-alpha blends toward
         the same target — so grouping loses nothing when all ratings agree."""
         strategy = EmaStrategy(beta=1.0)

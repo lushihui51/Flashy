@@ -71,6 +71,14 @@ def db_read_card_ids_for_deck(db: Session, deck_id: uuid.UUID) -> list[uuid.UUID
     return list(db.exec(select(Card.id).where(Card.deck_id == deck_id)).all())
 
 
+def db_read_deck_id_by_card(
+    db: Session, card_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, uuid.UUID]:
+    """`{card.id: card.deck_id}` for the ids that still exist. Unscoped: the caller has
+    already ownership-checked the practice these cards came from."""
+    return dict(db.exec(select(Card.id, Card.deck_id).where(col(Card.id).in_(card_ids))).all())
+
+
 def db_read_cards_for_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> list[Card]:
     return list(
         db.exec(
@@ -78,6 +86,7 @@ def db_read_cards_for_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) 
             .join(Deck, Deck.id == Card.deck_id)
             .join(Subject, Subject.id == Deck.subject_id)
             .where(Card.deck_id == deck_id, Subject.user_id == user_id)
+            .order_by(col(Card.last_activity_at).desc(), col(Card.id))
             .options(selectinload(Card.values))
         ).all()
     )
@@ -91,6 +100,16 @@ def db_read_cards_with_values_for_deck(db: Session, deck_id: uuid.UUID) -> list[
             select(Card)
             .where(Card.deck_id == deck_id)
             .options(selectinload(Card.values))
+        ).all()
+    )
+
+
+def db_read_cards_with_values(db: Session, card_ids: Collection[uuid.UUID]) -> list[Card]:
+    """Unscoped: the caller has already ownership-checked the practice these cards came
+    from. In no particular order."""
+    return list(
+        db.exec(
+            select(Card).where(col(Card.id).in_(card_ids)).options(selectinload(Card.values))
         ).all()
     )
 

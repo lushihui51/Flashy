@@ -1,4 +1,4 @@
-# 018 — A failed card at completion
+# 018 — Failed card at completion
 
 ## Goal
 

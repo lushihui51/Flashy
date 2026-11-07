@@ -116,7 +116,7 @@ class TestDeckPracticeConfigValidation:
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
 
-    def test_archived_field_id_rejected(
+    def test_deleted_field_id_rejected(
         self, client, valid_config_payload, config_fields
     ):
         client.delete(f"/api/fields/{config_fields['prompt1']}")
@@ -154,7 +154,7 @@ class TestDeckPracticeConfigValidation:
 
     def test_pool_ids_without_counts_rejected(self, client, valid_config_payload):
         """A pool with no counts draws zero fields per card, so the pool is inert and a
-        config resting on it alone generates a session with no cards at all."""
+        config relying on it alone generates a session with no cards at all."""
         valid_config_payload["prompt_pool_counts"] = []
         res = client.post("/api/deck_practice_configs", json=valid_config_payload)
         assert res.status_code == 400
@@ -231,14 +231,18 @@ class TestDeckPracticeConfigList:
         self, client, multi_subject_library
     ):
         lib = multi_subject_library
-        rows = client.get("/api/deck_practice_configs").json()
+        rows = {row["name"]: row for row in client.get("/api/deck_practice_configs").json()}
 
-        assert [row["name"] for row in rows] == ["Config A", "Config B"]
-        assert rows[0]["deck_id"] == lib["decks"]["a"]["id"]
-        assert rows[0]["deck_name"] == "Shared Deck Name"
-        assert rows[0]["subject_id"] == lib["subjects"]["a"]["id"]
-        assert rows[0]["subject_name"] == "Alpha"
-        assert rows[0]["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
+        assert set(rows) == {"Config A", "Config B"}
+        config_a = rows["Config A"]
+        assert config_a["deck_id"] == lib["decks"]["a"]["id"]
+        assert config_a["deck_name"] == "Shared Deck Name"
+        assert config_a["subject_id"] == lib["subjects"]["a"]["id"]
+        assert config_a["subject_name"] == "Alpha"
+        assert config_a["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
+        config_b = rows["Config B"]
+        assert config_b["deck_id"] == lib["decks"]["b"]["id"]
+        assert config_b["subject_name"] == "Beta"
 
     def test_subject_filter(self, client, multi_subject_library):
         lib = multi_subject_library

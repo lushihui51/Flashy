@@ -6,7 +6,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, col, func, select
 
 from app.models.card import Card
-from app.models.deck import Deck, DeckSummary
+from app.models.deck import Deck, DeckListing
 from app.models.field_def import FieldDef
 from app.models.subject import Subject
 
@@ -37,36 +37,36 @@ def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
     return db.get(Deck, deck_id)
 
 
-def db_read_decks(
-    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
-) -> list[Deck]:
+def db_read_deck_listings(
+    db: Session,
+    user_id: uuid.UUID,
+    subject_id: uuid.UUID | None = None,
+    deck_ids: Collection[uuid.UUID] | None = None,
+) -> list[DeckListing]:
+    """The user's decks, of one subject when subject_id is given and among deck_ids when
+    those are given, most recently active first, each with its subject's name, card_count and field_names (position order,
+    active fields only) — via two grouped queries regardless of how many decks there
+    are, never one query per deck."""
     # Recency order, server-side — the frontend never sorts this list.
     query = (
-        select(Deck)
+        select(Deck, Subject.name)
         .join(Subject, Subject.id == Deck.subject_id)
         .where(Subject.user_id == user_id)
     )
     if subject_id is not None:
         query = query.where(Deck.subject_id == subject_id)
+    if deck_ids is not None:
+        query = query.where(col(Deck.id).in_(deck_ids))
     query = query.order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
-    return list(db.exec(query).all())
-
-
-def db_read_decks_with_summary(
-    db: Session, user_id: uuid.UUID, subject_id: uuid.UUID | None = None
-) -> list[DeckSummary]:
-    """Same decks as db_read_decks, plus each one's card_count and field_names
-    (position order, active fields only) — via two grouped queries regardless of how
-    many decks there are, never one query per deck."""
-    decks = db_read_decks(db, user_id, subject_id)
-    if not decks:
+    rows = db.exec(query).all()
+    if not rows:
         return []
-    deck_ids = [deck.id for deck in decks]
+    listed_ids = [deck.id for deck, _ in rows]
 
     card_counts = dict(
         db.exec(
             select(Card.deck_id, func.count())
-            .where(col(Card.deck_id).in_(deck_ids))
+            .where(col(Card.deck_id).in_(listed_ids))
             .group_by(col(Card.deck_id))
         ).all()
     )
@@ -74,19 +74,20 @@ def db_read_decks_with_summary(
     field_names_by_deck: dict[uuid.UUID, list[str]] = defaultdict(list)
     field_rows = db.exec(
         select(FieldDef.deck_id, FieldDef.name)
-        .where(col(FieldDef.deck_id).in_(deck_ids), col(FieldDef.archived_at).is_(None))
+        .where(col(FieldDef.deck_id).in_(listed_ids))
         .order_by(col(FieldDef.deck_id), col(FieldDef.position))
     ).all()
     for deck_id, name in field_rows:
         field_names_by_deck[deck_id].append(name)
 
     return [
-        DeckSummary(
+        DeckListing(
             **deck.model_dump(),
+            subject_name=subject_name,
             card_count=card_counts.get(deck.id, 0),
             field_names=field_names_by_deck.get(deck.id, []),
         )
-        for deck in decks
+        for deck, subject_name in rows
     ]
 
 

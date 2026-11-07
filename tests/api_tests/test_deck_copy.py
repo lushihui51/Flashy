@@ -109,7 +109,6 @@ class TestCopyDeckContent:
             source_setup["back"]["position"],
             source_setup["extra"]["position"],
         }
-        assert all(f.archived_at is None for f in new_fields)
 
         new_cards = _new_deck_cards(db, new_deck.id)
         source_card_ids = {c["id"] for c in source_setup["cards"]}
@@ -124,11 +123,11 @@ class TestCopyDeckContent:
             # values themselves carried over unchanged
             assert {v.value for v in values} <= {"F1", "B1", "E1", "F2", "B2", "E2"}
 
-    def test_does_not_copy_archived_field_or_its_values(
+    def test_does_not_copy_a_deleted_field_or_its_values(
         self, db, client, existing_user, source_setup, target_subject
     ):
-        archive_res = client.delete(f"/api/fields/{source_setup['extra']['id']}")
-        assert archive_res.status_code == 200, archive_res.text
+        delete_res = client.delete(f"/api/fields/{source_setup['extra']['id']}")
+        assert delete_res.status_code == 204, delete_res.text
 
         new_deck = copy_deck(
             db,
@@ -261,13 +260,14 @@ class TestCopyDeckPracticeConfig:
             == []
         )
 
-    def test_stale_config_rejected(self, db, client, existing_user, source_setup, target_subject):
-        """The config's pool references 'extra'; archiving it after the config was
-        saved makes the config stale — copy must not silently drop the id, it must
-        refuse the whole copy."""
+    def test_config_deleted_with_its_field_is_not_found_on_copy(
+        self, db, client, existing_user, source_setup, target_subject
+    ):
+        """The config's pool references 'extra'; deleting the field deletes the config
+        with it, so a copy that still names the config finds nothing."""
         client.delete(f"/api/fields/{source_setup['extra']['id']}")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(LookupError):
             copy_deck(
                 db,
                 existing_user.id,
@@ -404,15 +404,13 @@ class TestCopyDeckErrors:
     ):
         """Single transactional function: a failure partway through must roll back
         everything, not just the failed step."""
-        client.delete(f"/api/fields/{source_setup['extra']['id']}")  # makes config stale
-
-        with pytest.raises(ValueError):
+        with pytest.raises(LookupError):
             copy_deck(
                 db,
                 existing_user.id,
                 uuid.UUID(source_setup["deck"]["id"]),
                 uuid.UUID(target_subject["id"]),
-                deck_practice_config_ids=[uuid.UUID(source_setup["config"]["id"])],
+                deck_practice_config_ids=[uuid.uuid4()],
             )
         db.rollback()
 
