@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState, type RefObject } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
@@ -31,6 +31,8 @@ import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
+import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 type SubjectRead = components['schemas']['SubjectRead'];
@@ -50,9 +52,6 @@ const FIELD_TYPE_SELECT =
 
 type FieldsSectionProps = {
   fields: EditorField[];
-  /** The list of field rows; a row whose name is refused marks its sentence
-   * `data-field-error`. */
-  listRef: RefObject<HTMLUListElement | null>;
   onRename: (key: string, name: string) => void;
   onMove: (key: string, toIndex: number) => void;
   onRemove: (key: string) => void;
@@ -71,7 +70,7 @@ type FieldsSectionProps = {
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
-function FieldsSection({ fields, listRef, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
+function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
   const activeCount = fields.filter((f) => !f.pendingRemoval).length;
   // The primary field is the first field still active (not staged for removal), in
   // array order — array index doubles as position here, exactly what the Move up/down
@@ -85,7 +84,7 @@ function FieldsSection({ fields, listRef, onRename, onMove, onRemove, onAdd }: F
       <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul ref={listRef} className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
@@ -150,66 +149,63 @@ function FieldsSection({ fields, listRef, onRename, onMove, onRemove, onAdd }: F
 
           return (
             <li key={field.key}>
-              <div className="flex items-end gap-1 py-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
-                  <input
-                    type="text"
-                    aria-label="Field name"
-                    value={field.name}
-                    onChange={(e) => onRename(field.key, e.target.value)}
-                    className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
-                  />
+              <FormPart sentence={error} look="wrong" className="[&>[data-reveal-sentence]]:pb-3">
+                <div className="flex items-end gap-1 py-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
+                    <input
+                      type="text"
+                      aria-label="Field name"
+                      value={field.name}
+                      onChange={(e) => onRename(field.key, e.target.value)}
+                      className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
+                    />
+                  </div>
+  
+                  <select
+                    aria-label="Field type"
+                    value={field.type}
+                    disabled
+                    className={FIELD_TYPE_SELECT}
+                  >
+                    {SUPPORTED_FIELD_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t === 'text' ? 'Text' : t}
+                      </option>
+                    ))}
+                  </select>
+  
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} up`}
+                    disabled={index === 0}
+                    onClick={() => onMove(field.key, index - 1)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowUp aria-hidden="true" className="size-icon" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move ${field.name || 'field'} down`}
+                    disabled={index === fields.length - 1}
+                    onClick={() => onMove(field.key, index + 1)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <ArrowDown aria-hidden="true" className="size-icon" />
+                  </button>
+  
+                  <button
+                    type="button"
+                    aria-label={`Remove ${field.name || 'field'}`}
+                    title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
+                    disabled={activeCount <= 2}
+                    onClick={() => onRemove(field.key)}
+                    className={FIELD_ICON_BUTTON}
+                  >
+                    <X aria-hidden="true" className="size-icon" />
+                  </button>
                 </div>
-
-                <select
-                  aria-label="Field type"
-                  value={field.type}
-                  disabled
-                  className={FIELD_TYPE_SELECT}
-                >
-                  {SUPPORTED_FIELD_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t === 'text' ? 'Text' : t}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  aria-label={`Move ${field.name || 'field'} up`}
-                  disabled={index === 0}
-                  onClick={() => onMove(field.key, index - 1)}
-                  className={FIELD_ICON_BUTTON}
-                >
-                  <ArrowUp aria-hidden="true" className="size-icon" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Move ${field.name || 'field'} down`}
-                  disabled={index === fields.length - 1}
-                  onClick={() => onMove(field.key, index + 1)}
-                  className={FIELD_ICON_BUTTON}
-                >
-                  <ArrowDown aria-hidden="true" className="size-icon" />
-                </button>
-
-                <button
-                  type="button"
-                  aria-label={`Remove ${field.name || 'field'}`}
-                  title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
-                  disabled={activeCount <= 2}
-                  onClick={() => onRemove(field.key)}
-                  className={FIELD_ICON_BUTTON}
-                >
-                  <X aria-hidden="true" className="size-icon" />
-                </button>
-              </div>
-              {error && (
-                <p data-field-error className="pb-3 text-sm text-(--color-wrong)">
-                  {error}
-                </p>
-              )}
+              </FormPart>
             </li>
           );
         })}
@@ -266,9 +262,9 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
           {isNotFound(deckQuery.error) ? (
             <p className="text-(--color-aside)">Deck not found.</p>
           ) : (
-            <p role="alert" className="text-sm text-(--color-wrong)">
-              Could not load this deck.
-            </p>
+            <FormPart sentence="Could not load this deck." look="wrong">
+              {null}
+            </FormPart>
           )}
         </div>
       );
@@ -348,7 +344,8 @@ function DeckEditorBody({
 }: DeckEditorBodyProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { reveal } = useViewParams();
+  const { revealFirstSentence } = useViewParams();
+  const rootRef = useRef<HTMLDivElement>(null);
   const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
   // Computed once, at mount — the same rule as the subject combobox's own initial
@@ -377,10 +374,6 @@ function DeckEditorBody({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [subjectError, setSubjectError] = useState<string | null>(null);
-  const subjectErrorRef = useRef<HTMLSpanElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const nameErrorRef = useRef<HTMLSpanElement>(null);
-  const fieldsRef = useRef<HTMLUListElement>(null);
   // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
@@ -415,9 +408,6 @@ function DeckEditorBody({
     dispatch({ type: 'LOAD', state: original });
     setNameError(null);
   };
-
-  const revealName = () =>
-    reveal({ control: () => nameInputRef.current, listStart: () => nameErrorRef.current });
 
   const handleSaveCreate = async () => {
     const created = await createDeck(buildDeckCreatePayload(state));
@@ -467,7 +457,7 @@ function DeckEditorBody({
       // A taken name is fixed at the input, so it is said there rather than in the bar.
       if (err instanceof ApiDetailError && err.detail.code === 'deck_name_taken') {
         setNameError(sentence);
-        revealName();
+        revealFirstSentence(rootRef.current);
       } else {
         setSaveError(sentence);
       }
@@ -531,28 +521,6 @@ function DeckEditorBody({
   // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
   // so the check reads it symmetrically with field_defs.delete.
   const handleSaveClick = async () => {
-    if (!valid) {
-      const nameBlank = state.name.trim() === '';
-      const noSubject = state.subjectId === null;
-      if (nameBlank) setNameError('Name is required.');
-      if (noSubject) setSubjectError('Choose a subject to create a deck.');
-      const fieldSentence = fieldsRef.current?.querySelector('[data-field-error]');
-      if (nameBlank || nameError) {
-        revealName();
-      } else if (noSubject) {
-        reveal({
-          control: () => subjectInputRef.current,
-          listStart: () => subjectErrorRef.current,
-        });
-      } else if (fieldSentence) {
-        reveal({
-          control: () => fieldSentence.closest('li')?.querySelector('input') ?? null,
-          listStart: () => fieldSentence,
-        });
-      }
-      return;
-    }
-    if (!canSave) return;
     if (mode === 'edit') {
       const payload = buildDeckBatchEditPayload(original, state);
       const fieldIds = payload.field_defs?.delete ?? [];
@@ -593,6 +561,11 @@ function DeckEditorBody({
     void handleSave();
   };
 
+  const sayWhatIsMissing = () => {
+    if (state.name.trim() === '') setNameError('Name is required.');
+    if (state.subjectId === null) setSubjectError('Choose a subject to create a deck.');
+  };
+
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
 
   const subjectDefaultValue: SubjectItem | null =
@@ -620,31 +593,27 @@ function DeckEditorBody({
   const showDone = mode === 'edit' && !state.dirty;
 
   return (
-    <div className="p-4">
+    <div ref={rootRef} className="p-4">
       <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
         {mode === 'edit' ? 'Edit deck' : 'New deck'}
       </h1>
 
       <div className="mt-4 flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-label text-(--color-aside)">Deck name</span>
-          <input
-            ref={nameInputRef}
-            type="text"
-            value={state.name}
-            onChange={(e) => {
-              dispatch({ type: 'SET_NAME', name: e.target.value });
-              setNameError(null);
-            }}
-            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
-          />
-          {nameError && (
-            <span ref={nameErrorRef} role="alert" className="text-sm text-(--color-wrong)">
-              {nameError}
-            </span>
-          )}
-        </label>
-        <div className="flex flex-col gap-1.5">
+        <FormPart sentence={nameError} look="wrong" className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-(--color-aside)">Deck name</span>
+            <input
+              type="text"
+              value={state.name}
+              onChange={(e) => {
+                dispatch({ type: 'SET_NAME', name: e.target.value });
+                setNameError(null);
+              }}
+              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            />
+          </label>
+        </FormPart>
+        <FormPart sentence={subjectError} look="wrong" className="flex flex-col gap-1.5">
           <PickerCombobox<SubjectItem>
             items={subjectsQuery.data ?? []}
             selected={selectedSubject}
@@ -659,17 +628,11 @@ function DeckEditorBody({
             renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
             inputRef={subjectInputRef}
           />
-          {subjectError && (
-            <span ref={subjectErrorRef} role="alert" className="text-sm text-(--color-wrong)">
-              {subjectError}
-            </span>
-          )}
-        </div>
+        </FormPart>
       </div>
 
       <FieldsSection
         fields={state.fields}
-        listRef={fieldsRef}
         onRename={(key, name) => dispatch({ type: 'RENAME_FIELD', key, name })}
         onMove={(key, toIndex) => dispatch({ type: 'MOVE_FIELD', key, toIndex })}
         onRemove={handleRemoveField}
@@ -706,17 +669,16 @@ function DeckEditorBody({
             Undo
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => void handleSaveClick()}
-          disabled={saving || checkingSaveImpact}
-          aria-disabled={!canSave || undefined}
-          className="tappable flex-1 h-action rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:bg-(--color-surface) disabled:text-(--color-aside) disabled:[box-shadow:none] aria-disabled:border-(--color-line) aria-disabled:bg-(--color-surface) aria-disabled:text-(--color-aside) aria-disabled:[box-shadow:none]"
+        <SubmitButton
+          ready={valid && state.dirty}
+          busy={saving || checkingSaveImpact}
+          onNotReady={sayWhatIsMissing}
+          onPress={() => void handleSaveClick()}
         >
           {/* Reverts the instant a new edit re-dirties the form, not just after the
               2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
           {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
-        </button>
+        </SubmitButton>
       </FormBar>
 
       {/* Creating a subject from the combobox's create row happens *over* this editor

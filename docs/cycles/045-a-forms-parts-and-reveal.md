@@ -216,7 +216,7 @@ Read in the code: the Selected section in `PracticeCreatePage`, for the size ove
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -276,4 +276,35 @@ export function boardProblem(state: BoardState): BoardProblem | null;
 
 **Debrief**
 
-None.
+Done when:
+
+- `npx vitest run` over the four named files: 4 files passed, 143 tests passed, no `todo`.
+- `grep -rn "boardValidationError" frontend/src docs/vocabulary.md` printed nothing, exit 1.
+- The `grep -n` over `DeckEditor.tsx` and `DeckConfigurationEditor.tsx` printed nothing, exit 1.
+- Live, in headless Chromium by the mouse, no page errors. The header's bottom is at 114. Edit configuration ran at 390 by 844, its bar's top at 763:
+  - Name cleared and the answer side emptied, at the foot: Save moved the window from 133 to 98, the Name input at 140 to 186 and "Give this configuration a name to save it." at 192 to 212. The answer side's sentence did not show.
+  - With a name typed, at the foot: the Answer side's card at 515 to 747 and its sentence at 556 to 606, under the heading and above "Always shown". They were already on screen, so Save moved nothing. At 390 by 500 from the top of the page, Save moved the window from 0 to 485, the card's top at 187 and the sentence at 228 to 278, above the bar's top at 419.
+  - A field in the answer side's random draw with no count checked: the "Each card shows" row at 669 to 688 and the sentence right under it at 700 to 740. From the top of the page, Save moved the window from 0 to 134, the sentence at 723 to 763.
+  - **The 500-tall line does not hold as written; it needs your judgement.** New deck at 390 by 500, page at 120, New subject over it at its foot: the overlay overflows by 9 pixels, so the Name input (96 to 142) and "Name is required." (148 to 168) are on screen at its foot and Create moved it 0. A reveal moves only as far as it takes, so I changed no code for this. At 390 by 300 Create moved the overlay from 209 to 79, the Name input at 26 to 72 and the sentence at 78 to 98. The window stayed at 120 in both, and after the overlay closed.
+  - A not-ready Create from the foot: New practice with the name cleared, 927 to 63, sentence at 192 to 212. New card at 300 tall, sentence at 193 to 213, in view, window unmoved. New subject at 300 tall, 291 to 63, sentence at 192 to 212. New deck at 500 tall, 194 to 63, sentence at 192 to 212. New deck with a field's name blanked, at 500 tall: the sentence at 247 to 279, in view, window unmoved.
+  - The bar at the foot, lowest content against the bar's top: New practice 747 against 763, New card 187 against 219, New subject 170 against 219, New deck 338 against 419, Edit configuration 390 against 419. With a failed save's sentence in the bar: New deck 290 against 371, Edit configuration 342 against 371.
+- `npx vitest run`: 73 files passed, 864 tests passed.
+
+Commit checks over the whole frontend: `npx vitest run` as above; `npm run lint` clean; `npm run build` exit 0.
+
+**A row the check wrote to the dev database.** My script tapped Create on New deck expecting it not to be ready, but the form starts with Term and Definition filled in, so it saved a deck: "X", id `064674c2-ffc3-4d41-8fbc-9284d5c04c0f`, in subject CompTIA A+, no cards. AGENTS.md forbids deleting rows after a browser check, so it is still there, for you to keep or delete. From then on the script failed every write in the browser with a 500, and the failed-save results above come from that.
+
+How the check was set up: no seeded configuration belongs to a deck of five fields, and I wrote none. The browser served Edit configuration a made-up configuration on the real deck Reformer Repertoire, which has five fields, and no Save reached the server.
+
+Departures from guidance: none. Consequences and additions the file does not state:
+
+- New configuration now says the name first. A new form's name stays blank until both sides have a field, so with a deck chosen it reads "Give this configuration a name to create it." where it used to read the prompt side's sentence, and a tap with only the prompt side filled still asks for a name. The Details require this. "Create reads not ready…" in `DeckConfigurationEditor.test.tsx` now types a name first, to reach each board sentence.
+- A side's sentence comes after the side's two areas in the DOM and is drawn above them through `order-1`. `FormPart` draws its sentence after its children, and the whole side card must be the part. A screen reader therefore reads the sentence after the areas, while the screen shows it under the heading. The other way to keep the sentence's place is a change to `FormPart`, which is outside Files.
+- Each field's "Name is required." and "Duplicate name" now carry `role="alert"`, as `FormPart`'s `wrong` look has it; they had none, so a screen reader now announces them.
+- The Name input on the configuration form lost `aria-describedby`, since `FormPart` gives its sentence no id. It keeps `aria-invalid`, and the sentence is still announced as an alert.
+- "Could not load this deck." and "Could not load this deck configuration." go through `FormPart` with no children, since the scan forbids `role="alert"` in these files, so they carry the sentence mark.
+- Drawings 4 and 31 draw the Name above the Deck and "Not used" below the sides. The form has the Deck first and "Not used" above the sides, and I left that order as it is: the Details place only the sentences, and cycle 027 kept the same order. Moving them would not change which sentence comes first.
+- Two tests in `DeckEditor.test.tsx` asserted the sentence sits inside the label. They now assert it sits in the input's part and outside the label, as T2 did for `SubjectForm`. A new test covers a field's row as its part.
+- `docs/vocabulary.md` quotes "Each card shows" inside the Where text, as `docs/rules/vocabulary-rules.md` requires of words on screen.
+
+Read in the code: `sideCard` in `FieldAssignmentBoard.tsx`, for the `order-1` above.

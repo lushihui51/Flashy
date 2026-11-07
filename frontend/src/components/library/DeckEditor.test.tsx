@@ -1092,7 +1092,8 @@ describe('DeckEditor — bringing a part of the form and its sentence on screen'
 
     const nameSentence = await screen.findByText('Name is required.');
     expect(nameSentence).toHaveAttribute('role', 'alert');
-    expect(nameSentence.closest('label')).toBe(name.closest('label'));
+    expect(nameSentence.closest('[data-reveal-part]')).toContainElement(name);
+    expect(nameSentence.closest('label')).toBeNull();
     const subjectSentence = screen.getByText('Choose a subject to create a deck.');
     expect(subjectSentence).toHaveAttribute('role', 'alert');
     expect(picker.compareDocumentPosition(subjectSentence)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -1135,6 +1136,27 @@ describe('DeckEditor — bringing a part of the form and its sentence on screen'
     expect(screen.queryByText('Name is required.')).not.toBeInTheDocument();
   });
 
+  it("a field's sentence is its row's part, and a tap brings that part on screen", async () => {
+    mockEditDeck();
+    const measured = vi.spyOn(Element.prototype, 'getBoundingClientRect');
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    const field = await screen.findByDisplayValue('Back');
+    await user.clear(field);
+    const sentence = screen.getByText('Name is required.');
+    const part = sentence.closest('[data-reveal-part]');
+    expect(part).toContainElement(field);
+    expect(part).toContainElement(screen.getByRole('button', { name: 'Remove field' }));
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(measured.mock.contexts).toContain(sentence);
+    expect(measured.mock.contexts).toContain(part);
+    measured.mockRestore();
+  });
+
   it('Save with nothing changed moves nothing', async () => {
     mockEditDeck();
     const user = userEvent.setup();
@@ -1162,7 +1184,8 @@ describe('DeckEditor — bringing a part of the form and its sentence on screen'
 
     const sentence = await screen.findByText('A deck with this name already exists.');
     expect(sentence).toHaveAttribute('role', 'alert');
-    expect(sentence.closest('label')).toBe(input.closest('label'));
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(input);
+    expect(sentence.closest('label')).toBeNull();
     expect(screen.getByTestId('form-bar')).not.toContainElement(sentence);
     expect(scrollBy).toHaveBeenCalledTimes(1);
 

@@ -8,6 +8,8 @@ const SRC = fileURLToPath(new URL('..', import.meta.url));
 const FORMS = [
   'components/library/SubjectForm.tsx',
   'components/library/CardStandaloneForm.tsx',
+  'components/library/DeckEditor.tsx',
+  'components/library/DeckConfigurationEditor.tsx',
   'pages/PracticeCreatePage.tsx',
 ];
 
@@ -19,7 +21,4 @@ describe('every form draws its sentences and its Create or Save through the two 
     expect(source).not.toContain('aria-disabled');
     expect(source).toMatch(/import SubmitButton from /);
   });
-
-  it.todo('components/library/DeckEditor.tsx');
-  it.todo('components/library/DeckConfigurationEditor.tsx');
 });

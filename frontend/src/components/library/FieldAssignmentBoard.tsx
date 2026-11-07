@@ -1,8 +1,11 @@
 import { useId, useRef, useState } from 'react';
 import BottomSheet from 'src/components/ui/BottomSheet';
+import FormPart from 'src/components/ui/FormPart';
 import {
   fieldsIn,
   SLOT_LABELS,
+  type BoardPart,
+  type BoardProblem,
   type BoardSlot,
   type BoardState,
   type PoolSlot,
@@ -17,6 +20,8 @@ type FieldAssignmentBoardProps = {
   state: BoardState;
   onMove: (fieldId: string, to: BoardSlot) => void;
   onToggleCount: (slot: PoolSlot, count: number) => void;
+  /** The one problem to say on the board, drawn in that part's place; null says nothing. */
+  problem: BoardProblem | null;
 };
 
 /** The sheet's five possible destinations, in this fixed order. A field's own current
@@ -50,6 +55,7 @@ export default function FieldAssignmentBoard({
   state,
   onMove,
   onToggleCount,
+  problem,
 }: FieldAssignmentBoardProps) {
   const nameById = new Map(fieldDefs.map((field) => [field.id, field.name]));
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export default function FieldAssignmentBoard({
   const titleId = useId();
 
   const closeSheet = () => setActiveFieldId(null);
+  const sentenceOf = (part: BoardPart) => (problem?.part === part ? problem.sentence : null);
 
   const chipButton = (fieldId: string) => (
     <button
@@ -88,32 +95,34 @@ export default function FieldAssignmentBoard({
     );
   };
 
-  const frequencyRow = (slot: PoolSlot) => {
+  const frequencyRow = (slot: PoolSlot, part: BoardPart) => {
     const size = fieldsIn(state, slot).length;
     if (size === 0) return null;
     return (
-      <fieldset className="flex basis-full flex-wrap items-center gap-1.5 text-label text-(--color-aside)">
-        <legend className="sr-only">{RANDOM_DRAW_LEGEND[slot]}</legend>
-        <span>Each card shows</span>
-        {Array.from({ length: size }, (_, i) => i + 1).map((count) => {
-          const chosen = state.counts[slot].includes(count);
-          return (
-            <label
-              key={count}
-              className={`tappable-sm relative flex h-7.5 w-8 cursor-pointer items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`}
-            >
-              <input
-                type="checkbox"
-                checked={chosen}
-                onChange={() => onToggleCount(slot, count)}
-                className="sr-only"
-              />
-              {count}
-            </label>
-          );
-        })}
-        <span>of these</span>
-      </fieldset>
+      <FormPart sentence={sentenceOf(part)} look="aside" className="flex flex-col gap-1.5">
+        <fieldset className="flex basis-full flex-wrap items-center gap-1.5 text-label text-(--color-aside)">
+          <legend className="sr-only">{RANDOM_DRAW_LEGEND[slot]}</legend>
+          <span>Each card shows</span>
+          {Array.from({ length: size }, (_, i) => i + 1).map((count) => {
+            const chosen = state.counts[slot].includes(count);
+            return (
+              <label
+                key={count}
+                className={`tappable-sm relative flex h-7.5 w-8 cursor-pointer items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={chosen}
+                  onChange={() => onToggleCount(slot, count)}
+                  className="sr-only"
+                />
+                {count}
+              </label>
+            );
+          })}
+          <span>of these</span>
+        </fieldset>
+      </FormPart>
     );
   };
 
@@ -121,26 +130,33 @@ export default function FieldAssignmentBoard({
     const alwaysSlot: BoardSlot = side === 'prompt' ? 'prompt_fields' : 'answer_fields';
     const randomSlot: PoolSlot = side === 'prompt' ? 'prompt_pool' : 'answer_pool';
     return (
-      <section
-        key={side}
-        aria-label={side === 'prompt' ? 'Prompt side' : 'Answer side'}
-        className="tappable flex flex-col rounded-block bg-(--color-surface) px-4"
-      >
-        <h2 className="flex h-10 items-center ruled-bottom text-sm font-semibold text-(--color-ink)">
-          {side === 'prompt' ? 'Prompt side' : 'Answer side'}
-        </h2>
-        <section aria-label={SLOT_LABELS[alwaysSlot]} className="flex flex-col gap-2 pt-2.5 pb-3">
-          <h3 className="text-label text-(--color-aside)">Always shown</h3>
-          {area(alwaysSlot, 'None yet.')}
-        </section>
-        <section
-          aria-label={SLOT_LABELS[randomSlot]}
-          className="flex flex-col gap-2 border-t border-(--color-line) pt-2.5 pb-3"
+      <section key={side} aria-label={side === 'prompt' ? 'Prompt side' : 'Answer side'}>
+        {/* The whole card is the part, so a reveal brings its top on screen. A part's sentence
+            follows its children, so `order-1` draws the two areas below it, under the heading. */}
+        <FormPart
+          sentence={sentenceOf(side === 'prompt' ? 'prompt_side' : 'answer_side')}
+          look="aside"
+          className="tappable flex flex-col rounded-block bg-(--color-surface) px-4 [&>[data-reveal-sentence]]:pt-2.5"
         >
-          <h3 className="text-label text-(--color-aside)">Random draw</h3>
-          {area(randomSlot, 'None yet.')}
-          {frequencyRow(randomSlot)}
-        </section>
+          <h2 className="flex h-10 items-center ruled-bottom text-sm font-semibold text-(--color-ink)">
+            {side === 'prompt' ? 'Prompt side' : 'Answer side'}
+          </h2>
+          <section
+            aria-label={SLOT_LABELS[alwaysSlot]}
+            className="order-1 flex flex-col gap-2 pt-2.5 pb-3"
+          >
+            <h3 className="text-label text-(--color-aside)">Always shown</h3>
+            {area(alwaysSlot, 'None yet.')}
+          </section>
+          <section
+            aria-label={SLOT_LABELS[randomSlot]}
+            className="order-1 flex flex-col gap-2 border-t border-(--color-line) pt-2.5 pb-3"
+          >
+            <h3 className="text-label text-(--color-aside)">Random draw</h3>
+            {area(randomSlot, 'None yet.')}
+            {frequencyRow(randomSlot, side === 'prompt' ? 'prompt_counts' : 'answer_counts')}
+          </section>
+        </FormPart>
       </section>
     );
   };
