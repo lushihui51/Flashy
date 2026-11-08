@@ -2,6 +2,7 @@
 
 - Flashy is a flashcard web app.
 - The user is a person using the app, not the engineer or the product owner building it; there are none yet, so a product decision covers only what is built.
+- A drawing is a phone screen, 390 by 844.
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
@@ -46,18 +47,18 @@
   - Reason: peer sessions share TEST_DATABASE_URL
 - Never delete rows from the dev database as cleanup after a browser check; seeded data stays.
 - Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
-- Never write under docs/ beyond what the running skill lists or the engineer orders.
+- Never write under docs/ beyond what the running skill lists or the human orders.
   - Reason: every docs/ file records the human's decision
 - Name code by file and symbol, never by line number, in every file you write.
   - Reason: a line number changes with the next commit
-- Raise a finding that must outlive the session to the engineer; never fix it in passing.
-  - Reason: a lasting decision needs the engineer's approval
-- Treat an explicit order from the engineer as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
-- After the engineer orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
+- Raise a finding that must outlive the session to the human; never fix it in passing.
+  - Reason: a lasting decision needs the human's approval
+- Treat an explicit order from the human as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
+- After the human orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
   - Reason: one standing approval, given once a conversation
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
-- Never mark deferred work in code; raise it to the engineer as a question for docs/backlog.md.
+- Never mark deferred work in code; raise it to the human as a question for docs/backlog.md.
   - Reason: the backlog is a kept question's one home
 - Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
   - Reason: PDR 001, ADR 069
