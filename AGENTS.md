@@ -15,7 +15,8 @@
   - Reason: npm run test is watch mode and does not exit
 - Dry-run a new migration on a `pg_dump` copy of the dev database, then apply it with `alembic upgrade head` in the task that writes it.
   - Reason: fastapi dev reloads new models before the schema
-- Check a frontend change in headless Chromium through playwright-core, run from the session scratchpad against localhost:5173, signed out of Clerk with `DEV_AUTH_USER_ID` and `ENV=development` set.
+- See a page of the running app, or check a frontend change, in headless Chromium through playwright-core, from the scratchpad against localhost:5173.
+- Run a browser check signed out of Clerk, with `DEV_AUTH_USER_ID` and `ENV=development` set.
 - Run the record citation guard with `uv run pytest tests/api_tests/test_record_citation_guard.py -q`.
 
 # Hard rules
