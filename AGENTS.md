@@ -6,7 +6,7 @@
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
-- The `process` plugin, read from the Process repository, holds the skills and the rules for every file an agent writes under docs/, for comments in code, and for this file.
+- The `process` plugin holds the skills and the rules for every file an agent writes under docs/, for comments in code, and for this file.
 - README.md is for a human reader and self-contained; it never points at AGENTS.md or a record.
 
 # Commands
@@ -56,6 +56,8 @@
 - Treat an explicit order from the human as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
 - After the human orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
   - Reason: one standing approval, given once a conversation
+- When auto mode reaches a skill's Ending, first list in plain words each proposal taken that was a close call or a hard decision, the alternative it beat and why it was taken, or say none was.
+  - Reason: the human reviews what auto mode approved
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
 - Never mark deferred work in code; raise it to the human as a question for docs/backlog.md.
