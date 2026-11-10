@@ -1,0 +1,131 @@
+# 047 — A form's way out
+
+Waits for: 046, its three steps in `HomePage`, its three rows in `CreateSheet`, its one list in `LibraryPage`, its one place in `DeckDetailPage`'s breadcrumb, its deck form with no subject in `DeckEditor`, and the deck-only filters of `PracticeOverviewPage` and `PracticeCreatePage`, files this cycle shares.
+
+## Goal
+
+Outcome: Every form backs out to the page that opened it, wherever it was opened from, and lands on what it made after Create; once the user has left a form by Cancel, Create or Save, the form is no longer in the browser's history, so the "<" on the page they land on never opens it again.
+
+Scope: The cycle covers `useLeaveForm` under `frontend/src/lib/`, the one way New deck, Edit deck, New card, Edit card and New practice leave by Cancel, Create, Save, Done or Delete; New practice reading `cancelTo` and `returnTo` as every other form does; and every opener of those forms passing its own address as `cancelTo`: Home's steps and its New practice, the top bar's New sheet, Your library's Add deck, a deck's page's Add card, Edit deck and card rows, and the Practice page's Add practice. It leaves out New configuration and Edit configuration, which cycle 049 removes; and every form's look and words, which do not change.
+
+Judgement: The engineer judges on the live server at 390 wide, by the mouse: on the run page, Edit card then Cancel lands on the run page on the same card, and its "<" then lands on the page the run page was reached from, not on Edit card; signed in as a user with no practice, Home's New deck step then Cancel lands on Home; the New sheet opened over a deck's page, New card, then Cancel lands on that deck's page; the Practice page narrowed to a deck, Add practice, then Cancel lands on the Practice page still narrowed; Your library, Add deck, a name and two fields, then Create lands on the new deck's page, and its "<" does not open New deck; New card, its Deck picker's "New deck…", then Create lands back on New card with the new deck chosen; and New deck opened from its address in a fresh tab, then Cancel, lands on Your library.
+
+## Records
+
+- ADR 124: Two URL parameters for a form's return addresses, and one function leaving every form by history
+- ADR 099: The router's history index as the test for an earlier page
+- ADR 097: One hook for a page's URL search params, that never resets scroll
+- PDR 017: A row of the places above a page, led by a way back
+- PDR 034: A form about one thing and nothing it holds, landing on the thing it made
+
+## Tasks
+
+### T1 — useLeaveForm and every form leaving through it
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+New deck, Edit deck, New card, Edit card and New practice leave by Cancel, Create, Save, Done and Delete only through `useLeaveForm`, so a form left with an earlier page in Flashy's history is gone from the history, and New practice's Cancel and Create read `cancelTo` and `returnTo`.
+
+**Dependencies**
+
+None.
+
+**Files**
+
+- `frontend/src/lib/leaveForm.ts` (new)
+- `frontend/src/lib/leaveForm.test.tsx` (new)
+- `frontend/src/components/library/DeckEditor.tsx`
+- `frontend/src/components/library/DeckEditor.test.tsx`
+- `frontend/src/components/library/CardStandaloneForm.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `frontend/src/pages/PracticeCreatePage.tsx`
+- `frontend/src/pages/PracticeCreatePage.test.tsx`
+
+**Details**
+
+ADR 124 and ADR 099:
+
+```ts
+/** The way a form leaves for `target`, an app path, with `state` as a one-shot arrival
+ * result for the page there. With an earlier page in Flashy's history (`hasEarlierPage()`),
+ * it steps back one entry to the form's opener, then replaces that entry with `target` and
+ * `state` when the opener's address differs from `target` or `state` is given; otherwise it
+ * replaces the form's own entry with `target` and `state`. */
+export function useLeaveForm(): (target: string, state?: Record<string, unknown>) => void;
+```
+
+- `useLeaveForm` must live in `frontend/src/lib/leaveForm.ts` and read the earlier page only through `hasEarlierPage()` in `frontend/src/lib/historyIndex.ts`. An address compares as `pathname + search`.
+- Every Cancel, Create, Save and Done of `DeckEditor`, `CardStandaloneForm` and `PracticeCreatePage` must leave through it, with the address each chooses today: Cancel to `cancelTo`, else the default; Create and Save to `returnTo`, else the made or changed thing's page; an arrival result, such as the new deck's id for a picker, as `state`. No `navigate` call in these three files may leave the form; a `navigate` that opens another form from inside one, such as "New deck…" from New card's picker, stays.
+- `PracticeCreatePage` must read `cancelTo` and `returnTo` through `internalReturnTo`, as every other form does: Cancel to `cancelTo`, else `/practice`; Create to `returnTo`, else the new practice's page.
+- Guidance: Delete deck and Delete card leave through `useLeaveForm` too, to the address they land on today, so the deleted thing's page leaves the history with the form.
+- Guidance: under the data router, `await navigate(-1)` resolves once the opener's entry is current, and the opener's address is then `window.location.pathname + window.location.search`; a router whose history holds no index, such as `createMemoryRouter`, takes the replace branch.
+- Tests, in `leaveForm.test.tsx` with `createBrowserRouter` over jsdom's history: from a form pushed over an opener, leaving for the opener's own address leaves the opener's entry current and the history one entry shorter, with no replace; leaving for another address replaces the opener's entry with it; leaving with `state` delivers the state; with no earlier page, the form's entry is replaced. In the three forms' tests, Cancel, Create and Save call the hook's function with the addresses above.
+
+**Out of scope**
+
+- `DeckConfigurationEditor`: never; cycle 049 deletes it.
+- Back and the breadcrumb reading `cancelTo` or `returnTo`: never, ADR 124.
+- The openers passing `cancelTo`: T2.
+
+**Done when**
+
+- `cd frontend && npx vitest run src/lib/leaveForm.test.tsx src/components/library/DeckEditor.test.tsx src/components/library/CardStandaloneForm.test.tsx src/pages/PracticeCreatePage.test.tsx` passes.
+- `grep -n "navigate(" frontend/src/components/library/DeckEditor.tsx frontend/src/components/library/CardStandaloneForm.tsx frontend/src/pages/PracticeCreatePage.tsx` prints only the calls that open another form from inside one.
+- On the live server at 390 wide: on the run page, Edit card then Cancel lands on the run page on the same card, and its "<" lands on the page the run page was reached from; New card, its Deck picker's "New deck…", then Create lands back on New card with the new deck chosen; New deck opened from its address in a fresh tab, then Cancel, lands on Your library.
+
+**Debrief**
+
+None.
+
+### T2 — Every opener's own address
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+Every page that opens New deck, Edit deck, New card, Edit card or New practice passes its own address as `cancelTo`, so the form's Cancel lands where the user opened it, Home's steps and the top bar's New sheet included.
+
+**Dependencies**
+
+- T1: `useLeaveForm`, and New practice's Cancel reading `cancelTo`.
+
+**Files**
+
+- `frontend/src/pages/HomePage.tsx`
+- `frontend/src/pages/HomePage.test.tsx`
+- `frontend/src/components/shell/CreateSheet.tsx`
+- `frontend/src/components/shell/CreateSheet.test.tsx`
+- `frontend/src/pages/LibraryPage.tsx`
+- `frontend/src/pages/LibraryPage.test.tsx`
+- `frontend/src/pages/DeckDetailPage.tsx`
+- `frontend/src/pages/DeckDetailPage.test.tsx`
+- `frontend/src/pages/PracticeOverviewPage.tsx`
+- `frontend/src/pages/PracticeOverviewPage.test.tsx`
+
+**Details**
+
+LPD4, under ADR 124:
+
+- Every opener named in the Goal must open its form with `returnAddressParams(location, 'cancelTo')` from `frontend/src/lib/returnTo.ts`, its own `pathname + search`, beside any parameter or router state it passes today: Home's three steps and its New practice link; the New sheet's three rows, with the address of the page beneath the sheet; Your library's Add deck; a deck's page's Add card, its pencil to Edit deck, and its card rows to Edit card; and the Practice page's Add practice, beside the filter parameters it passes today.
+- No opener passes `returnTo`, so Create still lands on the thing made.
+- Tests: `HomePage.test.tsx` asserts each step's link carries `cancelTo=%2F`; `CreateSheet.test.tsx` asserts a row opens its form with the current page's address as `cancelTo`; `LibraryPage.test.tsx`, `DeckDetailPage.test.tsx` and `PracticeOverviewPage.test.tsx` assert their openers carry their own address.
+
+**Out of scope**
+
+- The run page's and the summary's Edit card, which pass both addresses today: never changed here.
+- New practice's "New configuration…" and pencil: never; cycle 049 removes them.
+
+**Done when**
+
+- `cd frontend && npx vitest run src/pages/HomePage.test.tsx src/components/shell/CreateSheet.test.tsx src/pages/LibraryPage.test.tsx src/pages/DeckDetailPage.test.tsx src/pages/PracticeOverviewPage.test.tsx` passes.
+- The cycle's judgement holds.
+
+**Debrief**
+
+None.
