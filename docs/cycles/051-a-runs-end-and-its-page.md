@@ -1,6 +1,6 @@
 # 051 — A run's end and its page
 
-Waits for: 049, its `run` and `run_card` tables, `RunPage` at `/runs/:runId`, `RunMark`, `RunStatusBadge`, `RerunButton`, `RunBreakdown` on the new paths and `practice_has_active_run`; 050, its `RunDetail` from `GET /api/runs/{id}` and the run's board at `/runs/:runId/decks/:deckId`; and `docs/vocabulary.md`, which it shares with both.
+Waits for: 048, its `DeckMark`; 049, its `run` and `run_card` tables, `RunListing`, `RunPage` at `/runs/:runId`, `RunMark`, `PracticeMark`, `formatRunDay`, `RunStatusBadge`, `RerunButton`, `RunBreakdown` on the new paths, `failureSentence`'s map of sentences by code, and `practice_has_active_run`; 050, its `RunDetail` from `GET /api/runs/{id}` with `decks`, and the run's board at `/runs/:runId/decks/:deckId`; and `docs/vocabulary.md`, which it shares with each.
 
 Canvas: https://claude.ai/artifact/NdSpFVAWQESu3S2ydqJoNS
 
@@ -66,20 +66,20 @@ None.
 
 **Details**
 
-PDR 038, LPD13, LPD20 and drawing 14, under ADR 111 and ADR 117:
+PDR 038 and drawing 14, under ADR 111 and ADR 117:
 
 - `POST /api/runs/{id}/end` (no body, 200, `RunRead`) must, through `end_run(db, run)` in `app/services/run.py` and in one transaction, delete every `pending` `run_card` of the run, mark it completed and touch it (ADR 111, ADR 117), on a whole run and a run of chosen cards alike. Another user's run is a 404.
 - `RunDetail` must extend `RunListing`, so `GET /api/runs/{id}` carries `reached_cards` and `counted_cards`.
-- The run page must keep its row of places, no heading, its progress bar and its card as they stand, and put "End run" as a white button at the right end of the progress bar's line, the bar shortening to make room, as drawing 14 draws it. End run asks, through `ConfirmDialog`, "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did.", with Cancel and "End run"; on "End run" it calls the path and the run page turns into the completed run's page in place, with no new history entry.
-- A failure of the end shows its sentence beside "End run" (PDR 031).
-- Tests: ending deletes the pending rows and keeps every rated one and every review, the run's N reads the cards reached, and the run is touched; the run page's End run asks first, Cancel changes nothing, and yes calls the path once.
+- While a card is current, the run page must keep its row of places, no heading, its progress bar and its card as they stand, and put "End run" as a white button at the right end of the progress bar's line, the bar shortening to make room, as drawing 14 draws it. Once the run is completed, neither the bar nor "End run" shows. End run asks, through `ConfirmDialog`, "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did.", with Cancel and "End run"; on "End run" it calls the path and the run page turns into the completed run's page in place, with no new history entry.
+- `frontend/src/api/run.ts` must offer `endRun(runId)`. A failure of the end shows its sentence beside "End run", through `failureSentence` with "Run not found." for a 404 (PDR 031).
+- Tests: ending deletes the pending rows and keeps every rated one and every review, the run's N reads the cards reached, and the run is touched; the run page's End run asks first, Cancel changes nothing, and yes calls the path once; `run.test.ts` covers `endRun`'s request; a completed run's page shows no "End run".
 - `docs/vocabulary.md`: "Ending a run before its last card": User reads "End run"; "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did."; Where the run page, at the right end of the progress bar's line; Code `POST /api/runs/{id}/end`; `end_run`.
 
 **Out of scope**
 
 - An `ended` status, or anything recording why a run became completed: never, ADR 111.
 - What ending a run that is already completed does, refused or answered unchanged: an unsettled decision, backlog B33; no test fixes it.
-- End run among the card's acts or in the row of places: never, LPD13.
+- End run among the card's acts or in the row of places: never.
 - The completed run's page as drawing 13 draws it: T2.
 
 **Done when**
@@ -116,22 +116,23 @@ A completed run's page reads as drawing 13 draws it: under "All practices › <p
 
 **Details**
 
-LPD12, LPD13, LPD19, LPD20, PDR 040, PDR 041 and drawing 13:
+PDR 040, PDR 041 and drawing 13:
 
-- Once the run is completed, the run page must read as drawing 13, under the row of places "All practices" then the practice's `PracticeMark` and name: the heading, the run's `RunMark` at the heading's size and its day as `formatRunDay` writes it; then the "Completed" badge and "N of M cards" on one line; then one line per deck the run asked, its `DeckMark` and name, opening `/runs/:runId/decks/:deckId` with the page's own address as `cancelTo`; then "Re-run" as the page's main action in yellow, its words alone with no sign; then the summary. "Practice complete", "N cards practiced" and "Done" leave the page.
+- Once the run is completed, the run page must read as drawing 13, under the row of places "All practices" then the practice's `PracticeMark` and name: the heading, the run's `RunMark` at the heading's size and its day as `formatRunDay` writes it; then the "Completed" badge and "N of M cards" on one line; then one line per deck of `RunDetail.decks`, in its order, its `DeckMark` and name, opening `/runs/:runId/decks/:deckId` with the page's own address as `cancelTo`; then "Re-run" as the page's main action in yellow, its words alone with no sign; then the summary. "Practice complete", "N cards practiced" and "Done" leave the page.
 - The page reads the run through `GET /api/runs/{id}` and the summary through the breakdown read, each through TanStack Query (ADR 088).
 - Re-run must start the run at once through `POST /api/runs/{id}/rerun`, with no confirm, and open `/runs/:newRunId`; a refusal shows its sentence beneath it: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first."
 - Tests: the heading, the badge and count, the deck lines' addresses, Re-run's words and look, no "Done", and each refusal's sentence.
 - `docs/vocabulary.md`, each row's columns as given:
   - "Running a practice again": User reads "Re-run"; Where a completed run's page, as its main action.
-  - "Leaving a finished practice": User reads "—"; Where "—".
+  - "How many of its practice's cards a run reached": Code `reached_cards`; `counted_cards`; `RunListing`.
+  - "Leaving a finished practice": User reads "—"; Where "—"; the row leaves the file, since "Done" and its code go.
   - "What a practice did to mastery, never named": Concept "What a run did to mastery, never named"; User reads the run's mark and its day heading it; Where a completed run's page.
 
 **Out of scope**
 
 - "Re-run these", the counts and the zero counts: T3.
-- Re-run beside a "Done" at the foot, or as the play button: never, LPD12.
-- The summary first and Re-run below it, or every board open above the summary: never, LPD12.
+- Re-run beside a "Done" at the foot, or as the play button: never.
+- The summary first and Re-run below it, or every board open above the summary: never.
 
 **Done when**
 
@@ -165,10 +166,11 @@ On a completed run's page, a kind of change no card had shows its badge in its c
 
 **Details**
 
-LPD3, LPD5, LPD12, LPD20, PDR 040, PDR 041 and drawing 6:
+PDR 040, PDR 041 and drawing 6:
 
+- A kind in the page's `kind` parameter whose count is zero must be ignored, so an address can no more narrow the list to nothing than a tap can.
 - Each kind of change with a count above zero must stay a button drawn as a block, pressed while chosen, narrowing the list as today. A kind with no card must show its `ChangeBadge` in its own color and its 0 with no block around them, as drawing 6 draws "0 up" and "0 down", and must be no button: nothing happens when it is tapped and it is not reached by Tab.
-- Under the counts, once one or more counts are chosen, "Re-run these" must start a run of exactly the cards the list shows through `POST /api/runs/{id}/chosen_cards`, with no confirm, and open `/runs/:newRunId`, as drawing 6-chosen draws it; a refusal shows beneath it: `no_cards` "These cards can't be run. Each is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first." It reads its words alone with no sign.
+- Under the counts, once one or more counts are chosen, "Re-run these" must start a run of exactly the cards the list shows through `POST /api/runs/{id}/chosen_cards`, with no confirm, and open `/runs/:newRunId`, as drawing 6-chosen draws it; a refusal shows beneath it: `no_cards` "These cards can't be run. Each is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first." It reads its words alone with no sign, a white button, as drawing 6-chosen draws it, Re-run alone being yellow.
 - The chosen counts and the order must stay in the page's `kind` and `order` parameters, so they survive a refresh, browser back and the address; a run's page reached by its address with neither opens on every card ordered by mastery, as drawing 6-fresh draws it (PDR 017, PDR 041).
 - Tests: a zero count is no button and a tap on it changes nothing; "Re-run these" appears once a count is chosen and sends the listed cards; a render from `?kind=down_a_lot&order=drops` shows that narrowing and order.
 - `docs/vocabulary.md`, each row's columns as given:
@@ -178,7 +180,7 @@ LPD3, LPD5, LPD12, LPD20, PDR 040, PDR 041 and drawing 6:
 
 **Out of scope**
 
-- A greyed badge, a dashed outline or a hidden zero: never, LPD3.
+- A greyed badge, a dashed outline or a hidden zero: never.
 - Words for a list narrowed to nothing: never; no count of zero can be chosen.
 
 **Done when**
