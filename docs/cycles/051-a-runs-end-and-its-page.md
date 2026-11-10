@@ -61,23 +61,24 @@ None.
 - `frontend/src/test/run.test.ts`
 - `frontend/src/pages/RunPage.tsx`
 - `frontend/src/pages/RunPage.test.tsx`
-- `frontend/src/components/practice/RunProgressBar.tsx`
+- `frontend/src/components/run/RunProgressBar.tsx`
 - `docs/vocabulary.md`
 
 **Details**
 
 PDR 038, LPD13, LPD20 and drawing 14, under ADR 111 and ADR 117:
 
-- `POST /api/runs/{id}/end` (no body, 200, `RunRead`) must, through `end_run(db, run)` in `app/services/run.py` and in one transaction, delete every `pending` `run_card` of the run, mark it completed and touch it (ADR 111, ADR 117), on a whole run and a run of chosen cards alike. On a run already completed it changes nothing and returns it. Another user's run is a 404.
+- `POST /api/runs/{id}/end` (no body, 200, `RunRead`) must, through `end_run(db, run)` in `app/services/run.py` and in one transaction, delete every `pending` `run_card` of the run, mark it completed and touch it (ADR 111, ADR 117), on a whole run and a run of chosen cards alike. Another user's run is a 404.
 - `RunDetail` must extend `RunListing`, so `GET /api/runs/{id}` carries `reached_cards` and `counted_cards`.
 - The run page must keep its row of places, no heading, its progress bar and its card as they stand, and put "End run" as a white button at the right end of the progress bar's line, the bar shortening to make room, as drawing 14 draws it. End run asks, through `ConfirmDialog`, "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did.", with Cancel and "End run"; on "End run" it calls the path and the run page turns into the completed run's page in place, with no new history entry.
 - A failure of the end shows its sentence beside "End run" (PDR 031).
-- Tests: ending deletes the pending rows and keeps every rated one and every review, the run's N reads the cards reached, ending a completed run changes nothing, and the run is touched; the run page's End run asks first, Cancel changes nothing, and yes calls the path once.
+- Tests: ending deletes the pending rows and keeps every rated one and every review, the run's N reads the cards reached, and the run is touched; the run page's End run asks first, Cancel changes nothing, and yes calls the path once.
 - `docs/vocabulary.md`: "Ending a run before its last card": User reads "End run"; "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did."; Where the run page, at the right end of the progress bar's line; Code `POST /api/runs/{id}/end`; `end_run`.
 
 **Out of scope**
 
 - An `ended` status, or anything recording why a run became completed: never, ADR 111.
+- What ending a run that is already completed does, refused or answered unchanged: an unsettled decision, backlog B33; no test fixes it.
 - End run among the card's acts or in the row of places: never, LPD13.
 - The completed run's page as drawing 13 draws it: T2.
 
@@ -109,8 +110,8 @@ A completed run's page reads as drawing 13 draws it: under "All practices › <p
 
 - `frontend/src/pages/RunPage.tsx`
 - `frontend/src/pages/RunPage.test.tsx`
-- `frontend/src/components/practice/RerunButton.tsx`
-- `frontend/src/components/practice/RerunButton.test.tsx`
+- `frontend/src/components/run/RerunButton.tsx`
+- `frontend/src/components/run/RerunButton.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
@@ -134,7 +135,7 @@ LPD12, LPD13, LPD19, LPD20, PDR 040, PDR 041 and drawing 13:
 
 **Done when**
 
-- `cd frontend && npx vitest run src/pages/RunPage.test.tsx src/components/practice/RerunButton.test.tsx` passes.
+- `cd frontend && npx vitest run src/pages/RunPage.test.tsx src/components/run/RerunButton.test.tsx` passes.
 - On the live server at 390 wide, a completed run's page reads as drawing 13 above its counts, and a deck's line opens that deck's board greyed with "How this run asked it."
 
 **Debrief**
@@ -157,8 +158,8 @@ On a completed run's page, a kind of change no card had shows its badge in its c
 
 **Files**
 
-- `frontend/src/components/practice/RunBreakdown.tsx`
-- `frontend/src/components/practice/RunBreakdown.test.tsx`
+- `frontend/src/components/run/RunBreakdown.tsx`
+- `frontend/src/components/run/RunBreakdown.test.tsx`
 - `frontend/src/components/ui/ChangeBadge.tsx`
 - `docs/vocabulary.md`
 
@@ -182,7 +183,7 @@ LPD3, LPD5, LPD12, LPD20, PDR 040, PDR 041 and drawing 6:
 
 **Done when**
 
-- `cd frontend && npx vitest run src/components/practice/RunBreakdown.test.tsx` passes.
+- `cd frontend && npx vitest run src/components/run/RunBreakdown.test.tsx` passes.
 - The cycle's judgement holds.
 
 **Debrief**
