@@ -71,18 +71,21 @@ class ConfigurationArrays(AppModel):
     answer_pool_ids: list[uuid.UUID]
     answer_pool_counts: list[int]
 
-class DeckConfigurationRead(ConfigurationArrays):
+class PracticeConfigurationRead(ConfigurationArrays):
+    deck_id: uuid.UUID
+
+class RunConfigurationRead(ConfigurationArrays):
     deck_id: uuid.UUID
 
 class RunDetail(RunRead):
     practice_name: str
     # One per deck the run asked, as it asked it.
-    configurations: list[DeckConfigurationRead]
+    configurations: list[RunConfigurationRead]
 ```
 
-- `PracticeDetail` must gain `configurations: list[DeckConfigurationRead]`, one per deck of the practice, read in the same bounded number of statements as the rest of the read (ADR 091).
+- `PracticeDetail` must gain `configurations: list[PracticeConfigurationRead]`, one per deck of the practice, read in the same bounded number of statements as the rest of the read (ADR 091).
 - `GET /api/runs/{id}` must return `RunDetail`.
-- `PUT /api/practices/{id}/configurations/{deck_id}` (`ConfigurationArrays`, 200, `DeckConfigurationRead`) must validate through `validate_configuration` and refuse a violation with a 400 whose detail is the plain-string message naming the first rule broken, writing nothing, since the board's Save is ready only when `boardProblem` finds nothing and no screen reaches the refusal (ADR 070); replace the whole row; touch no `last_activity_at`; and accept the save while the practice has an active run, whose copy it never changes (ADR 107). A deck that is not one of the practice's is a 404.
+- `PUT /api/practices/{id}/configurations/{deck_id}` (`ConfigurationArrays`, 200, `PracticeConfigurationRead`) must validate through `validate_configuration` and refuse a violation with a 400 whose detail is the plain-string message naming the first rule broken, writing nothing, since the board's Save is ready only when `boardProblem` finds nothing and no screen reaches the refusal (ADR 070); replace the whole row; touch no `last_activity_at`; and accept the save while the practice has an active run, whose copy it never changes (ADR 107). A deck that is not one of the practice's is a 404.
 - `frontend/src/api/practice.ts` gains `savePracticeConfiguration(practiceId, deckId, arrays)` and `frontend/src/api/run.ts` reads `RunDetail`.
 - Tests: a save reaches the next run's copy and leaves an active run's copy as it was; a save naming a field of another deck, a field on both sides or a count above its pool is refused and writes nothing; the save moves no practice in `GET /api/practices`; another user's practice is a 404.
 
@@ -120,8 +123,8 @@ A deck's line on a practice's page opens the deck's board as a form, as drawing 
 - `frontend/src/pages/DeckBoardPage.test.tsx` (new)
 - `frontend/src/components/library/FieldAssignmentBoard.tsx`
 - `frontend/src/components/library/FieldAssignmentBoard.test.tsx` (new)
-- `frontend/src/lib/deckConfigurationBoard.ts`
-- `frontend/src/lib/deckConfigurationBoard.test.ts`
+- `frontend/src/lib/deckBoard.ts` (renamed from `frontend/src/lib/deckConfigurationBoard.ts`)
+- `frontend/src/lib/deckBoard.test.ts` (renamed from `frontend/src/lib/deckConfigurationBoard.test.ts`)
 - `frontend/src/pages/PracticeDetailsPage.tsx`
 - `frontend/src/pages/PracticeDetailsPage.test.tsx`
 - `docs/vocabulary.md`
@@ -134,6 +137,7 @@ LPD17, LPD20, LCD2, LCD5 and drawing 16, under PDR 051, ADR 124 and ADR 127:
 - `DeckBoardPage` must be a form with no row of places, headed by the deck's `DeckMark` and name, and beneath it the practice's `PracticeMark` and name, as drawing 16 draws them. The board below is `FieldAssignmentBoard` over the deck's live fields, from `GET /api/decks/{id}`, and the configuration from `PracticeDetail.configurations` or `RunDetail.configurations`; "Loading fields…" stands while the deck's fields load, and "Could not load this deck." in place of the board when a read fails.
 - From a practice's page while the practice has no active run, the board's moves and counts must stay in the form's own state and send nothing until Save (LCD5); the bar at the foot holds Cancel and Save, and Save, ready only when `boardProblem` finds nothing, saves through `savePracticeConfiguration`. Cancel leaves through `useLeaveForm` for `cancelTo`, else the practice's page, sending nothing; Save leaves for `returnTo`, else the practice's page.
 - While the practice has an active run, and always at `/runs/:runId/decks/:deckId`, every field must be greyed and do nothing when tapped, the counts too, one line above the board reading "A run is active." from a practice's page and "How this run asked it." from a run's page, and the bar holding Done alone, which leaves through `useLeaveForm` for `cancelTo`, else the practice's page or the run's page (PDR 051).
+- `frontend/src/lib/deckConfigurationBoard.ts` must become `frontend/src/lib/deckBoard.ts`, after the board's user word, "the deck's board", since a configuration of a deck is no longer a thing of its own; its exports keep their names but `ConfigPayloadArrays`, which becomes `BoardArrays`.
 - `FieldAssignmentBoard` must take a `readOnly: boolean` prop that greys every chip and count and ignores every tap.
 - A practice's page's deck line must open `/practices/:practiceId/decks/:deckId` with the page's own address as `cancelTo` and `returnTo`.
 - Tests: a move then Cancel sends no request; Save sends one `PUT` with the board's arrays; with an active run, a tap on a field opens no move sheet and the bar holds Done alone; the run's board reads its run's configuration.
@@ -155,7 +159,7 @@ LPD17, LPD20, LCD2, LCD5 and drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 **Done when**
 
-- `cd frontend && npx vitest run src/pages/DeckBoardPage.test.tsx src/components/library/FieldAssignmentBoard.test.tsx src/lib/deckConfigurationBoard.test.ts src/pages/PracticeDetailsPage.test.tsx` passes.
+- `cd frontend && npx vitest run src/pages/DeckBoardPage.test.tsx src/components/library/FieldAssignmentBoard.test.tsx src/lib/deckBoard.test.ts src/pages/PracticeDetailsPage.test.tsx` passes.
 - The cycle's judgement holds.
 
 **Debrief**
