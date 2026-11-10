@@ -1,6 +1,6 @@
 # 052 — Home as runs
 
-Waits for: 049, its `HomeRun`, `RunListing`, `RunMark`, `DeckLine`, `POST /api/practices/{id}/runs` and Home on the new paths; 051, its completed run's summary and `docs/vocabulary.md`, which it shares.
+Waits for: 046, with which it shares `app/models/home_payloads.py` and `app/database_ops/home.py`; 047, with which it shares `HomePage.tsx`; 049, its `HomeRun`, `RunListing`, `DeckNameRead`, `RunMark`, `DeckLine`, `POST /api/practices/{id}/runs` and Home on the new paths; 051, its completed run's summary, `RunBreakdown` and `docs/vocabulary.md`, which it shares.
 
 Canvas: https://claude.ai/artifact/MictUjYsjMS8tWixE7ysg1
 
@@ -48,6 +48,7 @@ None.
 - `app/database_ops/run.py`
 - `app/services/home.py`
 - `tests/api_tests/test_home.py`
+- `tests/api_tests/test_auth_scoping.py`
 - `frontend/src/api/openapi.json`
 - `frontend/src/api/types.ts`
 - `frontend/src/test/home.test.ts`
@@ -59,7 +60,7 @@ None.
 
 **Details**
 
-PDR 048, LPD1, LPD16, LPD18 and drawings 2-before and 17, under ADR 123 and ADR 127:
+PDR 048 and drawings 2-before and 17, under ADR 123 and ADR 127:
 
 ```python
 class HomeRun(RunListing):
@@ -80,15 +81,15 @@ class HomeRead(AppModel):
 ```
 
 - `GET /api/home` must return `HomeRead` in a number of statements fixed whatever the user's data (ADR 123, ADR 091); `recent_decks`, `RecentDecks` and `RECENT_DECK_LIMIT` go, `RECENT_RUN_LIMIT` taking the last's place.
-- Once `steps` is null, Home must read as drawings 2-before and 17: the heading "Home"; "Active" over one row per active run; "Recently completed" over one row per completed run; a section with no run is left out. A row opens with a small outlined block holding the run's `RunMark` and its day as `formatRunDay` writes it; beneath stand the practice's name in bold, with no mark, then its decks as `DeckLine` writes them, then, for an active run, its `RunProgressBar`. Nothing is indented. At the right stands a round play button, a triangle inside a circle, spoken "Practice <practice name>".
-- The play button of the first active run must be yellow and every other white; with no active run, the first completed run's is yellow (PDR 048). An active run's play button opens `/runs/:runId`; a completed run's calls `POST /api/practices/{practice_id}/runs` and opens the run it returns, with no confirm, a refusal showing its sentence beneath the row: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."
-- Once `steps` is null, Home must end with `FormBar` holding one white button, "All practices", opening `/practices`, fixed at the foot while Home scrolls (LPD16, ADR 127). Home's link to New practice goes.
+- Once `steps` is null, Home must read as drawings 2-before and 17: the heading "Home"; "Active" over one row per active run; "Recently completed" over one row per completed run; a section with no run is left out. A row opens with a small outlined block holding the run's `RunMark` and its day as `formatRunDay` writes it; beneath stand the practice's name in semibold, as the drawings draw it, with no mark, then its decks as `DeckLine` writes them, then, for an active run, its `RunProgressBar`. Nothing is indented. At the right stands a round play button, a triangle inside a circle, spoken "Practice <practice name>".
+- The play button of the first active run must be yellow and every other white; with no active run, the first completed run's is yellow (PDR 048). An active run's play button opens `/runs/:runId`; a completed run's calls `POST /api/practices/{practice_id}/runs` and opens the run it returns, with no confirm, a refusal showing its sentence beneath the row, through `failureSentence` with "Practice not found." for a 404: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."
+- Once `steps` is null, Home must end with `FormBar` holding one white button, "All practices", opening `/practices`, fixed at the foot while Home scrolls (ADR 127). Home's link to New practice goes.
 - Guidance: the row and its play button go in `HomeRunRow`, which T2 extends with the details.
 - Tests: the read's selection, at most three of each, one completed run per practice, none of a practice with an active run, in a fixed number of statements; the row's block, name, decks and bar; which play button is yellow; each play button's address or request; the bar and no New practice.
 - `docs/vocabulary.md`, each row's columns as given:
-  - "The practices the user can go on with": Concept "The active runs the user can continue"; User reads "Active" over up to three runs, each its mark and day in a block, its practice's name, its decks and its progress, with a play button; Where Home.
-  - "The decks of the most recently completed practices": Concept "The most recently completed runs"; User reads "Recently completed" over up to three runs, each its mark and day in a block, its practice's name and its decks, with a play button; Where Home.
-  - "Going to New practice from Home": User reads "—"; Where "—".
+  - "The practices the user can go on with": Concept "The active runs the user can continue"; User reads "Active" over up to three runs, each its mark and day in a block, its practice's name, its decks and its progress, with a play button; Where Home; Code `active_runs`; `ACTIVE_RUN_LIMIT`; `HomeRun`.
+  - "The decks of the most recently completed practices": Concept "The most recently completed runs"; User reads "Recently completed" over up to three runs, each its mark and day in a block, its practice's name and its decks, with a play button; Where Home; Code `recent_runs`; `RECENT_RUN_LIMIT`; `HomeRun`.
+  - "Going to New practice from Home": the row leaves the file, Home holding no way to New practice and the code no name for one.
   - A new row in the Home area: Concept "Going to All practices from Home"; User reads "All practices"; Where Home, in the bar at the foot, once the user has made a practice; Code `FormBar`; `/practices`.
   - A new row in the Home area: Concept "A run's play button"; User reads a triangle inside a circle; "Practice <name>", spoken, naming the run's practice, as "Practice Commands + Ports"; Where Home, on each run's row; Code `HomeRunRow`.
 
@@ -127,30 +128,31 @@ Tapping a run's row on Home anywhere but its play button opens its details benea
 - `frontend/src/components/run/HomeRunRow.tsx`
 - `frontend/src/components/run/HomeRunRow.test.tsx`
 - `frontend/src/components/run/RunBreakdown.tsx`
+- `frontend/src/components/run/RunProgressBar.tsx`
 - `frontend/src/lib/changeKinds.ts`
 - `frontend/src/lib/changeKinds.test.ts` (new)
 - `docs/vocabulary.md`
 
 **Details**
 
-LPD1, LCD1 and drawings 2-active and 2-done, under ADR 088 and ADR 125:
+Drawings 2-active and 2-done, under ADR 088 and ADR 125:
 
 ```ts
 /** How many of the cards had each kind of change. */
 export function countChanges(cards: { change: ChangeKind }[]): Record<ChangeKind, number>;
 ```
 
-- `countChanges` must live in `frontend/src/lib/changeKinds.ts`, and `RunBreakdown` must count its kinds through it, so Home's details and the summary count with one function (LCD1).
-- A tap on the row anywhere but its play button must open the details beneath it, as drawings 2-active and 2-done draw them, and "Hide" closes them; the open row is kept in the component's own state.
-- An active run's details must list each of its decks on a line, its `DeckMark` and name, then its counts from `progress`: "N passed", "N failed", "N retrying" and "N unseen", each beside its square in the bar's color for it, then "Hide".
-- A completed run's details must list each deck on a line, then "N of M cards", then the five change counts, each its `ChangeBadge` and its number, counted by `countChanges` over `GET /api/runs/{id}/breakdown`, read through TanStack Query keyed by the run once the details open (LCD1); until it arrives the details hold their deck lines and no count, with no words of their own, and "Could not load this run." stands in the counts' place when it fails.
+- `countChanges` must live in `frontend/src/lib/changeKinds.ts`, and `RunBreakdown` must count its kinds through it, so Home's details and the summary count with one function.
+- A tap on the row anywhere but its play button must open the details beneath it, as drawings 2-active and 2-done draw them, and "Hide" closes them; each row opens and closes on its own, its state kept in `HomeRunRow`.
+- An active run's details must list each of its decks on a line, its `DeckMark` and name, then its counts from `progress`: "N passed", "N failed", "N retrying" and "N unseen", each beside its square in the bar's color for it, the four colors exported from `RunProgressBar.tsx` so the bar and the details draw them from one place, then "Hide".
+- A completed run's details must list each deck on a line, then "N of M cards", then the five change counts, each its `ChangeBadge` and its number, spoken as "N up a lot", "N up", "N no change", "N down" or "N down a lot", counted by `countChanges` over `GET /api/runs/{id}/breakdown`, read through TanStack Query keyed by the run once the details open; until it arrives the details hold their deck lines and no count, with no words of their own, and "Could not load this run." stands in the counts' place when it fails.
 - Tests: `countChanges` over five kinds; a tap on the row opens the details and a tap on the play button does not; the active run's four counts; the completed run's count line and five counts from a mocked breakdown; the details before the breakdown arrives and when it fails; "Hide" closes.
 - `docs/vocabulary.md`: a new row in the Home area: Concept "A run's details on Home"; User reads "Hide"; each of its decks on a line; for an active run, "N passed", "N failed", "N retrying" and "N unseen"; for a completed run, "N of M cards" and the number under each kind of change's badge; Where Home, beneath a run's row once tapped; Code `HomeRunRow`; `countChanges`.
 
 **Out of scope**
 
-- "Open practice" or "Delete practice" in the details: never, LPD1.
-- The change counts in Home's read: never, LCD1.
+- "Open practice" or "Delete practice" in the details: never.
+- The change counts in Home's read: never.
 
 **Done when**
 
