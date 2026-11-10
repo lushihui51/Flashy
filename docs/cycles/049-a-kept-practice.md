@@ -8,7 +8,7 @@ Canvas: https://claude.ai/artifact/HnVa41szMKm1HkChh9FktD
 
 Outcome: The user makes a practice by picking its decks and a name, keeps it, and runs it from its own page as many times as they like; All practices lists every practice; Edit practice renames or deletes one; and every existing run is the one run of a practice of its own.
 
-Scope: The cycle covers the `practice`, `practice_configuration` and `run_counted_card` tables and the renames of the run's tables, in ADR 122's one migration; the API's practice and run paths of LCD2 but the board's and the end of a run; creating a practice from its decks and a name, each deck's starting configuration as LCD3 gives it, and the first practice stamped; starting or continuing a practice's run, and cutting every run, a re-run and a run of chosen cards included, from the practice's configurations; a run's day and its count of cards; a practice's mastery; New practice, All practices, Edit practice and a practice's page as drawings 8, 15, 4-edit and 4-practice draw them; the practice mark and the run mark; a deck's page holding its cards alone; the run page, its summary and Home reading the new paths; and the vocabulary's practice and run rows. It leaves out the board opened from a deck's line, cycle 050's; ending a run, the completed run's page with its heading, count and deck lines, Re-run as the page's main action and the summary's new words, cycle 051's; Home's runs and its bar, cycle 052's; and a name wrapping to two lines, cycle 053's.
+Scope: The cycle covers the `practice`, `practice_configuration` and `run_counted_card` tables and the renames of the run's tables, in ADR 122's one migration; the API's practice and run paths but the board's and the end of a run; creating a practice from its decks and a name, each deck's starting configuration, and the first practice stamped; starting or continuing a practice's run, and cutting every run, a re-run and a run of chosen cards included, from the practice's configurations; a run's day and its count of cards; a practice's mastery; New practice, All practices, Edit practice and a practice's page as drawings 8, 15, 4-edit and 4-practice draw them; the practice mark and the run mark; a deck's page holding its cards alone; the run page, its summary and Home reading the new paths; and the vocabulary's practice and run rows. It leaves out the board opened from a deck's line, cycle 050's; ending a run, the completed run's page with its heading, count and deck lines, Re-run as the page's main action and the summary's new words, cycle 051's; Home's runs and its bar, cycle 052's; and a name wrapping to two lines, cycle 053's.
 
 Judgement: The engineer judges on the live server at 390 wide, against the dev database migrated by T1: All practices lists every practice, among them one per former run under the run's name, each row as drawing 15 draws it, and narrows by deck; New practice with Commands then Ports picked shows "Commands + Ports" in grey in Name and "2 selected", and Create lands on the new practice's page; that page reads as drawing 4-practice, with Start run, the pencil, a line per deck and no runs; Start run opens the run page on a card, and the practice's page then reads Continue run and lists the run under Runs as its day, Active and "0 of N cards"; a second practice named "Commands + Ports" is refused beside Name with "A practice with this name already exists."; Edit practice renames the practice and leaves it where it was on All practices; Delete practice asks "Delete this practice?" over "Its runs will be gone. Its decks and your mastery stay as they are.", lands on All practices, and leaves every deck's circle as it was; a deck's page shows its cards and no tabs and no Practice button; and a completed run's summary's Re-run opens a new run of the same practice.
 
@@ -55,7 +55,7 @@ Judgement: The engineer judges on the live server at 390 wide, against the dev d
 
 **Goal**
 
-Every run belongs to a practice the user keeps, made from its decks and a name and holding one configuration per deck, the run's tables carry the run's names, every run is cut from its practice's configurations, the API answers on LCD2's practice and run paths, every existing run is the one run of a practice of its own, and every page that read a run or a configuration works on the new paths, each in its least working form.
+Every run belongs to a practice the user keeps, made from its decks and a name and holding one configuration per deck, the run's tables carry the run's names, every run is cut from its practice's configurations, the API answers on its practice and run paths, every existing run is the one run of a practice of its own, and every page that read a run or a configuration works on the new paths, each in its least working form.
 
 **Dependencies**
 
@@ -85,6 +85,7 @@ None.
 - `app/database_ops/run_configuration.py` (renamed from `app/database_ops/practice_deck.py`)
 - `app/database_ops/run_card.py` (renamed from `app/database_ops/practice_card.py`)
 - `app/database_ops/run_generation.py` (renamed from `app/database_ops/practice_generation.py`)
+- `app/database_ops/run_counted_card.py` (new)
 - `app/database_ops/home.py`
 - `app/database_ops/mastery_log.py`
 - `app/database_ops/app_user.py`
@@ -122,6 +123,9 @@ None.
 - `frontend/src/api/run.ts` (renamed from `frontend/src/api/practice_run.ts`)
 - `frontend/src/api/deck_practice_config.ts` (deleted)
 - `frontend/src/api/deletion_impact.ts`
+- `frontend/src/api/unwrap.ts`
+- `frontend/eslint.config.js`
+- `frontend/src/components/ui/ConfirmDialog.tsx`
 - `frontend/src/App.tsx`
 - `frontend/src/components/shell/navItems.ts`
 - `frontend/src/components/shell/CreateSheet.tsx`
@@ -186,18 +190,28 @@ None.
 
 The schema, ADR 105, ADR 107, ADR 110, ADR 113, ADR 114, ADR 115, ADR 117 and ADR 122:
 
-- One migration must, in one transaction and in this order: create `practice` (`id`, `user_id` not null `ON DELETE CASCADE` to `app_user`, `name`, `created_at`, `updated_at` as `TimestampMixin` gives them, `uq_practice_user_id` on `(user_id, name)`), `practice_configuration` (`id`, `practice_id` and `deck_id` each not null `ON DELETE CASCADE`, the six array and count columns, `UNIQUE (practice_id, deck_id)`) and `run_counted_card` (`run_id`, `card_id`, primary key `pk_run_counted_card` on both, each `ON DELETE CASCADE`, index `ix_run_counted_card_card_id`); move every run into a practice of its own as ADR 122 lists, a later practice whose name its user's earlier one has taking the next untaken number in parentheses, as "Cycle 032 T3 judgement (1)"; add `practice_run.practice_id`, not null, `ON DELETE CASCADE`, and `practice_run.last_activity_at`, set to the later of the run's `created_at` and its latest review's `reviewed_at`; then drop `practice_run.name`, `practice_run.user_id`, `practice_deck.source_config_id`, `practice_deck.source_config_name` and `deck_practice_config`; rename `practice_run` to `run`, `practice_deck` to `run_configuration`, `practice_card` to `run_card`, every foreign key column after the table it references (`practice_run_id` to `run_id` in `run_configuration`, `run_card` and `mastery_log`), and every constraint and index to the name the naming convention in `app/database.py` derives, the names left from `practice_session` included; and create `uq_run_practice_id_active` on `run (practice_id) WHERE status = 'active'` and `ix_run_practice_id` on `run (practice_id, last_activity_at)`. Its downgrade must raise. Applied migrations keep their names.
+- One migration must, in one transaction and in this order:
+  1. Create `practice` (`id`, `user_id` not null `ON DELETE CASCADE` to `app_user`, `name`, `created_at` as `TimestampMixin` gives it, and `uq_practice_user_id` on `(user_id, name)`) and `practice_configuration` (`id`, `practice_id` and `deck_id` each not null `ON DELETE CASCADE`, the six array and count columns, `UNIQUE (practice_id, deck_id)`). No table gains `updated_at` (ADR 117).
+  2. Add `practice_run.practice_id`, nullable; create one practice per run as ADR 122 lists, with the run's user, name and `created_at`, a later practice whose name its user's earlier one already has taking the next untaken number in parentheses, as "Cycle 032 T3 judgement (1)"; set each run's `practice_id`; then make it not null, `ON DELETE CASCADE`.
+  3. Give each practice one `practice_configuration` per copy of its run, its six arrays pruned to the deck's live fields as ADR 119 prunes a deleted field: a dead id removed, each random-draw count lowered to its pool's size, the count of a pool left empty dropped, and a configuration left with a side naming no field replaced whole by the deck's starting configuration, so every configuration passes `validate_configuration`.
+  4. Add `practice_run.last_activity_at`, set to the later of the run's `created_at` and its latest review's `reviewed_at`.
+  5. Drop `practice_run.name`, `practice_run.user_id`, `practice_deck.source_config_id`, `practice_deck.source_config_name` and `deck_practice_config`.
+  6. Rename `practice_run` to `run`, `practice_deck` to `run_configuration`, `practice_card` to `run_card`, and every foreign key column after the table it references (`practice_run_id` to `run_id` in `run_configuration`, `run_card` and `mastery_log`); rename every constraint and index the naming convention in `app/database.py` derives to the name it now derives, the names left from `practice_session` included; rename the explicit `ix_practice_card_run_status_position` to `ix_run_card_run_status_position`, `ix_mastery_log_run` keeping its name; and rename every NOT NULL constraint PostgreSQL named after an old table or column, as `practice_session_name_not_null`, to `<table>_<column>_not_null` of its table and column now, or let it go with its dropped column.
+  7. Create `run_counted_card` (`run_id`, `card_id`, primary key `pk_run_counted_card` on both, each `ON DELETE CASCADE`, index `ix_run_counted_card_card_id`), and write each run's rows as the distinct cards of its `run_card` rows (ADR 122).
+  8. Create `uq_run_practice_id_active` on `run (practice_id) WHERE status = 'active'` and `ix_run_practice_id` on `run (practice_id, last_activity_at)`.
+
+  Its downgrade must raise. Applied migrations keep their names.
 - The models must follow the schema: `Practice` and `PracticeConfiguration` new; `Run`, `RunConfiguration`, `RunCard` and `RunCountedCard`; `MasteryLog.run_id`. `Run` has no `name` and no `user_id`, and carries `last_activity_at`. Every name in the code in which "practice" or "session" means one go through a practice must become "run", in models, `db_*` functions, services, routes, payloads, tests and the frontend: `PracticeRun` to `Run`, `PracticeCard` to `RunCard`, `PracticeDeck` to `RunConfiguration`, `practice_card_id` to `run_card_id`, `generate_practice_card_fields` to `generate_run_card_fields`, `session_status` to `status`, and the like. "Practice" stays only for the thing the user keeps. The renames, every one of them, across `app/`, `tests/`, `frontend/src/`, the vocabulary's Code cells, `AGENTS.md` and `README.md`:
   - Models and payloads: `PracticeRun` to `Run`, `PracticeRunRead` to `RunRead`, `PracticeCard` to `RunCard`, `PracticeCardRead` to `RunCardRead`, `PracticeCardStatus` to `RunCardStatus`, `PracticeDeck` to `RunConfiguration`, `PracticeRunState` to `RunState`, `PracticeRunBreakdown` to `RunBreakdown`, `PracticeRunChosenCards` to `RunChosenCards`; `PracticeRunCreate`, `PracticeRunRerun`, `PracticeRunSummary`, `PracticeRunDeckSummary` and `HomeActivePractice` go, replaced by the payloads below; `app/models/practice_run_payloads.py` to `app/models/run_payloads.py`.
   - Fields and columns: `practice_run_id` to `run_id`, `practice_card_id` to `run_card_id`, `practice_card_ids` to `run_card_ids`, `rated_practice_card` to `rated_run_card`, `requeued_practice_card` to `requeued_run_card`, `active_practices` to `active_runs`, `session_status` to `status`; `session_name` goes.
   - Functions: every `db_*` function's `practice_run` to `run`, `practice_card` to `run_card` and `practice_deck` to `run_configuration`, as `db_read_practice_cards_for_run` to `db_read_run_cards_for_run` and `db_read_active_practice_runs_with_decks` to `db_read_active_runs_with_decks`; `db_stage_set_practice_deck_source_config_name`, `db_stage_unlink_practice_decks_from_config` and `db_delete_practice_run` go; `start_practice_run` to `start_run`, `rerun_practice_run` to `rerun`, `start_chosen_cards_run` to `start_chosen_cards`, the three cutting through `cut_run`; `get_practice_run_state` to `get_run_state`, `get_practice_run_breakdown` to `get_run_breakdown`, `get_current_practice_card` to `get_current_run_card`, `generate_practice_card_fields` to `generate_run_card_fields`; `app/services/practice_generation.py` and `app/database_ops/practice_generation.py` to `run_generation.py`; each route handler after its path, as `read_run_state` and `rate_run_card`, and `api_practice_run_router` to `api_run_router` beside a new `api_practice_router`; `ACTIVE_PRACTICE_LIMIT` to `ACTIVE_RUN_LIMIT`; `decks_by_session` to `decks_by_run`.
-  - Frontend: the run's components move from `frontend/src/components/practice/` to `frontend/src/components/run/`, as Files lists them, `PracticeRunRow` becoming `RunRow` and `PracticeStatusBadge` `RunStatusBadge`, and `components/practice/` keeps only what shows a practice; `PracticeRunPage` to `RunPage`, its `PracticeRunBody` to `RunBody` and `PracticeCardView` to `RunCardView`; `SessionDeckChips` to `DeckChips`; `practiceCopy.ts` to `runCopy.ts`; `HomePage`'s `ActivePractices` to `ActiveRuns`; `practiceThese` to `rerunThese`; `practiceSessionId` and `sessionId` to `runId`, `practiceCardId` to `runCardId`; the api functions `createPracticeRun` to `startRun`, `readPracticeRun` to `readRun`, `readPracticeRunState` to `readRunState`, `readPracticeRunBreakdown` to `readRunBreakdown`, `rerunPracticeRun` to `rerunRun` and `ratePracticeCard` to `rateRunCard`, `readPracticeRuns`, `deletePracticeRun` and `PracticeRunFilters` going; the query keys `['practice_runs', …]` and `['practice_run_breakdown', …]` to `['runs', …]` and `['run_breakdown', …]`.
+  - Frontend: the run's components move from `frontend/src/components/practice/` to `frontend/src/components/run/`, as Files lists them, `PracticeRunRow` becoming `RunRow` and `PracticeStatusBadge` `RunStatusBadge`, and `components/practice/` keeps only what shows a practice; `PracticeRunPage` to `RunPage`, its `PracticeRunBody` to `RunBody` and `PracticeCardView` to `RunCardView`; `SessionDeckChips` to `DeckChips`; `practiceCopy.ts` to `runCopy.ts`; `HomePage`'s `ActivePractices` to `ActiveRuns`; `practiceThese` to `rerunThese`; `practiceSessionId` and `sessionId` to `runId`, `practiceCardId` to `runCardId`; the api functions `createPracticeRun` to `startRun`, `readPracticeRun` to `readRun`, `readPracticeRunState` to `readRunState`, `readPracticeRunBreakdown` to `readRunBreakdown`, `rerunPracticeRun` to `rerunRun` and `ratePracticeCard` to `rateRunCard`, `readPracticeRuns`, `deletePracticeRun` and `PracticeRunFilters` going; the query keys `['practice_runs', …]`, `['practice_run', id]`, `['practice_run_summary', id]` and `['practice_run_breakdown', id]` to `['practices']`, `['run', id]`, `['practice', id]` and `['run_breakdown', id]`.
   - A local name `session`, `sessions`, `new_session`, `sessionQuery` or the like that holds a run becomes `run`, `runs`, `new_run`, `runQuery`, in production code and tests alike.
   - These keep their names, since "session" or "practice" means something else in them: `Session`, `SessionDep` and `get_session`, the database's session; `verify_clerk_session`, Clerk's; `first_practice_at`, `db_stage_set_first_practice_at` and `FirstPracticeSteps`, the first practice the user creates; `PRACTICE_NAV`, `PracticeOverviewPage`, `PracticeDetailsPage` and `PracticeCreatePage`, which show practices.
 - Every read and write of a run, or of a row that hangs from a run, must be scoped by joining `practice` and comparing `practice.user_id` in the statement (ADR 105); another user's practice or run is a 404 (ADR 034).
 - `uuid`, `date` and `datetime` are the payload types below; `date` is a calendar date with no time.
 
-The API, LCD2, LCD3 and LCD4. Payloads in `app/models/practice_payloads.py` and `app/models/run_payloads.py`:
+The API. Payloads in `app/models/practice_payloads.py` and `app/models/run_payloads.py`:
 
 ```python
 class PracticeCreate(AppModel):
@@ -251,31 +265,49 @@ class RunChosenCards(AppModel):
 ```
 
 - Paths, each scoped to the user: `POST /api/practices` (`PracticeCreate`, 201, `PracticeSummary`); `GET /api/practices` (`list[PracticeSummary]`, ordered by the latest `last_activity_at` of the practice's runs, or its `created_at` with none, descending, then id, ADR 117); `GET /api/practices/suggested-name?deck_ids=` (`SuggestedPracticeName`); `GET /api/practices/{id}` (`PracticeDetail`); `POST /api/practices/{id}/runs` (200, `RunRead`, the practice's active run or a new one, ADR 110); `GET /api/runs/{id}` (`RunRead`); `GET /api/runs/{id}/state` (`RunState`); `GET /api/runs/{id}/breakdown` (the breakdown, renamed `RunBreakdown`); `POST /api/runs/{id}/rerun` (no body, 201, `RunRead`); `POST /api/runs/{id}/chosen_cards` (`RunChosenCards`, 201, `RunRead`); `POST /api/run_cards/{id}/rate` (the rating body as today). `/api/practice_runs…`, `/api/practice_cards…` and `/api/deck_practice_configs…` go, and no route deletes a single run (ADR 118).
-- `POST /api/practices` must refuse a missing deck or one not the user's with a 404 naming it, a repeated deck id with a plain-string 400, and a taken name with `Refusal("practice_name_taken")` from an `IntegrityError` on `uq_practice_user_id`, answered as a 400 with the coded detail (LCD4, ADR 115). It must write `app_user.first_practice_at` while it is null, in the practice's own transaction; starting a run writes nothing to it (ADR 123).
+- `POST /api/practices` must refuse a missing deck or one not the user's with a 404 naming it, a repeated deck id with a plain-string 400 from the `IntegrityError` on `UNIQUE (practice_id, deck_id)`, with no check of its own (ADR 107), and a taken name with `Refusal("practice_name_taken")` from an `IntegrityError` on `uq_practice_user_id`, answered as a 400 with the coded detail (ADR 115); a create with no name whose second try at the name also meets the constraint is refused with `practice_name_taken` too. `GET /api/practices/suggested-name` answers a deck not the user's with a 404 naming it. It must write `app_user.first_practice_at` while it is null, in the practice's own transaction; starting a run writes nothing to it (ADR 123).
 - `suggest_practice_name(db, user_id, deck_ids)` in `app/services/practice.py` must return the decks' names in the order given joined by " + ", with the first free number from 1 added in parentheses, as "Ports (1)", when that name is taken. A create with no name calls it inside its transaction, and when `db_try_stage_create_practice` returns `None` on the name, works the name out once more (ADR 115).
-- Creating a practice must give each picked deck, in one statement over the picked decks, a `practice_configuration` copied from the `run_configuration` of the run holding the deck's most recently rated card, found through the latest `review_log.reviewed_at` over the deck's cards, its `review_group_id` and that `run_card`'s run, with `card_ids` ignored; a deck never rated, or whose copy fails `validate_configuration`, takes the starting configuration (LCD3, ADR 109). The starting configuration is one function in `app/services/practice_configuration.py`, shared with the deletion closure's reset (ADR 119): the deck's first live field by position always shown on the prompt side, every other live field always shown on the answer side.
+- Creating a practice must give each picked deck, in one statement over the picked decks, a `practice_configuration` copied from the `run_configuration` of the run holding the deck's most recently rated card, found through the latest `review_log.reviewed_at` over the deck's cards, its `review_group_id` and that `run_card`'s run, with `card_ids` ignored; a deck never rated, or whose copy fails `validate_configuration`, takes the starting configuration (ADR 109). The starting configuration is one function in `app/services/practice_configuration.py`, shared with the deletion closure's reset (ADR 119): the deck's first live field by position always shown on the prompt side, every other live field always shown on the answer side:
+
+```python
+def starting_configuration(live_field_ids: list[uuid.UUID]) -> dict[str, list]:
+    """The six array and count columns, keyed by column name, for a deck whose live field ids are given in position order."""
+```
 - `validate_configuration` keeps the four rules of ADR 109 and lives in `app/services/practice_configuration.py`; at the cut a violation raises an `AssertionError`. `config_not_found`, `duplicate_deck`, `stale_config` and `nothing_to_rerun` go, with their frontend sentences.
-- Every run must be cut by one function, `cut_run(db, strategy, practice, card_ids=None) -> Run` in `app/services/run.py`, for starting a practice, a re-run and a run of chosen cards (ADR 112): for each `practice_configuration` of the practice it validates the configuration, copies it into a `run_configuration` with `card_ids` null for a whole run or that deck's chosen cards for a run of chosen cards, empty for a deck that holds none, generates the deck's cards, and writes one `run_counted_card` per card the copies could ask, judged by the same askability test generation uses, held in one function both call (ADR 113). A run that writes no `run_card` is refused with `no_cards`, writing nothing. A re-run and a run of chosen cards are refused with `practice_has_active_run`, before anything is cut, while the practice has an active run; the completed run supplies only the chosen cards, each checked to be one of its cards (ADR 110, ADR 112).
+- Every run must be cut by one function, `cut_run(db, strategy, practice, card_ids=None) -> Run` in `app/services/run.py`, for starting a practice, a re-run and a run of chosen cards (ADR 112): for each `practice_configuration` of the practice it validates the configuration, copies it into a `run_configuration` with `card_ids` null for a whole run or that deck's chosen cards for a run of chosen cards, empty for a deck that holds none, generates the deck's cards, and writes one `run_counted_card` per card the copies could ask, judged by the same askability test generation uses, held in one function both call (ADR 113), and written by `db_stage_create_run_counted_cards(db, run_id, card_ids)` in `app/database_ops/run_counted_card.py`:
+
+```python
+def card_is_askable(values: Mapping[uuid.UUID, str], configuration: RunConfiguration) -> bool:
+    """Whether a card with these values, by field id, has a non-blank value among the fields each side of the configuration names."""
+``` A run that writes no `run_card` is refused with `no_cards`, writing nothing. A re-run and a run of chosen cards of a run that is itself active are refused with `run_active`, and otherwise with `practice_has_active_run` while the practice has an active run, both before anything is cut; the completed run supplies only the chosen cards, each checked to be one of its cards (ADR 110, ADR 112).
 - Starting a practice must, in one transaction, read its active run, complete it when it has no pending card, return it while it is still active, and otherwise create one through `db_try_stage_create_run`, reading the concurrent start's run when that returns `None` (ADR 110).
 - `touch()` takes `Deck | Card | Run`; a run is touched when cut, on every rating in it, and on nothing else in this task (ADR 117). `DeckPracticeConfig` leaves `touch()`.
 - Every read that returns a run must return `day` and `day_index`, worked out in its `db_*` read by one window function over the practice's runs (ADR 114).
-- The deletion closure must plan the practices that hold a deleted deck and drop configuration deletion: `DeletionImpact` gains `practice_ids` and loses `configuration_ids`; an explicitly deleted field leaves every practice's configuration of its deck and every remaining run copy of it as ADR 119 gives, through the starting configuration for a side left empty. `DeletionImpactRead` loses `configurations_deleted` and gains `practices_affected: int`.
-- Home's read must keep its shape but for the run: `HomeRead` becomes `steps`, `active_runs: list[HomeRun]` with `HomeRun(RunRead)` adding `practice_name: str`, `decks: list[DeckNameRead]` and `progress: RunProgress`, up to three active runs, newest `last_activity_at` first, and `recent_decks` as today, read over the new tables.
+- The deletion closure must plan the practices that hold a deleted deck and drop configuration deletion: `DeletionImpact` gains `practice_ids` and loses `configuration_ids`; an explicitly deleted field leaves every practice's configuration of its deck as ADR 119 gives, a configuration left with a side naming no field taking the deck's starting configuration whole, and leaves every remaining run copy of the deck pruned with no reset. `DeletionImpactRead` loses `configurations_deleted` and gains `practices_affected: int`.
+- Home's read must keep its shape but for the run: `HomeRead` becomes `steps`, `active_runs: list[HomeRun]` with `HomeRun(RunRead)` adding `practice_name: str`, `decks: list[DeckNameRead]` and `progress: RunProgress`, up to three active runs, newest `last_activity_at` first, and `recent_decks` as today, read over the new tables, each deck row's Practice opening `/practices`.
 - Regenerate `frontend/src/api/openapi.json` and `frontend/src/api/types.ts` with `npm run gen:api`.
+- `frontend/src/api/practice.ts` must offer `createPractice(payload)`, `readPractices()`, `readPractice(practiceId)`, `readSuggestedPracticeName(deckIds)` and `startRun(practiceId)`, and `frontend/src/api/run.ts` `readRun(runId)`, `readRunState(runId)`, `readRunBreakdown(runId)`, `rerunRun(runId)`, `startChosenCards(runId, cardIds)` and `rateRunCard(runCardId, ratings)`, each unwrapping its response as the api modules do today.
+- `frontend/eslint.config.js`'s rule messages must stop naming `formatDate` and `formatDateTime`; `unwrap.ts`'s handling and comments for `config_id` go; `ConfirmDialog.tsx`'s comment stops naming a practice's delete.
 
 The frontend, each page in its least working form; T2 to T5 bring the four practice screens to their drawings:
 
 - `App.tsx` must route `/practices` to `PracticeOverviewPage`, `/practices/new` to `PracticeCreatePage`, `/practices/:practiceId` to `PracticeDetailsPage` and `/runs/:runId` to `RunPage`; every `/practice…` and `/deck-configurations…` route goes. Every link and navigation in Files follows.
 - `PracticeOverviewPage` must list every practice from `GET /api/practices`, one row each, its name linking to `/practices/:practiceId`, with "Add practice" opening `/practices/new` with its own `cancelTo`; its tabs and filters go.
-- `PracticeDetailsPage` must show the practice's name, its decks' names, a button reading "Start run" with no active run and "Continue run" with one, which calls `POST /api/practices/{id}/runs` and opens `/runs/:runId`, and one row per run linking to `/runs/:runId`, each its day as `formatRunDay` writes it and its Active or Completed badge. A refusal of Start run shows its sentence beside the button.
-- `PracticeCreatePage` must ask for Name and the decks alone, the decks picked through `DeckPicker` and listed beneath with a way to remove each, and send `PracticeCreate`; Create lands on the new practice's page through `useLeaveForm`, and Cancel leaves as cycle 047 has it.
-- `DeckDetailPage` must list the deck's cards and nothing else beside its heading, pencil and Add card: its tabs, its Configurations tab and its Practice button go (LPD8).
-- `RunPage` must read `GET /api/runs/{id}/state`, name the practice in its breadcrumb as "All practices › <practice name>", the practice linking to `/practices/:practiceId`, and title the browser tab with the practice's name. Its summary, Re-run and "Practice these" work as today on the new paths: Re-run and "Practice these" start the run at once, with no confirm, and open `/runs/:newRunId`.
+- `PracticeDetailsPage` must read `GET /api/practices/{id}` under the query key `['practice', practiceId]` and show the practice's name, its decks' names, a button reading "Start run" with no active run and "Continue run" with one, which calls `POST /api/practices/{id}/runs` and opens `/runs/:runId`, and one row per run linking to `/runs/:runId`, each its day as `formatRunDay` writes it and its Active or Completed badge. A refusal of Start run shows its sentence beside the button.
+- `PracticeCreatePage` must ask for Name and the decks alone, the decks picked through `DeckPicker` and listed beneath with a way to remove each, and send `PracticeCreate`; Create lands on the new practice's page through `useLeaveForm`, and Cancel leaves through it for `cancelTo`, else `/practices`. The picked decks, in the order picked, and a typed name must stay in the page's URL, as one `deck` parameter per pick and a `name` parameter, written through `useViewParams`, so a refresh keeps them; the picker's "New deck…" opens New deck with the page's own address as `cancelTo` and `returnTo`, and the new deck's id it brings back is added to the picks.
+- `DeckDetailPage` must list the deck's cards and nothing else beside its heading, pencil and Add card: its tabs, its Configurations tab and its Practice button go.
+- `RunPage` must read `GET /api/runs/{id}/state` under the query key `['run', runId]`, name the practice in its breadcrumb as "All practices › <practice name>", the practice linking to `/practices/:practiceId`, and title the browser tab with the practice's name. Its summary, Re-run and "Practice these" work as today on the new paths, and its completed view's "Done" opens the practice's page: Re-run and "Practice these" start the run at once, with no confirm, and open `/runs/:newRunId`.
 - `frontend/src/lib/datetime.ts` must offer `formatRunDay(day: string, dayIndex: number): string`, writing `day` as the server sends it and adding " (N)" when `dayIndex` is above 0, never parsing `day` into a `Date`; `formatDate` and `formatDateTime` are removed, and `userTimeZone()` and the ESLint rule stay (ADR 114).
-- Home must read the renamed payload: each active row names its run's practice, links to `/practices/:practiceId`, and its Start practice continues `/runs/:runId`.
+- Home must read the renamed payload: each active row names its run's practice, links to `/practices/:practiceId`, and its Start practice continues `/runs/:runId`; a recently practiced deck's Practice opens `/practices`.
 - `PracticeFilterBar` goes, since the Practice page and New practice drop their filters.
 - `deckConfigurationBoard.ts` must stop reading `DeckPracticeConfigCreate`, which leaves the schema: `ConfigPayloadArrays` is written out in the module as the six arrays, `prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids` and `answer_pool_ids` as `string[]` and `prompt_pool_counts` and `answer_pool_counts` as `number[]`, and `boardFromConfig` takes it.
-- `failureSentence` must give `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." beside Start run and Re-run, "These cards can't be run. Each is blank in every field one side shows." under "Practice these", `practice_has_active_run` "Finish the active run first.", and `practice_name_taken` "A practice with this name already exists."
+- `failureSentence` must take an optional map of sentences by code, for a control whose sentence for a code differs from the app's:
+
+```ts
+export function failureSentence(error: unknown, notFound: string, byCode?: Partial<Record<string, string>>): string;
+```
+
+  It must give `practice_has_active_run` "Finish the active run first.", `practice_name_taken` "A practice with this name already exists." and `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows.", the sentence beside Start run and Re-run; "Practice these" passes `{ no_cards: "These cards can't be run. Each is blank in every field one side shows." }`. `nothing_to_practice` goes with `nothing_to_rerun`, every run that writes no card being refused with `no_cards` (ADR 112).
 - The deck delete confirm must read "This also deletes N cards, N fields and N runs, and takes the deck out of N practices. This can't be undone.", each count present only above zero; the save that removes fields reads "This removes N fields from N cards, deletes N cards and deletes N active runs. This can't be undone."
 - `AGENTS.md` and `README.md` must carry every rename and path this task makes, `submit_rating` in `app/services/run.py` among them, and `README.md` must describe a practice as a kept set of decks run many times and a run as one go through it.
 - Tests: `tests/api_tests/test_practices.py` covers create with a typed name, with no name taking the suggestion, a taken name refused, a repeated deck refused, another user's deck a 404, each deck's configuration copied from its last rated run or the starting one, `first_practice_at` written once, start creating a run and then continuing it, two concurrent starts landing on one run, and the order of `GET /api/practices`; `test_runs.py` covers the cut writing counted cards, `no_cards`, `practice_has_active_run` on a re-run and a run of chosen cards, a re-run cut from the practice's configurations as they stand, and the run's `day` and `day_index` across a zone change; every other test in Files is brought to the new tables and paths.
@@ -296,6 +328,10 @@ The vocabulary, `docs/vocabulary.md`, each row's columns as given, every other c
 - "A practice that would have no cards": Concept "A run that would have no cards"; User reads "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."; Where a practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button.
 - "A practice of chosen cards that nothing survives": Concept "A run of chosen cards that would have no cards"; User reads "These cards can't be run. Each is blank in every field one side shows."; Where a completed run's page, under Re-run these.
 - A new row in the Practice area: Concept "Starting a next run while one is active"; User reads "Finish the active run first."; Where a completed run's page, under Re-run or Re-run these.
+- A new row in the Practice area: Concept "A practice name already taken"; User reads "A practice with this name already exists."; Where New practice; Edit practice; under Name; Code `practice_name_taken`.
+- A new row in the Run area: Concept "A run's day"; User reads the day it was run, as "2026-11-03"; a later run of one day adds the next number, as "2026-11-03 (1)"; Where Home, in a run's block; a practice's page, under "Runs"; a completed run's page, its heading; Code `day`; `day_index`; `formatRunDay`.
+- "A run that can still be continued": User reads "active"; "Active" as badge and as Home's section; Where a practice's page, under "Runs"; Home.
+- "A run that has finished": User reads "completed"; "Completed" as badge; "Recently completed" as Home's section; Where a practice's page, under "Runs"; a completed run's page; Home.
 - "The page a practice runs on": Concept "The page a run runs on"; User reads no heading of its own; its practice named in the row of places.
 - "The practice's progress, a wordless bar, spoken": Concept "A run's progress, a wordless bar, spoken".
 - A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left. Every Code cell must follow every name and path this task renames or deletes.
@@ -348,22 +384,21 @@ New practice reads as drawing 8 draws it: its heading, Name with the suggested n
 
 **Details**
 
-LPD9, LPD14 and drawing 8, under ADR 115 and PDR 051:
+Drawing 8, under ADR 115 and PDR 051:
 
 - The page must read, top to bottom: the heading "New practice"; Name, an empty input showing in grey, as its placeholder, the suggested name from `GET /api/practices/suggested-name?deck_ids=` for the decks picked, in the order picked, read through TanStack Query keyed by those ids, and blank while none is picked; "Choose decks", with its search, placeholder and spoken name "Search decks", opening a list spoken "Decks", each row a deck's name with its mark and "New deck…" as the last row; then the picked decks beneath, flat, each its mark, its name and "N cards · N fields" beneath, with a cross spoken "Remove <name>". The bar at the foot holds Cancel, "N selected" once a deck is picked, and Create, greyed and not ready while no deck is picked.
 - A name the user has typed must stay whatever they pick afterwards; Create sends the typed name, or none when Name is blank.
 - "New deck…" must open New deck with both return addresses, so Create there brings the user back with the new deck picked.
-- `practice_name_taken` must render "A practice with this name already exists." beside Name and be revealed as cycle 039 reveals a taken name.
+- `practice_name_taken` must render "A practice with this name already exists." beside Name and be revealed through `FormPart` and `SubmitButton`, as `DeckEditor` reveals a taken name.
 - Tests: the grey suggestion follows picks and removals; a typed name survives a later pick; Create is not ready with no deck; a taken name shows beside Name.
 - `docs/vocabulary.md`, each row's columns as given:
   - "A new practice's name": Concept "A new practice's suggested name"; User reads its decks' names in the order picked, joined by " + ", in grey inside Name, as "Commands + Ports"; a name another practice already has, with the next untaken number in parentheses, as "Ports (1)"; Where New practice.
   - "The chosen configurations": Concept "The chosen decks"; User reads "Choose decks"; "Search decks", spoken, on its search; "Decks", spoken, on the list it opens, each row a deck's name alone and "New deck…" as the last row; each picked deck beneath with its cross; "Remove <name>", spoken; "N selected", in the bar at the foot between Cancel and Create, once a deck is picked; Where New practice.
   - "New practice with a blank name" and "New practice with nothing chosen": User reads "—"; Where "—".
-  - A new row in the Practice area: Concept "A practice name already taken"; User reads "A practice with this name already exists."; Where New practice; Edit practice; under Name; Code `practice_name_taken`.
 
 **Out of scope**
 
-- Each deck's board on New practice: never, LPD14.
+- Each deck's board on New practice: never.
 - A name wrapping in the picked decks: cycle 053.
 
 **Done when**
@@ -411,20 +446,24 @@ All practices reads as drawing 15 draws it, every practice a row of its mark, it
 - `frontend/src/pages/RunPage.test.tsx`
 - `frontend/src/pages/HomePage.tsx`
 - `frontend/src/pages/HomePage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
+- `frontend/src/components/run/RunRow.tsx`
 - `frontend/src/components/shell/navItems.ts`
 - `frontend/src/components/shell/TopBar.test.tsx`
+- `frontend/src/components/shell/SideDrawer.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
 
-LPD15, LPD18, PDR 045, PDR 046, PDR 049 and drawing 15, under ADR 116:
+PDR 045, PDR 046, PDR 049 and drawing 15, under ADR 116:
 
 - `PracticeSummary` must gain `readiness: float | None`, the practice's readiness, None when its decks hold no card, read for every requested practice in one statement, `db_fetch_practice_mastery_read_rows`, each row owned by its practice through `practice_configuration`, and folded in `practice_readiness` through `_fold_collections` (ADR 116). `PracticeDetail` carries it too.
 - `PracticeMark` must draw drawing 15's flash: the path `M13 2 3 14h9l-1 8 10-12h-9l1-8z` on a 24 by 24 view box, stroke `currentColor` at width 2 with round caps and joins, no fill, `role="img"`, `aria-label="Practice"`, inline before the name and sized to its text as `DeckMark` is.
-- `DeckLine` must write several decks in one line, each its `DeckMark` and name, joined by " · ", as "Commands · Ports" (LPD18); it replaces `DeckChips`.
+- `DeckLine` must write several decks in one line, each its `DeckMark` and name, joined by " · ", as "Commands · Ports"; it replaces `DeckChips`.
 - All practices must read as drawing 15: the heading "All practices", "Add practice", the filter "All decks" through `DeckPicker` narrowing the rows to the practices holding the chosen deck, client-side over the whole list `GET /api/practices` returns, the chosen deck kept in the URL's `deck` parameter (PDR 017); then one row per practice in the order received, its `PracticeMark` and name, its circle at the right when it has a readiness, and its decks beneath as `DeckLine` writes them; tapping the row opens the practice's page. A row shows no progress, no date and no play button. "No practices yet." stands with none, and "No practices match these filters." with "Clear filters" when the filter empties the list.
 - The side menu's place must read "All practices".
-- The run page's breadcrumb must show the practice's name after its `PracticeMark`, as "All practices › " then the mark and the name. Home's active rows keep naming their practice with no mark, since cycle 052 redraws them, and write their decks through `DeckLine`, which replaces `DeckChips` there.
+- The run page's breadcrumb must show the practice's name after its `PracticeMark`, as "All practices › " then the mark and the name. Home's active rows keep naming their practice with no mark, since cycle 052 redraws them, and write their decks through `DeckLine`, which replaces `DeckChips` there and everywhere else it stands, `RunRow` and `PracticeDetailsPage` included. A recently practiced deck's Practice on Home opens `/practices?deck=<deck id>`.
 - Tests: practice readiness over two decks of different sizes weighs each card once, and is None with no card; the filter narrows and clears; the row carries the mark, the decks and the circle.
 - `docs/vocabulary.md`, each row's columns as given:
   - "A list its filters empty": Where All practices.
@@ -480,11 +519,12 @@ Edit practice, reached at `/practices/:practiceId/edit`, renames a practice and 
 - `frontend/src/App.tsx`
 - `frontend/src/pages/PracticeEditPage.tsx` (new)
 - `frontend/src/pages/PracticeEditPage.test.tsx` (new)
+- `frontend/src/test/formParts.test.ts`
 - `docs/vocabulary.md`
 
 **Details**
 
-LPD2, LPD10, LPD20 and drawing 4-edit, under ADR 115, ADR 118, ADR 124 and PDR 051:
+Drawing 4-edit, under ADR 115, ADR 118, ADR 124 and PDR 051:
 
 ```python
 class PracticeUpdate(AppModel):
@@ -493,7 +533,7 @@ class PracticeUpdate(AppModel):
 
 - `PATCH /api/practices/{id}` (`PracticeUpdate`, 200, `PracticeSummary`) must rename the practice, refuse a taken name with `practice_name_taken` from the constraint, and touch nothing, so the practice stays where it was in every list (PDR 047).
 - `DELETE /api/practices/{id}` (204) must call a committing `db_delete_practice`, one `DELETE` scoped to the user whose cascades remove the practice's configurations and runs with their copies, card rows and counted cards, set `mastery_log.run_id` null and leave `review_log` alone; it does not go through the deletion closure (ADR 118).
-- Edit practice must read as drawing 4-edit: the heading "Edit practice", Name holding the practice's name, then "Delete practice"; the bar at the foot holds Cancel and Save. A blank Name is "Name is required." beside Name, as on every form. A taken name shows "A practice with this name already exists." beside Name.
+- Edit practice must read as drawing 4-edit: the heading "Edit practice", Name holding the practice's name, then "Delete practice"; the bar at the foot holds Cancel and Save. A blank Name is "Name is required." beside Name, and `PATCH` refuses a blank name with a plain-string 400 no screen reaches. A taken name shows "A practice with this name already exists." beside Name. Edit practice asks nothing before Cancel leaves with unsaved changes, being none of the forms that ask. Name and Save are drawn through `FormPart` and `SubmitButton`, and `frontend/src/test/formParts.test.ts`'s list of forms gains `PracticeEditPage.tsx`.
 - Delete practice must ask "Delete this practice?" over "Its runs will be gone. Its decks and your mastery stay as they are.", with Cancel and Delete; on Delete it deletes the practice and leaves through `useLeaveForm` for `/practices`.
 - Save and Cancel must leave through `useLeaveForm`: Cancel to `cancelTo`, else the practice's page; Save to `returnTo`, else the practice's page.
 - Tests: a rename moves no practice in `GET /api/practices`; a taken name is refused; deleting a practice deletes its runs and leaves every card's readiness as it was; another user's practice is a 404 on both paths.
@@ -502,6 +542,8 @@ class PracticeUpdate(AppModel):
   - A new row in the Practice area: Concept "Deleting a practice"; User reads "Delete practice"; Where Edit practice; Code `DELETE /api/practices/{id}`.
   - "Confirming a practice's deletion": Where Edit practice.
   - "What deleting a practice takes and leaves": User reads "Its runs will be gone. Its decks and your mastery stay as they are."; Where Edit practice.
+  - "A name left blank": Where New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name; Edit practice, under Name.
+- `frontend/src/api/practice.ts` gains `renamePractice(practiceId, name)` and `deletePractice(practiceId)`.
 
 **Out of scope**
 
@@ -554,7 +596,7 @@ A practice's page reads as drawing 4-practice draws it: its mark, name and circl
 
 **Details**
 
-LPD6, LPD11, LPD19, LPD20, LPD22, PDR 040, PDR 046 and drawing 4-practice, under ADR 113 and ADR 114:
+PDR 040, PDR 046 and drawing 4-practice, under ADR 113 and ADR 114:
 
 ```python
 class RunListing(RunRead):
@@ -568,18 +610,15 @@ class RunListing(RunRead):
 - `RunMark` must draw drawing 4-practice's run mark: a circle of radius 10.5 at the centre of a 24 by 24 view box with the flash path `M13 5 7 13h5l-1 6 6-8h-5l1-6z` at stroke width 1.8 inside it, stroke `currentColor` with round caps and joins, no fill, `role="img"`, `aria-label="Run"`, sized to the text beside it as `DeckMark` is.
 - The page must read as drawing 4-practice, under the row of places "All practices": the heading, the practice's `PracticeMark` and name, its circle at the far right when it has a readiness; beneath, the main action in yellow reading "Continue run" while a run is active and "Start run" when none is, with the pencil spoken "Edit <name>" beside it opening Edit practice with its own address as `cancelTo` and `returnTo`; then one line per deck, its `DeckMark` and name; then "Runs" and one `RunRow` per run, most recent first, each its `RunMark` and day in ink as `formatRunDay` writes it, its Active or Completed badge beside, and "N of M cards" beneath, opening `/runs/:runId`. "No runs yet." stands under "Runs" with none. Nothing else is on the page.
 - A deck's line must show its name and nothing that opens yet.
-- Tests: the counts over a run ended with cards unreached, a run of chosen cards and a deck's card deleted afterward; the main action's two words; a row's mark, day, badge and count.
+- Tests: the counts over a run ended with cards unreached, made in the test by deleting its pending rows and marking it completed since the end of a run comes later, a run of chosen cards, and a deck's card deleted afterward; the main action's two words; a row's mark, day, badge and count.
 - `docs/vocabulary.md`, each row's columns as given:
-  - A new row in the Run area: Concept "A run's day"; User reads the day it was run, as "2026-11-03"; a later run of one day adds the next number, as "2026-11-03 (1)"; Where Home, in a run's block; a practice's page, under "Runs"; a completed run's page, its heading; Code `day`; `day_index`; `formatRunDay`.
   - A new row in the Run area: Concept "A run's mark"; User reads a flash inside a circle, drawn as an outline in the color of the words beside it; "Run", spoken; Where beside a run's day on Home, under "Runs" and heading a completed run's page; never on the run page; Code `RunMark`.
   - "A practice's own page": User reads its name with its mark and its circle; each of its decks on a line; "Runs" over its runs.
-  - "A run that can still be continued": User reads "active"; "Active" as badge and as Home's section; Where a practice's page, under "Runs"; Home.
-  - "A run that has finished": User reads "completed"; "Completed" as badge; "Recently completed" as Home's section; Where a practice's page, under "Runs"; a completed run's page; Home.
   - "How many cards were practiced": Concept "How many of its practice's cards a run reached"; User reads "N of M cards"; Where a completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details.
 
 **Out of scope**
 
-- A deck's line opening the deck's board: cycle 050.
+- A deck's line opening the deck's board, and the chevron drawing 4-practice draws at its end: cycle 050.
 - "N of M cards" on a completed run's page and on Home: cycles 051 and 052.
 - A name wrapping to two lines: cycle 053.
 
