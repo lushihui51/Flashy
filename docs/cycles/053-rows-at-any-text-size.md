@@ -1,6 +1,6 @@
 # 053 — Rows at any text size
 
-Waits for: 046, 048, 049, 050, 051 and 052, every screen they leave, its rows and its names: `ListRow`, `DeckRow`, `CardList`, `PickerCombobox`, `DeckLine`, `RunRow`, `HomeRunRow`, `RunBreakdown`, `FieldAssignmentBoard`, `DeckEditor`, `PracticeOverviewPage`, `PracticeDetailsPage`, `RunPage`, `HomePage` and `DeckDetailPage`, files this cycle shares with them.
+Waits for: 046, 047, 048, 049, 050, 051 and 052, every screen they leave, its rows, names and inputs, and these files this cycle shares with them: `ListRow`, `PickerCombobox`, `Breadcrumb`, `FormBar`, `TopBar`, `AuthSlot`, `CardList`, `FieldAssignmentBoard`, `DeckLine`, `RunRow`, `HomeRunRow`, `RunBreakdown`, `RatingChip`, `DeckEditor`, `CardFieldsForm`, `CardStandaloneForm`, `LibraryPage`, `DeckDetailPage`, `HomePage`, `PracticeOverviewPage`, `PracticeDetailsPage`, `PracticeCreatePage`, `PracticeEditPage`, `RunPage` and `DeckBoardPage`.
 
 Canvas: https://claude.ai/artifact/6c1PcXHayxZvA6DPin7n1w
 
@@ -48,6 +48,11 @@ None.
 - `frontend/src/components/run/RunRow.tsx`
 - `frontend/src/components/run/HomeRunRow.tsx`
 - `frontend/src/components/run/RunBreakdown.tsx`
+- `frontend/src/components/run/RatingChip.tsx`
+- `frontend/src/components/library/CardStandaloneForm.tsx`
+- `frontend/src/pages/LibraryPage.tsx`
+- `frontend/src/pages/PracticeCreatePage.tsx`
+- `frontend/src/pages/PracticeEditPage.tsx`
 - `frontend/src/pages/DeckDetailPage.tsx`
 - `frontend/src/pages/HomePage.tsx`
 - `frontend/src/pages/PracticeOverviewPage.tsx`
@@ -58,12 +63,13 @@ None.
 
 **Details**
 
-PDR 050, LPD21 and drawings 7-practice and 7-deck:
+PDR 050, drawings 7-practice and 7-deck:
 
-- A name in a list, a deck's, a card's, a practice's, a run's practice's on Home, a field's on the board, and a line of decks as `DeckLine` writes it, must wrap onto a second line and be shortened with "…" after two, through `line-clamp-2`, as drawing 7-practice draws "Judgement practice of every command before the CompTIA exam next month". A mark stays on the line of the name's first word.
-- A name on its own page, as a heading, must never be shortened, and must break only between words: no `break-all`, `break-words` or `overflow-wrap: anywhere` on any heading or name.
+- Guidance: run the scan below before changing anything, to list the files it fails on.
+- A name in a list, a deck's, a card's (its lead value on a deck's page and its title on the summary), a practice's, a run's practice's on Home, a picked deck's on New practice, a field's on the board, and a line of decks as `DeckLine` writes it, must wrap onto a second line and be shortened with "…" after two, through `line-clamp-2`, as drawing 7-practice draws "Judgement practice of every command before the CompTIA exam next month". A mark stays on the line of the name's first word.
+- A name on its own page, as a heading, must never be shortened, and must break only between words: a heading takes its line's full width, the buttons beside it wrapping beneath it, and a heading or a name carries no `break-all` and no `wrap-anywhere`. A single word wider than its whole line may break inside itself, through `overflow-wrap: break-word` (`break-words` or `wrap-break-word`), since nothing else keeps the page from scrolling sideways (PDR 050). A card's values other than its lead value are not names and keep wrapping as they do today.
 - Every row of the app, the top bar's items, the row of places, a page's heading beside its buttons, the bars at the foot, the summary's counts and its order, and every filter, must wrap what it holds onto further lines when it is wider than the screen, so no page scrolls sideways; nothing shrinks to fit (PDR 050).
-- The scan, `frontend/src/test/nameWrap.test.ts`, reads every `.tsx` file under `frontend/src/components` and `frontend/src/pages`, test files left out, and fails on any `truncate`, `text-ellipsis`, `break-all`, `break-words` or `overflow-x-auto` class, naming the file.
+- The scan, `frontend/src/test/nameWrap.test.ts`, reads every `.tsx` file under `frontend/src/components` and `frontend/src/pages`, test files left out, and fails on any `truncate`, `text-ellipsis`, `line-clamp-1`, `break-all` or `overflow-x-auto` class, naming the file.
 - Tests: `ListRow.test.tsx` asserts the title's two-line clamp; the scan passes.
 
 **Out of scope**
@@ -71,6 +77,7 @@ PDR 050, LPD21 and drawings 7-practice and 7-deck:
 - An input too narrow to type in, on the deck form and elsewhere: T2.
 - A layout change at the default text size: never.
 - Text shrunk to fit a row: never, PDR 050.
+- A card's lead value breaking anywhere, as drawing 7-deck draws it: never; it is the card's name, which breaks only between words (PDR 050).
 
 **Done when**
 
@@ -106,15 +113,15 @@ An input too narrow to type in moves beneath its label and takes the full width,
 
 **Details**
 
-LPD21 and drawing 7-editdeck:
+Drawing 7-editdeck:
 
-- At the default text size the deck form must read as it does today, each field one row of its name input, its type and its three buttons. Where that row has no room for the name input to show its value, as at a 24px root on a 390-wide screen, the field must read as drawing 7-editdeck draws it: "Field name" as a visible label above its input at the full width, then "Field type" with its type and the three buttons on a line beneath, wrapping. Guidance: a CSS container query on the field's row, sized in `rem` or `ch`, switches the layout with no script.
+- At the default text size the deck form must read as it does today, each field one row of its name input, its type and its three buttons. Where that row has no room for the name input to show its value, as at a 24px root on a 390-wide screen, each field must read as drawing 7-editdeck draws it, in a card of its own: "Field name" as a visible label above its input at the full width, then "Field type" with its type and the three buttons on a line beneath, wrapping. The input keeps its accessible name "Field name" in both layouts. Guidance: a CSS container query on the field's row, sized in `rem` or `ch`, switches the layout with no script.
 - Every other input beside a label or a control, the card form's values, New practice's and Edit practice's Name and the pickers' search, must stay at the full width of its row or move beneath its label when the row narrows; no input narrows below its own text.
-- Tests: `DeckEditor.test.tsx` asserts each field's name input has the visible label "Field name" in the DOM and its accessible name stays "Field name".
+- Tests: `DeckEditor.test.tsx` asserts each field's name input keeps the accessible name "Field name" and that the label element for the narrow layout is in the DOM; jsdom applies no container query, so the two layouts are checked live.
 
 **Out of scope**
 
-- The "Primary" label and the sentence about the first field, which drawing 7-editdeck draws inside the first field's card: never moved or removed here; they stay where the deck form has them.
+- The "Primary" label, which drawing 7-editdeck leaves out, and the sentence about the first field, which it draws inside the first field's card: never moved or removed here; they stay where the deck form has them.
 - A layout change at the default text size: never.
 
 **Done when**
