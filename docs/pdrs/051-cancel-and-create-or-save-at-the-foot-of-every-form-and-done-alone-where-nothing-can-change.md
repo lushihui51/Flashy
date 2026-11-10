@@ -1,0 +1,67 @@
+# PDR 051: Cancel and Create or Save at the foot of every form, and Done alone where nothing can change
+
+## Status
+
+Active
+
+## Context
+
+The app is used on phones held upright. A phone held in one hand is reached by the thumb, which rests near the foot of the screen and stretches to the top.
+
+A form is where the user makes or changes a thing, such as a deck, a card or a practice. A form that makes or changes a thing has a way to back out, Cancel, and a way to finish, Create or Save.
+
+PDR 039 lets the user change how a practice's next run asks a deck, from the practice's page between runs, and read how a completed run asked it, which the user cannot change. Both open the deck's board.
+
+PDR 017 gives a form no row of places and has it back out to what opened it, so a form's own controls are the user's only way off it.
+
+PDR 034 lets a user make a deck from a picker inside the card form, which opens New deck over that form. One form can be opened from its own entry or over another form, and holds the same words either way.
+
+A row under the top bar keeps Create or Save clear of a phone's keyboard and keeps the page's name in view while the user scrolls. A bar at the foot of the screen takes a little more of a phone's screen than that row.
+
+Whether a bar at the foot stays clear of a phone's keyboard while the user types is not yet known.
+
+A heading at the top of the page that scrolls with it reads as the page's own, and leaves the screen as the user scrolls. A heading held in a row under the top bar stays in view.
+
+Edit deck already shows "Done" where nothing is unsaved. A form that shows only what cannot be changed has nothing to save and nothing to back out of.
+
+PDR 032 put Cancel and Create or Save at the foot of every form. This record replaces PDR 032 to give a form that changes nothing Done alone, and restates the rest unchanged.
+
+## Decision
+
+We will put Cancel and Create or Save in a bar at the foot of the screen on every form where the user can change something, and Done alone in that bar on a form that only shows what cannot be changed. The bar stays at the foot while the page scrolls.
+
+We will give every form the same bar however it was opened, from its own entry or over another form.
+
+We will put a form's heading at the top of the page, where it scrolls with the page.
+
+## Alternatives considered
+
+### The row under the top bar, on every form
+
+Rejected because it crowds the page's name between two buttons and sits furthest from the thumb.
+
+### A bar at the foot on New practice alone
+
+Rejected because Create would then sit at the foot on one form and at the top on the others.
+
+### The row under the top bar on a form opened over another form
+
+Rejected because one form would differ by where it was opened, which tells the user nothing useful.
+
+## Consequences
+
+**Positive**
+
+- The user finds Cancel and Create or Save under the thumb, in one place on every form, however the form was opened.
+- The user reads a form's heading as the page's own, with nothing beside it.
+- The user leaves a form that changes nothing by its one button, in the same place.
+
+**Negative**
+
+- The user loses the heading from view once they scroll.
+- The user gives up a little more of a phone's screen to the bar than the row took.
+- The user who reaches for Create or Save can tap Cancel beside it, and on New practice, which asks nothing before leaving, loses what they chose.
+
+**Neutral**
+
+- The user meets Done alone at the foot of a form that only shows what cannot be changed.

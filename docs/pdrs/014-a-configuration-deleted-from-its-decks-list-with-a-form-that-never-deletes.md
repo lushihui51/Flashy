@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Superseded by PDR 039
 
 ## Context
 

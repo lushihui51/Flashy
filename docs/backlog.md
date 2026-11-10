@@ -20,9 +20,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B9. Can the user create many cards at once by pasting rows of text?
   - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
   - Owner: /product-decide
-- B10. Does an unsaved deck form survive leaving the page or closing the browser?
-  - Reason: `DeckEditor` keeps its draft in `useReducer` state and loses it on leaving, while New practice's draft lives in its address.
-  - Owner: /product-decide
 - B11. Which kinds of value can a field hold besides text, and how does the user enter each on a card?
   - Reason: `FieldType` in `app/models/field_def.py` has `text`, `image` and `audio`; `SUPPORTED_FIELD_TYPES` in `frontend/src/lib/fieldTypes.ts` allows `text` alone, and `CardFieldsForm` in `frontend/src/components/library/CardFieldsForm.tsx` has no widget for the other two.
   - Owner: /product-decide
