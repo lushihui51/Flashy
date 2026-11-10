@@ -140,15 +140,18 @@ None.
 - `frontend/src/pages/practicePrefilterChain.test.tsx` (deleted)
 - `frontend/src/pages/RunPage.tsx` (renamed from `frontend/src/pages/PracticeRunPage.tsx`)
 - `frontend/src/pages/RunPage.test.tsx` (renamed from `frontend/src/pages/PracticeRunPage.test.tsx`)
-- `frontend/src/components/practice/RunRow.tsx` (renamed from `frontend/src/components/practice/PracticeRunRow.tsx`)
-- `frontend/src/components/practice/RunStatusBadge.tsx` (renamed from `frontend/src/components/practice/PracticeStatusBadge.tsx`)
+- `frontend/src/components/run/RunRow.tsx` (moved from `frontend/src/components/practice/PracticeRunRow.tsx`)
+- `frontend/src/components/run/RunStatusBadge.tsx` (moved from `frontend/src/components/practice/PracticeStatusBadge.tsx`)
+- `frontend/src/components/run/RerunButton.tsx` (moved from `frontend/src/components/practice/RerunButton.tsx`)
+- `frontend/src/components/run/RerunButton.test.tsx` (moved from `frontend/src/components/practice/RerunButton.test.tsx`)
+- `frontend/src/components/run/RunBreakdown.tsx` (moved from `frontend/src/components/practice/RunBreakdown.tsx`)
+- `frontend/src/components/run/RunBreakdown.test.tsx` (moved from `frontend/src/components/practice/RunBreakdown.test.tsx`)
+- `frontend/src/components/run/RatingChip.tsx` (moved from `frontend/src/components/practice/RatingChip.tsx`)
+- `frontend/src/components/run/RatingChip.test.tsx` (moved from `frontend/src/components/practice/RatingChip.test.tsx`)
+- `frontend/src/components/run/ratingTiers.ts` (moved from `frontend/src/components/practice/ratingTiers.ts`)
+- `frontend/src/components/run/FieldValue.tsx` (moved from `frontend/src/components/practice/FieldValue.tsx`)
+- `frontend/src/components/run/RunProgressBar.tsx` (moved from `frontend/src/components/practice/RunProgressBar.tsx`)
 - `frontend/src/components/practice/DeckChips.tsx` (renamed from `frontend/src/components/practice/SessionDeckChips.tsx`)
-- `frontend/src/components/practice/RerunButton.tsx`
-- `frontend/src/components/practice/RerunButton.test.tsx`
-- `frontend/src/components/practice/RunBreakdown.tsx`
-- `frontend/src/components/practice/RunBreakdown.test.tsx`
-- `frontend/src/components/practice/RatingChip.tsx`
-- `frontend/src/components/practice/RatingChip.test.tsx`
 - `frontend/src/components/practice/ConfigurationPickList.tsx` (deleted)
 - `frontend/src/components/practice/SelectedConfigurationList.tsx` (deleted)
 - `frontend/src/components/practice/PracticeFilterBar.tsx` (deleted)
@@ -160,7 +163,7 @@ None.
 - `frontend/src/lib/practiceConfigurationGroups.ts` (deleted)
 - `frontend/src/lib/practiceSelection.ts` (deleted)
 - `frontend/src/lib/practiceSelection.test.ts` (deleted)
-- `frontend/src/lib/practiceCopy.ts`
+- `frontend/src/lib/runCopy.ts` (renamed from `frontend/src/lib/practiceCopy.ts`)
 - `frontend/src/lib/deckConfigurationBoard.ts`
 - `frontend/src/lib/datetime.ts`
 - `frontend/src/lib/datetime.test.ts`
@@ -184,7 +187,13 @@ None.
 The schema, ADR 105, ADR 107, ADR 110, ADR 113, ADR 114, ADR 115, ADR 117 and ADR 122:
 
 - One migration must, in one transaction and in this order: create `practice` (`id`, `user_id` not null `ON DELETE CASCADE` to `app_user`, `name`, `created_at`, `updated_at` as `TimestampMixin` gives them, `uq_practice_user_id` on `(user_id, name)`), `practice_configuration` (`id`, `practice_id` and `deck_id` each not null `ON DELETE CASCADE`, the six array and count columns, `UNIQUE (practice_id, deck_id)`) and `run_counted_card` (`run_id`, `card_id`, primary key `pk_run_counted_card` on both, each `ON DELETE CASCADE`, index `ix_run_counted_card_card_id`); move every run into a practice of its own as ADR 122 lists, a later practice whose name its user's earlier one has taking the next untaken number in parentheses, as "Cycle 032 T3 judgement (1)"; add `practice_run.practice_id`, not null, `ON DELETE CASCADE`, and `practice_run.last_activity_at`, set to the later of the run's `created_at` and its latest review's `reviewed_at`; then drop `practice_run.name`, `practice_run.user_id`, `practice_deck.source_config_id`, `practice_deck.source_config_name` and `deck_practice_config`; rename `practice_run` to `run`, `practice_deck` to `run_configuration`, `practice_card` to `run_card`, every foreign key column after the table it references (`practice_run_id` to `run_id` in `run_configuration`, `run_card` and `mastery_log`), and every constraint and index to the name the naming convention in `app/database.py` derives, the names left from `practice_session` included; and create `uq_run_practice_id_active` on `run (practice_id) WHERE status = 'active'` and `ix_run_practice_id` on `run (practice_id, last_activity_at)`. Its downgrade must raise. Applied migrations keep their names.
-- The models must follow the schema: `Practice` and `PracticeConfiguration` new; `Run`, `RunConfiguration`, `RunCard` and `RunCountedCard`; `MasteryLog.run_id`. `Run` has no `name` and no `user_id`, and carries `last_activity_at`. Every name in the code in which "practice" or "session" means one go through a practice must become "run", in models, `db_*` functions, services, routes, payloads, tests and the frontend: `PracticeRun` to `Run`, `PracticeCard` to `RunCard`, `PracticeDeck` to `RunConfiguration`, `practice_card_id` to `run_card_id`, `generate_practice_card_fields` to `generate_run_card_fields`, `session_status` to `status`, and the like. "Practice" stays only for the thing the user keeps.
+- The models must follow the schema: `Practice` and `PracticeConfiguration` new; `Run`, `RunConfiguration`, `RunCard` and `RunCountedCard`; `MasteryLog.run_id`. `Run` has no `name` and no `user_id`, and carries `last_activity_at`. Every name in the code in which "practice" or "session" means one go through a practice must become "run", in models, `db_*` functions, services, routes, payloads, tests and the frontend: `PracticeRun` to `Run`, `PracticeCard` to `RunCard`, `PracticeDeck` to `RunConfiguration`, `practice_card_id` to `run_card_id`, `generate_practice_card_fields` to `generate_run_card_fields`, `session_status` to `status`, and the like. "Practice" stays only for the thing the user keeps. The renames, every one of them, across `app/`, `tests/`, `frontend/src/`, the vocabulary's Code cells, `AGENTS.md` and `README.md`:
+  - Models and payloads: `PracticeRun` to `Run`, `PracticeRunRead` to `RunRead`, `PracticeCard` to `RunCard`, `PracticeCardRead` to `RunCardRead`, `PracticeCardStatus` to `RunCardStatus`, `PracticeDeck` to `RunConfiguration`, `PracticeRunState` to `RunState`, `PracticeRunBreakdown` to `RunBreakdown`, `PracticeRunChosenCards` to `RunChosenCards`; `PracticeRunCreate`, `PracticeRunRerun`, `PracticeRunSummary`, `PracticeRunDeckSummary` and `HomeActivePractice` go, replaced by the payloads below; `app/models/practice_run_payloads.py` to `app/models/run_payloads.py`.
+  - Fields and columns: `practice_run_id` to `run_id`, `practice_card_id` to `run_card_id`, `practice_card_ids` to `run_card_ids`, `rated_practice_card` to `rated_run_card`, `requeued_practice_card` to `requeued_run_card`, `active_practices` to `active_runs`, `session_status` to `status`; `session_name` goes.
+  - Functions: every `db_*` function's `practice_run` to `run`, `practice_card` to `run_card` and `practice_deck` to `run_configuration`, as `db_read_practice_cards_for_run` to `db_read_run_cards_for_run` and `db_read_active_practice_runs_with_decks` to `db_read_active_runs_with_decks`; `db_stage_set_practice_deck_source_config_name`, `db_stage_unlink_practice_decks_from_config` and `db_delete_practice_run` go; `start_practice_run` to `start_run`, `rerun_practice_run` to `rerun`, `start_chosen_cards_run` to `start_chosen_cards`, the three cutting through `cut_run`; `get_practice_run_state` to `get_run_state`, `get_practice_run_breakdown` to `get_run_breakdown`, `get_current_practice_card` to `get_current_run_card`, `generate_practice_card_fields` to `generate_run_card_fields`; `app/services/practice_generation.py` and `app/database_ops/practice_generation.py` to `run_generation.py`; each route handler after its path, as `read_run_state` and `rate_run_card`, and `api_practice_run_router` to `api_run_router` beside a new `api_practice_router`; `ACTIVE_PRACTICE_LIMIT` to `ACTIVE_RUN_LIMIT`; `decks_by_session` to `decks_by_run`.
+  - Frontend: the run's components move from `frontend/src/components/practice/` to `frontend/src/components/run/`, as Files lists them, `PracticeRunRow` becoming `RunRow` and `PracticeStatusBadge` `RunStatusBadge`, and `components/practice/` keeps only what shows a practice; `PracticeRunPage` to `RunPage`, its `PracticeRunBody` to `RunBody` and `PracticeCardView` to `RunCardView`; `SessionDeckChips` to `DeckChips`; `practiceCopy.ts` to `runCopy.ts`; `HomePage`'s `ActivePractices` to `ActiveRuns`; `practiceThese` to `rerunThese`; `practiceSessionId` and `sessionId` to `runId`, `practiceCardId` to `runCardId`; the api functions `createPracticeRun` to `startRun`, `readPracticeRun` to `readRun`, `readPracticeRunState` to `readRunState`, `readPracticeRunBreakdown` to `readRunBreakdown`, `rerunPracticeRun` to `rerunRun` and `ratePracticeCard` to `rateRunCard`, `readPracticeRuns`, `deletePracticeRun` and `PracticeRunFilters` going; the query keys `['practice_runs', …]` and `['practice_run_breakdown', …]` to `['runs', …]` and `['run_breakdown', …]`.
+  - A local name `session`, `sessions`, `new_session`, `sessionQuery` or the like that holds a run becomes `run`, `runs`, `new_run`, `runQuery`, in production code and tests alike.
+  - These keep their names, since "session" or "practice" means something else in them: `Session`, `SessionDep` and `get_session`, the database's session; `verify_clerk_session`, Clerk's; `first_practice_at`, `db_stage_set_first_practice_at` and `FirstPracticeSteps`, the first practice the user creates; `PRACTICE_NAV`, `PracticeOverviewPage`, `PracticeDetailsPage` and `PracticeCreatePage`, which show practices.
 - Every read and write of a run, or of a row that hangs from a run, must be scoped by joining `practice` and comparing `practice.user_id` in the statement (ADR 105); another user's practice or run is a 404 (ADR 034).
 - `uuid`, `date` and `datetime` are the payload types below; `date` is a calendar date with no time.
 
@@ -197,7 +206,7 @@ class PracticeCreate(AppModel):
     # In the order the user picked them; at least one.
     deck_ids: list[uuid.UUID]
 
-class PracticeDeckRead(AppModel):
+class DeckNameRead(AppModel):
     deck_id: uuid.UUID
     deck_name: str
 
@@ -217,7 +226,7 @@ class PracticeSummary(AppModel):
     name: str
     created_at: datetime
     # Most recently changed deck first (PDR 047).
-    decks: list[PracticeDeckRead]
+    decks: list[DeckNameRead]
     # The practice's active run, or None.
     active_run_id: uuid.UUID | None
 
@@ -251,7 +260,7 @@ class RunChosenCards(AppModel):
 - `touch()` takes `Deck | Card | Run`; a run is touched when cut, on every rating in it, and on nothing else in this task (ADR 117). `DeckPracticeConfig` leaves `touch()`.
 - Every read that returns a run must return `day` and `day_index`, worked out in its `db_*` read by one window function over the practice's runs (ADR 114).
 - The deletion closure must plan the practices that hold a deleted deck and drop configuration deletion: `DeletionImpact` gains `practice_ids` and loses `configuration_ids`; an explicitly deleted field leaves every practice's configuration of its deck and every remaining run copy of it as ADR 119 gives, through the starting configuration for a side left empty. `DeletionImpactRead` loses `configurations_deleted` and gains `practices_affected: int`.
-- Home's read must keep its shape but for the run: `HomeRead` becomes `steps`, `active_runs: list[HomeRun]` with `HomeRun(RunRead)` adding `practice_name: str`, `decks: list[PracticeDeckRead]` and `progress: RunProgress`, up to three active runs, newest `last_activity_at` first, and `recent_decks` as today, read over the new tables.
+- Home's read must keep its shape but for the run: `HomeRead` becomes `steps`, `active_runs: list[HomeRun]` with `HomeRun(RunRead)` adding `practice_name: str`, `decks: list[DeckNameRead]` and `progress: RunProgress`, up to three active runs, newest `last_activity_at` first, and `recent_decks` as today, read over the new tables.
 - Regenerate `frontend/src/api/openapi.json` and `frontend/src/api/types.ts` with `npm run gen:api`.
 
 The frontend, each page in its least working form; T2 to T5 bring the four practice screens to their drawings:
@@ -308,7 +317,7 @@ The vocabulary, `docs/vocabulary.md`, each row's columns as given, every other c
 - `uv run alembic heads` prints one revision, this task's, followed by `(head)`.
 - With `R` the count of `practice_run` rows, `D` the count of `practice_deck` rows and `C` the count of distinct `(practice_run_id, card_id)` pairs of `practice_card`, each read before the upgrade: after `alembic upgrade head` on the dev database, `psql "$DATABASE_URL" -tAc "select (select count(*) from practice), (select count(*) from run), (select count(*) from practice_configuration), (select count(*) from run_counted_card), to_regclass('deck_practice_config') is null, to_regclass('practice_run') is null"` prints `R|R|D|C|t|t`.
 - `uv run pytest tests/api_tests/test_practices.py tests/api_tests/test_runs.py tests/api_tests/test_practice_configuration.py tests/api_tests/test_deletion.py tests/api_tests/test_home.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_schema_guard.py tests/api_tests/test_layering_guard.py -q` passes.
-- `git grep -nE "practice_run|practice_card|practice_deck|deck_practice_config|PracticeRun|PracticeCard|practiceSession|session_name|formatDateTime" -- app tests frontend/src AGENTS.md README.md` prints nothing.
+- `git grep -nE "practice_run|practice_card|practice_deck|deck_practice_config|PracticeRun|PracticeCard|PracticeDeck|practiceSession|sessionId|session_name|session_status|SessionDeckChips|PracticeStatusBadge|practiceCopy|practice_generation|active_practices|ActivePractices|practiceThese|practiceCardId|formatDateTime" -- app tests frontend/src AGENTS.md README.md` prints nothing, and `ls frontend/src/components/practice` prints `DeckChips.tsx` alone.
 - On the live server at 390 wide: New practice with a name and two decks lands on the new practice's page; Start run opens the run page on a card, its breadcrumb reading "All practices › <practice>"; the practice's page then reads Continue run and lists the run; a deck's page shows no tabs and no Practice button.
 
 **Debrief**
@@ -536,9 +545,9 @@ A practice's page reads as drawing 4-practice draws it: its mark, name and circl
 - `frontend/src/api/types.ts`
 - `frontend/src/components/ui/RunMark.tsx` (new)
 - `frontend/src/components/ui/RunMark.test.tsx` (new)
-- `frontend/src/components/practice/RunRow.tsx`
-- `frontend/src/components/practice/RunRow.test.tsx` (new)
-- `frontend/src/components/practice/RunStatusBadge.tsx`
+- `frontend/src/components/run/RunRow.tsx`
+- `frontend/src/components/run/RunRow.test.tsx` (new)
+- `frontend/src/components/run/RunStatusBadge.tsx`
 - `frontend/src/pages/PracticeDetailsPage.tsx`
 - `frontend/src/pages/PracticeDetailsPage.test.tsx`
 - `docs/vocabulary.md`
@@ -577,7 +586,7 @@ class RunListing(RunRead):
 **Done when**
 
 - `uv run pytest tests/api_tests/test_practices.py tests/api_tests/test_runs.py -q` passes.
-- `cd frontend && npx vitest run src/components/ui/RunMark.test.tsx src/components/practice/RunRow.test.tsx src/pages/PracticeDetailsPage.test.tsx` passes.
+- `cd frontend && npx vitest run src/components/ui/RunMark.test.tsx src/components/run/RunRow.test.tsx src/pages/PracticeDetailsPage.test.tsx` passes.
 - The cycle's judgement holds.
 
 **Debrief**
