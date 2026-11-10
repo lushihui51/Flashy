@@ -161,6 +161,7 @@ None.
 - `frontend/src/lib/practiceSelection.ts` (deleted)
 - `frontend/src/lib/practiceSelection.test.ts` (deleted)
 - `frontend/src/lib/practiceCopy.ts`
+- `frontend/src/lib/deckConfigurationBoard.ts`
 - `frontend/src/lib/datetime.ts`
 - `frontend/src/lib/datetime.test.ts`
 - `frontend/src/lib/deletionSummary.ts`
@@ -264,6 +265,7 @@ The frontend, each page in its least working form; T2 to T5 bring the four pract
 - `frontend/src/lib/datetime.ts` must offer `formatRunDay(day: string, dayIndex: number): string`, writing `day` as the server sends it and adding " (N)" when `dayIndex` is above 0, never parsing `day` into a `Date`; `formatDate` and `formatDateTime` are removed, and `userTimeZone()` and the ESLint rule stay (ADR 114).
 - Home must read the renamed payload: each active row names its run's practice, links to `/practices/:practiceId`, and its Start practice continues `/runs/:runId`.
 - `PracticeFilterBar` goes, since the Practice page and New practice drop their filters.
+- `deckConfigurationBoard.ts` must stop reading `DeckPracticeConfigCreate`, which leaves the schema: `ConfigPayloadArrays` is written out in the module as the six arrays, `prompt_field_ids`, `answer_field_ids`, `prompt_pool_ids` and `answer_pool_ids` as `string[]` and `prompt_pool_counts` and `answer_pool_counts` as `number[]`, and `boardFromConfig` takes it.
 - `failureSentence` must give `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." beside Start run and Re-run, "These cards can't be run. Each is blank in every field one side shows." under "Practice these", `practice_has_active_run` "Finish the active run first.", and `practice_name_taken` "A practice with this name already exists."
 - The deck delete confirm must read "This also deletes N cards, N fields and N runs, and takes the deck out of N practices. This can't be undone.", each count present only above zero; the save that removes fields reads "This removes N fields from N cards, deletes N cards and deletes N active runs. This can't be undone."
 - `AGENTS.md` and `README.md` must carry every rename and path this task makes, `submit_rating` in `app/services/run.py` among them, and `README.md` must describe a practice as a kept set of decks run many times and a run as one go through it.
