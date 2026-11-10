@@ -53,8 +53,8 @@ None.
 - `frontend/src/test/home.test.ts`
 - `frontend/src/pages/HomePage.tsx`
 - `frontend/src/pages/HomePage.test.tsx`
-- `frontend/src/components/practice/HomeRunRow.tsx` (new)
-- `frontend/src/components/practice/HomeRunRow.test.tsx` (new)
+- `frontend/src/components/run/HomeRunRow.tsx` (new)
+- `frontend/src/components/run/HomeRunRow.test.tsx` (new)
 - `docs/vocabulary.md`
 
 **Details**
@@ -65,7 +65,7 @@ PDR 048, LPD1, LPD16, LPD18 and drawings 2-before and 17, under ADR 123 and ADR 
 class HomeRun(RunListing):
     practice_name: str
     # Most recently changed deck first (PDR 047).
-    decks: list[PracticeDeckRead]
+    decks: list[DeckNameRead]
     # The live counts of an active run; None for a completed one.
     progress: RunProgress | None
 
@@ -79,7 +79,7 @@ class HomeRead(AppModel):
     recent_runs: list[HomeRun]
 ```
 
-- `GET /api/home` must return `HomeRead` in a number of statements fixed whatever the user's data (ADR 123, ADR 091); `recent_decks` goes.
+- `GET /api/home` must return `HomeRead` in a number of statements fixed whatever the user's data (ADR 123, ADR 091); `recent_decks`, `RecentDecks` and `RECENT_DECK_LIMIT` go, `RECENT_RUN_LIMIT` taking the last's place.
 - Once `steps` is null, Home must read as drawings 2-before and 17: the heading "Home"; "Active" over one row per active run; "Recently completed" over one row per completed run; a section with no run is left out. A row opens with a small outlined block holding the run's `RunMark` and its day as `formatRunDay` writes it; beneath stand the practice's name in bold, with no mark, then its decks as `DeckLine` writes them, then, for an active run, its `RunProgressBar`. Nothing is indented. At the right stands a round play button, a triangle inside a circle, spoken "Practice <practice name>".
 - The play button of the first active run must be yellow and every other white; with no active run, the first completed run's is yellow (PDR 048). An active run's play button opens `/runs/:runId`; a completed run's calls `POST /api/practices/{practice_id}/runs` and opens the run it returns, with no confirm, a refusal showing its sentence beneath the row: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."
 - Once `steps` is null, Home must end with `FormBar` holding one white button, "All practices", opening `/practices`, fixed at the foot while Home scrolls (LPD16, ADR 127). Home's link to New practice goes.
@@ -101,7 +101,7 @@ class HomeRead(AppModel):
 **Done when**
 
 - `uv run pytest tests/api_tests/test_home.py -q` passes.
-- `cd frontend && npx vitest run src/pages/HomePage.test.tsx src/components/practice/HomeRunRow.test.tsx src/test/home.test.ts` passes.
+- `cd frontend && npx vitest run src/pages/HomePage.test.tsx src/components/run/HomeRunRow.test.tsx src/test/home.test.ts` passes.
 - On the live server at 390 wide, Home reads as drawing 2-before, and each kind of play button lands where the Goal says.
 
 **Debrief**
@@ -124,9 +124,9 @@ Tapping a run's row on Home anywhere but its play button opens its details benea
 
 **Files**
 
-- `frontend/src/components/practice/HomeRunRow.tsx`
-- `frontend/src/components/practice/HomeRunRow.test.tsx`
-- `frontend/src/components/practice/RunBreakdown.tsx`
+- `frontend/src/components/run/HomeRunRow.tsx`
+- `frontend/src/components/run/HomeRunRow.test.tsx`
+- `frontend/src/components/run/RunBreakdown.tsx`
 - `frontend/src/lib/changeKinds.ts`
 - `frontend/src/lib/changeKinds.test.ts` (new)
 - `docs/vocabulary.md`
@@ -154,7 +154,7 @@ export function countChanges(cards: { change: ChangeKind }[]): Record<ChangeKind
 
 **Done when**
 
-- `cd frontend && npx vitest run src/components/practice/HomeRunRow.test.tsx src/lib/changeKinds.test.ts src/components/practice/RunBreakdown.test.tsx` passes.
+- `cd frontend && npx vitest run src/components/run/HomeRunRow.test.tsx src/lib/changeKinds.test.ts src/components/run/RunBreakdown.test.tsx` passes.
 - The cycle's judgement holds.
 
 **Debrief**
