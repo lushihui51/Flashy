@@ -1,6 +1,6 @@
 # 048 — Deck and field marks
 
-Waits for: 046, its `DeckRow` with no subject, `DeckPicker` with its item type `{ id: string; name: string }`, `DeckDetailPage` with one place in its breadcrumb, and `docs/vocabulary.md`, which it shares; 047, with which it shares `DeckDetailPage.tsx` and its test.
+Waits for: 046, its `DeckRow` with no subject, `DeckPicker` with its item type `{ id: string; name: string }`, `DeckDetailPage` with one place in its breadcrumb, and `docs/vocabulary.md`, which it shares; 047, with which it shares `DeckDetailPage.tsx`, `CardStandaloneForm.tsx`, `PracticeCreatePage.tsx` and their tests, and `PracticeOverviewPage.test.tsx`.
 
 Canvas: https://claude.ai/artifact/Mhz9bGtbce5kn8ZrD1RM8h
 
@@ -43,11 +43,17 @@ None.
 - `frontend/src/components/library/DeckPicker.test.tsx`
 - `frontend/src/pages/DeckDetailPage.tsx`
 - `frontend/src/pages/DeckDetailPage.test.tsx`
+- `frontend/src/components/library/CardStandaloneForm.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
+- `frontend/src/pages/PracticeOverviewPage.test.tsx`
+- `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
 
-PDR 049 and VC56:
+PDR 049:
 
 ```ts
 /** A deck's mark: a stack of cards drawn as an outline in the color of the words beside it,
@@ -56,10 +62,10 @@ export default function DeckMark(): ReactNode;
 ```
 
 - `DeckMark` must draw the geometry drawing 9 draws, a `rect` at 3,7 of 14 by 14 with a radius of 2 and the path `M7 3h12a2 2 0 0 1 2 2v12` on a 24 by 24 view box, stroke `currentColor` at width 2 with round caps and joins, no fill, `role="img"` and `aria-label="Deck"`. It is an inline SVG component like `PromptMark` and `RatingMark`, since lucide-react holds no icon of this geometry.
-- Guidance: size it `0.9em`, with `vertical-align: -0.15em` and a right margin of `0.3em`, inside the element holding the name, the mark and the name's first word kept on one line, as drawings 9 and 7-deck place it.
-- `DeckRow`'s title, `DeckDetailPage`'s heading and every row `DeckPicker` draws must show `DeckMark` before the deck's name. `DeckPicker` passes it through `PickerCombobox`'s `renderLeading`, so the Practice page's filter, New card's and Edit card's pickers and New configuration's picker carry it with no change of their own.
+- Guidance: size it `0.9em`. Where it sits inline with a name, on a row's title and a page's heading, give it `vertical-align: -0.15em` and a right margin of `0.3em`, inside the element holding the name, the mark and the name's first word kept on one line, as drawings 9 and 7-deck place it; in a picker's rows it is `renderLeading`'s own item, spaced by the row's gap.
+- `DeckRow`'s title, `DeckDetailPage`'s heading and every row `DeckPicker` draws must show `DeckMark` before the deck's name. `DeckPicker` passes it through `PickerCombobox`'s `renderLeading`, so the Practice page's filter, New card's picker and New configuration's picker carry it with no change of their own. Edit card, whose deck is locked and shown as the deck's name in `CardStandaloneForm`'s locked branch, must show `DeckMark` before that name too.
 - A mark must never stand beside a word naming its kind: "Add deck", "New deck", "Edit deck", "Delete deck", "N decks" and "Deck" as a picker's label carry none.
-- Tests: `DeckMark.test.tsx` asserts the image named "Deck"; `DeckRow.test.tsx`, `DeckPicker.test.tsx` and `DeckDetailPage.test.tsx` assert the mark comes before the deck's name, and `DeckDetailPage.test.tsx` that the pencil "Edit deck" carries none.
+- Tests: `DeckMark.test.tsx` asserts the image named "Deck"; `DeckRow.test.tsx`, `DeckPicker.test.tsx` and `DeckDetailPage.test.tsx` assert the mark comes before the deck's name, and `DeckDetailPage.test.tsx` that the pencil "Edit deck" carries none. A deck's option in a picker is then named "Deck <name>", so every test in Files that finds an option by the deck's name alone must find it by its new name.
 - `docs/vocabulary.md` must gain a row in the Deck area: Concept "A deck's mark"; User reads a stack of cards, drawn as an outline in the color of the words beside it; "Deck", spoken; Where beside every deck's name, never beside the word "deck"; Code `DeckMark`.
 
 **Out of scope**
@@ -91,7 +97,7 @@ Every field's name the user reads, on a deck's page's cards, the card form, the 
 
 **Dependencies**
 
-- T1: the Deck area's new row in `docs/vocabulary.md`, which this task's row follows.
+- T1: `docs/vocabulary.md`, which both tasks change.
 
 **Files**
 
@@ -107,26 +113,29 @@ Every field's name the user reads, on a deck's page's cards, the card form, the 
 - `frontend/src/components/library/FieldAssignmentBoard.tsx`
 - `frontend/src/pages/PracticeRunPage.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `frontend/src/pages/DeckDetailPage.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
 
-PDR 049 and VC57:
+PDR 049:
 
 ```ts
 /** A field's name as the user reads it: in square brackets, as "[Definition]". */
 export function fieldLabel(name: string): string;
 ```
 
-- Every place in Files that shows a field's name must show `fieldLabel(name)`: `CardList`'s label over each value, as drawing 7-deck draws "[Command]"; `CardFieldsForm`'s label over each input; `FieldValue`'s name in the run page's zones and a summary card's sheet; `RunBreakdown`'s field rows; and `FieldAssignmentBoard`'s chips and its move sheet's heading, which reads Move "[Term]" to….
+- Every place in Files that shows a field's name must show `fieldLabel(name)`: `CardList`'s label over each value, as drawing 7-deck draws "[Command]"; `CardFieldsForm`'s label over each input; `FieldValue`'s name in the run page's zones and a summary card's sheet, on its label, its media chip's text and its dialog's title; `RunBreakdown`'s field rows; and `FieldAssignmentBoard`'s chips and its move sheet's heading, which reads Move "[Term]" to….
 - A name only spoken stays without brackets: "Move <field> up", "Remove <field>", "Rate <field>", a field's marks spoken as "OS: shown, then not shown" and an image's `alt`.
 - The deck form's field name inputs hold the name as a value and take no brackets, as drawing 10 draws them.
-- Tests: `fieldLabel.test.ts` covers a name with spaces; the other tests in Files assert the bracketed name where the field's name shows.
+- Tests: `fieldLabel.test.ts` covers a name with spaces; the other tests in Files assert the bracketed name where the field's name shows. `CardFieldsForm`'s label wraps its input, so an input is then named "[<field>]", and every test in Files that finds it by the field's name alone must find it by its new name.
 - `docs/vocabulary.md` must gain a row in the Field area: Concept "A field's mark"; User reads its name in square brackets, as "[Definition]"; Where every field's name, never the word "field"; Code `fieldLabel`.
+- `docs/vocabulary.md`'s row "Moving a field on the board" must read User reads "Move "[<field>]" to…", the field's name in its mark, every other column as it stands.
 
 **Out of scope**
 
-- A field's name on New practice and on a practice's page: cycle 049.
+- A field's name on New practice: cycle 049. A practice's page shows a completed run's summary through `RunBreakdown`, so its field names take brackets here with the rest.
 - Brackets in a name only spoken: never.
 
 **Done when**
