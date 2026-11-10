@@ -44,3 +44,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
   - Reason: a fading circle can feel like being told you're behind, which PDR 037 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 037's "nothing due".
   - Owner: /product-decide
+- B33. When the user ends a run that is already completed, from a page that still shows it active, is the end refused with a sentence, or does the page turn into the completed run's page with nothing said?
+  - Reason: PDR 038 lets the user end an active run and says nothing of ending one already completed; a second tab, or a run page that has not caught up, sends `POST /api/runs/{id}/end` for a completed run. A refusal needs a code and a sentence (ADR 070); answering with the run unchanged needs neither, and the user sees the completed run's page.
+  - Owner: /product-decide
