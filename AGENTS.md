@@ -56,7 +56,7 @@
 - Treat an explicit order from the human as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
 - After the human orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where it has nothing to recommend.
   - Reason: one standing approval, given once a conversation
-- When auto mode reaches a skill's Ending, first list in plain words each proposal taken that was a close call or a hard decision, the alternative it beat and why it was taken, or say none was.
+- When auto mode reaches a skill's Ending, first list in plain words, least sure first, each close call or hard decision it took, the alternative it beat and why, or say none was.
   - Reason: the human reviews what auto mode approved
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
