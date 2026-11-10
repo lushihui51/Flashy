@@ -32,12 +32,12 @@
   - Reason: ADR 045
   - Guard: tests/api_tests/test_schema_guard.py
 - Keep mastery arithmetic only under app/mastery/, never in SQL, a SQLModel expression or a trigger.
-  - Reason: ADR 083
+  - Reason: ADR 116
   - Guard: tests/api_tests/test_mastery.py
 - Append to review_log only through record_review_group in app/services/mastery.py, and never update or delete its rows outside the deletion closure.
   - Reason: ADR 011
-- Delete a subject, deck, field or card only through compute_deletion_impact then apply_deletion in app/services/deletion.py, inside the deleting transaction.
-  - Reason: ADR 093
+- Delete a deck, field or card only through compute_deletion_impact then apply_deletion in app/services/deletion.py, inside the deleting transaction.
+  - Reason: ADR 118
 - Take every instant from the server's clock in UTC, never from a caller, and use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
   - Reason: ADR 019
   - Guard: tests/api_tests/test_user_timezone.py
@@ -69,7 +69,7 @@
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070
 - Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
-  - Reason: ADR 083
+  - Reason: ADR 116
 - Write a "" card_field_value row for every existing card in the same transaction as any path that adds a field to a deck.
   - Reason: ADR 057
 - Scope every read and write to the requesting user, so another user's resource returns 404.
@@ -79,10 +79,10 @@
   - Reason: ADR 034, ADR 055
   - Guard: tests/api_tests/test_layering_guard.py
 - Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
-  - Reason: ADR 018
+  - Reason: ADR 117
   - Guard: tests/api_tests/test_activity_tracking.py
 - Carry a form's return addresses as the ?cancelTo= and ?returnTo= URL parameters, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
-  - Reason: ADR 103
+  - Reason: ADR 124
 - Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no cache handler or toast, and App.tsx's route for a page that cannot be shown is the one error boundary.
   - Reason: PDR 031, ADR 063, ADR 104
 - Carry a rename through every tracked file and path, quoted literals and generated files included; only an occurrence with a different meaning stays.

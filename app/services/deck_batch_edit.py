@@ -273,7 +273,7 @@ def _stage_deck_batch_edit(
             )
 
     # A card updated by id is the user's change to that card; a field operation that
-    # rewrites every card's values is not, so no card is touched for it (ADR 096).
+    # rewrites every card's values is not, so no card is touched for it (ADR 117).
     touch(db, *updated_cards)
     if touch_deck:
         touch(db, deck)
