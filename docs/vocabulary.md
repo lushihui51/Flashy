@@ -35,10 +35,10 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit subject; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
 | App | Switching the deck a form is filling in | "Change deck?" | New card; New configuration | `deckChange`; `pendingDeck` |
 | App | A name left blank | "Name is required." | New subject; Edit subject; the deck form's overlay; New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name | `nameError`; `FieldsSection` |
-| Places | The main places | "Home"; "Your library"; "Practice" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
+| Places | The main places | "Home"; "Your library"; "All practices" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
-| Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "Practice" on a practice's page; "Practice › <Practice>" on the run page | Subject page; deck page; practice's page; run page | `Breadcrumb`; `places` |
+| Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Subject page; deck page; practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
 | Places | A thing's address, widest place first | "Subject · Deck"; "Deck · Configuration"; "Subject · Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
 | Home | The steps to a first practice | "Your first practice"; "N of 5"; "New subject", "New deck", "New card", "New configuration", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
 | Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_practices`; `HomeActivePractice` |
@@ -138,17 +138,19 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Configuration | Any other empty area on the board | "None yet." | The board's Always shown and Random draw areas | `FieldAssignmentBoard` |
 | Configuration | Confirming a configuration's deletion | "Delete this configuration?" | Deck page's Configurations tab | `pendingDelete` |
 | Configuration | What deleting a configuration leaves alone | "Practices that already used it are unaffected." | Deck page's Configurations tab | `pendingDelete` |
-| Practice | One run of practice | "practice"; "practice" and "practiced" as the verb | Practice page; New practice; a practice's page; run page | `practice_run`; `PracticeRun`; `PracticeRunSummary`; `/api/practice_runs`; `session`; `practiceSessionId` |
-| Practice | The list of practices | "Practice" | Its heading; side menu | `PracticeOverviewPage`; `/practice` |
+| Practice | A named set of decks the user keeps and runs as many times as they like | "practice" | All practices; New practice; a practice's page; Home | — |
+| Practice | One sitting of a practice, from its first card until it ends | "run"; "Runs" over a practice's runs; "practice" and "practiced" as the verb for doing one | A practice's page; the run page; a completed run's page; Home | `practice_run`; `PracticeRun`; `PracticeRunSummary`; `/api/practice_runs`; `session`; `practiceSessionId` |
+| Practice | The page listing every practice the user has | "All practices" | Its heading; side menu; Home's foot; the row of places | `PracticeOverviewPage`; `/practice` |
 | Practice | Adding a practice to the list in view | "Add practice" | Practice page's header | `PracticeOverviewPage` |
 | Practice | The page where a practice is made | "New practice" | Its heading | `/practice/new`; `PracticeCreatePage`; `PracticeRunCreate` |
 | Practice | A new practice's name | the moment the page opened, as "Aug 24, 2026, 9:00 AM" | New practice | `name`; `formatDateTime` |
 | Practice | The chosen configurations | "Selected"; "N selected", above Cancel and Create; "Remove <name>", spoken | New practice | `config`; `SelectedConfigurationList`; `deck_practice_config_ids`; `selectedCount` |
 | Practice | A practice's own page | its name, its date and time beneath | A practice's page | `/practice/:practiceSessionId`; `PracticeDetailsPage` |
 | Practice | Narrowing practices by state | "Practice status", spoken; "All"; "Active"; "Completed" | Practice page | `RunStatus`; `status`; `StatusTab` |
-| Practice | A practice that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page; Home | `active` |
-| Practice | A practice that has finished | "completed"; "Completed" as badge and tab | Practice page; a practice's page | `completed` |
-| Practice | Going on with an active practice | "Start practice" | A practice's page; Home | `/practice/:practiceSessionId/run` |
+| Practice | A run that can still be continued | "active"; "Active" as badge and tab | Practice page; a practice's page; Home | `active` |
+| Practice | A run that has finished | "completed"; "Completed" as badge and tab | Practice page; a practice's page | `completed` |
+| Practice | Starting a practice's run, or continuing its active one | "Start run" while no run is active; "Continue run" while one is | A practice's page | `/practice/:practiceSessionId/run` |
+| Practice | Ending a run before its last card | "End run"; "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did." | The run page | — |
 | Practice | The copy of each configuration a practice takes at start | — | — | `practice_deck`; `PracticeDeck`; `source_config_id`; `source_config_name` |
 | Practice | Running a practice again | "Re-run"; "Re-run <name>", spoken | A practice's page; the summary, beside Done | `/api/practice_runs/{practice_run_id}/rerun`; `PracticeRunRerun`; `rerunPracticeRun`; `RerunButton` |
 | Practice | New practice with a blank name | "Give this practice a name to create it." | New practice | `nameMissing` |
@@ -156,7 +158,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A chosen configuration deleted since it was chosen | "A selected configuration no longer exists." | New practice | `config_not_found`; `MISSING_CONFIGURATION_MESSAGE`; `missingIds` |
 | Practice | A chosen configuration that yields no prompts | "This configuration no longer produces any prompts — edit it." | New practice, against the configuration's row | `stale_config` |
 | Practice | Two chosen configurations of one deck | "Choose one configuration per deck." | New practice | `duplicate_deck` |
-| Practice | A practice that would have no cards | "This practice would have no cards. Either the selected decks have no cards, or every card is blank in every field its configuration shows on one side." | New practice; a practice's page, after Re-run; the summary, after Re-run; the summary, after Practice these | `no_cards` |
+| Practice | A practice that would have no cards | "This practice would have no cards." | New practice; a practice's page, after Re-run; the summary, after Re-run; the summary, after Practice these | `no_cards` |
 | Practice | The chosen configurations will not load | "Could not load your selected configurations." | New practice's Selected list | `allConfigsQuery` |
 | Practice | Confirming a re-run | "Re-run this practice?" | A practice's page; the summary | `confirmRerunOpen` |
 | Practice | What a re-run makes | "A new practice with the same decks is created. This practice and its reviews stay on record." | A practice's page; the summary | `confirmRerunOpen` |
