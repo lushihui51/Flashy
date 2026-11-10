@@ -17,6 +17,8 @@ Judgement: The engineer judges on the live server at 390 wide, against the dev d
 - PDR 045: A deck's and a practice's mastery as the average over their cards
 - PDR 046: Mastery shown as a circle filled as far as the user is ready
 - PDR 048: Home as the runs the user can continue or start again
+- ADR 034: Backend layering — routers, services, database_ops
+- ADR 054: A metadata naming convention for every constraint and index
 - ADR 108: A deck copy mechanism ahead of share links, copying into the caller's own decks
 - ADR 116: Readiness as the only mastery figure leaving the mastery module, folded over a practice's cards
 - ADR 118: One deletion closure for every deletion of a deck, field or card, a practice deleted by its cascades
@@ -68,6 +70,7 @@ None.
 - `frontend/src/components/library/DeckEditor.tsx`
 - `frontend/src/components/library/DeckEditor.test.tsx`
 - `frontend/src/components/library/CardStandaloneForm.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
 - `frontend/src/components/practice/PracticeFilterBar.tsx`
@@ -79,7 +82,7 @@ None.
 
 **Details**
 
-PDR 033, PDR 048 and LPD7, the backend unchanged:
+PDR 033 and PDR 048, the backend unchanged:
 
 - Your library must be one list of decks with no tabs, as drawing 9 draws it: the heading, then "N decks" ("Decks" while the list loads) with "Add deck", then one `DeckRow` per deck, then the failure sentence "Could not load decks." or the empty sentence "No decks yet." where they stand today. The page must read no `tab` parameter, so `/library?tab=subjects` shows the same list. `LibraryPage`'s tab reveal, `TABS`, `TAB_ITEMS` and the subjects query go.
 - `App.tsx` must hold no `/subjects/…` route, so every `/subjects/…` address reaches the catch-all `NotFoundPage`. `SubjectDetailPage` and its test are deleted.
@@ -90,7 +93,7 @@ PDR 033, PDR 048 and LPD7, the backend unchanged:
 - `DeckPicker` must draw a row as the deck's name alone; its item type becomes `{ id: string; name: string }`. `CardStandaloneForm` must drop the `subject_name: ''` it builds for the chosen deck.
 - `PracticeFilterBar` must hold the deck filter alone, "All decks", its rows each a deck's name alone, with props `decks: { id: string; name: string }[]`, `deckId` and `onChange: (next: { deckId: string | null }) => void`. `PracticeOverviewPage` and `PracticeCreatePage` must neither read nor write a `subject` parameter, call `readPracticeRuns` and `readDeckPracticeConfigs` with `deckId` alone, and keep "Clear filters" clearing the deck.
 - New practice's configuration groups, its Selected rows and `SessionDeckChips`' `full` variant must name a deck without its subject, and `practiceConfigurationGroups` must drop `subjectName`.
-- `DeckConfigurationEditor` must name a chosen deck by its name alone and order its deck options without a context subject; it reads no `subject` parameter.
+- `DeckConfigurationEditor` must name a chosen deck by its name alone and list its deck options in the order `GET /api/decks` returns them, the context deck still chosen on arrival as today; it reads no `subject` parameter. `PracticeCreatePage` and `DeckDetailPage` key their configuration reads as `['deck_practice_configs', deckId]`, with `null` for no deck.
 - Home's steps must be three, as drawing 11 draws them: "Your first practice", "N of 3", then New deck (done when `has_deck`), New card (done when `has_card`) and New practice. `has_subject` and `has_configuration` are read nowhere. Home's recently practiced deck row must read "N cards · N fields" beneath its name, and its Practice must open `/practice?deck=<deck id>`.
 - The New sheet must hold three rows, New deck, New card and New practice, each its words alone with no icon, as drawing 12 draws them; "Create a deck first" stays under New card while the user has no deck. `CreateSheet`'s interface comment must stop naming subjects.
 - Every comment in the pages, `components/practice/`, `components/shell/`, `DeckRow`, `DeckPicker` and `practiceConfigurationGroups` that names a subject must be brought to what the code now does or go, by `/home/jadenlu/Projects/Process/rules/comment-rules.md`.
@@ -114,13 +117,15 @@ PDR 033, PDR 048 and LPD7, the backend unchanged:
   - "How ready the user is to recall a card or field, from not ready to ready": Where Library; deck page; All practices; a practice's page; summary.
   - "A thing that will not load": Where Edit deck; deck page; Edit card; Edit practice; a deck's board; a practice's page; run page; a completed run's page; Home; the whole content of a page that failed while it was being drawn.
   - "A list that will not load": Where Library; All practices; New practice.
+  - "A thing's address, widest place first", which names a subject on screens this task changes: User reads "Deck · Configuration"; Where New practice's groups and Selected rows; a practice's row; a practice's page.
+  - "Deleting a subject or deck that takes other things with it, each count present only above zero": Where Edit deck.
 - A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left. Every Code cell must drop a name this task deletes from the code.
 
 **Out of scope**
 
 - The subject picker, its New subject overlay and `subject_id` in the deck form: T2.
 - Anything in `frontend/src/api/` or the backend: T2.
-- The deck mark beside each deck's name in drawings 9 and 11: cycle 048.
+- The deck mark beside each deck's name in drawing 9: cycle 048.
 - A row's name wrapping to two lines and shortened after that, in drawing 9: cycle 053.
 - New practice's, the Practice page's and the deck page's configurations, and their Practice buttons: cycle 049.
 - The runs and the All practices bar drawn behind the sheet in drawing 12: cycle 052.
@@ -250,14 +255,15 @@ Every deck belongs to its user with nothing above it: the schema, the API, the d
 
 **Details**
 
-ADR 120, PDR 033, PDR 034 and LPD7:
+ADR 120, PDR 033 and PDR 034:
 
 - The migration must do ADR 120's data move in one transaction, in this order: add `deck.user_id` and fill it from each deck's subject's `user_id`, then make it not null with `fk_deck_user_id_app_user`; rename every deck whose name another deck of its user also has to its own name, a space and its subject's name in parentheses, as "Verbs (Spanish)"; add `uq_deck_user_id` on `(user_id, name)`, so a clash left over fails the whole migration; then drop `uq_deck_subject_id`, `deck.subject_id` and the `subject` table. Its downgrade must raise, since no downgrade restores a subject. Constraint names must come from the naming convention in `app/database.py` (ADR 054).
 - `Deck` must carry `user_id` and `UniqueConstraint("user_id", "name")`, and no `subject_id`. Every read and write of a deck, a card, a field or a configuration must compare `Deck.user_id` in the statement where it joins `Subject` today (ADR 034).
 - `DeckCreate`, `DeckBatchEdit`, `DeckDetail`, `DeckListing` and every payload must carry no `subject_id` or `subject_name`. `GET /api/decks` must take no `subject_id`, and `GET /api/practice_runs` and `GET /api/deck_practice_configs` must take no `subject_id`. `deck_batch_edit`'s constraint check must name `uq_deck_user_id` for `deck_name_taken`.
-- `app/routers/api/subject.py`, `app/database_ops/subject.py` and `app/models/subject.py` are deleted, and `app/main.py` includes no subject router. `touch()` takes `Deck | Card | DeckPracticeConfig`, and every call that touched a subject touches what is left of its rows.
+- `app/routers/api/subject.py`, `app/database_ops/subject.py` and `app/models/subject.py` are deleted, and `app/main.py` includes no subject router. `touch()` takes `Deck | Card | DeckPracticeConfig`; a call that touched a subject keeps its other rows, and a call that touched a subject alone, as in deck creation and deck deletion, goes.
+- `db_stage_create_deck(db, user_id, name)` takes the user in place of the subject, `db_read_deck_ids_for_subjects` goes, and every `db_*` function left with no caller goes. `deck.user_id` carries no `ON DELETE` action, as `subject.user_id` has none, and `DeckRead` and `DeckDetail` carry no `user_id`.
 - The deletion closure must hold no subject: `compute_deletion_impact` takes no `subject_ids`, `DeletionImpact` has no `subject_ids`, `GET /api/deletion-impact` takes no `subject_ids` and `DeletionImpactRead` has no `subjects_deleted` (ADR 118). `delete_subject` goes.
-- `subject_readiness`, `db_fetch_subject_mastery_read_rows` and every subject sentence in `app/mastery/readiness.py`'s docstrings go (ADR 116).
+- `subject_readiness` in `app/services/mastery.py`, `db_fetch_subject_mastery_read_rows`, and every subject sentence in `app/mastery/readiness.py`'s docstrings go (ADR 116).
 - `HomeSteps` must carry `has_deck` and `has_card` alone, read in one statement by `db_read_home_steps` (ADR 123).
 - `copy_deck` must take `(db, user_id, source_deck_id)`, copy the source's fields, cards and values into a new deck of `user_id` under the source's name, copy no configuration, mastery, review or run, and raise `ValueError` on a name the caller's decks already hold, rolling the whole copy back (ADR 108). It stays reached by no route.
 - After the model change, regenerate `frontend/src/api/openapi.json` and `frontend/src/api/types.ts` with `npm run gen:api`.
@@ -279,13 +285,13 @@ ADR 120, PDR 033, PDR 034 and LPD7:
 - A number added to a name the parentheses leave clashing: never, ADR 120.
 - A route that reaches `copy_deck`: never before share links, ADR 108.
 - The deck confirm's counts of runs and practices: cycle 049.
-- The deck mark, and a field's name in brackets, in drawing 10: cycle 048.
-- New practice's configurations, `has_configuration`'s step and `deck_practice_config` itself: cycle 049; this task drops only their subject.
+- The deck mark, and a field's name in brackets: cycle 048.
+- New practice's configurations and `deck_practice_config` itself: cycle 049; this task drops only their subject.
 
 **Done when**
 
 - `uv run alembic heads` prints one revision, this task's, followed by `(head)`.
-- After `alembic upgrade head` on the dev database, `psql "$DATABASE_URL" -tAc "select to_regclass('subject') is null, (select count(*) from deck where name like '% (Cycle 032 T3 judgement 2026-11-05 11:4_)')"` prints `t|6`.
+- After `alembic upgrade head` on the dev database, `psql "$(grep ^DATABASE_URL .env | cut -d= -f2-)" -tAc "select to_regclass('subject') is null, (select count(*) from deck where name like '% (Cycle 032 T3 judgement 2026-11-05 11:4_)')"` prints `t|6`.
 - `uv run pytest tests/api_tests/test_decks.py tests/api_tests/test_deck_copy.py tests/api_tests/test_deletion.py tests/api_tests/test_deletion_impact.py tests/api_tests/test_home.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_schema_guard.py -q` passes.
 - `git grep -il "subject" -- app tests frontend/src README.md` prints nothing.
 - On the live server at 390 wide: New deck shows Deck name, Fields and Add field with no subject picker, as drawing 10 draws it; a deck named after another of the user's decks is refused beside Deck name with "A deck with this name already exists."; and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/subjects` prints `404`.
