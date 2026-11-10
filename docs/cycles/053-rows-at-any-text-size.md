@@ -45,9 +45,9 @@ None.
 - `frontend/src/components/library/CardList.tsx`
 - `frontend/src/components/library/FieldAssignmentBoard.tsx`
 - `frontend/src/components/practice/DeckLine.tsx`
-- `frontend/src/components/practice/RunRow.tsx`
-- `frontend/src/components/practice/HomeRunRow.tsx`
-- `frontend/src/components/practice/RunBreakdown.tsx`
+- `frontend/src/components/run/RunRow.tsx`
+- `frontend/src/components/run/HomeRunRow.tsx`
+- `frontend/src/components/run/RunBreakdown.tsx`
 - `frontend/src/pages/DeckDetailPage.tsx`
 - `frontend/src/pages/HomePage.tsx`
 - `frontend/src/pages/PracticeOverviewPage.tsx`
