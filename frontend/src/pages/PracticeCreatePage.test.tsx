@@ -11,6 +11,22 @@ import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import { MISSING_CONFIGURATION_MESSAGE, NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 import { useViewParams } from 'src/lib/viewParams';
 
+// Every call the form makes to leave, passed on to the real leave, which under a memory
+// router replaces the form's entry.
+const leaveCalls = vi.hoisted(() => vi.fn());
+vi.mock('src/lib/leaveForm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('src/lib/leaveForm')>();
+  return {
+    useLeaveForm: () => {
+      const leave = actual.useLeaveForm();
+      return (...args: Parameters<typeof leave>) => {
+        leaveCalls(...args);
+        return leave(...args);
+      };
+    },
+  };
+});
+
 const BASE = 'http://localhost:8000';
 
 const decks = [
@@ -166,6 +182,7 @@ function holdFilteredConfigs(respond: () => Response) {
 let consoleError: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  leaveCalls.mockClear();
 });
 afterEach(() => {
   consoleError.mockRestore();
@@ -400,6 +417,27 @@ describe('PracticeCreatePage', () => {
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({ name: 'Study run', deck_practice_config_ids: ['c1', 'c3'] });
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps9'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/practice/ps9');
+  });
+
+  it('with returnTo, Create lands on returnTo, and cancelTo never stands in for it', async () => {
+    mockLibrary();
+    server.use(
+      http.post(`${BASE}/api/practice_runs`, () =>
+        HttpResponse.json(
+          { id: 'ps9', user_id: 'u1', name: 'Run', status: 'active', created_at: '' },
+          { status: 201 },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderCreate('/practice/new?config=c1&cancelTo=%2Fother&returnTo=%2Fpractice%3Fdeck%3Dd1');
+    await screen.findByRole('checkbox', { name: 'Recall' });
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(currentLocation().full).toBe('/practice?deck=d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/practice?deck=d1');
   });
 
   it('stale_config renders on the offending row and keeps the selection', async () => {
@@ -863,6 +901,8 @@ describe('PracticeCreatePage', () => {
     expect(landed.pathname).toBe('/deck-configurations/c2/edit');
     expect(landed.params.get('cancelTo')).toBe('/practice/new?deck=d1&config=c1&name=Exam');
     expect(landed.params.get('returnTo')).toBe('/practice/new?deck=d1&config=c1&name=Exam');
+    // Opening Edit configuration from inside this form is not leaving it.
+    expect(leaveCalls).not.toHaveBeenCalled();
   });
 
   it('tapping a row’s label still ticks it and stays on the page (MD-6)', async () => {
@@ -877,20 +917,25 @@ describe('PracticeCreatePage', () => {
     expect(currentLocation().pathname).toBe('/practice/new');
   });
 
-  it('Cancel returns to the practice list with the overview’s own params and none of the draft', async () => {
+  it.each([
+    {
+      given: 'cancelTo',
+      search: '&cancelTo=%2Fpractice%3Fdeck%3Dd1%26status%3Dcompleted&returnTo=%2Fother',
+      cancel: '/practice?deck=d1&status=completed',
+    },
+    { given: 'returnTo alone', search: '&returnTo=%2Fother', cancel: '/practice' },
+    { given: 'a non-internal cancelTo', search: '&cancelTo=https%3A%2F%2Fevil.com', cancel: '/practice' },
+    { given: 'neither', search: '', cancel: '/practice' },
+  ])('with $given, Cancel lands on $cancel and none of the draft', async ({ search, cancel }) => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?deck=d1&status=completed&config=c1');
+    renderCreate(`/practice/new?deck=d1&status=completed&config=c1${search}`);
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    const landed = currentLocation();
-    expect(landed.pathname).toBe('/practice');
-    expect(landed.params.get('deck')).toBe('d1');
-    expect(landed.params.get('status')).toBe('completed');
-    expect(landed.params.has('config')).toBe(false);
-    expect([...landed.params.keys()].sort()).toEqual(['deck', 'status']);
+    await waitFor(() => expect(currentLocation().full).toBe(cancel));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith(cancel);
   });
 
   it('a filter whose list is loading keeps the old row until the new list arrives', async () => {

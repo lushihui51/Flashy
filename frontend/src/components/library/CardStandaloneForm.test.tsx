@@ -3,10 +3,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
+
+// Every call the form makes to leave, passed on to the real leave, which under a memory
+// router replaces the form's entry.
+const leaveCalls = vi.hoisted(() => vi.fn());
+vi.mock('src/lib/leaveForm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('src/lib/leaveForm')>();
+  return {
+    useLeaveForm: () => {
+      const leave = actual.useLeaveForm();
+      return (...args: Parameters<typeof leave>) => {
+        leaveCalls(...args);
+        return leave(...args);
+      };
+    },
+  };
+});
 
 const BASE = 'http://localhost:8000';
 
@@ -97,6 +113,7 @@ function renderForm(initialPath: string | { pathname: string; search?: string; s
 let consoleError: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  leaveCalls.mockClear();
 });
 afterEach(() => {
   consoleError.mockRestore();
@@ -137,6 +154,7 @@ describe.each([
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(cancel));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith(cancel);
   });
 
   it.each([
@@ -150,6 +168,7 @@ describe.each([
     await user.click(screen.getByRole('button', { name: leaveLabel }));
 
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(save));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith(save);
   });
 
   it('a confirmed Cancel lands on cancelTo', async () => {
@@ -161,6 +180,7 @@ describe.each([
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/opener'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/opener');
   });
 });
 
@@ -230,6 +250,41 @@ describe('CardStandaloneForm — create mode', () => {
     const params = new URLSearchParams(locationEl.dataset.search);
     expect(params.get('cancelTo')).toBe('/cards/new');
     expect(params.get('returnTo')).toBe('/cards/new');
+    // Opening New deck from inside this form is not leaving it.
+    expect(leaveCalls).not.toHaveBeenCalled();
+  });
+
+  it("a new deck's id arriving at the form already open chooses that deck", async () => {
+    mockAll();
+    const user = userEvent.setup();
+    // Stands in for New deck's Create, which replaces this form's entry with the new
+    // deck's id after the form has mounted.
+    function ArriveWithNewDeck() {
+      const navigate = useNavigate();
+      return (
+        <button
+          type="button"
+          onClick={() => navigate('/cards/new', { replace: true, state: { deckId: 'd1' } })}
+        >
+          Arrive
+        </button>
+      );
+    }
+    renderWithProviders(
+      <>
+        <ArriveWithNewDeck />
+        <Routes>
+          <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
+        </Routes>
+      </>,
+      ['/cards/new'],
+    );
+    expect(await screen.findByRole('combobox')).toHaveValue('');
+
+    await user.click(screen.getByRole('button', { name: 'Arrive' }));
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('French Vocab'));
+    expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
   });
 
   it('deck is preselected but still an editable combobox when opened with a deckId in location state', async () => {
@@ -329,6 +384,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('changing deck after typing values prompts a confirm; confirming clears the form', async () => {
@@ -392,6 +448,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('with returnTo alone and no deck chosen, Cancel lands on /library', async () => {
@@ -403,6 +460,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('an unsupported field type renders read-only and does not crash', async () => {
@@ -456,6 +514,7 @@ describe('CardStandaloneForm — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('Delete card confirms, then deletes and navigates back to the deck', async () => {
@@ -468,7 +527,7 @@ describe('CardStandaloneForm — edit mode', () => {
       }),
     );
     const user = userEvent.setup();
-    renderForm('/cards/c1/edit');
+    const { queryClient } = renderForm('/cards/c1/edit');
 
     await user.click(await screen.findByRole('button', { name: 'Delete card' }));
     expect(await screen.findByText('Delete card?')).toBeInTheDocument();
@@ -476,6 +535,9 @@ describe('CardStandaloneForm — edit mode', () => {
 
     await waitFor(() => expect(deleteCalled).toBe(true));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
+    // The deleted card's query is gone from the cache once the form has left.
+    await waitFor(() => expect(queryClient.getQueryCache().find({ queryKey: ['card', 'c1'] })).toBeUndefined());
   });
 
   it('shows a not-found message instead of crashing for a missing card', async () => {

@@ -8,6 +8,22 @@ import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import DeckEditor from 'src/components/library/DeckEditor';
 
+// Every call the form makes to leave, passed on to the real leave, which under a memory
+// router replaces the form's entry.
+const leaveCalls = vi.hoisted(() => vi.fn());
+vi.mock('src/lib/leaveForm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('src/lib/leaveForm')>();
+  return {
+    useLeaveForm: () => {
+      const leave = actual.useLeaveForm();
+      return (...args: Parameters<typeof leave>) => {
+        leaveCalls(...args);
+        return leave(...args);
+      };
+    },
+  };
+});
+
 const BASE = 'http://localhost:8000';
 
 const deckDetail = {
@@ -69,6 +85,7 @@ function renderEditor(initialPath = '/decks/new') {
 let consoleError: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  leaveCalls.mockClear();
 });
 afterEach(() => {
   consoleError.mockRestore();
@@ -205,6 +222,7 @@ describe('DeckEditor — create mode', () => {
       'data-state',
       JSON.stringify({ deckId: 'd9' }),
     );
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/cards/new', { deckId: 'd9' });
   });
 
   it('opened via a "New deck…" round-trip: Cancel with no changes navigates to cancelTo with no state', async () => {
@@ -223,6 +241,7 @@ describe('DeckEditor — create mode', () => {
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/cards/new');
   });
 
   it('a confirmed Cancel navigates to cancelTo', async () => {
@@ -240,6 +259,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/cards/new'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/cards/new');
   });
 
   it('with returnTo alone, Cancel lands on /library — returnTo never stands in for cancelTo', async () => {
@@ -250,6 +270,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('with cancelTo alone, Create lands on the new deck — cancelTo never stands in for returnTo', async () => {
@@ -264,6 +285,7 @@ describe('DeckEditor — create mode', () => {
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
     expect(screen.getByTestId('location')).toHaveAttribute('data-state', 'null');
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d9');
   });
 
   it('a non-internal cancelTo is treated as absent — Cancel falls back to /library', async () => {
@@ -274,6 +296,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('a non-internal returnTo is treated as absent — Create falls back to the new deck', async () => {
@@ -287,6 +310,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d9'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d9');
   });
 
   it('saves name and fields — no cards field at all — and lands on the new deck', async () => {
@@ -320,6 +344,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('Cancel with no changes navigates to /library immediately', async () => {
@@ -330,6 +355,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('Cancel after typing prompts a discard confirm', async () => {
@@ -343,6 +369,7 @@ describe('DeckEditor — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('has no Delete deck button — create mode has nothing saved to delete', async () => {
@@ -448,6 +475,7 @@ describe('DeckEditor — edit mode', () => {
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
     expect(screen.queryByText('Discard this deck?')).not.toBeInTheDocument();
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('the bar switches to Cancel once dirty, and Cancel still prompts to discard', async () => {
@@ -473,6 +501,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('with returnTo alone, a confirmed Cancel lands on the deck’s page', async () => {
@@ -485,6 +514,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('Done goes to returnTo, ignoring cancelTo', async () => {
@@ -496,6 +526,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 
   it('with cancelTo alone, Done lands on the deck’s page', async () => {
@@ -507,6 +538,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
   it('Undo reverts a mix of edits (rename + added field + field removal) in one click', async () => {
@@ -635,6 +667,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByText('Saved ✓').closest('button')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+    expect(leaveCalls).not.toHaveBeenCalled();
   });
 
   it('save confirm does not appear for a rename/add/reorder-only changeset (no deletions)', async () => {
@@ -755,10 +788,8 @@ describe('DeckEditor — edit mode', () => {
         deleted = true;
         return new HttpResponse(null, { status: 204 });
       }),
-      // Mirrors the real backend: once deleted, a GET 404s — this is what an
-      // invalidation of the deck's own (still-mounted, pre-navigation) detail
-      // query would hit if that query were invalidated on delete, which it must
-      // not be (see the comment on handleDeleteDeck).
+      // Mirrors the real backend: once deleted, a GET 404s — what a refetch of the
+      // deck's own detail query would hit while the form still watches it.
       http.get(`${BASE}/api/decks/:id`, () =>
         deleted
           ? HttpResponse.json({ detail: 'Deck not found' }, { status: 404 })
@@ -766,7 +797,7 @@ describe('DeckEditor — edit mode', () => {
       ),
     );
     const user = userEvent.setup();
-    renderEditDeck();
+    const { queryClient } = renderEditDeck();
 
     await screen.findByDisplayValue('French Vocab');
     await user.click(screen.getByRole('button', { name: 'Delete deck' }));
@@ -783,6 +814,9 @@ describe('DeckEditor — edit mode', () => {
 
     await waitFor(() => expect(deleteCalled).toBe(true));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
+    // The deleted deck's query is gone from the cache once the form has left.
+    await waitFor(() => expect(queryClient.getQueryCache().find({ queryKey: ['deck', 'd1'] })).toBeUndefined());
   });
 
   it("Delete deck with nothing else to lose: the confirm says only that it can't be undone", async () => {
@@ -864,6 +898,7 @@ describe('DeckEditor — edit mode', () => {
 
     await waitFor(() => expect(deleteCalled).toBe(true));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
   });
 });
 

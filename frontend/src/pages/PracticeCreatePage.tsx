@@ -16,7 +16,8 @@ import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { MISSING_CONFIGURATION_MESSAGE } from 'src/lib/practiceCopy';
-import { returnAddressParams } from 'src/lib/returnTo';
+import { useLeaveForm } from 'src/lib/leaveForm';
+import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { groupConfigurationsByDeck } from 'src/lib/practiceConfigurationGroups';
 import {
   readSelectedConfigIds,
@@ -28,20 +29,18 @@ import { useViewParams } from 'src/lib/viewParams';
 
 type RowError = { configId: string; sentence: string };
 
-/** The overview's own params — the only ones Cancel hands back, so the draft never
- * leaves this page. */
-const OVERVIEW_PARAMS = ['deck', 'status'] as const;
-
 /**
  * `/practice/new`: name, filter, tick at most one configuration per deck, create. The
  * draft rides the URL — repeated `config` params and a `name` param — so it survives
- * every round trip, a refresh, and back. Create *is* start — a successful post lands
- * straight on the new session's own page.
+ * every round trip, a refresh, and back. Create *is* start — a successful post lands on
+ * `returnTo`, else straight on the new session's own page; Cancel lands on `cancelTo`,
+ * else the Practice page.
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
   const { params, setParams, changeView } = useViewParams();
   const navigate = useNavigate();
+  const leaveForm = useLeaveForm();
   const location = useLocation();
   const queryClient = useQueryClient();
   const nameInputId = useId();
@@ -160,7 +159,7 @@ export default function PracticeCreatePage() {
       }),
     onSuccess: async (session) => {
       await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
-      navigate(`/practice/${session.id}`);
+      await leaveForm(internalReturnTo(params, 'returnTo') ?? `/practice/${session.id}`);
     },
     // The code decides only where the sentence renders: against the offending row for
     // `stale_config`, in the bar for everything else.
@@ -239,14 +238,7 @@ export default function PracticeCreatePage() {
     });
   };
 
-  const cancel = () => {
-    const overviewParams = new URLSearchParams();
-    for (const key of OVERVIEW_PARAMS) {
-      const value = params.get(key);
-      if (value !== null) overviewParams.set(key, value);
-    }
-    navigate({ pathname: '/practice', search: overviewParams.toString() });
-  };
+  const cancel = () => void leaveForm(internalReturnTo(params, 'cancelTo') ?? '/practice');
 
   const selectedCount = selectedIds.length;
   const nothingSelected = selectedCount === 0;

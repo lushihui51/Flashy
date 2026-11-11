@@ -14,6 +14,7 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useLeaveForm } from 'src/lib/leaveForm';
 import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
@@ -63,6 +64,9 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
 
   return (
     <CardStandaloneFormBody
+      // A new deck's id arrives after this form has mounted again on the step back from New
+      // deck, so the body starts over on every arrival rather than reading it once.
+      key={location.key}
       mode={mode}
       cardId={cardId}
       original={mode === 'edit' ? cardQuery.data : undefined}
@@ -91,6 +95,7 @@ function CardStandaloneFormBody({
   returnTo,
 }: CardStandaloneFormBodyProps) {
   const navigate = useNavigate();
+  const leaveForm = useLeaveForm();
   const location = useLocation();
   const queryClient = useQueryClient();
   const formId = useId();
@@ -139,7 +144,8 @@ function CardStandaloneFormBody({
       : !!original && Object.entries(values).some(([k, v]) => v !== (original.values[k] ?? ''));
 
 
-  const leaveByCancel = () => navigate(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
+  const leaveByCancel = () =>
+    void leaveForm(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
 
   const handleCancel = () => {
     if (dirty) {
@@ -200,7 +206,7 @@ function CardStandaloneFormBody({
         }
       }
       await invalidateAfterWrite(deckId);
-      navigate(returnTo ?? `/decks/${deckId}`);
+      await leaveForm(returnTo ?? `/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
@@ -213,7 +219,10 @@ function CardStandaloneFormBody({
     try {
       await deleteCard(cardId!);
       await invalidateAfterWrite(deckId);
-      navigate(`/decks/${deckId}`);
+      await leaveForm(`/decks/${deckId}`);
+      // Only once the form is gone: it watches the card's query until it unmounts, and
+      // dropping the query sooner refetches a card that no longer exists.
+      queryClient.removeQueries({ queryKey: ['card', cardId] });
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);

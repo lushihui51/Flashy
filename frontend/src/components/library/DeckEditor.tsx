@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
@@ -20,6 +20,7 @@ import { joinClauses } from 'src/lib/joinClauses';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
+import { useLeaveForm } from 'src/lib/leaveForm';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -308,7 +309,7 @@ function DeckEditorBody({
   cancelTo,
   returnTo,
 }: DeckEditorBodyProps) {
-  const navigate = useNavigate();
+  const leaveForm = useLeaveForm();
   const queryClient = useQueryClient();
   const { revealFirstSentence } = useViewParams();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -353,8 +354,8 @@ function DeckEditorBody({
   const canUndo = state.dirty && !saving;
 
   const leaveByCancel = () =>
-    navigate(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
-  const leaveByDone = () => navigate(returnTo ?? `/decks/${deckId}`);
+    void leaveForm(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
+  const leaveByDone = () => void leaveForm(returnTo ?? `/decks/${deckId}`);
 
   const handleCancel = () => {
     if (state.dirty) {
@@ -376,10 +377,10 @@ function DeckEditorBody({
     const created = await createDeck(buildDeckCreatePayload(state));
     await queryClient.invalidateQueries({ queryKey: ['decks'] });
     if (returnTo) {
-      navigate(returnTo, { state: { deckId: created.id } });
+      await leaveForm(returnTo, { deckId: created.id });
       return;
     }
-    navigate(`/decks/${created.id}`);
+    await leaveForm(`/decks/${created.id}`);
   };
 
   const handleSaveEdit = async () => {
@@ -428,14 +429,11 @@ function DeckEditorBody({
     setSaveError(null);
     try {
       await deleteDeck(deckId!);
-      // Deliberately not invalidating ['deck', deckId] — that query is still
-      // mounted on this very page until navigate() below unmounts it, and
-      // invalidating it would trigger an immediate refetch of a deck that no
-      // longer exists (a 404) before navigation ever runs. Same reason
-      // CardStandaloneForm's own delete never invalidates the entity it just
-      // deleted, only the list/parent queries that reference it.
       await queryClient.invalidateQueries({ queryKey: ['decks'] });
-      navigate('/library');
+      await leaveForm('/library');
+      // Only once the form is gone: it watches the deck's query until it unmounts, and
+      // dropping the query sooner refetches a deck that no longer exists.
+      queryClient.removeQueries({ queryKey: ['deck', deckId] });
     } catch (err) {
       setSaveError(failureSentence(err, 'Deck not found.'));
       setDeleting(false);

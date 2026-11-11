@@ -24,7 +24,7 @@ Judgement: The engineer judges on the live server at 390 wide, by the mouse: on 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -82,7 +82,28 @@ export function useLeaveForm(): (target: string, state?: Record<string, unknown>
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The four files pass: `Test Files  4 passed (4)`, `Tests  147 passed (147)`.
+- The grep prints exactly three lines: `PracticeCreatePage.tsx` in `newConfiguration` (`navigate({ pathname: '/deck-configurations/new', … })`) and in `editConfiguration` (`navigate({`), and `CardStandaloneForm.tsx` in `goToCreateDeck` (`navigate({ pathname: '/decks/new', … })`).
+- Live server, headless Chromium at 390 by 844, mouse only, each check in a fresh tab:
+  - From the practice "Overlap B 723016" page, Start practice, Show answer, then Edit card, at history index 2, then Cancel lands at index 1 on the same address, `…/run?card=5255503e-…&shown=1`, with the same card on screen. Its "<" then lands on `/practice/9d20eb8c-…` at index 0, the page the run page was reached from.
+  - Your library, the top bar's New, New card (index 1), the picker's "New deck…" (index 2), a name, then Create lands on `/cards/new` at index 1, with the picker showing the new deck "Cycle 047 T1 picker 2026-11-11T06:02:14.369Z". That deck stays in the dev database.
+  - `/decks/new` opened by its address (index 0), then Cancel, lands on `/library` at index 0 under the heading "Your library".
+
+Departures from guidance: none.
+
+Beyond the tests Details names:
+
+- The three forms' tests wrap the real hook in a spy, so each existing landing check still runs alongside the call check.
+- `CardStandaloneForm.test.tsx` has a test that delivers a deck id by a replace to the mounted form. It fails without the `key`.
+- Both Delete tests check that the deleted thing's query is gone from the cache. The deck's check fails without `removeQueries`.
+- "New deck…" in New card and the pencil in New practice are each shown not to call the hook.
+
+Read in the code:
+
+- `useLeaveForm` in `frontend/src/lib/leaveForm.ts`.
+- The `key={location.key}` on `CardStandaloneFormBody` in `CardStandaloneForm`. It remounts the form's body whenever its location changes. The form writes nothing to its own URL, so only an arrival changes it.
 
 ### T2 — Every opener's own address
 
