@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Pencil, Play } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
 import { deleteDeckPracticeConfig, readDeckPracticeConfigs } from 'src/api/deck_practice_config';
@@ -14,6 +14,7 @@ import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { failureSentence } from 'src/lib/failureSentence';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
@@ -35,6 +36,7 @@ function isTab(value: string | null): value is Tab {
 export default function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   // In the URL rather than component state: the configuration builder navigates away and
   // back, and landing on the deck's *cards* after saving one would lose the thread.
@@ -113,9 +115,12 @@ export default function DeckDetailPage() {
     });
   };
 
+  const cancelToHere = returnAddressParams(location, 'cancelTo').toString();
+
   // Both carry the deck in router state — the same deck-context wiring the card form
   // and the configuration builder already read on arrival.
-  const addCard = () => navigate('/cards/new', { state: { deckId: deck.id } });
+  const addCard = () =>
+    navigate({ pathname: '/cards/new', search: cancelToHere }, { state: { deckId: deck.id } });
   const addConfiguration = () =>
     navigate('/deck-configurations/new', { state: { deckId: deck.id } });
 
@@ -142,7 +147,7 @@ export default function DeckDetailPage() {
         <button
           type="button"
           aria-label="Edit deck"
-          onClick={() => navigate(`/decks/${deck.id}/edit`)}
+          onClick={() => navigate({ pathname: `/decks/${deck.id}/edit`, search: cancelToHere })}
           className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
           <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
@@ -171,7 +176,7 @@ export default function DeckDetailPage() {
                 deckName={deck.name}
                 fieldDefs={fieldDefs}
                 cards={deck.cards}
-                cardHref={(cardId) => `/cards/${cardId}/edit`}
+                cardHref={(cardId) => `/cards/${cardId}/edit?${cancelToHere}`}
               />
             </div>
           )}

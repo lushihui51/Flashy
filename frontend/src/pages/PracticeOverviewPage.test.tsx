@@ -273,14 +273,19 @@ describe('PracticeOverviewPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
   });
 
-  it('Add practice carries the current filters into the creation surface', async () => {
+  it('Add practice carries the current filters into the creation surface, and this page as cancelTo', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderOverview('/practice?deck=d1');
+    renderOverview('/practice?deck=d1&status=active');
     await screen.findByText('Alpha run');
 
     await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/new?deck=d1');
+    const [pathname, search] = screen.getByTestId('location').textContent!.split('?');
+    expect(pathname).toBe('/practice/new');
+    const params = new URLSearchParams(search);
+    expect(params.get('deck')).toBe('d1');
+    expect(params.get('status')).toBe('active');
+    expect(params.get('cancelTo')).toBe('/practice?deck=d1&status=active');
   });
 
   it('deleting a session confirms first, then removes it from the list', async () => {

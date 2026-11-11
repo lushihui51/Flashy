@@ -246,7 +246,7 @@ describe('DeckDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'New card' })).not.toBeInTheDocument();
   });
 
-  it('Add card navigates to the card creation form with this deck locked', async () => {
+  it('Add card navigates to the card creation form with this deck locked, Cancel returning here', async () => {
     mockDeck();
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
@@ -258,6 +258,21 @@ describe('DeckDetailPage', () => {
     expect(screen.getByTestId('location')).toHaveAttribute(
       'data-state',
       JSON.stringify({ deckId: 'd1' }),
+    );
+    expect(screen.getByTestId('location')).toHaveAttribute(
+      'data-search',
+      '?cancelTo=%2Fdecks%2Fd1',
+    );
+  });
+
+  it('a card row opens Edit card, Cancel returning here', async () => {
+    mockDeck();
+    renderAtDeckRoute();
+
+    const list = await screen.findByRole('list', { name: 'Cards in Vocab Deck' });
+    expect(within(list).getByRole('link')).toHaveAttribute(
+      'href',
+      '/cards/c1/edit?cancelTo=%2Fdecks%2Fd1',
     );
   });
 
@@ -273,7 +288,7 @@ describe('DeckDetailPage', () => {
     expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?deck=d1');
   });
 
-  it('Edit navigates to the deck-edit placeholder route', async () => {
+  it('Edit deck opens the deck form, Cancel returning here', async () => {
     mockDeck();
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
@@ -282,6 +297,10 @@ describe('DeckDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Edit deck' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1/edit');
+    expect(screen.getByTestId('location')).toHaveAttribute(
+      'data-search',
+      '?cancelTo=%2Fdecks%2Fd1',
+    );
   });
 
   it('renders with no console errors for a deck with zero fields', async () => {

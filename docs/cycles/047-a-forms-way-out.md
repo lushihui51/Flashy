@@ -109,7 +109,7 @@ Read in the code:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -153,4 +153,21 @@ Under ADR 124:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- The five files pass: `Test Files  5 passed (5)`, `Tests  81 passed (81)`. `practicePrefilterChain.test.tsx` passes too. Run against the old openers, the new assertions fail: 15 tests across the six files.
+- The judgement, in headless Chromium at 390 by 844, mouse only, each check in a fresh tab, no console errors:
+  - Run page: from the "Overlap B 723016" practice page (index 0), Start practice, Show answer, then Edit card (index 2). Cancel lands at index 1 on `…/run?card=5255503e-…&shown=1`, the same address, with the same text on screen. Its "<" then lands on `/practice/9d20eb8c-…` at index 0, not on Edit card.
+  - A user with no deck: Home (index 0) reads "0 of 3", and the New deck step's link is `/decks/new?cancelTo=%2F`. Cancel lands on `/` at index 0 under "Home". For this check only, the tab's `/api/` calls went to a second backend on port 8001, run with `ENV=development` and `DEV_AUTH_USER_ID=dev-cycle-047-t2-no-deck`. That backend is stopped now, and the `app_user` row it created stays in the dev database.
+  - The New sheet over a deck's page: Your library (0), Ports's page (1), then the top bar's New and New card open `/cards/new?cancelTo=%2Fdecks%2Fd5fcc81f-…` (2). Cancel lands on Ports's page at index 1.
+  - The Practice page narrowed to a deck: Home (0), then a recent deck's Practice opens `/practice?deck=dea18f1b-…` (1), with the filter on "Stale 723016". Add practice opens `/practice/new?deck=dea18f1b-…&cancelTo=%2Fpractice%3Fdeck%3Ddea18f1b-…` (2). Cancel lands on `/practice?deck=dea18f1b-…` at index 1, the filter still on "Stale 723016".
+  - Your library, Add deck: Ports's page (0), its breadcrumb's Your library (1), Add deck at `/decks/new?cancelTo=%2Flibrary` (2), with the fields Term and Definition and a typed name. Create lands on the new deck's page at index 1. Its "<" lands on Ports's page at index 0, not on New deck. The deck "Cycle 047 T2 library 2026-11-11T06:12:59.357Z" stays in the dev database.
+  - New card, then its picker's "New deck…", a name, then Create: lands on `/cards/new?cancelTo=%2Flibrary` at index 1, with the picker showing the new deck "Cycle 047 T2 picker 2026-11-11T06:12:59.357Z". That deck stays in the dev database.
+  - `/decks/new` opened by its address (index 0), then Cancel: lands on `/library` at index 0 under "Your library".
+
+Departures from guidance: none.
+
+Read in the code:
+
+- `useLocation` in `CreateSheet`. The sheet is state in `AppShell`, not an address, so the location is the page beneath it.
+- Add practice's `onClick` in `PracticeOverviewPage`. It adds `cancelTo` after the filter parameters it already passed.

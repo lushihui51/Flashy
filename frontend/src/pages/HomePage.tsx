@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Check, Play, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { readHome } from 'src/api/home';
 import type { components } from 'src/api/types';
 import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
@@ -9,6 +9,7 @@ import SessionDeckChips from 'src/components/practice/SessionDeckChips';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { pluralize } from 'src/lib/pluralize';
+import { returnAddressParams } from 'src/lib/returnTo';
 
 type HomeSteps = components['schemas']['HomeSteps'];
 type StepFlag = Extract<keyof HomeSteps, 'has_deck' | 'has_card'>;
@@ -29,6 +30,7 @@ const BLOCK_CLASS =
   'tappable flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)';
 
 function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
+  const location = useLocation();
   const isDone = (flag: StepFlag | null) => flag !== null && steps[flag];
   const doneCount = STEPS.filter((step) => isDone(step.flag)).length;
   const nextIndex = STEPS.findIndex((step) => !isDone(step.flag));
@@ -60,7 +62,10 @@ function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
                   {index + 1}
                 </span>
                 <Link
-                  to={step.to}
+                  to={{
+                    pathname: step.to,
+                    search: returnAddressParams(location, 'cancelTo').toString(),
+                  }}
                   className="tappable flex h-field min-w-0 flex-1 items-center justify-start gap-2 rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink)"
                 >
                   <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5 shrink-0" />
@@ -159,6 +164,7 @@ function RecentDecks({ decks, firstIsMainAction }: RecentDecksProps) {
  * their active practices, the decks they most recently practiced, and a way to New practice. */
 export default function HomePage() {
   usePageTitle('Home');
+  const location = useLocation();
   // Nothing invalidates this key: a thing made on any other page shows through the refetch on
   // Home's next mount (ADR 088).
   const homeQuery = useQuery({ queryKey: ['home'], queryFn: readHome });
@@ -190,7 +196,10 @@ export default function HomePage() {
             <RecentDecks decks={recentDecks} firstIsMainAction={activePractices.length === 0} />
           )}
           <Link
-            to="/practice/new"
+            to={{
+              pathname: '/practice/new',
+              search: returnAddressParams(location, 'cancelTo').toString(),
+            }}
             className="tappable-sm mt-3.5 flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink)"
           >
             <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5" />

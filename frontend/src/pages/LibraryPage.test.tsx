@@ -12,7 +12,11 @@ const BASE = 'http://localhost:8000';
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return (
+    <span data-testid="location" data-search={location.search}>
+      {location.pathname}
+    </span>
+  );
 }
 
 const decks = [
@@ -90,7 +94,7 @@ describe('LibraryPage', () => {
     expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
   });
 
-  it('the create button is sized for touch and opens New deck', async () => {
+  it('the create button is sized for touch and opens New deck, Cancel returning here', async () => {
     mockDecks();
     const user = userEvent.setup();
     renderWithProviders(
@@ -98,6 +102,7 @@ describe('LibraryPage', () => {
         <LibraryPage />
         <LocationProbe />
       </>,
+      ['/library'],
     );
 
     await screen.findByText('Algebra');
@@ -106,6 +111,7 @@ describe('LibraryPage', () => {
     await user.click(button);
 
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?cancelTo=%2Flibrary');
   });
 
   it('a deck row shows its mastery, and a deck with no card shows none', async () => {

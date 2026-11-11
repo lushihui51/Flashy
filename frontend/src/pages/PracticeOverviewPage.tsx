@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDecks } from 'src/api/deck';
 import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
@@ -10,6 +10,7 @@ import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import Tabs, { type TabItem } from 'src/components/ui/Tabs';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 import type { components } from 'src/api/types';
 
@@ -36,6 +37,7 @@ export default function PracticeOverviewPage() {
   usePageTitle('Practice');
   const { params, changeView } = useViewParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   const filtersRef = useRef<HTMLDivElement>(null);
@@ -119,7 +121,13 @@ export default function PracticeOverviewPage() {
         </h1>
         <AddButton
           label="Add practice"
-          onClick={() => navigate({ pathname: '/practice/new', search: params.toString() })}
+          onClick={() => {
+            const formParams = new URLSearchParams([
+              ...params,
+              ...returnAddressParams(location, 'cancelTo'),
+            ]);
+            navigate({ pathname: '/practice/new', search: formParams.toString() });
+          }}
         />
       </div>
 

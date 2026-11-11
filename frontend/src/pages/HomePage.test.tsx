@@ -89,7 +89,7 @@ describe('HomePage', () => {
       // The next step is the only link, so nothing else on the list can be followed or yellow.
       const link = within(list).getByRole('link');
       expect(link).toHaveTextContent('New card');
-      expect(link).toHaveAttribute('href', '/cards/new');
+      expect(link).toHaveAttribute('href', '/cards/new?cancelTo=%2F');
       expect(link).toHaveClass(MAIN_ACTION_CLASS);
 
       expect(within(list).getByText('New practice')).not.toHaveClass('line-through');
@@ -100,11 +100,11 @@ describe('HomePage', () => {
       { done: 0, label: 'New deck', href: '/decks/new' },
       { done: 1, label: 'New card', href: '/cards/new' },
       { done: 2, label: 'New practice', href: '/practice/new' },
-    ])('with $done done links $label to $href', async ({ done, label, href }) => {
+    ])('with $done done links $label to $href, Cancel returning to Home', async ({ done, label, href }) => {
       renderHome({ steps: steps(done >= 1, done >= 2) });
 
       const link = await screen.findByRole('link', { name: label });
-      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('href', `${href}?cancelTo=%2F`);
       expect(screen.getByText(`${done} of 3`)).toBeInTheDocument();
     });
   });
@@ -181,11 +181,11 @@ describe('HomePage', () => {
       expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
     });
 
-    it('renders no heading without a recent deck, and links New practice last', async () => {
+    it('renders no heading without a recent deck, and links New practice last, Cancel returning to Home', async () => {
       renderHome({});
 
       const link = await screen.findByRole('link', { name: 'New practice' });
-      expect(link).toHaveAttribute('href', '/practice/new');
+      expect(link).toHaveAttribute('href', '/practice/new?cancelTo=%2F');
       expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
       expect(screen.queryByText('Recently practiced')).not.toBeInTheDocument();
     });

@@ -10,15 +10,20 @@ const triggerRef = { current: null };
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return (
+    <span data-testid="location" data-search={location.search}>
+      {location.pathname}
+    </span>
+  );
 }
 
-function renderSheet(props: Partial<Parameters<typeof CreateSheet>[0]> = {}) {
+function renderSheet(props: Partial<Parameters<typeof CreateSheet>[0]> = {}, path = '/') {
   return renderWithRouter(
     <>
       <CreateSheet open onClose={() => {}} triggerRef={triggerRef} hasDecks {...props} />
       <LocationProbe />
     </>,
+    [path],
   );
 }
 
@@ -96,6 +101,27 @@ describe('CreateSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/practice/new');
   });
+
+  it.each([
+    { row: 'New deck', hasDecks: true, pathname: '/decks/new' },
+    { row: 'New card', hasDecks: true, pathname: '/cards/new' },
+    { row: 'New card', hasDecks: false, pathname: '/decks/new' },
+    { row: 'New practice', hasDecks: true, pathname: '/practice/new' },
+  ])(
+    '$row (hasDecks: $hasDecks) opens $pathname with the page beneath as cancelTo',
+    async ({ row, hasDecks, pathname }) => {
+      const user = userEvent.setup();
+      renderSheet({ hasDecks }, '/practice?deck=d1&status=active');
+
+      await user.click(screen.getByRole('button', { name: new RegExp(`^${row}`) }));
+
+      const location = screen.getByTestId('location');
+      expect(location).toHaveTextContent(pathname);
+      expect(new URLSearchParams(location.dataset.search).get('cancelTo')).toBe(
+        '/practice?deck=d1&status=active',
+      );
+    },
+  );
 
   it('calls onClose when the scrim is clicked', async () => {
     const user = userEvent.setup();

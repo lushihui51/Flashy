@@ -1,6 +1,7 @@
 import { type RefObject } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BottomSheet from 'src/components/ui/BottomSheet';
+import { returnAddressParams } from 'src/lib/returnTo';
 
 type CreateSheetProps = {
   open: boolean;
@@ -25,10 +26,13 @@ const LABEL_CLASS = 'text-base font-semibold text-(--color-ink)';
  * practice. */
 export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: CreateSheetProps) {
   const navigate = useNavigate();
+  // The sheet has no address of its own, so this is the page beneath it, where the form's
+  // Cancel returns.
+  const location = useLocation();
 
   const go = (to: string) => {
     onClose();
-    navigate(to);
+    navigate({ pathname: to, search: returnAddressParams(location, 'cancelTo').toString() });
   };
 
   return (

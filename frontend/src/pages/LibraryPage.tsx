@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { readDecks } from 'src/api/deck';
 import DeckRow from 'src/components/library/DeckRow';
 import AddButton from 'src/components/ui/AddButton';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 
 function EmptyState({ copy }: { copy: string }) {
   return (
@@ -16,6 +17,7 @@ function EmptyState({ copy }: { copy: string }) {
 export default function LibraryPage() {
   usePageTitle('Your library');
   const navigate = useNavigate();
+  const location = useLocation();
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
   return (
@@ -28,7 +30,15 @@ export default function LibraryPage() {
         <h2 className="text-body font-medium text-(--color-aside)">
           {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
         </h2>
-        <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
+        <AddButton
+          label="Add deck"
+          onClick={() =>
+            navigate({
+              pathname: '/decks/new',
+              search: returnAddressParams(location, 'cancelTo').toString(),
+            })
+          }
+        />
       </div>
       {decksQuery.isError && (
         <p role="alert" className="mt-2 text-sm text-(--color-wrong)">

@@ -266,9 +266,12 @@ describe('practice pre-filter chains', () => {
     expect(currentLocation().full).toBe('/practice?deck=d1');
     await waitFor(() => expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck'));
 
-    // Overview → New practice with the deck intact.
+    // Overview → New practice with the deck intact, Cancel returning to the overview.
     await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    expect(currentLocation().full).toBe('/practice/new?deck=d1');
+    const newPractice = currentLocation();
+    expect(newPractice.pathname).toBe('/practice/new');
+    expect(newPractice.params.get('deck')).toBe('d1');
+    expect(newPractice.params.get('cancelTo')).toBe('/practice?deck=d1');
 
     await screen.findByRole('group', { name: 'Alpha Deck' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
@@ -281,8 +284,8 @@ describe('practice pre-filter chains', () => {
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
     expect(builder.params.get('deck')).toBe('d1');
-    expect(builder.params.get('cancelTo')).toBe('/practice/new?deck=d1');
-    expect(builder.params.get('returnTo')).toBe('/practice/new?deck=d1');
+    expect(builder.params.get('cancelTo')).toBe(newPractice.full);
+    expect(builder.params.get('returnTo')).toBe(newPractice.full);
 
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
     expect(within(notUsed).getByText('Term')).toBeInTheDocument();
