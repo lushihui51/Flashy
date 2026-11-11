@@ -231,7 +231,7 @@ type DeckEditorProps = {
 };
 
 /** Full-screen route page. Mode is derived from the route (`/decks/new` vs.
- * `/decks/:deckId/edit`, App.tsx), same pattern as `SubjectForm`/`CardStandaloneForm`.
+ * `/decks/:deckId/edit`, App.tsx), same pattern as `CardStandaloneForm`.
  * Edit mode loads the existing `DeckDetail` — and its subject, since the subject
  * combobox needs the full `{id, name, icon}` object, not just an id — before mounting
  * the body, gated the same way `CardStandaloneForm` gates on its deck. */
@@ -466,10 +466,9 @@ function DeckEditorBody({
     }
   };
 
-  // Ignores whatever's staged/unsaved in the editor, same as
-  // SubjectForm/CardStandaloneForm's own deletes — deleting the whole deck makes any
-  // pending edit moot. Navigates to the deck's own parent (its subject), the same "one
-  // level up" pattern as a card's delete going to its deck.
+  // Ignores whatever's staged/unsaved in the editor, same as CardStandaloneForm's own
+  // delete — deleting the whole deck makes any pending edit moot. Lands on Your library,
+  // the place a deck sits in.
   const handleDeleteDeck = async () => {
     setDeleting(true);
     setSaveError(null);
@@ -479,14 +478,14 @@ function DeckEditorBody({
       // mounted on this very page until navigate() below unmounts it, and
       // invalidating it would trigger an immediate refetch of a deck that no
       // longer exists (a 404) before navigation ever runs. Same reason
-      // SubjectForm/CardStandaloneForm's own deletes never invalidate the entity
-      // they just deleted, only the list/parent queries that reference it.
+      // CardStandaloneForm's own delete never invalidates the entity it just
+      // deleted, only the list/parent queries that reference it.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['decks'] }),
         queryClient.invalidateQueries({ queryKey: ['decks', original.subjectId] }),
         queryClient.invalidateQueries({ queryKey: ['subjects'] }),
       ]);
-      navigate(`/subjects/${original.subjectId}`);
+      navigate('/library');
     } catch (err) {
       setSaveError(failureSentence(err, 'Deck not found.'));
       setDeleting(false);

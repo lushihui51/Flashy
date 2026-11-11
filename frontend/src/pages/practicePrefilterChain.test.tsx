@@ -6,7 +6,6 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import SubjectDetailPage from 'src/pages/SubjectDetailPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
@@ -159,19 +158,9 @@ function mockLibrary() {
   const configRequests: URLSearchParams[] = [];
 
   server.use(
+    // The deck form's subject picker reads these.
     http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
-    http.get(`${BASE}/api/subjects/:subjectId`, ({ params }) => {
-      const subject = subjects.find((s) => s.id === params.subjectId);
-      return subject
-        ? HttpResponse.json(subject)
-        : HttpResponse.json({ detail: 'Subject not found' }, { status: 404 });
-    }),
-    http.get(`${BASE}/api/decks`, ({ request }) => {
-      const subjectId = new URL(request.url).searchParams.get('subject_id');
-      return HttpResponse.json(
-        subjectId ? decks.filter((deck) => deck.subject_id === subjectId) : decks,
-      );
-    }),
+    http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/decks/:deckId`, ({ params }) => {
       const detail = deckDetails[params.deckId as string];
       return detail
@@ -182,15 +171,8 @@ function mockLibrary() {
     http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
       const query = new URL(request.url).searchParams;
       configRequests.push(query);
-      const subjectId = query.get('subject_id');
       const deckId = query.get('deck_id');
-      return HttpResponse.json(
-        configs.filter(
-          (config) =>
-            (!subjectId || config.subject_id === subjectId) &&
-            (!deckId || config.deck_id === deckId),
-        ),
-      );
+      return HttpResponse.json(configs.filter((config) => !deckId || config.deck_id === deckId));
     }),
     http.get(`${BASE}/api/deck_practice_configs/:configId`, ({ params }) => {
       const config = configs.find((c) => c.id === params.configId);
@@ -283,7 +265,6 @@ function renderChain(initialPath: string) {
     <>
       <LocationProbe />
       <Routes>
-        <Route path="/subjects/:subjectId" element={<SubjectDetailPage />} />
         <Route path="/decks/:deckId" element={<DeckDetailPage />} />
         <Route path="/practice" element={<PracticeOverviewPage />} />
         <Route path="/practice/new" element={<PracticeCreatePage />} />
@@ -321,81 +302,35 @@ afterEach(() => {
 });
 
 describe('practice pre-filter chains', () => {
-  it('subject page → overview → New practice → New configuration, the subject riding every hop', async () => {
-    const { configRequests } = mockLibrary();
-    const user = userEvent.setup();
-    renderChain('/subjects/s2');
-
-    // Subject page → the overview, pre-filtered to this subject.
-    await user.click(await screen.findByRole('button', { name: 'Practice' }));
-    expect(currentLocation().pathname).toBe('/practice');
-    expect(currentLocation().params.get('subject')).toBe('s2');
-    await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Beta'));
-
-    // Overview → New practice, still carrying the subject.
-    await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    expect(currentLocation().pathname).toBe('/practice/new');
-    expect(currentLocation().params.get('subject')).toBe('s2');
-
-    // The filter reached the server and the list: only Beta's group renders. Some
-    // request, not the last — New practice also asks for every configuration,
-    // unfiltered, for its Selected section.
-    await screen.findByRole('group', { name: 'Beta · Beta Deck' });
-    expect(screen.queryByText('Recall')).not.toBeInTheDocument();
-    expect(configRequests.some((query) => query.get('subject_id') === 's2')).toBe(true);
-
-    // New practice → the builder: subject param and both addresses ride along, and the
-    // context subject's decks sort first in the picker.
-    await user.click(screen.getByRole('button', { name: 'New configuration…' }));
-    const builder = currentLocation();
-    expect(builder.pathname).toBe('/deck-configurations/new');
-    expect(builder.params.get('subject')).toBe('s2');
-    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s2');
-    expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s2');
-
-    await user.click(await screen.findByPlaceholderText('Deck'));
-    const options = await screen.findAllByRole('option');
-    // "New deck…" is last; the first real option belongs to the context subject even
-    // though "Alpha Deck" would sort first alphabetically.
-    expect(options[0]).toHaveTextContent('Beta Deck');
-  });
-
-  it('deck page → overview → New practice → New configuration, both filters riding and the deck pre-selected', async () => {
+  it('deck page → overview → New practice → New configuration, the deck riding every hop and pre-selected', async () => {
     const { configRequests } = mockLibrary();
     const user = userEvent.setup();
     renderChain('/decks/d1');
 
-    // Deck page → the overview, pre-filtered to subject AND deck.
+    // Deck page → the overview, pre-filtered to the deck alone.
     await user.click(await screen.findByRole('button', { name: 'Practice' }));
-    expect(currentLocation().pathname).toBe('/practice');
-    expect(currentLocation().params.get('subject')).toBe('s1');
-    expect(currentLocation().params.get('deck')).toBe('d1');
-    await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Alpha'));
-    expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
+    expect(currentLocation().full).toBe('/practice?deck=d1');
+    await waitFor(() => expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck'));
 
-    // Overview → New practice with both filters intact.
+    // Overview → New practice with the deck intact.
     await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    expect(currentLocation().pathname).toBe('/practice/new');
-    expect(currentLocation().params.get('subject')).toBe('s1');
-    expect(currentLocation().params.get('deck')).toBe('d1');
+    expect(currentLocation().full).toBe('/practice/new?deck=d1');
 
-    await screen.findByRole('group', { name: 'Alpha · Alpha Deck' });
+    await screen.findByRole('group', { name: 'Alpha Deck' });
     expect(screen.queryByText('Basics')).not.toBeInTheDocument();
-    // Some request, not the last, as above.
-    expect(
-      configRequests.some(
-        (query) => query.get('subject_id') === 's1' && query.get('deck_id') === 'd1',
-      ),
-    ).toBe(true);
+    // Some request, not the last — New practice also asks for every configuration,
+    // unfiltered, for its Selected section.
+    expect(configRequests.some((query) => query.get('deck_id') === 'd1')).toBe(true);
+    expect(configRequests.every((query) => !query.has('subject_id'))).toBe(true);
 
     // New practice → the builder: the deck arrives pre-selected, straight to its board.
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
-    expect(builder.params.get('subject')).toBe('s1');
+    expect(builder.params.has('subject')).toBe(false);
     expect(builder.params.get('deck')).toBe('d1');
-    expect(builder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
-    expect(builder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+    expect(builder.params.get('cancelTo')).toBe('/practice/new?deck=d1');
+    expect(builder.params.get('returnTo')).toBe('/practice/new?deck=d1');
 
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
     expect(within(notUsed).getByText('Term')).toBeInTheDocument();
@@ -405,7 +340,7 @@ describe('practice pre-filter chains', () => {
   it('New practice → New configuration → New deck, then Cancel twice back up the chain (MD-5)', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderChain('/practice/new?subject=s1&deck=d1');
+    renderChain('/practice/new?deck=d1');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
@@ -421,8 +356,8 @@ describe('practice pre-filter chains', () => {
     expect(currentLocation().params.get('returnTo')).toBe(builderLocation);
     for (const address of ['cancelTo', 'returnTo']) {
       const nested = new URLSearchParams(currentLocation().params.get(address)!.split('?')[1]);
-      expect(nested.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
-      expect(nested.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+      expect(nested.get('cancelTo')).toBe('/practice/new?deck=d1');
+      expect(nested.get('returnTo')).toBe('/practice/new?deck=d1');
     }
 
     // Cancel in the deck editor → back on the builder, nothing dropped.
@@ -430,20 +365,18 @@ describe('practice pre-filter chains', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(currentLocation().full).toBe(builderLocation));
     const backOnBuilder = currentLocation();
-    expect(backOnBuilder.params.get('subject')).toBe('s1');
     expect(backOnBuilder.params.get('deck')).toBe('d1');
-    expect(backOnBuilder.params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
-    expect(backOnBuilder.params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+    expect(backOnBuilder.params.get('cancelTo')).toBe('/practice/new?deck=d1');
+    expect(backOnBuilder.params.get('returnTo')).toBe('/practice/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Alpha Deck'));
 
     // Cancel in the builder → back on New practice with the original filters.
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(currentLocation().full).toBe('/practice/new?subject=s1&deck=d1'));
+    await waitFor(() => expect(currentLocation().full).toBe('/practice/new?deck=d1'));
     expect(await screen.findByRole('heading', { name: 'New practice' })).toBeInTheDocument();
     await screen.findByRole('checkbox', { name: 'Recall' });
-    await waitFor(() => expect(screen.getByPlaceholderText('All subjects')).toHaveValue('Alpha'));
-    expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck');
+    await waitFor(() => expect(screen.getByPlaceholderText('All decks')).toHaveValue('Alpha Deck'));
   });
 
   it('the save direction: deck created → builder resumes on it → configuration saved → auto-selected on New practice, earlier selections kept (MD-5)', async () => {

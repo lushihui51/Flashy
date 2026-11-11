@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
@@ -47,17 +47,6 @@ const deck = {
     },
   ],
 };
-const subject = {
-  id: 's1',
-  name: 'French',
-  icon: 'languages',
-  description: '',
-  user_id: 'u1',
-  created_at: '',
-  deck_count: 1,
-  readiness: 0.5,
-};
-
 function configuration(overrides: Record<string, unknown> = {}) {
   return {
     id: 'cfg1',
@@ -80,12 +69,10 @@ function configuration(overrides: Record<string, unknown> = {}) {
 function mockDeck({
   deckData = deck,
   deckStatus = 200,
-  subjectData = subject,
   configurations = [],
 }: {
   deckData?: typeof deck;
   deckStatus?: number;
-  subjectData?: typeof subject;
   configurations?: unknown[];
 } = {}) {
   const configRequests: URLSearchParams[] = [];
@@ -95,7 +82,6 @@ function mockDeck({
         ? HttpResponse.json(deckData)
         : HttpResponse.json({ detail: 'Deck not found' }, { status: deckStatus }),
     ),
-    http.get(`${BASE}/api/subjects/:id`, () => HttpResponse.json(subjectData)),
     http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
       configRequests.push(new URL(request.url).searchParams);
       return HttpResponse.json(configurations);
@@ -132,7 +118,7 @@ describe('DeckDetailPage', () => {
     renderAtDeckRoute();
 
     expect(await screen.findByRole('heading', { name: 'Vocab Deck' })).toBeInTheDocument();
-    expect(await screen.findByText(/French/)).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Cards in Vocab Deck' })).toBeInTheDocument();
     expect(screen.getByText('Front')).toBeInTheDocument();
     expect(screen.getByText('Back')).toBeInTheDocument();
@@ -177,26 +163,16 @@ describe('DeckDetailPage', () => {
     expect(within(list).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
   });
 
-  it('the breadcrumb renders the subject icon as a real icon (not raw text) and links to the subject page', async () => {
+  it('the breadcrumb holds one place, Your library', async () => {
     mockDeck();
     renderAtDeckRoute();
 
-    const crumb = await screen.findByRole('link', { name: /French/ });
-    expect(crumb).toHaveAttribute('href', '/subjects/s1');
-    expect(crumb.querySelector('svg')).toBeInTheDocument();
-    expect(crumb).not.toHaveTextContent('languages');
-  });
-
-  it('renders a two-link breadcrumb chain: library then subject, both in one row', async () => {
-    mockDeck();
-    renderAtDeckRoute();
-
-    await screen.findByRole('link', { name: /French/ });
+    await screen.findByRole('heading', { name: 'Vocab Deck' });
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
     const links = within(row).getAllByRole('link');
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/library', '/subjects/s1']);
-    expect(links[0]).toHaveTextContent('Your library');
-    expect(links[1]).toHaveTextContent('French');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent(/^Your library$/);
+    expect(links[0]).toHaveAttribute('href', '/library');
   });
 
   it('the library crumb link carries no ?tab — a structural link goes to the place, not a remembered view', async () => {
@@ -205,35 +181,6 @@ describe('DeckDetailPage', () => {
 
     const libraryLink = await screen.findByRole('link', { name: 'Your library' });
     expect(libraryLink).toHaveAttribute('href', '/library');
-  });
-
-  it('the library link is present even before the subject query resolves', async () => {
-    server.use(
-      http.get(`${BASE}/api/decks/:id`, () => HttpResponse.json(deck)),
-      http.get(`${BASE}/api/subjects/:id`, async () => {
-        await delay(50);
-        return HttpResponse.json(subject);
-      }),
-      http.get(`${BASE}/api/deck_practice_configs`, () => HttpResponse.json([])),
-    );
-    renderAtDeckRoute();
-
-    const libraryLink = await screen.findByRole('link', { name: 'Your library' });
-    expect(libraryLink).toHaveAttribute('href', '/library');
-    expect(screen.queryByRole('link', { name: /French/ })).not.toBeInTheDocument();
-
-    expect(await screen.findByRole('link', { name: /French/ })).toHaveAttribute(
-      'href',
-      '/subjects/s1',
-    );
-  });
-
-  it('still renders an icon without crashing when the subject has no icon set', async () => {
-    mockDeck({ subjectData: { ...subject, icon: '' } });
-    renderAtDeckRoute();
-
-    const crumb = await screen.findByRole('link', { name: /French/ });
-    expect(crumb.querySelector('svg')).toBeInTheDocument();
   });
 
   describe('Cards toolbar label pluralization', () => {
@@ -317,7 +264,7 @@ describe('DeckDetailPage', () => {
     );
   });
 
-  it('Practice opens the overview pre-filtered to this deck and its subject', async () => {
+  it('Practice opens the overview pre-filtered to this deck', async () => {
     mockDeck();
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
@@ -326,9 +273,7 @@ describe('DeckDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice');
-    // Both params: two decks in different subjects can share a name, so the deck id
-    // alone would leave the arriving list ambiguous about which subject it belongs to.
-    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?subject=s1&deck=d1');
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?deck=d1');
   });
 
   it('Edit navigates to the deck-edit placeholder route', async () => {

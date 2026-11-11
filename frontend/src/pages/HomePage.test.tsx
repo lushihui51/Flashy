@@ -61,19 +61,37 @@ describe('HomePage', () => {
   });
 
   describe('the steps', () => {
-    it('counts the two done, strikes them and makes the next the one main action', async () => {
-      renderHome({
-        steps: { has_subject: true, has_deck: true, has_card: false, has_configuration: false },
-      });
+    // `has_subject` and `has_configuration` stand opposite to the steps' state throughout, so a
+    // step that read either would show.
+    const steps = (hasDeck: boolean, hasCard: boolean) => ({
+      has_subject: !hasDeck,
+      has_deck: hasDeck,
+      has_card: hasCard,
+      has_configuration: !hasCard,
+    });
+
+    it('a user with nothing made reads "0 of 3" over New deck, New card and New practice', async () => {
+      renderHome({ steps: steps(false, false) });
 
       const list = await screen.findByRole('list', { name: 'Your first practice' });
       expect(
         screen.getByRole('heading', { level: 2, name: 'Your first practice' }),
       ).toBeInTheDocument();
-      expect(screen.getByText('2 of 5')).toBeInTheDocument();
-      expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+      expect(screen.getByText('0 of 3')).toBeInTheDocument();
+      expect(within(list).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+        '1New deck',
+        '2New card',
+        '3New practice',
+      ]);
+    });
 
-      expect(within(list).getByText('New subject')).toHaveClass('line-through');
+    it('counts the one done, strikes it and makes the next the one main action', async () => {
+      renderHome({ steps: steps(true, false) });
+
+      const list = await screen.findByRole('list', { name: 'Your first practice' });
+      expect(screen.getByText('1 of 3')).toBeInTheDocument();
+      expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+
       expect(within(list).getByText('New deck')).toHaveClass('line-through');
 
       // The next step is the only link, so nothing else on the list can be followed or yellow.
@@ -82,30 +100,20 @@ describe('HomePage', () => {
       expect(link).toHaveAttribute('href', '/cards/new');
       expect(link).toHaveClass(MAIN_ACTION_CLASS);
 
-      for (const label of ['New configuration', 'New practice']) {
-        expect(within(list).getByText(label)).not.toHaveClass('line-through');
-      }
+      expect(within(list).getByText('New practice')).not.toHaveClass('line-through');
       expect(screen.getAllByRole('link')).toHaveLength(1);
     });
 
     it.each([
-      { done: 0, label: 'New subject', href: '/subjects/new' },
-      { done: 1, label: 'New deck', href: '/decks/new' },
-      { done: 3, label: 'New configuration', href: '/deck-configurations/new' },
-      { done: 4, label: 'New practice', href: '/practice/new' },
+      { done: 0, label: 'New deck', href: '/decks/new' },
+      { done: 1, label: 'New card', href: '/cards/new' },
+      { done: 2, label: 'New practice', href: '/practice/new' },
     ])('with $done done links $label to $href', async ({ done, label, href }) => {
-      renderHome({
-        steps: {
-          has_subject: done >= 1,
-          has_deck: done >= 2,
-          has_card: done >= 3,
-          has_configuration: done >= 4,
-        },
-      });
+      renderHome({ steps: steps(done >= 1, done >= 2) });
 
       const link = await screen.findByRole('link', { name: label });
       expect(link).toHaveAttribute('href', href);
-      expect(screen.getByText(`${done} of 5`)).toBeInTheDocument();
+      expect(screen.getByText(`${done} of 3`)).toBeInTheDocument();
     });
   });
 
@@ -158,14 +166,15 @@ describe('HomePage', () => {
       ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Ports/ })).toHaveAttribute('href', '/decks/d1');
       expect(screen.getByRole('link', { name: /Commands/ })).toHaveAttribute('href', '/decks/d2');
-      expect(screen.getAllByText('Networking · 21 cards · 4 fields')).toHaveLength(2);
+      expect(screen.getAllByText('21 cards · 4 fields')).toHaveLength(2);
+      expect(screen.queryByText(/Networking/)).not.toBeInTheDocument();
       // The second deck has no readiness, so it has no circle.
       expect(screen.getAllByRole('img', { name: /^Mastery/ })).toHaveLength(1);
       expect(screen.getByRole('img', { name: 'Mastery 50%' })).toBeInTheDocument();
 
       const practiceLinks = screen.getAllByRole('link', { name: 'Practice' });
-      expect(practiceLinks[0]).toHaveAttribute('href', '/practice?subject=subject-of-d1&deck=d1');
-      expect(practiceLinks[1]).toHaveAttribute('href', '/practice?subject=subject-of-d2&deck=d2');
+      expect(practiceLinks[0]).toHaveAttribute('href', '/practice?deck=d1');
+      expect(practiceLinks[1]).toHaveAttribute('href', '/practice?deck=d2');
       expect(practiceLinks[0]).toHaveClass(MAIN_ACTION_CLASS);
       expect(practiceLinks[1]).not.toHaveClass(MAIN_ACTION_CLASS);
     });

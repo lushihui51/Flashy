@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { readDeckPracticeConfigs } from 'src/api/deck_practice_config';
 import { createPracticeRun } from 'src/api/practice_run';
@@ -31,7 +30,7 @@ type RowError = { configId: string; sentence: string };
 
 /** The overview's own params — the only ones Cancel hands back, so the draft never
  * leaves this page. */
-const OVERVIEW_PARAMS = ['subject', 'deck', 'status'] as const;
+const OVERVIEW_PARAMS = ['deck', 'status'] as const;
 
 /**
  * `/practice/new`: name, filter, tick at most one configuration per deck, create. The
@@ -56,7 +55,6 @@ export default function PracticeCreatePage() {
   const emptyRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLDivElement>(null);
 
-  const subjectId = params.get('subject');
   const deckId = params.get('deck');
   const selectedIds = readSelectedConfigIds(params);
   const selectedIdSet = new Set(selectedIds);
@@ -82,12 +80,10 @@ export default function PracticeCreatePage() {
   // setState inside that same effect.
   const appliedReturnedConfig = useRef(false);
 
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
   const configsQuery = useQuery({
-    queryKey: ['deck_practice_configs', subjectId, deckId],
-    queryFn: () =>
-      readDeckPracticeConfigs({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+    queryKey: ['deck_practice_configs', deckId],
+    queryFn: () => readDeckPracticeConfigs({ deckId: deckId ?? undefined }),
     // An empty list while a filter's new one loads would shrink the page and lose the
     // user's place on it.
     placeholderData: keepPreviousData,
@@ -97,7 +93,7 @@ export default function PracticeCreatePage() {
   // since the filtered list lacks any selection a filter hides. The same key the
   // filtered query uses with no filter set, so an unfiltered page makes one request.
   const allConfigsQuery = useQuery({
-    queryKey: ['deck_practice_configs', null, null],
+    queryKey: ['deck_practice_configs', null],
     queryFn: () => readDeckPracticeConfigs(),
   });
 
@@ -198,10 +194,8 @@ export default function PracticeCreatePage() {
   });
 
   // Changes only its own params, so the draft's `config` ids ride along.
-  const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
+  const setFilters = (next: { deckId: string | null }) => {
     const nextParams = new URLSearchParams(params);
-    if (next.subjectId) nextParams.set('subject', next.subjectId);
-    else nextParams.delete('subject');
     if (next.deckId) nextParams.set('deck', next.deckId);
     else nextParams.delete('deck');
     changeView(nextParams, {
@@ -222,7 +216,6 @@ export default function PracticeCreatePage() {
     // Both addresses ride the URL, not router state: they have to survive a further forward
     // if the builder itself opens "New deck…" before coming back here.
     const builderParams = returnAddressParams(location, 'cancelTo', 'returnTo');
-    if (subjectId) builderParams.set('subject', subjectId);
     if (deckId) builderParams.set('deck', deckId);
     navigate({ pathname: '/deck-configurations/new', search: builderParams.toString() });
   };
@@ -258,7 +251,7 @@ export default function PracticeCreatePage() {
   const selectedCount = selectedIds.length;
   const nothingSelected = selectedCount === 0;
   const nameMissing = name.trim() === '';
-  const filtered = subjectId !== null || deckId !== null;
+  const filtered = deckId !== null;
 
   const submit = () => {
     setRowError(null);
@@ -292,9 +285,7 @@ export default function PracticeCreatePage() {
 
       <div ref={filtersRef} className="mt-3">
         <PracticeFilterBar
-          subjects={subjectsQuery.data ?? []}
           decks={decksQuery.data ?? []}
-          subjectId={subjectId}
           deckId={deckId}
           onChange={setFilters}
         />
@@ -324,7 +315,7 @@ export default function PracticeCreatePage() {
           {filtered && (
             <button
               type="button"
-              onClick={() => setFilters({ subjectId: null, deckId: null })}
+              onClick={() => setFilters({ deckId: null })}
               className="tappable-sm h-10 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
             >
               Clear filters

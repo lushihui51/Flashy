@@ -5,23 +5,17 @@ import { pluralize } from 'src/lib/pluralize';
 
 type DeckSummary = components['schemas']['DeckSummary'];
 
-type DeckRowProps = {
-  deck: DeckSummary;
-  /** The deck's subject's name, given where the list spans subjects; the row's second
-   * line then opens with it. */
-  subjectName?: string;
-};
-
 /** A deck in a list of decks: its name over its card and field counts, with its mastery
  * when it has a card, linking to the deck's page. */
-export default function DeckRow({ deck, subjectName }: DeckRowProps) {
-  const counts = `${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`;
+export default function DeckRow({ deck }: { deck: DeckSummary }) {
   return (
     <ListRow
       title={deck.name}
-      subtitle={subjectName ? `${subjectName} · ${counts}` : counts}
+      subtitle={`${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`}
       trailing={
-        deck.readiness !== null ? <MasteryCircle readiness={deck.readiness} size="row" /> : undefined
+        deck.readiness !== null ? (
+          <MasteryCircle readiness={deck.readiness} size="row" />
+        ) : undefined
       }
       to={`/decks/${deck.id}`}
     />

@@ -1,33 +1,13 @@
-import { useRef, type Ref } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import DeckRow from 'src/components/library/DeckRow';
-import SubjectIcon from 'src/components/library/SubjectIcon';
-import ListRow from 'src/components/ui/ListRow';
-import MasteryCircle from 'src/components/ui/MasteryCircle';
 import AddButton from 'src/components/ui/AddButton';
-import Tabs from 'src/components/ui/Tabs';
-import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
-import { useViewParams } from 'src/lib/viewParams';
 
-const TABS = ['subjects', 'decks'] as const;
-type Tab = (typeof TABS)[number];
-
-const TAB_ITEMS: { value: Tab; label: string }[] = [
-  { value: 'subjects', label: 'Subjects' },
-  { value: 'decks', label: 'Decks' },
-];
-
-function isTab(value: string | null): value is Tab {
-  return value !== null && (TABS as readonly string[]).includes(value);
-}
-
-function EmptyState({ copy, ref }: { copy: string; ref?: Ref<HTMLDivElement> }) {
+function EmptyState({ copy }: { copy: string }) {
   return (
-    <div ref={ref} className="py-8">
+    <div className="py-8">
       <p className="text-body text-(--color-aside)">{copy}</p>
     </div>
   );
@@ -36,31 +16,6 @@ function EmptyState({ copy, ref }: { copy: string; ref?: Ref<HTMLDivElement> }) 
 export default function LibraryPage() {
   usePageTitle('Your library');
   const navigate = useNavigate();
-  // In the URL rather than component state: a return to the library — via browser back
-  // or the deck page's crumb — should restore whichever tab was open.
-  const { params, changeView } = useViewParams();
-  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'subjects';
-
-  const tabsRef = useRef<HTMLDivElement>(null);
-  // The open tab's list, its empty sentence or its failure sentence: whichever shows, so a
-  // reveal after a tab change finds where the list starts, and nothing until one does.
-  const listRef = useRef<HTMLUListElement>(null);
-  const emptyRef = useRef<HTMLDivElement>(null);
-  const failureRef = useRef<HTMLParagraphElement>(null);
-
-  const setTab = (next: Tab) => {
-    const nextParams = new URLSearchParams(params);
-    if (next === 'subjects') nextParams.delete('tab');
-    else nextParams.set('tab', next);
-    changeView(nextParams, {
-      // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
-      // others by the press travel: at the band's top it would leave them under the header.
-      control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
-      listStart: () => listRef.current ?? emptyRef.current ?? failureRef.current,
-    });
-  };
-
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
 
   return (
@@ -69,80 +24,28 @@ export default function LibraryPage() {
         Your library
       </h1>
 
-      <div ref={tabsRef} className="mt-4">
-        <Tabs ariaLabel="Library" items={TAB_ITEMS} value={tab} onChange={setTab} />
+      <div className="mt-4 flex items-center justify-between">
+        <h2 className="text-body font-medium text-(--color-aside)">
+          {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
+        </h2>
+        <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
       </div>
+      {decksQuery.isError && (
+        <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+          Could not load decks.
+        </p>
+      )}
 
-      {tab === 'subjects' ? (
-        <section aria-label="Subjects">
-          <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-body font-medium text-(--color-aside)">
-              {subjectsQuery.data ? `${subjectsQuery.data.length} subjects` : 'Subjects'}
-            </h2>
-            <AddButton label="Add subject" onClick={() => navigate('/subjects/new')} />
-          </div>
-          {subjectsQuery.isError && (
-            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
-              Could not load subjects.
-            </p>
-          )}
-
-          {subjectsQuery.data && subjectsQuery.data.length === 0 ? (
-            <EmptyState ref={emptyRef} copy="No subjects yet." />
-          ) : (
-            <ul ref={subjectsQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
-              {(subjectsQuery.data ?? []).map((subject) => (
-                <li key={subject.id}>
-                  <ListRow
-                    leading={
-                      <span className="flex size-field items-center justify-center rounded-field outlined-ink">
-                        <SubjectIcon
-                          icon={subject.icon}
-                          className="size-icon-lg text-(--color-ink)"
-                        />
-                      </span>
-                    }
-                    title={subject.name}
-                    subtitle={subject.description || undefined}
-                    meta={pluralize(subject.deck_count, 'deck')}
-                    trailing={
-                      subject.readiness !== null ? (
-                        <MasteryCircle readiness={subject.readiness} size="row" />
-                      ) : undefined
-                    }
-                    to={`/subjects/${subject.id}`}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      {decksQuery.data && decksQuery.data.length === 0 ? (
+        <EmptyState copy="No decks yet." />
       ) : (
-        <section aria-label="Decks">
-          <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-body font-medium text-(--color-aside)">
-              {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
-            </h2>
-            <AddButton label="Add deck" onClick={() => navigate('/decks/new')} />
-          </div>
-          {decksQuery.isError && (
-            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
-              Could not load decks.
-            </p>
-          )}
-
-          {decksQuery.data && decksQuery.data.length === 0 ? (
-            <EmptyState ref={emptyRef} copy="No decks yet." />
-          ) : (
-            <ul ref={decksQuery.data ? listRef : undefined} className="mt-4 flex flex-col gap-3">
-              {(decksQuery.data ?? []).map((deck) => (
-                <li key={deck.id}>
-                  <DeckRow deck={deck} subjectName={deck.subject_name} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <ul className="mt-4 flex flex-col gap-3">
+          {(decksQuery.data ?? []).map((deck) => (
+            <li key={deck.id}>
+              <DeckRow deck={deck} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

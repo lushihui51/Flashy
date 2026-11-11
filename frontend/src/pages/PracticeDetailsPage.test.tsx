@@ -136,7 +136,7 @@ describe('PracticeDetailsPage', () => {
     // machine running this test happens to sit in, so a fixed instant can land on a
     // different hour, though never a different calendar day for this one.
     expect(screen.getByText(/Aug 24, 2026/)).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Shared Deck Name · Config A')).toBeInTheDocument();
+    expect(screen.getByText('Shared Deck Name · Config A')).toBeInTheDocument();
   });
 
   it('lists every deck with no cap', async () => {
@@ -151,13 +151,13 @@ describe('PracticeDetailsPage', () => {
     renderDetails();
 
     await screen.findByRole('heading', { name: 'Alpha run' });
-    expect(screen.getByText('Alpha · Deck 1 · Config 1')).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Deck 2 · Config 2')).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Deck 3 · Config 3')).toBeInTheDocument();
+    expect(screen.getByText('Deck 1 · Config 1')).toBeInTheDocument();
+    expect(screen.getByText('Deck 2 · Config 2')).toBeInTheDocument();
+    expect(screen.getByText('Deck 3 · Config 3')).toBeInTheDocument();
     expect(screen.queryByText('+1')).not.toBeInTheDocument();
   });
 
-  it('a deck with no configuration name shows subject and deck', async () => {
+  it('a deck with no configuration name shows the deck alone', async () => {
     mockSession(
       session({
         decks: [
@@ -173,7 +173,7 @@ describe('PracticeDetailsPage', () => {
     );
     renderDetails();
 
-    expect(await screen.findByText('Alpha · Shared Deck Name')).toBeInTheDocument();
+    expect(await screen.findByText(/^Shared Deck Name$/)).toBeInTheDocument();
   });
 
   it('an active session shows Start practice, and it navigates to the run stub', async () => {

@@ -10,39 +10,12 @@ import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 
 const BASE = 'http://localhost:8000';
 
-// Two decks with the *same name* under different subjects — the case the deck filter
-// exists to disambiguate, so every filter test here runs against it.
-const subjects = [
-  {
-    id: 's1',
-    name: 'Alpha',
-    icon: 'brain',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-  {
-    id: 's2',
-    name: 'Beta',
-    icon: 'music',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-];
-
 const decks = [
   {
     id: 'd1',
     subject_id: 's1',
     subject_name: 'Alpha',
-    name: 'Shared Deck Name',
+    name: 'Commands',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
@@ -53,7 +26,7 @@ const decks = [
     id: 'd2',
     subject_id: 's2',
     subject_name: 'Beta',
-    name: 'Shared Deck Name',
+    name: 'Ports',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
@@ -72,7 +45,7 @@ function session(overrides: Record<string, unknown> = {}) {
     decks: [
       {
         deck_id: 'd1',
-        deck_name: 'Shared Deck Name',
+        deck_name: 'Commands',
         subject_id: 's1',
         subject_name: 'Alpha',
         configuration_name: 'Config A',
@@ -90,7 +63,7 @@ const betaRun = session({
   decks: [
     {
       deck_id: 'd2',
-      deck_name: 'Shared Deck Name',
+      deck_name: 'Ports',
       subject_id: 's2',
       subject_name: 'Beta',
       configuration_name: 'Config B',
@@ -98,15 +71,14 @@ const betaRun = session({
   ],
 });
 
-/** Records what the page asked the server for — the subject/deck filters are the
- * server's job (they walk practice_deck → deck → subject), so "did the filter work" is
- * really "did the page send the right query". */
+/** Records what the page asked the server for — the deck filter is the server's job (it
+ * walks practice_deck → deck), so "did the filter work" is really "did the page send the
+ * right query". */
 function mockLibrary(
   sessionsFor: (query: URLSearchParams) => unknown[] = () => [alphaRun, betaRun],
 ) {
   const requests: URLSearchParams[] = [];
   server.use(
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/practice_runs`, ({ request }) => {
       const query = new URL(request.url).searchParams;
@@ -154,7 +126,7 @@ function holdFilteredSessions(respond: () => Response) {
   server.use(
     http.get(`${BASE}/api/practice_runs`, async ({ request }) => {
       const query = new URL(request.url).searchParams;
-      if (query.get('subject_id') === null) return HttpResponse.json([betaRun]);
+      if (query.get('deck_id') === null) return HttpResponse.json([betaRun]);
       filteredRequests.push(query);
       await released;
       return respond();
@@ -179,8 +151,8 @@ describe('PracticeOverviewPage', () => {
 
     const row = (await screen.findByText('Alpha run')).closest('div')!;
     expect(within(row).getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('Shared Deck Name · Config A')).toBeInTheDocument();
-    expect(screen.getByText('Shared Deck Name · Config B')).toBeInTheDocument();
+    expect(screen.getByText('Commands · Config A')).toBeInTheDocument();
+    expect(screen.getByText('Ports · Config B')).toBeInTheDocument();
     expect(screen.queryByText('Aug 24, 2026')).not.toBeInTheDocument();
   });
 
@@ -202,8 +174,8 @@ describe('PracticeOverviewPage', () => {
     renderOverview();
 
     const row = (await screen.findByText('Alpha run')).closest('div')!;
-    expect(within(row).getByText('Shared Deck Name · Config A')).toBeInTheDocument();
-    expect(within(row).getByText('Shared Deck Name · Config B')).toBeInTheDocument();
+    expect(within(row).getByText('Commands · Config A')).toBeInTheDocument();
+    expect(within(row).getByText('Ports · Config B')).toBeInTheDocument();
     expect(within(row).getByText('+1')).toBeInTheDocument();
     expect(within(row).queryByText(/Third Deck/)).not.toBeInTheDocument();
   });
@@ -216,7 +188,7 @@ describe('PracticeOverviewPage', () => {
     renderOverview();
 
     const row = (await screen.findByText('Alpha run')).closest('div')!;
-    expect(within(row).getByText('Shared Deck Name')).toBeInTheDocument();
+    expect(within(row).getByText('Commands')).toBeInTheDocument();
   });
 
   it('sends no filters when the URL has none', async () => {
@@ -228,53 +200,54 @@ describe('PracticeOverviewPage', () => {
     expect(requests[0]!.get('deck_id')).toBeNull();
   });
 
-  it('a subject in the URL is sent as subject_id', async () => {
-    const requests = mockLibrary((query) => (query.get('subject_id') === 's1' ? [alphaRun] : []));
-    renderOverview('/practice?subject=s1');
-
-    await screen.findByText('Alpha run');
-    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
-    expect(requests[0]!.get('subject_id')).toBe('s1');
-  });
-
-  it('a deck in the URL is sent as deck_id, telling same-named decks apart', async () => {
+  it('a deck in the URL is sent as deck_id alone', async () => {
     const requests = mockLibrary((query) => (query.get('deck_id') === 'd2' ? [betaRun] : []));
-    renderOverview('/practice?subject=s2&deck=d2');
+    renderOverview('/practice?deck=d2');
 
     await screen.findByText('Beta run');
     expect(screen.queryByText('Alpha run')).not.toBeInTheDocument();
     expect(requests[0]!.get('deck_id')).toBe('d2');
-    expect(requests[0]!.get('subject_id')).toBe('s2');
+    expect(requests[0]!.get('subject_id')).toBeNull();
   });
 
-  it('picking a subject writes it to the URL and refetches', async () => {
+  it('a subject in the URL narrows nothing', async () => {
+    const requests = mockLibrary();
+    renderOverview('/practice?subject=s1');
+
+    await screen.findByText('Alpha run');
+    expect(screen.getByText('Beta run')).toBeInTheDocument();
+    expect(requests[0]!.get('subject_id')).toBeNull();
+    expect(screen.queryByText('No practices match these filters.')).not.toBeInTheDocument();
+  });
+
+  it('holds the deck filter alone', async () => {
+    mockLibrary();
+    renderOverview();
+    await screen.findByText('Alpha run');
+
+    const filters = screen.getByTestId('practice-filters');
+    expect(within(filters).getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByPlaceholderText('All decks')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('All subjects')).not.toBeInTheDocument();
+  });
+
+  it('picking a deck writes it to the URL and refetches', async () => {
     const requests = mockLibrary((query) =>
-      query.get('subject_id') === 's1' ? [alphaRun] : [alphaRun, betaRun],
+      query.get('deck_id') === 'd1' ? [alphaRun] : [alphaRun, betaRun],
     );
     const user = userEvent.setup();
     renderOverview();
     await screen.findByText('Beta run');
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: /Alpha/ }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Commands' }));
 
-    await waitFor(() => expect(requests.at(-1)!.get('subject_id')).toBe('s1'));
+    await waitFor(() => expect(requests.at(-1)!.get('deck_id')).toBe('d1'));
+    expect(screen.getByTestId('current-location')).toHaveTextContent(/^\?deck=d1$/);
     await waitFor(() => expect(screen.queryByText('Beta run')).not.toBeInTheDocument());
   });
 
-  it('the deck options narrow to the selected subject', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderOverview('/practice?subject=s2');
-    await screen.findByText('Beta run');
-
-    await user.click(screen.getByPlaceholderText('All decks'));
-    // Both decks share a name, so the count is what proves the narrowing: one deck
-    // option plus the "All decks" clear row.
-    expect(screen.getAllByRole('option')).toHaveLength(2);
-  });
-
-  it("each deck's row in the deck filter reads its name with its subject's name beneath", async () => {
+  it("each deck's row in the deck filter reads its name alone", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderOverview('/practice');
@@ -282,26 +255,24 @@ describe('PracticeOverviewPage', () => {
 
     await user.click(screen.getByPlaceholderText('All decks'));
     const rows = screen.getAllByRole('option');
-    // Two decks of one name, told apart by the line beneath; the first row is "All decks".
-    expect(within(rows[1]!).getByText('Shared Deck Name')).toBeInTheDocument();
-    expect(within(rows[1]!).getByText('Alpha')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Shared Deck Name')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Beta')).toBeInTheDocument();
+    // The first row is "All decks".
+    expect(rows.map((row) => row.textContent)).toEqual(['All decks', 'Commands', 'Ports']);
   });
 
-  it('clearing the subject drops it from the URL', async () => {
+  it('clearing the deck drops it from the URL', async () => {
     const requests = mockLibrary();
     const user = userEvent.setup();
-    renderOverview('/practice?subject=s1');
+    renderOverview('/practice?deck=d1');
     await screen.findByText('Alpha run');
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'All subjects' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'All decks' }));
 
-    await waitFor(() => expect(requests.at(-1)!.get('subject_id')).toBeNull());
+    await waitFor(() => expect(requests.at(-1)!.get('deck_id')).toBeNull());
+    expect(screen.getByTestId('current-location')).toBeEmptyDOMElement();
   });
 
-  it('the status tabs filter client-side and compose with the subject filter', async () => {
+  it('the status tabs filter client-side', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderOverview();
@@ -328,11 +299,11 @@ describe('PracticeOverviewPage', () => {
   it('Add practice carries the current filters into the creation surface', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderOverview('/practice?subject=s1&deck=d1');
+    renderOverview('/practice?deck=d1');
     await screen.findByText('Alpha run');
 
     await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/new?subject=s1&deck=d1');
+    expect(screen.getByTestId('location')).toHaveTextContent('/practice/new?deck=d1');
   });
 
   it('deleting a session confirms first, then removes it from the list', async () => {
@@ -400,7 +371,7 @@ describe('PracticeOverviewPage', () => {
   it('empty with filters offers to clear them; empty with none offers to start one', async () => {
     mockLibrary(() => []);
     const user = userEvent.setup();
-    renderOverview('/practice?subject=s1');
+    renderOverview('/practice?deck=d1');
 
     expect(await screen.findByText('No practices match these filters.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
@@ -417,11 +388,11 @@ describe('PracticeOverviewPage', () => {
     renderOverview();
     await screen.findByText('Beta run');
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Commands' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
-    expect(screen.getByTestId('current-location')).toHaveTextContent('?subject=s1');
+    expect(screen.getByTestId('current-location')).toHaveTextContent('?deck=d1');
     expect(screen.getByText('Beta run')).toBeInTheDocument();
     expect(screen.queryByText('Gamma run')).not.toBeInTheDocument();
 
@@ -439,8 +410,8 @@ describe('PracticeOverviewPage', () => {
     renderOverview();
     await screen.findByText('Beta run');
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Commands' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(screen.getByText('Beta run')).toBeInTheDocument();

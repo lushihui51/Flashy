@@ -209,14 +209,15 @@ describe('CardStandaloneForm — the heading and the bar', () => {
 });
 
 describe('CardStandaloneForm — create mode', () => {
-  it("each deck's row in the picker reads its name with its subject's name beneath", async () => {
+  it("each deck's row in the picker reads its name alone", async () => {
     mockAll();
     const user = userEvent.setup();
     renderForm('/cards/new');
 
     await user.click(await screen.findByPlaceholderText('Deck'));
     const row = (await screen.findByText('French Vocab')).closest('[role="option"]') as HTMLElement;
-    expect(within(row).getByText('Languages')).toBeInTheDocument();
+    expect(row).toHaveTextContent(/^French Vocab$/);
+    expect(screen.queryByText('Languages')).not.toBeInTheDocument();
   });
 
   it('with no decks yet, the picker still offers "New deck…" and leads to deck creation', async () => {

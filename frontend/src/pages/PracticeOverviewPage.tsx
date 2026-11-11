@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { readSubjects } from 'src/api/subject';
 import { readDecks } from 'src/api/deck';
 import { deletePracticeRun, readPracticeRuns } from 'src/api/practice_run';
 import PracticeFilterBar from 'src/components/practice/PracticeFilterBar';
@@ -30,9 +29,9 @@ function isStatusTab(value: string | null): value is StatusTab {
 }
 
 /** The session list. Filter state lives in the URL rather than component state so
- * every entry point into practice — the subject page's Practice button, the deck
- * page's, a shared link — is just a URL with the right params, and so going back
- * returns to the list the user was actually looking at. */
+ * every entry point into practice — the deck page's Practice button, Home's, a shared
+ * link — is just a URL with the right params, and so going back returns to the list the
+ * user was actually looking at. */
 export default function PracticeOverviewPage() {
   usePageTitle('Practice');
   const { params, changeView } = useViewParams();
@@ -48,7 +47,6 @@ export default function PracticeOverviewPage() {
   const emptyRef = useRef<HTMLDivElement>(null);
   const failureRef = useRef<HTMLParagraphElement>(null);
 
-  const subjectId = params.get('subject');
   const deckId = params.get('deck');
   const statusTab: StatusTab = isStatusTab(params.get('status'))
     ? (params.get('status') as StatusTab)
@@ -57,15 +55,13 @@ export default function PracticeOverviewPage() {
   const [pendingDelete, setPendingDelete] = useState<PracticeRunSummary | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
   const decksQuery = useQuery({ queryKey: ['decks'], queryFn: () => readDecks() });
-  // Subject and deck are sent to the server rather than filtered here: the relation
-  // being asked about (practice_deck → deck → subject) lives there, and a session's
-  // rows only carry the decks that still exist.
+  // The deck is sent to the server rather than filtered here: the relation being asked
+  // about (practice_deck → deck) lives there, and a session's rows only carry the decks
+  // that still exist.
   const sessionsQuery = useQuery({
-    queryKey: ['practice_runs', subjectId, deckId],
-    queryFn: () =>
-      readPracticeRuns({ subjectId: subjectId ?? undefined, deckId: deckId ?? undefined }),
+    queryKey: ['practice_runs', deckId],
+    queryFn: () => readPracticeRuns({ deckId: deckId ?? undefined }),
     // An empty list while a filter's new one loads would shrink the page and lose the
     // user's place on it.
     placeholderData: keepPreviousData,
@@ -93,10 +89,8 @@ export default function PracticeOverviewPage() {
     listStart,
   };
 
-  const setFilters = (next: { subjectId: string | null; deckId: string | null }) => {
+  const setFilters = (next: { deckId: string | null }) => {
     const nextParams = new URLSearchParams(params);
-    if (next.subjectId) nextParams.set('subject', next.subjectId);
-    else nextParams.delete('subject');
     if (next.deckId) nextParams.set('deck', next.deckId);
     else nextParams.delete('deck');
     changeView(nextParams, filterTargets);
@@ -110,12 +104,12 @@ export default function PracticeOverviewPage() {
   };
 
   // Status is the one filter the server doesn't take: it isn't a relation, and every
-  // session the other two filters returned is already in hand.
+  // session the deck filter returned is already in hand.
   const sessions = (sessionsQuery.data ?? []).filter(
     (session) => statusTab === 'all' || session.status === statusTab,
   );
 
-  const filtered = subjectId !== null || deckId !== null || statusTab !== 'all';
+  const filtered = deckId !== null || statusTab !== 'all';
 
   return (
     <div className="p-4">
@@ -131,9 +125,7 @@ export default function PracticeOverviewPage() {
 
       <div ref={filtersRef} className="mt-3.5">
         <PracticeFilterBar
-          subjects={subjectsQuery.data ?? []}
           decks={decksQuery.data ?? []}
-          subjectId={subjectId}
           deckId={deckId}
           onChange={setFilters}
         />

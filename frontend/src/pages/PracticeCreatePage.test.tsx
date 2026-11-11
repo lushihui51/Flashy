@@ -13,39 +13,12 @@ import { useViewParams } from 'src/lib/viewParams';
 
 const BASE = 'http://localhost:8000';
 
-// Two decks with the *same name* under different subjects — the case group headers
-// exist to disambiguate.
-const subjects = [
-  {
-    id: 's1',
-    name: 'Alpha',
-    icon: 'brain',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-  {
-    id: 's2',
-    name: 'Beta',
-    icon: 'music',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-];
-
 const decks = [
   {
     id: 'd1',
     subject_id: 's1',
     subject_name: 'Alpha',
-    name: 'Shared Deck Name',
+    name: 'Commands',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
@@ -56,7 +29,7 @@ const decks = [
     id: 'd2',
     subject_id: 's2',
     subject_name: 'Beta',
-    name: 'Shared Deck Name',
+    name: 'Ports',
     created_at: '',
     last_activity_at: '',
     card_count: 2,
@@ -77,7 +50,7 @@ function config(overrides: Record<string, unknown> = {}) {
     prompt_pool_counts: [] as number[],
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
-    deck_name: 'Shared Deck Name',
+    deck_name: 'Commands',
     subject_id: 's1',
     subject_name: 'Alpha',
     ...overrides,
@@ -90,6 +63,7 @@ const configBasics = config({
   id: 'c3',
   deck_id: 'd2',
   name: 'Basics',
+  deck_name: 'Ports',
   subject_id: 's2',
   subject_name: 'Beta',
 });
@@ -101,7 +75,6 @@ const ALL_CONFIGS = [configRecall, configRecognition, configBasics];
 function mockLibrary(configsFor: (query: URLSearchParams) => unknown[] = () => ALL_CONFIGS) {
   const requests: URLSearchParams[] = [];
   server.use(
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
       const query = new URL(request.url).searchParams;
@@ -189,7 +162,7 @@ function holdFilteredConfigs(respond: () => Response) {
   server.use(
     http.get(`${BASE}/api/deck_practice_configs`, async ({ request }) => {
       const query = new URL(request.url).searchParams;
-      if (query.get('subject_id') === null) return HttpResponse.json(ALL_CONFIGS);
+      if (query.get('deck_id') === null) return HttpResponse.json(ALL_CONFIGS);
       filteredRequests.push(query);
       await released;
       return respond();
@@ -208,31 +181,41 @@ afterEach(() => {
 });
 
 describe('PracticeCreatePage', () => {
-  it('groups configurations by deck, keeping two same-named decks in different subjects apart', async () => {
+  it('groups configurations by deck, each group named by its deck alone', async () => {
     mockLibrary();
     renderCreate();
 
-    const alphaGroup = await screen.findByRole('group', { name: 'Alpha · Shared Deck Name' });
-    const betaGroup = screen.getByRole('group', { name: 'Beta · Shared Deck Name' });
+    const commandsGroup = await screen.findByRole('group', { name: 'Commands' });
+    const portsGroup = screen.getByRole('group', { name: 'Ports' });
 
-    expect(within(alphaGroup).getByText('Recall')).toBeInTheDocument();
-    expect(within(alphaGroup).getByText('Recognition')).toBeInTheDocument();
-    expect(within(betaGroup).getByText('Basics')).toBeInTheDocument();
+    expect(within(commandsGroup).getByText('Recall')).toBeInTheDocument();
+    expect(within(commandsGroup).getByText('Recognition')).toBeInTheDocument();
+    expect(within(portsGroup).getByText('Basics')).toBeInTheDocument();
+    expect(screen.queryByText(/Alpha|Beta/)).not.toBeInTheDocument();
   });
 
-  it("each deck's row in the deck filter reads its name with its subject's name beneath", async () => {
+  it("holds the deck filter alone, each deck's row reading its name alone", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
     await screen.findByText('Recall');
 
+    expect(within(screen.getByTestId('practice-filters')).getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.queryByPlaceholderText('All subjects')).not.toBeInTheDocument();
     await user.click(screen.getByPlaceholderText('All decks'));
     const rows = screen.getAllByRole('option');
-    // Two decks of one name, told apart by the line beneath; the first row is "All decks".
-    expect(within(rows[1]!).getByText('Shared Deck Name')).toBeInTheDocument();
-    expect(within(rows[1]!).getByText('Alpha')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Shared Deck Name')).toBeInTheDocument();
-    expect(within(rows[2]!).getByText('Beta')).toBeInTheDocument();
+    // The first row is "All decks".
+    expect(rows.map((row) => row.textContent)).toEqual(['All decks', 'Commands', 'Ports']);
+  });
+
+  it('a subject in the URL narrows nothing and is not sent', async () => {
+    const requests = mockLibrary();
+    renderCreate('/practice/new?deck=d1');
+    await screen.findByText('Basics');
+
+    expect(screen.getByText('Recall')).toBeInTheDocument();
+    expect(requests.every((query) => !query.has('subject_id'))).toBe(true);
+    expect(screen.queryByText('No configurations match these filters.')).not.toBeInTheDocument();
   });
 
   it('a checkbox per configuration: at most one ticked per deck, and a tick can be cleared (MD-1)', async () => {
@@ -316,7 +299,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByText('Recall');
 
     expect(
-      precedes(screen.getByLabelText('Name'), screen.getByPlaceholderText('All subjects')),
+      precedes(screen.getByLabelText('Name'), screen.getByPlaceholderText('All decks')),
     ).toBe(true);
   });
 
@@ -326,7 +309,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByText('Recall');
 
     const [firstGroup] = screen.getAllByRole('group');
-    expect(precedes(screen.getByPlaceholderText('All subjects'), firstGroup!)).toBe(true);
+    expect(precedes(screen.getByPlaceholderText('All decks'), firstGroup!)).toBe(true);
   });
 
   it('Selected sits below the last configuration group', async () => {
@@ -356,7 +339,7 @@ describe('PracticeCreatePage', () => {
     expect(within(screen.getByTestId('form-bar')).getByText('3 selected')).toBeInTheDocument();
 
     const [firstGroup] = screen.getAllByRole('group');
-    expect(precedes(screen.getByPlaceholderText('All subjects'), firstGroup!)).toBe(true);
+    expect(precedes(screen.getByPlaceholderText('All decks'), firstGroup!)).toBe(true);
     expect(precedes(firstGroup!, screen.getByRole('region', { name: 'Selected' }))).toBe(true);
   });
 
@@ -586,7 +569,7 @@ describe('PracticeCreatePage', () => {
     server.use(
       http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
         const query = new URL(request.url).searchParams;
-        if (!query.has('subject_id') && !query.has('deck_id')) {
+        if (!query.has('deck_id')) {
           return HttpResponse.json({ detail: 'boom' }, { status: 500 });
         }
         return HttpResponse.json([configRecall, configRecognition]);
@@ -600,7 +583,7 @@ describe('PracticeCreatePage', () => {
       }),
     );
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&config=c1');
+    renderCreate('/practice/new?deck=d1&config=c1');
     await screen.findByRole('checkbox', { name: 'Recall' });
     await screen.findByText('Could not load your selected configurations.');
 
@@ -687,42 +670,42 @@ describe('PracticeCreatePage', () => {
   });
 
   it('filters matching zero configurations offer Clear filters instead', async () => {
-    mockLibrary((query) => (query.get('subject_id') === 's1' ? [] : ALL_CONFIGS));
-    renderCreate('/practice/new?subject=s1');
+    mockLibrary((query) => (query.get('deck_id') === 'd1' ? [] : ALL_CONFIGS));
+    renderCreate('/practice/new?deck=d1');
 
     expect(await screen.findByText('No configurations match these filters.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
   it('Clear filters drops only the filters, keeping the selection', async () => {
-    mockLibrary((query) => (query.get('subject_id') === 's1' ? [] : ALL_CONFIGS));
+    mockLibrary((query) => (query.get('deck_id') === 'd1' ? [] : ALL_CONFIGS));
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&config=c3');
+    renderCreate('/practice/new?deck=d1&config=c3');
     await screen.findByText('No configurations match these filters.');
 
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     expect(currentLocation().pathname).toBe('/practice/new');
-    expect(currentLocation().params.has('subject')).toBe(false);
+    expect(currentLocation().params.has('deck')).toBe(false);
     expect(currentLocation().params.getAll('config')).toEqual(['c3']);
     expect(await screen.findByRole('checkbox', { name: 'Basics' })).toBeChecked();
   });
 
   it('a selection a filter hides stays listed under Selected and counted (MD-3, MD-5)', async () => {
     mockLibrary((query) => {
-      const subjectId = query.get('subject_id');
-      if (!subjectId) return ALL_CONFIGS;
-      return subjectId === 's1' ? [configRecall, configRecognition] : [configBasics];
+      const deckId = query.get('deck_id');
+      if (!deckId) return ALL_CONFIGS;
+      return deckId === 'd1' ? [configRecall, configRecognition] : [configBasics];
     });
     const user = userEvent.setup();
     renderCreate();
     await screen.findByText('Recall');
 
-    await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1, subject s1
+    await user.click(screen.getByRole('checkbox', { name: 'Recall' })); // deck d1
 
-    // Filtering to subject s2 drops d1's group — and the Recall checkbox — from view.
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+    // Filtering to deck d2 drops d1's group — and the Recall checkbox — from view.
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Ports' }));
 
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
@@ -732,7 +715,7 @@ describe('PracticeCreatePage', () => {
     expect(within(screen.getByTestId('form-bar')).getByText('1 selected')).toBeInTheDocument();
   });
 
-  it("Selected lists every selection in the configurations' order, with its deck and subject", async () => {
+  it("Selected lists every selection in the configurations' order, with its deck alone", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -744,9 +727,10 @@ describe('PracticeCreatePage', () => {
     const items = within(screen.getByRole('region', { name: 'Selected' })).getAllByRole('listitem');
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent('Recall');
-    expect(items[0]).toHaveTextContent('Alpha · Shared Deck Name');
-    expect(items[1]).toHaveTextContent('Basics');
-    expect(items[1]).toHaveTextContent('Beta · Shared Deck Name');
+    expect(items[0]).toHaveTextContent(/^RecallCommands/);
+    expect(items[1]).toHaveTextContent(/^BasicsPorts/);
+    expect(items[0]).not.toHaveTextContent(/Alpha/);
+    expect(items[1]).not.toHaveTextContent(/Beta/);
   });
 
   it('Remove unticks the configuration, drops its row, and drops it from the URL', async () => {
@@ -793,13 +777,13 @@ describe('PracticeCreatePage', () => {
     server.use(
       http.get(`${BASE}/api/deck_practice_configs`, ({ request }) => {
         const query = new URL(request.url).searchParams;
-        if (!query.has('subject_id') && !query.has('deck_id')) {
+        if (!query.has('deck_id')) {
           return HttpResponse.json({ detail: 'boom' }, { status: 500 });
         }
         return HttpResponse.json([configRecall, configRecognition]);
       }),
     );
-    renderCreate('/practice/new?subject=s1&config=c1');
+    renderCreate('/practice/new?deck=d1&config=c1');
 
     expect(await screen.findByRole('checkbox', { name: 'Recall' })).toBeChecked();
     const selected = screen.getByRole('region', { name: 'Selected' });
@@ -823,11 +807,11 @@ describe('PracticeCreatePage', () => {
 
   it('a filtered page also requests every configuration, unfiltered (MD-3)', async () => {
     const requests = mockLibrary();
-    renderCreate('/practice/new?subject=s1');
+    renderCreate('/practice/new?deck=d1');
     await screen.findByText('Recall');
 
     await waitFor(() =>
-      expect(requests.some((query) => !query.has('subject_id') && !query.has('deck_id'))).toBe(
+      expect(requests.some((query) => !query.has('deck_id'))).toBe(
         true,
       ),
     );
@@ -836,7 +820,7 @@ describe('PracticeCreatePage', () => {
   it('New configuration… carries the current filters, and auto-selects the config it returns', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&deck=d1');
+    renderCreate('/practice/new?deck=d1');
     await screen.findByText('Recall');
 
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
@@ -845,10 +829,10 @@ describe('PracticeCreatePage', () => {
     const [path, search] = (screen.getByTestId('new-config-location').textContent ?? '').split('?');
     const params = new URLSearchParams(search);
     expect(path).toBe('/deck-configurations/new');
-    expect(params.get('subject')).toBe('s1');
+    expect(params.has('subject')).toBe(false);
     expect(params.get('deck')).toBe('d1');
-    expect(params.get('cancelTo')).toBe('/practice/new?subject=s1&deck=d1');
-    expect(params.get('returnTo')).toBe('/practice/new?subject=s1&deck=d1');
+    expect(params.get('cancelTo')).toBe('/practice/new?deck=d1');
+    expect(params.get('returnTo')).toBe('/practice/new?deck=d1');
 
     await user.click(screen.getByRole('button', { name: 'Finish new config' }));
 
@@ -890,15 +874,15 @@ describe('PracticeCreatePage', () => {
   it('a row’s pencil opens Edit configuration with both addresses set to the page’s full URL (MD-6)', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&config=c1&name=Exam');
+    renderCreate('/practice/new?deck=d1&config=c1&name=Exam');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'Edit Recognition' }));
 
     const landed = currentLocation();
     expect(landed.pathname).toBe('/deck-configurations/c2/edit');
-    expect(landed.params.get('cancelTo')).toBe('/practice/new?subject=s1&config=c1&name=Exam');
-    expect(landed.params.get('returnTo')).toBe('/practice/new?subject=s1&config=c1&name=Exam');
+    expect(landed.params.get('cancelTo')).toBe('/practice/new?deck=d1&config=c1&name=Exam');
+    expect(landed.params.get('returnTo')).toBe('/practice/new?deck=d1&config=c1&name=Exam');
   });
 
   it('tapping a row’s label still ticks it and stays on the page (MD-6)', async () => {
@@ -916,17 +900,17 @@ describe('PracticeCreatePage', () => {
   it('Cancel returns to the practice list with the overview’s own params and none of the draft', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&status=completed&config=c1');
+    renderCreate('/practice/new?subject=s1&deck=d1&status=completed&config=c1');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const landed = currentLocation();
     expect(landed.pathname).toBe('/practice');
-    expect(landed.params.get('subject')).toBe('s1');
+    expect(landed.params.get('deck')).toBe('d1');
     expect(landed.params.get('status')).toBe('completed');
     expect(landed.params.has('config')).toBe(false);
-    expect([...landed.params.keys()].sort()).toEqual(['status', 'subject']);
+    expect([...landed.params.keys()].sort()).toEqual(['deck', 'status']);
   });
 
   it('a filter whose list is loading keeps the old row until the new list arrives', async () => {
@@ -937,11 +921,11 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByRole('checkbox', { name: 'Recall' });
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Ports' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
-    expect(currentLocation().params.get('subject')).toBe('s2');
+    expect(currentLocation().params.get('deck')).toBe('d2');
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeInTheDocument();
 
     release();
@@ -949,7 +933,7 @@ describe('PracticeCreatePage', () => {
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
     );
-    expect(screen.getByRole('group', { name: 'Beta · Shared Deck Name' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Ports' })).toBeInTheDocument();
   });
 
   it('a filter whose list fails removes the old row and says so', async () => {
@@ -960,8 +944,8 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByRole('checkbox', { name: 'Recall' });
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Ports' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeInTheDocument();
@@ -980,8 +964,8 @@ describe('PracticeCreatePage', () => {
     renderCreate();
     await screen.findByRole('checkbox', { name: 'Recall' });
 
-    await user.click(screen.getByPlaceholderText('All subjects'));
-    await user.click(await screen.findByRole('option', { name: 'Beta' }));
+    await user.click(screen.getByPlaceholderText('All decks'));
+    await user.click(await screen.findByRole('option', { name: 'Ports' }));
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
 
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));

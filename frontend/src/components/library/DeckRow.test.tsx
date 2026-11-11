@@ -24,10 +24,10 @@ describe('DeckRow', () => {
     expect(screen.getByText('6 cards · 2 fields')).toBeInTheDocument();
   });
 
-  it("opens its second line with the subject's name when given", () => {
-    renderWithRouter(<DeckRow deck={deck} subjectName="Math" />);
+  it("never shows its subject's name", () => {
+    renderWithRouter(<DeckRow deck={deck} />);
 
-    expect(screen.getByText('Math · 6 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.queryByText(/Math/)).not.toBeInTheDocument();
   });
 
   it('counts one card and one field in the singular', () => {
@@ -37,7 +37,7 @@ describe('DeckRow', () => {
   });
 
   it("never shows a field's name", () => {
-    renderWithRouter(<DeckRow deck={deck} subjectName="Math" />);
+    renderWithRouter(<DeckRow deck={deck} />);
 
     expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Back/)).not.toBeInTheDocument();

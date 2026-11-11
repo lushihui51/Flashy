@@ -10,14 +10,14 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | The menu, spoken | "Main menu" | Side menu | `SideDrawer`; `NAV_ITEMS` |
 | App | Opening and closing the menu, spoken | "Open menu"; "Close menu" | Top bar | `TopBar` |
 | App | Starting a new thing from anywhere, spoken | "New" | Top bar's plus button; the sheet it opens | `CreateSheet` |
-| App | The shortcut's rows | "New subject"; "New deck"; "New card"; "New practice" | Top bar's New sheet | `CreateSheet` |
+| App | The shortcut's rows | "New deck"; "New card"; "New practice" | Top bar's New sheet | `CreateSheet` |
 | App | New card while there is no deck | "Create a deck first" | Top bar's New sheet, under "New card" | `CreateSheet` |
 | App | Signing in | "Log in" | Top bar, signed out | `AuthSlot` |
 | App | Signing out | "Log out" | Account sheet | `AccountSheet` |
 | App | The signed-in user | "Account"; "Account menu for <name>", spoken | Top bar; Account sheet | `app_user`; `AppUser`; `AccountSheet` |
 | App | Searching | "Search" | Top bar | `SearchBar` |
-| App | Finishing a form that makes a new thing | "Create" | New subject; New deck; New card; New configuration; New practice | `mode="create"` |
-| App | Finishing a form that changes a thing | "Save" | Edit subject; Edit deck; Edit card; Edit configuration; the save confirm | `mode="edit"` |
+| App | Finishing a form that makes a new thing | "Create" | New deck; New card; New practice | `mode="create"` |
+| App | Finishing a form that changes a thing | "Save" | Edit deck; Edit card; Edit practice; a deck's board, opened from a practice's page while no run is active; the save confirm | `mode="edit"` |
 | App | Feedback after a save | "Saved ✓" | Edit deck | `savedFlash` |
 | App | Backing out | "Cancel" | Every form and confirm | `cancelLabel` |
 | App | Leaving when nothing is unsaved | "Done" | Edit deck | `showDone` |
@@ -25,57 +25,55 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Accepting a warning | "Continue" | New card; New configuration | `confirmLabel` |
 | App | Throwing away unsaved work | "Discard" | Every discard confirm | `ConfirmDialog` |
 | App | Deleting a thing | "Delete"; "Delete <name>", spoken | Page headers; list rows; every delete confirm | `ConfirmDialog`; `/api/deletion-impact`; `DeletionImpactRead` |
-| App | Changing a thing, spoken | "Edit subject"; "Edit deck"; "Edit <name>" | Subject page; deck page; New practice's rows | `navigate` |
-| App | A thing's name | "Name" | Subject form; New configuration; Edit configuration; New practice | `name` |
-| App | Narrowing a list | "All subjects"; "All decks", each deck's row with its subject's name beneath; "Clear filters" | Practice page; New practice | `PracticeFilterBar`; `DeckPicker`; `subject`; `deck` |
+| App | Changing a thing, spoken | "Edit deck" on a deck's pencil; "Edit <name>" on a practice's pencil, as "Edit Commands + Ports" | Deck page; a practice's page, on the pencil beside its main action | `navigate` |
+| App | A thing's name | "Name" | New practice; Edit practice | `name` |
+| App | Narrowing a list | "All decks", each row a deck's name alone; "Clear filters" | All practices | `PracticeFilterBar`; `DeckPicker`; `deck` |
 | App | A picker holding more than it shows | "Showing N of N · type to narrow" | Every picker | `PickerCombobox`; `PICKER_MAX_ITEMS` |
-| App | A list with nothing in it | "No <things> yet." | Library; subject page; deck page's Configurations tab; Practice page; New practice | `EmptyState` |
+| App | A list with nothing in it | "No <things> yet." | Library; deck page; All practices; New practice; a practice's page, under "Runs" | `EmptyState` |
 | App | A list its filters empty | "No <things> match these filters." | Practice page; New practice | `filtered` |
-| App | Why leaving discards | "You have unsaved changes. Leaving now will discard them." | New subject; Edit subject; New deck; Edit deck; New card; Edit card | `confirmCancelOpen` |
-| App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit subject; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
+| App | Why leaving discards | "You have unsaved changes. Leaving now will discard them." | New deck; Edit deck; New card; Edit card | `confirmCancelOpen` |
+| App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
 | App | Switching the deck a form is filling in | "Change deck?" | New card; New configuration | `deckChange`; `pendingDeck` |
-| App | A name left blank | "Name is required." | New subject; Edit subject; the deck form's overlay; New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name | `nameError`; `FieldsSection` |
+| App | A name left blank | "Name is required." | New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name | `nameError`; `FieldsSection` |
 | Places | The main places | "Home"; "Your library"; "All practices" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practice` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
-| Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a subject's page; "Your library › <Subject>" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Subject page; deck page; practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
-| Places | A thing's address, widest place first | "Subject · Deck"; "Deck · Configuration"; "Subject · Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
-| Home | The steps to a first practice | "Your first practice"; "N of 5"; "New subject", "New deck", "New card", "New configuration", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
+| Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Deck page; a practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
+| Places | A thing's address, widest place first | "Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
+| Home | The steps to a first practice | "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
 | Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_practices`; `HomeActivePractice` |
 | Home | The decks of the most recently completed practices | "Recently practiced"; "Practice" on each deck | Home | `recent_decks` |
 | Home | Going to New practice from Home | "New practice" | Home, last | `/practice/new` |
-| Library | The library's tabs | "Library", spoken; "Subjects"; "Decks" | Library | `TABS`; `tab` |
-| Library | The Subjects tab's toolbar label | "N subjects"; "Subjects" while the list loads | Library | `readSubjects`; `/api/subjects` |
-| Library | The Decks tab's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
-| Library | Deleting a subject or deck that takes other things with it, each count present only above zero | "This also deletes N decks, N cards, N fields, N deck configurations and N practices. This can't be undone." | Edit subject; Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `/api/deletion-impact` |
-| Subject | A subject | "subject" | Library; subject page; forms | `subject`; `Subject`; `SubjectRead`; `SubjectSummary`; `/api/subjects`; `subjectId` |
-| Subject | Adding a subject to the list in view | "Add subject" | Library's Subjects tab | `AddButton` |
-| Subject | The page where a subject is made | "New subject" | Its heading; the deck form's overlay | `/subjects/new`; `SubjectForm` |
-| Subject | The page where a subject is changed | "Edit subject" | Its heading | `/subjects/:subjectId/edit`; `SubjectForm` |
+| Library | The Subjects tab's toolbar label | — | — | `readSubjects`; `/api/subjects` |
+| Library | The library's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
+| Library | Deleting a subject or deck that takes other things with it, each count present only above zero | "This also deletes N decks, N cards, N fields, N deck configurations and N practices. This can't be undone." | Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `/api/deletion-impact` |
+| Subject | A subject | "subject" | New deck; Edit deck; the deck form's overlay | `subject`; `Subject`; `SubjectRead`; `SubjectSummary`; `/api/subjects`; `subjectId` |
+| Subject | Adding a subject to the list in view | — | — | `AddButton` |
+| Subject | The page where a subject is made | "New subject" | the deck form's overlay | `SubjectForm` |
+| Subject | The page where a subject is changed | — | — | `SubjectForm` |
 | Subject | Choosing a subject | "Subject"; "New subject…" as the last row | New deck; Edit deck | `PickerCombobox`; `createLabel`; `subject_id` |
-| Subject | A subject's description | "Description" | Subject form; subject page | `description` |
-| Subject | A subject's picture | "Icon"; the control spoken as "Icon: <picture>"; the sheet of pictures spoken as "Icon" | Subject form; library rows; subject page | `icon`; `SubjectIcon`; `SubjectIconPicker` |
+| Subject | A subject's description | "Description" | the deck form's overlay | `description` |
+| Subject | A subject's picture | "Icon"; the control spoken as "Icon: <picture>"; the sheet of pictures spoken as "Icon" | the deck form's overlay | `icon`; `SubjectIcon`; `SubjectIconPicker` |
 | Subject | Each picture, spoken only and never shown as text | "Atom"; "Open book"; "Brain"; "Calculator"; "Camera"; "Code"; "Coins"; "DNA"; "Dumbbell"; "Flask"; "Gavel"; "Globe"; "Heart"; "Headset"; "Landmark"; "Languages"; "Leaf"; "Microscope"; "Music"; "Palette"; "Pen"; "Rocket"; "Scale"; "Theater"; "Trophy"; "Utensils" | Icon sheet; every subject icon | `ICONS`; `subjectIconName` |
-| Subject | A subject counted | "N decks"; "N cards" | Library rows | `deck_count` |
-| Subject | The subject page's toolbar label | "N decks · N cards"; "Decks" while the list loads | Subject page | `readDecks`; `card_count` |
-| Subject | Practicing a subject's decks | "Practice" | Subject page's header | `/practice?subject=` |
-| Subject | Deleting a subject | "Delete subject" | Edit subject | `deleteSubject`; `/api/subjects/{subject_id}` |
-| Subject | A subject name already taken | "A subject with this name already exists." | New subject; Edit subject; the deck form's overlay | `subject_name_taken` |
-| Subject | Confirming a subject's deletion | "Delete subject?" | Edit subject | `confirmDeleteOpen` |
-| Subject | Leaving the subject form with unsaved changes | "Discard changes?" | New subject; Edit subject; the deck form's overlay | `confirmCancelOpen` |
+| Subject | A subject counted | — | — | `deck_count` |
+| Subject | The subject page's toolbar label | — | — | `readDecks`; `card_count` |
+| Subject | Deleting a subject | — | — | `deleteSubject`; `/api/subjects/{subject_id}` |
+| Subject | A subject name already taken | "A subject with this name already exists." | the deck form's overlay | `subject_name_taken` |
+| Subject | Confirming a subject's deletion | — | — | `confirmDeleteOpen` |
+| Subject | Leaving the subject form with unsaved changes | "Discard changes?" | the deck form's overlay | `confirmCancelOpen` |
 | Subject | A subject left unchosen | "Choose a subject to create a deck." | New deck | `subjectError` |
-| Deck | A deck | "deck" | Library; subject page; deck page; forms | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |
+| Deck | A deck | "deck" | Library; deck page; forms; New practice; a practice's page; a deck's board; Home | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |
 | Deck | A deck's name | "Deck name" | New deck; Edit deck | `name`; `DeckCreate`; `DeckBatchEdit` |
-| Deck | Adding a deck to the list in view | "Add deck" | Library's Decks tab; subject page | `AddButton` |
+| Deck | Adding a deck to the list in view | "Add deck" | Library | `AddButton` |
 | Deck | The page where a deck is made | "New deck" | Its heading | `/decks/new`; `DeckEditor` |
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
-| Deck | Choosing a deck | "Deck"; each row the deck's name with its subject's name beneath; "New deck…" as the last row | New card; Edit card; New configuration | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id`; `subject_name` |
-| Deck | A deck counted | "N cards"; "N fields" | Library rows; subject page rows | `card_count`; `field_names` |
-| Deck | A deck's row | its name, then "N cards · N fields" beneath; "<subject> · N cards · N fields" beneath in the library's Decks tab, as "Linux · 48 cards · 12 fields" | Library's Decks tab; subject page; Home | `DeckRow` |
+| Deck | Choosing a deck | "Deck"; each row a deck's name alone; "New deck…" as the last row | New card; Edit card | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id`; `subject_name` |
+| Deck | A deck counted | "N cards"; "N fields" | Library rows | `card_count`; `field_names` |
+| Deck | A deck's row | its name, then "N cards · N fields" beneath, as "48 cards · 12 fields" | Library; New practice's picked decks | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |
 | Deck | The Cards tab's toolbar label | "N cards · N fields" | Deck page | `cards`; `field_defs` |
 | Deck | The Configurations tab's toolbar label | "N configurations"; "Configurations" while the list loads | Deck page | `readDeckPracticeConfigs` |
-| Deck | Practicing a deck | "Practice" | Deck page's header; Home | `/practice?subject=&deck=` |
+| Deck | Practicing a deck | "Practice" | Deck page's header; Home | `/practice?deck=` |
 | Deck | Deleting a deck | "Delete deck" | Edit deck | `deleteDeck`; `/api/decks/{deck_id}` |
 | Deck | A new deck's starting fields | "Term"; "Definition" | New deck | `deckEditorReducer` |
 | Deck | A deck name already taken | "A deck with this name already exists." | New deck; Edit deck | `deck_name_taken` |
@@ -181,7 +179,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | The practice's progress, a wordless bar, spoken | "N passed, N failed, N retrying, N unseen" | Run page; Home | `RunProgress`; `RunProgressBar`; `passed`; `still_failed`; `retry_pending`; `unseen`; `total_cards` |
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
 | Run | Rating a card that is no longer current | "This is not the current card." | Run page | `not_current_card` |
-| Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; subject page; deck page; summary; Home | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
+| Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; deck page; All practices; a practice's page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `PracticeRunBreakdown`; `/api/practice_runs/{practice_run_id}/breakdown`; `RunBreakdown`; `practice_run_breakdown` |
 | Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
 | Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | Run page; a practice's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
@@ -199,6 +197,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Failure | An action Flashy had trouble with | "Flashy is having trouble right now. Try again in a moment." | Beside the control that failed | `ApiError`; `unwrap`; `failureSentence`; `SERVER_TROUBLE_MESSAGE` |
 | Failure | An action while Flashy is temporarily unavailable | "Flashy is temporarily unavailable." | Not shown yet | `database_unavailable` |
 | Failure | A thing that is gone | "<Thing> not found." | In place of a thing that is gone; beside the control that failed; the whole content of the page, for an address that leads to no page | `ApiError`; `unwrap`; `isNotFound`; `failureSentence`; `NotFoundPage` |
-| Failure | A thing that will not load | "Could not load this <thing>."; "Could not load Home." | Edit subject; subject page; Edit deck; deck page; Edit card; Edit configuration; a practice's page; run page; Home; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |
-| Failure | A list that will not load | "Could not load <things>." | Library; deck page's Configurations tab; Practice page; New practice | `isError` |
+| Failure | A thing that will not load | "Could not load this <thing>."; "Could not load Home." | Edit deck; deck page; Edit card; Edit practice; a deck's board; a practice's page; run page; a completed run's page; Home; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |
+| Failure | A list that will not load | "Could not load <things>." | Library; All practices; New practice | `isError` |
 | Failure | Any other failed action | "Something went wrong." | Beside the control that failed | `ApiError`; `ApiDetailError`; `detail.code`; `unwrap`; `failureSentence`; `SOMETHING_WENT_WRONG` |

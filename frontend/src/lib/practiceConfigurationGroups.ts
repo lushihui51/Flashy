@@ -5,16 +5,13 @@ type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummar
 export type ConfigurationGroup = {
   deckId: string;
   deckName: string;
-  subjectName: string;
   configs: DeckPracticeConfigSummary[];
 };
 
 /**
  * Configs come back ordered by their deck's most recent change, then by their own (the
  * backend contract), so grouping by first-seen `deck_id` preserves that order without a
- * second sort. Two decks that share a name in different subjects still land in separate
- * groups — each keyed by `deck_id` and carrying its own `subject_name` — so the group
- * header can tell them apart (a deck name alone is not unique).
+ * second sort.
  */
 export function groupConfigurationsByDeck(
   configs: DeckPracticeConfigSummary[],
@@ -29,7 +26,6 @@ export function groupConfigurationsByDeck(
       groups.push({
         deckId: config.deck_id,
         deckName: config.deck_name,
-        subjectName: config.subject_name,
         configs: [],
       });
     }

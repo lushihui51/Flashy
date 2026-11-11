@@ -32,7 +32,7 @@ Judgement: The engineer judges on the live server at 390 wide, against the dev d
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -145,7 +145,32 @@ PDR 033 and PDR 048, the backend unchanged:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `npx vitest run` over the six named files: `Test Files 6 passed (6)`, `Tests 68 passed (68)`. The whole frontend: `Test Files 72 passed (72)`, `Tests 794 passed (794)`; `npm run lint` and `npm run build` are clean.
+- The `grep -rln` printed nothing and exited 1.
+- Headless Chromium through playwright-core at 390 by 844, signed out of Clerk, against localhost:5173 with `ENV=development` and `DEV_AUTH_USER_ID` set:
+  - `/library` and `/library?tab=subjects` each showed 0 tablists and 0 tabs, "18 decks", one "Add deck", 18 deck rows, and 0 links to `/subjects/…`. The first rows read "X | 0 cards · 2 fields", "Commands | 54 cards · 12 fields", "Ports | 21 cards · 4 fields" and "Blank 731006 | 4 cards · 3 fields".
+  - `/subjects/new` showed "Page not found.".
+  - The deck page of "X" had a breadcrumb of one link, "Your library -> /library". Its Practice landed on `/practice?deck=064674c2-ffc3-4d41-8fbc-9284d5c04c0f` with "X" in the deck filter and no subject filter.
+  - The New sheet's rows were "New deck", "New card" and "New practice", each holding 0 `svg`.
+  - For Home, a second backend ran on port 8001 with `DEV_AUTH_USER_ID=user_cycle046_t1_home_check`, an id no `app_user` row held (`select count(*)` printed `0`), and the page's `/api/…` calls were routed to it. Home showed "0 of 3" and the steps "1 New deck", "2 New card" and "3 New practice" under "Your first practice". That backend has since stopped, and the `app_user` row it made stays in the dev database.
+
+Departures and choices beyond Details:
+
+- `LibraryPage` keeps its `EmptyState` helper, so the `EmptyState` name in "A list with nothing in it" still names code.
+- `DeckConfigurationEditor`'s `DeckOption` already carries no subject field, since nothing in the editor reads one any more. T2's constraint on that type now holds as it stands.
+- The New sheet's rows take drawing 12's size and type: a 52px minimum height (`min-h-action`), an 18px inset, and `text-base font-semibold` in place of `font-medium`.
+- `PracticeFilterBar` lost its two-column wrapper and holds the one `DeckPicker` directly.
+- `SubjectForm.test.tsx` keeps only the overlay's blank-name case, the one test that renders `SubjectFormBody`. Every other case rendered the routed page and is gone with it.
+- `DeckEditor.test.tsx`'s tests of the return addresses use `/library` in place of `/subjects/s1`, an address that now leads nowhere.
+- `HomePage` reads its step flags through `StepFlag`, `Extract<keyof HomeSteps, 'has_deck' | 'has_card'>`. A step that read `has_subject` or `has_configuration` would fail the type check, and `HomePage.test.tsx` sets those two flags opposite to the steps' state.
+- In `docs/vocabulary.md`, "Practicing a subject's decks" left the file as well as "The library's tabs", because its one Code name, `/practice?subject=`, is gone from the code. "The page where a subject is made" and "The page where a subject is changed" dropped `/subjects/new` and `/subjects/:subjectId/edit`. Code names the code still holds stay, such as `subject_name` in "A thing's address" and `renderBeneath` in "Choosing a deck".
+
+What to read:
+
+- The `docs/vocabulary.md` diff. Several Where cells, as Details gave them, name screens a later cycle builds ("Edit practice", "a deck's board", "New practice's picked decks"), and they drop screens that stand today, such as Edit configuration and New practice's configuration pencils.
+- Two comments outside Files are now false, and T2 lists both files: `ListRow`'s interface comment names `/subjects/:subjectId`'s lists, and `PickerCombobox`'s `PurposeProps` gives "All subjects" as its example.
 
 ### T2 — Decks owned by their user
 

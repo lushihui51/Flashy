@@ -24,7 +24,7 @@ type CardStandaloneFormProps = {
 type LocationState = { deckId?: string } | null;
 
 /** Standalone card create/edit — its own routes (`/cards/new`, `/cards/:cardId/edit`),
- * real API calls, real navigation, a routed page like SubjectForm. */
+ * real API calls, real navigation, a routed page like DeckEditor. */
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
@@ -117,11 +117,10 @@ function CardStandaloneFormBody({
   // Derived from `deckId` rather than kept as its own state: reverting `deckId` after a
   // cancelled "Change deck?" confirm then redisplays the previous deck by itself, with no
   // remount needed to tell the combobox its selection moved back. Falls back to the
-  // single-deck fetch for the initial preselection, which lands before the list does. That
-  // read carries no subject's name; a chosen deck shows only its own name, so none is missed.
+  // single-deck fetch for the initial preselection, which lands before the list does.
   const selectedDeck =
     decksQuery.data?.find((deck) => deck.id === deckId) ??
-    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name, subject_name: '' } : null);
+    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
 
   // A card can't move between decks once it exists, so editing one shows its deck as a
   // fixed value. A contextual "New card" and the deck-editor round-trip both just

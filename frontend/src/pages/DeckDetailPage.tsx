@@ -3,9 +3,7 @@ import { Pencil, Play } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
-import { readSubject } from 'src/api/subject';
 import { deleteDeckPracticeConfig, readDeckPracticeConfigs } from 'src/api/deck_practice_config';
-import SubjectIcon from 'src/components/library/SubjectIcon';
 import CardList from 'src/components/library/CardList';
 import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
@@ -62,16 +60,10 @@ export default function DeckDetailPage() {
   const deck = deckQuery.data;
   usePageTitle(deck?.name);
 
-  const subjectQuery = useQuery({
-    queryKey: ['subject', deck?.subject_id],
-    queryFn: () => readSubject(deck!.subject_id),
-    enabled: !!deck,
-  });
-
   // Scoped to this deck, because a configuration belongs to exactly one: this is the
   // whole list there is to show here.
   const configurationsQuery = useQuery({
-    queryKey: ['deck_practice_configs', null, deckId],
+    queryKey: ['deck_practice_configs', deckId],
     queryFn: () => readDeckPracticeConfigs({ deckId: deckId! }),
     enabled: !!deckId,
   });
@@ -103,7 +95,6 @@ export default function DeckDetailPage() {
   if (!deck) return null;
 
   const fieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
-  const subject = subjectQuery.data;
   const configurations = configurationsQuery.data ?? [];
 
   const setTab = (next: Tab) => {
@@ -130,20 +121,7 @@ export default function DeckDetailPage() {
 
   return (
     <div className="p-4">
-      <Breadcrumb
-        places={[
-          { label: 'Your library', to: '/library' },
-          ...(subject
-            ? [
-                {
-                  label: subject.name,
-                  to: `/subjects/${subject.id}`,
-                  icon: <SubjectIcon icon={subject.icon} className="size-icon-sm" />,
-                },
-              ]
-            : []),
-        ]}
-      />
+      <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
       <div className="mt-3.5 flex items-center gap-3">
         <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
@@ -155,9 +133,7 @@ export default function DeckDetailPage() {
       <div className="mt-3.5 flex items-center gap-2.5">
         <button
           type="button"
-          // Both params, not just the deck: two decks in different subjects can share a
-          // name, so the subject is what makes the filtered list unambiguous on arrival.
-          onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
+          onClick={() => navigate(`/practice?deck=${deck.id}`)}
           className="tappable flex h-action flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
         >
           <Play aria-hidden="true" fill="currentColor" className="size-icon-sm" />
@@ -173,8 +149,8 @@ export default function DeckDetailPage() {
         </button>
       </div>
 
-      {/* This deck's two contents, in the same tab grammar the library uses for subjects
-          and decks — a configuration belongs to this deck exactly as its cards do. */}
+      {/* This deck's two contents — a configuration belongs to this deck exactly as its
+          cards do. */}
       <div ref={tabsRef} className="mt-3.5">
         <Tabs ariaLabel="Deck contents" items={TAB_ITEMS} value={tab} onChange={setTab} />
       </div>

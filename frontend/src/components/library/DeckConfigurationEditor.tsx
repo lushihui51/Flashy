@@ -37,18 +37,7 @@ type DeckSummary = components['schemas']['DeckSummary'];
 type DeckDetail = components['schemas']['DeckDetail'];
 type DeckPracticeConfigRead = components['schemas']['DeckPracticeConfigRead'];
 
-type DeckOption = Pick<DeckSummary, 'id' | 'name' | 'subject_id' | 'subject_name'>;
-
-/** Context decks first, then the rest — the picker itself never sorts (it renders items
- * in the order given), so arriving from a subject or a deck page means its decks are the
- * ones already at the top of the list. */
-function orderedDeckOptions(decks: DeckSummary[], contextSubjectId: string | null): DeckOption[] {
-  if (!contextSubjectId) return decks;
-  return [
-    ...decks.filter((deck) => deck.subject_id === contextSubjectId),
-    ...decks.filter((deck) => deck.subject_id !== contextSubjectId),
-  ];
-}
+type DeckOption = Pick<DeckSummary, 'id' | 'name'>;
 
 type DeckConfigurationEditorProps = {
   mode: 'create' | 'edit';
@@ -105,7 +94,6 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
     <DeckConfigurationEditorBody
       mode={mode}
       config={configQuery.data}
-      contextSubjectId={params.get('subject')}
       contextDeckId={state?.deckId ?? params.get('deck')}
       cancelTo={internalReturnTo(params, 'cancelTo')}
       returnTo={internalReturnTo(params, 'returnTo')}
@@ -116,7 +104,6 @@ export default function DeckConfigurationEditor({ mode }: DeckConfigurationEdito
 type BodyProps = {
   mode: 'create' | 'edit';
   config?: DeckPracticeConfigRead;
-  contextSubjectId: string | null;
   contextDeckId: string | null;
   /** Where Cancel lands. Null means the deck's Configurations tab with a deck chosen, and Your
    * library with none. */
@@ -129,7 +116,6 @@ type BodyProps = {
 function DeckConfigurationEditorBody({
   mode,
   config,
-  contextSubjectId,
   contextDeckId,
   cancelTo,
   returnTo,
@@ -161,12 +147,7 @@ function DeckConfigurationEditorBody({
     enabled: !!deckId,
   });
 
-  const deckOptions = orderedDeckOptions(
-    decksQuery.data ?? [],
-    contextSubjectId ??
-      (decksQuery.data ?? []).find((deck) => deck.id === contextDeckId)?.subject_id ??
-      null,
-  );
+  const deckOptions: DeckOption[] = decksQuery.data ?? [];
   const selectedDeck = deckOptions.find((deck) => deck.id === deckId) ?? null;
 
   const deck: DeckDetail | undefined = deckQuery.data;
@@ -261,9 +242,7 @@ function DeckConfigurationEditorBody({
           <span className="text-label text-(--color-aside)">Deck</span>
           {mode === 'edit' ? (
             <span className="text-body font-semibold text-(--color-ink)">
-              {selectedDeck
-                ? `${selectedDeck.subject_name} · ${selectedDeck.name}`
-                : (deck?.name ?? '')}
+              {selectedDeck?.name ?? deck?.name ?? ''}
             </span>
           ) : (
             <DeckPicker<DeckOption>

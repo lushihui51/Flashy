@@ -1,5 +1,4 @@
 import { type RefObject } from 'react';
-import { Folder, Layers, CreditCard, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BottomSheet from 'src/components/ui/BottomSheet';
 
@@ -14,10 +13,11 @@ type CreateSheetProps = {
 };
 
 const ROW_CLASS =
-  'tappable flex min-h-14 w-full items-center gap-3 rounded-2xl bg-(--color-surface) px-4 py-2 text-left';
+  'tappable flex min-h-action w-full items-center rounded-2xl bg-(--color-surface) px-4.5 py-2 text-left';
+const LABEL_CLASS = 'text-base font-semibold text-(--color-ink)';
 
-/** The four things a user makes, in the order they nest: a subject holds decks, a deck
- * holds cards, and a practice is run over them.
+/** The three things a user makes, in the order they nest: a deck holds cards, and a
+ * practice is run over them.
  *
  * A deck configuration is deliberately absent. It is not a top-level resource — it
  * belongs to one deck and only means anything beside that deck's fields, so it is made
@@ -35,15 +35,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
     <BottomSheet open={open} onClose={onClose} triggerRef={triggerRef} ariaLabel="New">
       <ul className="flex flex-col gap-3">
         <li>
-          <button type="button" onClick={() => go('/subjects/new')} className={ROW_CLASS}>
-            <Folder aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
-            <span className="font-medium text-(--color-ink)">New subject</span>
-          </button>
-        </li>
-        <li>
           <button type="button" onClick={() => go('/decks/new')} className={ROW_CLASS}>
-            <Layers aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
-            <span className="font-medium text-(--color-ink)">New deck</span>
+            <span className={LABEL_CLASS}>New deck</span>
           </button>
         </li>
         <li>
@@ -52,9 +45,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
             onClick={() => go(hasDecks === false ? '/decks/new' : '/cards/new')}
             className={ROW_CLASS}
           >
-            <CreditCard aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
             <span className="flex flex-col">
-              <span className="font-medium text-(--color-ink)">New card</span>
+              <span className={LABEL_CLASS}>New card</span>
               {hasDecks === false && (
                 <span className="text-sm text-(--color-aside)">Create a deck first</span>
               )}
@@ -65,8 +57,7 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
           {/* Straight to where a practice is made — choosing configurations and naming
               the run — not to the list of past ones. */}
           <button type="button" onClick={() => go('/practice/new')} className={ROW_CLASS}>
-            <Zap aria-hidden="true" className="h-5 w-5 text-(--color-aside)" />
-            <span className="font-medium text-(--color-ink)">New practice</span>
+            <span className={LABEL_CLASS}>New practice</span>
           </button>
         </li>
       </ul>

@@ -42,7 +42,7 @@ export default function ConfigurationPickList({
         >
           {/* Floated, or the browser cuts the legend into the fieldset's top outline. */}
           <legend className="float-left w-full px-4 pt-3 pb-2 text-body leading-5 font-semibold text-(--color-ink)">
-            {group.subjectName} · {group.deckName}
+            {group.deckName}
           </legend>
           <div className="clear-both flex flex-col divide-y divide-(--color-line)">
             {group.configs.map((config) => {

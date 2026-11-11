@@ -1,8 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
-import { createSubject, deleteSubject, readSubject, updateSubject } from 'src/api/subject';
+import { createSubject, deleteSubject, updateSubject } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
@@ -13,66 +12,9 @@ import SubjectIconPicker from 'src/components/library/SubjectIconPicker';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
 import { subjectIconName } from 'src/lib/subjectIcon';
 import type { components } from 'src/api/types';
-import { ApiDetailError, isNotFound } from 'src/api/unwrap';
+import { ApiDetailError } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
-import { usePageTitle } from 'src/lib/pageTitle';
-import { internalReturnTo } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
-
-type SubjectFormProps = {
-  mode: 'create' | 'edit';
-};
-
-/** Routed-page wrapper — thin: it owns navigation only. `SubjectFormBody` (below) is
- * the actual form, shared with the deck editor's create-a-subject overlay, which wraps
- * the same body in a FullScreenDialog instead of a route. */
-export default function SubjectForm({ mode }: SubjectFormProps) {
-  const { subjectId } = useParams<{ subjectId: string }>();
-  const navigate = useNavigate();
-  const { params } = useViewParams();
-  const cancelTo = internalReturnTo(params, 'cancelTo');
-  const returnTo = internalReturnTo(params, 'returnTo');
-
-  const subjectQuery = useQuery({
-    queryKey: ['subject', subjectId],
-    queryFn: () => readSubject(subjectId!),
-    enabled: mode === 'edit' && !!subjectId,
-  });
-  usePageTitle(mode === 'create' ? 'New subject' : subjectQuery.data ? 'Edit subject' : undefined);
-
-  if (mode === 'edit') {
-    if (subjectQuery.isError) {
-      return (
-        <div className="p-4">
-          {isNotFound(subjectQuery.error) ? (
-            <p className="text-(--color-aside)">Subject not found.</p>
-          ) : (
-            <FormPart sentence="Could not load this subject." look="wrong">
-              {null}
-            </FormPart>
-          )}
-        </div>
-      );
-    }
-    // Gate mounting the form body on the fetch having landed, so its `useState`
-    // initializers (below) see the real values exactly once instead of needing an
-    // effect to patch them in after the fact.
-    if (!subjectQuery.data) return null;
-  }
-
-  return (
-    <SubjectFormBody
-      mode={mode}
-      subjectId={subjectId}
-      original={mode === 'edit' ? subjectQuery.data : undefined}
-      onSuccess={(subject) => navigate(returnTo ?? `/subjects/${subject.id}`)}
-      onCancel={() =>
-        navigate(cancelTo ?? (mode === 'create' ? '/library' : `/subjects/${subjectId}`))
-      }
-      onDelete={() => navigate('/library')}
-    />
-  );
-}
 
 export type SubjectFormBodyProps = {
   mode: 'create' | 'edit';
@@ -89,9 +31,8 @@ export type SubjectFormBodyProps = {
 };
 
 /** Create and edit share one form — mode only changes what's prefilled, the submit
- * target, and whether Delete is offered. No navigation of its own: the two callers
- * (the routed page above, and DeckEditor's create-overlay) decide what "done" means
- * for them. */
+ * target, and whether Delete is offered. No navigation of its own: the caller decides
+ * what "done" means for it. */
 export function SubjectFormBody({
   mode,
   subjectId,

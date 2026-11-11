@@ -28,7 +28,7 @@ export default function SelectedConfigurationList({
               {config.name}
             </span>
             <span className="truncate text-label leading-4 text-(--color-aside)">
-              {config.subject_name} · {config.deck_name}
+              {config.deck_name}
             </span>
           </div>
           <button

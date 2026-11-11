@@ -23,38 +23,30 @@ function renderSheet(props: Partial<Parameters<typeof CreateSheet>[0]> = {}) {
 }
 
 describe('CreateSheet', () => {
-  it('renders a drag handle and the four things a user makes, in nesting order', () => {
+  it('renders the three things a user makes, in nesting order', () => {
     renderSheet();
 
     expect(screen.getByRole('dialog', { name: 'New' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New subject' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New deck' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New practice' })).toBeInTheDocument();
     // Top to bottom, and no deck configuration: that one belongs to a deck, not here.
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'New subject',
       'New deck',
       'New card',
       'New practice',
     ]);
   });
 
+  it.each([true, false])('draws each row as its words alone (hasDecks: %s)', (hasDecks) => {
+    renderSheet({ hasDecks });
+
+    for (const row of screen.getAllByRole('button')) {
+      expect(row.querySelector('svg')).toBeNull();
+    }
+  });
+
   it('renders nothing when closed', () => {
     renderSheet({ open: false });
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('closes and navigates to /subjects/new when Subject is tapped', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    renderSheet({ onClose });
-
-    await user.click(screen.getByRole('button', { name: 'New subject' }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('location')).toHaveTextContent('/subjects/new');
   });
 
   it('closes and navigates to /decks/new when Deck is tapped', async () => {

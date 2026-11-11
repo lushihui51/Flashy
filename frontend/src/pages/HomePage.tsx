@@ -11,16 +11,15 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { pluralize } from 'src/lib/pluralize';
 
 type HomeSteps = components['schemas']['HomeSteps'];
+type StepFlag = Extract<keyof HomeSteps, 'has_deck' | 'has_card'>;
 type HomeActivePractice = components['schemas']['HomeActivePractice'];
 type DeckSummary = components['schemas']['DeckSummary'];
 
 // In the order the things nest. The last has no flag: while the steps show, the user has made
 // no practice.
-const STEPS: { label: string; to: string; flag: keyof HomeSteps | null }[] = [
-  { label: 'New subject', to: '/subjects/new', flag: 'has_subject' },
+const STEPS: { label: string; to: string; flag: StepFlag | null }[] = [
   { label: 'New deck', to: '/decks/new', flag: 'has_deck' },
   { label: 'New card', to: '/cards/new', flag: 'has_card' },
-  { label: 'New configuration', to: '/deck-configurations/new', flag: 'has_configuration' },
   { label: 'New practice', to: '/practice/new', flag: null },
 ];
 
@@ -30,7 +29,7 @@ const BLOCK_CLASS =
   'tappable flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)';
 
 function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
-  const isDone = (flag: keyof HomeSteps | null) => flag !== null && steps[flag];
+  const isDone = (flag: StepFlag | null) => flag !== null && steps[flag];
   const doneCount = STEPS.filter((step) => isDone(step.flag)).length;
   const nextIndex = STEPS.findIndex((step) => !isDone(step.flag));
 
@@ -38,7 +37,7 @@ function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
     <>
       <div className="mt-3.5 flex flex-col gap-1">
         <h2 className="text-title font-bold text-(--color-ink)">Your first practice</h2>
-        <span className="text-sm text-(--color-aside)">{doneCount} of 5</span>
+        <span className="text-sm text-(--color-aside)">{`${doneCount} of ${STEPS.length}`}</span>
       </div>
       <ol aria-label="Your first practice" className={`mt-3 ${BLOCK_CLASS}`}>
         {STEPS.map((step, index) => {
@@ -134,13 +133,12 @@ function RecentDecks({ decks, firstIsMainAction }: RecentDecksProps) {
                 {deck.name}
               </span>
               <span className="truncate text-label text-(--color-aside)">
-                {deck.subject_name} · {pluralize(deck.card_count, 'card')} ·{' '}
-                {pluralize(deck.field_names.length, 'field')}
+                {pluralize(deck.card_count, 'card')} · {pluralize(deck.field_names.length, 'field')}
               </span>
             </Link>
             {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="row" />}
             <Link
-              to={`/practice?subject=${deck.subject_id}&deck=${deck.id}`}
+              to={`/practice?deck=${deck.id}`}
               className={`flex h-10 shrink-0 items-center gap-1.5 px-3.5 text-body font-semibold text-(--color-ink) ${
                 firstIsMainAction && index === 0
                   ? 'tappable rounded-2xl bg-(--color-main-action)'

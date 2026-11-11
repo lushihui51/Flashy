@@ -290,19 +290,15 @@ describe('DeckConfigurationEditor — create', () => {
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
   });
 
-  it("each deck's row in the picker reads its name with its subject's name beneath, and nowhere else", async () => {
+  it("each deck's row in the picker reads its name alone", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
 
     await user.click(await screen.findByPlaceholderText('Deck'));
     const row = (await screen.findByText('Alpha Deck')).closest('[role="option"]') as HTMLElement;
-    const subject = within(row).getByText('Alpha');
-    // The subject stands after the deck's name in the row, not before it.
-    expect(within(row).getByText('Alpha Deck').compareDocumentPosition(subject)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-    expect(screen.getAllByText('Alpha')).toHaveLength(1);
+    expect(row).toHaveTextContent(/^Alpha Deck$/);
+    expect(screen.queryByText(/^Alpha$/)).not.toBeInTheDocument();
   });
 
   it('starts with every live field unassigned, in deck order', async () => {
@@ -315,15 +311,34 @@ describe('DeckConfigurationEditor — create', () => {
     expect(within(unused).getByText('Reading')).toBeInTheDocument();
   });
 
-  it("a deck in context is preselected, and its subject's decks sort first", async () => {
+  it('a deck in context is preselected, and the options keep the order the decks arrive in', async () => {
+    mockLibrary();
+    const user = userEvent.setup();
+    renderCreate('/deck-configurations/new?deck=d2');
+
+    const picker = await screen.findByPlaceholderText('Deck');
+    await waitFor(() => expect(picker).toHaveValue('Beta Deck'));
+    await user.click(picker);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Alpha Deck',
+      'Beta Deck',
+      'New deck…',
+    ]);
+  });
+
+  it('a subject in the address chooses nothing and orders nothing', async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate('/deck-configurations/new?subject=s2');
 
-    await user.click(await screen.findByPlaceholderText('Deck'));
-    const options = screen.getAllByRole('option');
-    // "New deck…" is last; the first real option belongs to the context subject.
-    expect(options[0]).toHaveTextContent('Beta Deck');
+    const picker = await screen.findByPlaceholderText('Deck');
+    await user.click(picker);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Alpha Deck',
+      'Beta Deck',
+      'New deck…',
+    ]);
+    expect(picker).toHaveValue('');
   });
 
   it('starts on a deck handed back by the "New deck…" round-trip', async () => {
@@ -355,17 +370,17 @@ describe('DeckConfigurationEditor — create', () => {
         />
         <Route path="/decks/new" element={<ReturnToProbe />} />
       </Routes>,
-      ['/deck-configurations/new?subject=s1'],
+      ['/deck-configurations/new?deck=d1'],
     );
 
     await user.click(await screen.findByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /New deck…/ }));
 
     expect(screen.getByTestId('cancel-to')).toHaveTextContent(
-      '/deck-configurations/new?subject=s1',
+      '/deck-configurations/new?deck=d1',
     );
     expect(screen.getByTestId('return-to')).toHaveTextContent(
-      '/deck-configurations/new?subject=s1',
+      '/deck-configurations/new?deck=d1',
     );
   });
 
@@ -374,8 +389,8 @@ describe('DeckConfigurationEditor — create', () => {
     const user = userEvent.setup();
     // The builder itself was opened with a returnTo (e.g. from New practice) — its own
     // full location, not just the context params, is what must survive the next hop.
-    const practiceReturnTo = '/practice/new?subject=s1';
-    const builderParams = new URLSearchParams({ subject: 's1', returnTo: practiceReturnTo });
+    const practiceReturnTo = '/practice/new?deck=d1';
+    const builderParams = new URLSearchParams({ deck: 'd1', returnTo: practiceReturnTo });
     const builderPath = `/deck-configurations/new?${builderParams.toString()}`;
     renderWithProviders(
       <Routes>
@@ -777,7 +792,7 @@ describe('DeckConfigurationEditor — edit', () => {
 
     await screen.findByRole('region', { name: 'Not used' });
     expect(screen.queryByPlaceholderText('Deck')).not.toBeInTheDocument();
-    expect(screen.getByText('Alpha · Alpha Deck')).toBeInTheDocument();
+    expect(screen.getByText(/^Alpha Deck$/)).toBeInTheDocument();
   });
 
   it('PATCHes the edited board back', async () => {

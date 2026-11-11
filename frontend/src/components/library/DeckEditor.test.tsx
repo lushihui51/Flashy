@@ -74,7 +74,7 @@ function renderEditDeck(deckId = 'd1', search = '') {
     <Routes>
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
       <Route path="/decks/:deckId" element={<LocationProbe />} />
-      <Route path="/subjects/:subjectId" element={<LocationProbe />} />
+      <Route path="/library" element={<LocationProbe />} />
     </Routes>,
     [`/decks/${deckId}/edit${search}`],
   );
@@ -406,7 +406,7 @@ describe('DeckEditor — create mode', () => {
       http.post(`${BASE}/api/decks`, async () => HttpResponse.json({ id: 'd9' }, { status: 201 })),
     );
     const user = userEvent.setup();
-    renderEditor('/decks/new?cancelTo=%2Fsubjects%2Fs1');
+    renderEditor('/decks/new?cancelTo=%2Flibrary');
 
     await user.type(screen.getByRole('textbox', { name: 'Deck name' }), 'Spanish Basics');
     await user.click(screen.getByPlaceholderText('Subject'));
@@ -630,19 +630,19 @@ describe('DeckEditor — edit mode', () => {
   it('a confirmed Cancel goes to cancelTo, ignoring returnTo', async () => {
     mockEditDeck();
     const user = userEvent.setup();
-    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1&returnTo=%2Fdecks%2Fother');
+    renderEditDeck('d1', '?cancelTo=%2Flibrary&returnTo=%2Fdecks%2Fother');
 
     await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 
   it('with returnTo alone, a confirmed Cancel lands on the deck’s page', async () => {
     mockEditDeck();
     const user = userEvent.setup();
-    renderEditDeck('d1', '?returnTo=%2Fsubjects%2Fs1');
+    renderEditDeck('d1', '?returnTo=%2Flibrary');
 
     await user.type(await screen.findByDisplayValue('French Vocab'), ' II');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -654,18 +654,18 @@ describe('DeckEditor — edit mode', () => {
   it('Done goes to returnTo, ignoring cancelTo', async () => {
     mockEditDeck();
     const user = userEvent.setup();
-    renderEditDeck('d1', '?cancelTo=%2Fdecks%2Fother&returnTo=%2Fsubjects%2Fs1');
+    renderEditDeck('d1', '?cancelTo=%2Fdecks%2Fother&returnTo=%2Flibrary');
 
     await screen.findByDisplayValue('French Vocab');
     await user.click(screen.getByRole('button', { name: 'Done' }));
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 
   it('with cancelTo alone, Done lands on the deck’s page', async () => {
     mockEditDeck();
     const user = userEvent.setup();
-    renderEditDeck('d1', '?cancelTo=%2Fsubjects%2Fs1');
+    renderEditDeck('d1', '?cancelTo=%2Flibrary');
 
     await screen.findByDisplayValue('French Vocab');
     await user.click(screen.getByRole('button', { name: 'Done' }));
@@ -899,7 +899,7 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Remove Back' })).toBeDisabled();
   });
 
-  it('Delete deck: confirm counts the closure from the impact query, deletes, lands on the subject', async () => {
+  it('Delete deck: confirm counts the closure from the impact query, deletes, lands on Your library', async () => {
     mockEditDeck();
     server.use(
       http.get(`${BASE}/api/deletion-impact`, () =>
@@ -949,7 +949,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteCalled).toBe(true));
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 
   it("Delete deck with nothing else to lose: the confirm says only that it can't be undone", async () => {
@@ -1032,7 +1032,7 @@ describe('DeckEditor — edit mode', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteCalled).toBe(true));
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/subjects/s1'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 });
 
