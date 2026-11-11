@@ -20,6 +20,7 @@ Judgement: The engineer judges on the live server at 390 wide: on a practice wit
 - PDR 049: A drawn mark of its kind beside every name
 - PDR 051: Cancel and Create or Save at the foot of every form, and Done alone where nothing can change
 - ADR 070: A frontend map from refusal code to sentence
+- ADR 090: Eight colour tokens named by meaning as the only colours
 - ADR 091: Whole collections in bounded statements for every collection read
 - ADR 107: A practice's configuration per deck, copied into a frozen run configuration when each run is cut
 - ADR 109: One validator for a configuration against its deck's live fields, refusing a save and asserting at the cut
@@ -127,7 +128,7 @@ class RunDetail(RunRead):
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -156,17 +157,18 @@ A deck's line on a practice's page opens the deck's board as a form, as drawing 
 Drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 - `App.tsx` must route `/practices/:practiceId/decks/:deckId` and `/runs/:runId/decks/:deckId` to `DeckBoardPage`.
-- `DeckBoardPage` must be a form with no row of places, headed by the deck's `DeckMark` and name, and beneath it the practice's `PracticeMark` and name, as drawing 16 draws them. The board below is `FieldAssignmentBoard` over the deck's live fields, from `GET /api/decks/{id}`, and the configuration from `PracticeDetail.configurations`, read under `['practice', practiceId]`, or `RunDetail.configurations`, read under `['run_detail', runId]`, a key of its own beside the run page's `['run', runId]`; "Loading fields…" stands while any of its reads loads; in place of the board, "Deck not found." stands when the deck read answers 404 or the deck is none of the practice's or the run's, "Practice not found." or "Run not found." when that read answers 404, and "Could not load this deck." when a read fails otherwise, each drawn without `role="alert"`, which `formParts.test.ts` forbids in a form's source, through `FormPart`'s `wrong` look. The browser tab reads the deck's name, through `usePageTitle`. A failed Save shows its sentence in the bar, through `failureSentence` with "Deck not found." for a 404.
-- From a practice's page while the practice has no active run, the board's moves and counts must stay in the form's own state and send nothing until Save; the bar at the foot holds Cancel and Save, and Save, a `SubmitButton` ready only when `boardProblem` finds nothing, shows the board's problem at its part on a tap while not ready and saves through `savePracticeConfiguration`; `formParts.test.ts`'s list of forms gains `DeckBoardPage.tsx`. Cancel leaves through `useLeaveForm` for `cancelTo`, else the practice's page, sending nothing; Save leaves for `returnTo`, else the practice's page.
+- `DeckBoardPage` must be a form with no row of places, headed by the deck's `DeckMark` and name, and beneath it the practice's `PracticeMark` and name, as drawing 16 draws them. The board below is `FieldAssignmentBoard` over the deck's live fields, from `GET /api/decks/{id}` read under `['deck', deckId]`, the key every other page reads a deck under, and the configuration from `PracticeDetail.configurations`, read under `['practice', practiceId]`, or `RunDetail.configurations`, read under `['run_detail', runId]`, a key of its own beside the run page's `['run', runId]`; "Loading fields…", a plain muted sentence in `--color-aside` as the removed `DeckConfigurationEditor` drew it, stands until every one of its reads has answered or failed; "Deck not found." stands when the deck read answers 404 or the deck is none of the practice's or the run's, "Practice not found." or "Run not found." when that read answers 404, and "Could not load this deck." when a read fails otherwise. Until every read has answered, and once one has failed, the page must hold that sentence alone, with no heading and no bar, as `PracticeEditPage` does once its read fails; when several reads have failed, "Practice not found." or "Run not found." stands, else "Deck not found.", else "Could not load this deck.". The three "not found" sentences must be plain muted sentences, as `PracticeEditPage` draws "Practice not found.", and "Could not load this deck." must go through `FormPart`'s `wrong` look, so the form's own source holds no `role="alert"`, which `formParts.test.ts` forbids. The browser tab reads the deck's name, through `usePageTitle`. A failed Save shows its sentence in the bar, through `failureSentence` with "Deck not found." for a 404.
+- From a practice's page while the practice has no active run, the board's moves and counts must stay in the form's own state and send nothing until Save; the bar at the foot holds Cancel and Save, and Save, a `SubmitButton` ready only when `boardProblem` finds nothing, shows the board's problem at its part on a tap while not ready and saves through `savePracticeConfiguration`, then invalidates `['practice', practiceId]` before it leaves, as `PracticeEditPage`'s save does; `FieldAssignmentBoard`'s `problem` must be null until a tap on Save while not ready sets it to `boardProblem`'s answer, and the next move or count must set it back to null, as Edit practice's Name sentence clears when the name changes; `formParts.test.ts`'s list of forms gains `DeckBoardPage.tsx`. Cancel leaves through `useLeaveForm` for `cancelTo`, else the practice's page, sending nothing; Save leaves for `returnTo`, else the practice's page.
 - While the practice has an active run, and always at `/runs/:runId/decks/:deckId`, every field must be greyed and do nothing when tapped, the counts too, one line above the board reading "A run is active." from a practice's page and "How this run asked it." from a run's page, and the bar holding Done alone, which leaves through `useLeaveForm` for `cancelTo`, else the practice's page or the run's page (PDR 051).
 - `frontend/src/lib/deckConfigurationBoard.ts` must become `frontend/src/lib/deckBoard.ts`, after the board's user word, "the deck's board", since a configuration of a deck is no longer a thing of its own; its exports keep their names but `ConfigPayloadArrays`, which becomes `BoardArrays`, the generated `ConfigurationArrays` type from `frontend/src/api/types.ts`.
-- `FieldAssignmentBoard` must take a `readOnly: boolean` prop that greys every chip and count and ignores every tap.
+- `FieldAssignmentBoard` must take a `readOnly: boolean` prop that greys every chip and count and ignores every tap: a greyed chip and an unchosen greyed count take words in `--color-aside`, a border in `--color-line` and no shadow, and a chosen greyed count is filled `--color-line` with words in `--color-aside`, a border in `--color-line`, no shadow and no pressed offset, so which counts are chosen still shows (ADR 090).
 - The per-deck line in `PracticeDetailsPage` must open `/practices/:practiceId/decks/:deckId` with the page's own address as `cancelTo` and `returnTo`, and end in a chevron, `ChevronRight` from lucide-react, as a run's row does.
-- Tests: a move then Cancel sends no request; Save sends one `PUT` with the board's arrays; with an active run, a tap on a field opens no move sheet and the bar holds Done alone; the run's board reads its run's configuration.
+- Tests: in `DeckBoardPage.test.tsx`, a move then Cancel sends no request; Save sends one `PUT` with the board's arrays; with an active run, a tap on a field opens no move sheet and the bar holds Done alone; the run's board reads its run's configuration. In `FieldAssignmentBoard.test.tsx`, with `readOnly`, a tap on a chip opens no move sheet, a tap on a count calls no `onToggleCount`, and each chip and count carries the greyed look's classes; without it, a tap on a chip opens the move sheet. In `PracticeDetailsPage.test.tsx`, each deck's line links to `/practices/:practiceId/decks/:deckId` with the page's own address as `cancelTo` and `returnTo`.
 - `docs/vocabulary.md`, each row's columns as given, every other column as it stands:
   - "Leaving when nothing is unsaved": Where Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page; Code `showDone`; `DeckBoardPage`.
-  - "A deck's prompt and answer layout": Code `practice_configuration`; `run_configuration`; `PracticeConfigurationRead`; `RunConfigurationRead`; `ConfigurationArrays`; `PUT /api/practices/{id}/configurations/{deck_id}`; `savePracticeConfiguration`; `deckBoard.ts`; `BoardArrays`.
-  - "The page where a configuration is changed": Code `/practices/:practiceId/decks/:deckId`; `/runs/:runId/decks/:deckId`; `DeckBoardPage`.
+  - "How a practice asks one of its decks, never named": Code `practice_configuration`; `PracticeConfiguration`; `PracticeConfigurationRead`; `ConfigurationArrays`; `PUT /api/practices/{id}/configurations/{deck_id}`; `savePracticeConfiguration`; `deckBoard.ts`; `BoardArrays`.
+  - "The copy of how the practice asks each deck that a run takes at start": Code `run_configuration`; `RunConfiguration`; `RunConfigurationRead`.
+  - "The form showing how a practice asks one of its decks": Code `/practices/:practiceId/decks/:deckId`; `/runs/:runId/decks/:deckId`; `DeckBoardPage`.
   - "The deck's fields still loading": Code `DeckBoardPage`.
   - A new row in the Configuration area: Concept "Why a deck's board cannot be changed"; User reads "A run is active."; "How this run asked it."; Where a deck's board, one line above the greyed board, the first opened from a practice's page and the second from a completed run's page; Code `DeckBoardPage`; `readOnly`.
 
@@ -175,6 +177,7 @@ Drawing 16, under PDR 051, ADR 124 and ADR 127:
 - A completed run's page's deck lines: cycle 051.
 - A discard confirm on Cancel: never; the board is not among the forms that ask before discarding.
 - The board's slots, chips, counts and move sheet, which keep their look but for the greyed state: never changed here.
+- Drawing 16-read's #8a929c for a greyed chip: never; the app keeps its eight colours (ADR 090).
 - `docs/adrs/067-*.md`, a deprecated record that names `deckConfigurationBoard.ts`: never edited; on the human's word a record keeps the names it was written with.
 
 **Done when**
@@ -184,7 +187,4 @@ Drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 **Debrief**
 
-- Attempted: before any edit, read Details' `docs/vocabulary.md` items against the file as it stands.
-- Found: two of the five rows Details names by Concept are not in `docs/vocabulary.md`. "A deck's prompt and answer layout" and "The page where a configuration is changed" were removed by cycle 049 T1's commit, made after this file was planned and last amended. In their place stand "How a practice asks one of its decks, never named" (User reads the deck's board; Code `practice_configuration`; `PracticeConfiguration`) and "The form showing how a practice asks one of its decks" (Code —).
-- Found: putting the given Code cell on the first of those rows would drop `PracticeConfiguration`, the model's name, and repeat `run_configuration`, which the Practice row "The copy of how the practice asks each deck that a run takes at start" already holds with `RunConfiguration`.
-- Why the file cannot settle it: Details gives each row's columns by a Concept that no longer exists, so which row takes each Code cell, and whether `PracticeConfiguration` stays and `run_configuration` moves, is the planner's choice of the vocabulary's rows, not a builder's.
+None.
