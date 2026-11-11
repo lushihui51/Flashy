@@ -203,7 +203,7 @@ describe('PracticeCreatePage', () => {
     expect(screen.queryByText(/Alpha|Beta/)).not.toBeInTheDocument();
   });
 
-  it("holds the deck filter alone, each deck's row reading its name alone", async () => {
+  it("holds the deck filter alone, each deck's row reading its mark and name", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderCreate();
@@ -213,7 +213,10 @@ describe('PracticeCreatePage', () => {
     await user.click(screen.getByPlaceholderText('All decks'));
     const rows = screen.getAllByRole('option');
     // The first row is "All decks".
-    expect(rows.map((row) => row.textContent)).toEqual(['All decks', 'Commands', 'Ports']);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveAccessibleName('All decks');
+    expect(rows[1]).toHaveAccessibleName('Deck Commands');
+    expect(rows[2]).toHaveAccessibleName('Deck Ports');
   });
 
   it('a checkbox per configuration: at most one ticked per deck, and a tick can be cleared (MD-1)', async () => {
@@ -724,7 +727,7 @@ describe('PracticeCreatePage', () => {
 
     // Filtering to deck d2 drops d1's group — and the Recall checkbox — from view.
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Ports' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Ports' }));
 
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: 'Recall' })).not.toBeInTheDocument(),
@@ -947,7 +950,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Ports' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Ports' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(currentLocation().params.get('deck')).toBe('d2');
@@ -970,7 +973,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Ports' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Ports' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(screen.getByRole('checkbox', { name: 'Recall' })).toBeInTheDocument();
@@ -990,7 +993,7 @@ describe('PracticeCreatePage', () => {
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Ports' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Ports' }));
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
 
     await user.click(screen.getByRole('checkbox', { name: 'Recall' }));

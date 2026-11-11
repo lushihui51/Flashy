@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckPicker from 'src/components/library/DeckPicker';
 
@@ -9,8 +9,16 @@ const decks = [
   { id: 'd2', name: 'Ports' },
 ];
 
+function expectMarkBeforeName(option: HTMLElement, name: string) {
+  expect(option).toHaveAccessibleName(`Deck ${name}`);
+  const mark = within(option).getByRole('img', { name: 'Deck' });
+  expect(
+    mark.compareDocumentPosition(within(option).getByText(name)) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+}
+
 describe('DeckPicker', () => {
-  it("as a form's picker, a row reads the deck's name alone, and the create row stays", async () => {
+  it("as a form's picker, a row shows the deck's mark before the deck's name, and the create row stays", async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
     render(
@@ -29,12 +37,15 @@ describe('DeckPicker', () => {
     expect(commands).toHaveTextContent(/^Commands$/);
     expect(ports).toHaveTextContent(/^Ports$/);
     expect(create).toHaveTextContent(/^New deck…$/);
+    expectMarkBeforeName(commands!, 'Commands');
+    expectMarkBeforeName(ports!, 'Ports');
+    expect(within(create!).queryByRole('img', { name: 'Deck' })).not.toBeInTheDocument();
 
     await user.click(ports!);
     expect(onSelect).toHaveBeenCalledWith(decks[1]);
   });
 
-  it("as a filter, a row reads the deck's name alone, and the clear row stays first", async () => {
+  it("as a filter, a row shows the deck's mark before the deck's name, and the clear row stays first", async () => {
     const user = userEvent.setup();
     render(
       <DeckPicker
@@ -53,5 +64,8 @@ describe('DeckPicker', () => {
     expect(clear).toHaveTextContent(/^All decks$/);
     expect(commands).toHaveTextContent(/^Commands$/);
     expect(ports).toHaveTextContent(/^Ports$/);
+    expectMarkBeforeName(commands!, 'Commands');
+    expectMarkBeforeName(ports!, 'Ports');
+    expect(within(clear!).queryByRole('img', { name: 'Deck' })).not.toBeInTheDocument();
   });
 });

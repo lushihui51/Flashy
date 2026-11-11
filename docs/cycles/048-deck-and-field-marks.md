@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide: Your library's ro
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -84,7 +84,18 @@ export default function DeckMark(): ReactNode;
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/components/ui/DeckMark.test.tsx src/components/library/DeckRow.test.tsx src/components/library/DeckPicker.test.tsx src/pages/DeckDetailPage.test.tsx` printed `Test Files  4 passed (4)` and `Tests  40 passed (40)`.
+- On the live server at 390 by 844, in headless Chromium: Your library's rows show the stack before each name, 17.1px wide on the rows' 19px text, stroked in the name's ink. A deck's page's heading shows it 27px wide on 30px text, on the same line as the name's first word, with 9.4px between the mark and the name, which is 0.31em. New card's Deck picker shows it, 14.4px on 16px text, before every deck in the open list, and none on "New deck…" or in the empty input. The Practice page's deck filter shows it before every deck, and none on "All decks". "Edit deck" carries none. The console logged no error.
+
+Departures from guidance:
+
+- The mark carries no right margin. The space each caller puts after it gives the gap, 9.4px at 30px against the guidance's 0.3em.
+- On a deck's page, the heading's `nowrap` span holds the mark, the space and only the name's first letter, where drawing 7-deck's span holds the whole first word. In Chromium, a span around the whole word kept a word wider than its line from breaking, so the heading scrolled sideways. A no-break space did not keep the mark beside the word either, since Chromium allows a break beside an inline SVG. With only the first letter in the span, the mark starts the first word's line whenever that word fits on a line, and a longer word still breaks inside itself.
+- `docs/vocabulary.md`'s row "Choosing a deck" now reads each row as "a deck's mark and name", where it read "a deck's name alone", because its rows now carry the mark. The row "A deck's row" stays as it was, since its Where names New practice's picked decks, which carry no mark until cycle 049.
+
+What to read: `DeckDetailPage`'s heading, in `frontend/src/pages/DeckDetailPage.tsx`, for the first-letter span.
 
 ### T2 — The field mark
 

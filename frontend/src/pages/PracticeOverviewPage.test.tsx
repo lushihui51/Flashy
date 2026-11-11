@@ -217,14 +217,14 @@ describe('PracticeOverviewPage', () => {
     await screen.findByText('Beta run');
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Commands' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
 
     await waitFor(() => expect(requests.at(-1)!.get('deck_id')).toBe('d1'));
     expect(screen.getByTestId('current-location')).toHaveTextContent(/^\?deck=d1$/);
     await waitFor(() => expect(screen.queryByText('Beta run')).not.toBeInTheDocument());
   });
 
-  it("each deck's row in the deck filter reads its name alone", async () => {
+  it("each deck's row in the deck filter reads its mark and name", async () => {
     mockLibrary();
     const user = userEvent.setup();
     renderOverview('/practice');
@@ -233,7 +233,10 @@ describe('PracticeOverviewPage', () => {
     await user.click(screen.getByPlaceholderText('All decks'));
     const rows = screen.getAllByRole('option');
     // The first row is "All decks".
-    expect(rows.map((row) => row.textContent)).toEqual(['All decks', 'Commands', 'Ports']);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveAccessibleName('All decks');
+    expect(rows[1]).toHaveAccessibleName('Deck Commands');
+    expect(rows[2]).toHaveAccessibleName('Deck Ports');
   });
 
   it('clearing the deck drops it from the URL', async () => {
@@ -371,7 +374,7 @@ describe('PracticeOverviewPage', () => {
     await screen.findByText('Beta run');
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Commands' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(screen.getByTestId('current-location')).toHaveTextContent('?deck=d1');
@@ -393,7 +396,7 @@ describe('PracticeOverviewPage', () => {
     await screen.findByText('Beta run');
 
     await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Commands' }));
+    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
 
     await waitFor(() => expect(filteredRequests).toHaveLength(1));
     expect(screen.getByText('Beta run')).toBeInTheDocument();

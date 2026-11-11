@@ -313,11 +313,11 @@ describe('DeckConfigurationEditor — create', () => {
     const picker = await screen.findByPlaceholderText('Deck');
     await waitFor(() => expect(picker).toHaveValue('Beta Deck'));
     await user.click(picker);
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Alpha Deck',
-      'Beta Deck',
-      'New deck…',
-    ]);
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(3);
+    expect(options[0]).toHaveAccessibleName('Deck Alpha Deck');
+    expect(options[1]).toHaveAccessibleName('Deck Beta Deck');
+    expect(options[2]).toHaveAccessibleName('New deck…');
   });
 
   it('starts on a deck handed back by the "New deck…" round-trip', async () => {

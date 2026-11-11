@@ -23,7 +23,9 @@ describe('DeckRow', () => {
   });
 
   it('counts one card and one field in the singular', () => {
-    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />);
+    renderWithRouter(
+      <DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />,
+    );
 
     expect(screen.getByText('1 card · 1 field')).toBeInTheDocument();
   });
@@ -51,5 +53,13 @@ describe('DeckRow', () => {
     renderWithRouter(<DeckRow deck={deck} />);
 
     expect(screen.getByRole('link', { name: /Algebra/ })).toHaveAttribute('href', '/decks/d1');
+  });
+
+  it("shows the deck's mark before the deck's name", () => {
+    renderWithRouter(<DeckRow deck={deck} />);
+
+    const title = screen.getByText('Algebra');
+    expect(title.firstElementChild).toBe(screen.getByRole('img', { name: 'Deck' }));
+    expect(screen.getByRole('link', { name: /^Deck Algebra/ })).toBeInTheDocument();
   });
 });

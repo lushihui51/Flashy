@@ -9,6 +9,7 @@ import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import DeckMark from 'src/components/ui/DeckMark';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
@@ -98,6 +99,9 @@ export default function DeckDetailPage() {
 
   const fieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
   const configurations = configurationsQuery.data ?? [];
+  // The heading holds the mark to the name's first letter alone, so the mark always starts the
+  // first word's line and a word too long for one line still breaks inside itself.
+  const [nameFirstLetter = '', ...nameRest] = Array.from(deck.name);
 
   const setTab = (next: Tab) => {
     const nextParams = new URLSearchParams(params);
@@ -130,7 +134,10 @@ export default function DeckDetailPage() {
 
       <div className="mt-3.5 flex items-center gap-3">
         <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          {deck.name}
+          <span className="whitespace-nowrap">
+            <DeckMark /> {nameFirstLetter}
+          </span>
+          {nameRest.join('')}
         </h1>
         {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="heading" />}
       </div>

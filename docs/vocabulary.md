@@ -48,10 +48,11 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Library | Deleting a deck that takes other things with it, each count present only above zero | "This also deletes N decks, N cards, N fields, N deck configurations and N practices. This can't be undone." | Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `/api/deletion-impact` |
 | Deck | A deck | "deck" | Library; deck page; forms; New practice; a practice's page; a deck's board; Home | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |
 | Deck | A deck's name | "Deck name" | New deck; Edit deck | `name`; `DeckCreate`; `DeckBatchEdit` |
+| Deck | A deck's mark | a stack of cards, drawn as an outline in the color of the words beside it; "Deck", spoken | beside every deck's name, never beside the word "deck" | `DeckMark` |
 | Deck | Adding a deck to the list in view | "Add deck" | Library | `AddButton` |
 | Deck | The page where a deck is made | "New deck" | Its heading | `/decks/new`; `DeckEditor` |
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
-| Deck | Choosing a deck | "Deck"; each row a deck's name alone; "New deck…" as the last row | New card; Edit card | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id` |
+| Deck | Choosing a deck | "Deck"; each row a deck's mark and name; "New deck…" as the last row | New card; Edit card | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id` |
 | Deck | A deck counted | "N cards"; "N fields" | Library rows | `card_count`; `field_names` |
 | Deck | A deck's row | its name, then "N cards · N fields" beneath, as "48 cards · 12 fields" | Library; New practice's picked decks | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |

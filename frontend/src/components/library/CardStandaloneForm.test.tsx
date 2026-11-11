@@ -339,7 +339,7 @@ describe('CardStandaloneForm — create mode', () => {
     await screen.findByText('Choose a deck to create a card.');
 
     await user.click(screen.getByRole('combobox'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
 
     expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
   });
@@ -352,7 +352,7 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(await screen.findByRole('combobox'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(screen.queryByText('Choose a deck to create a card.')).not.toBeInTheDocument();
@@ -377,7 +377,7 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
 
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
     await user.type(screen.getByRole('textbox', { name: 'Back' }), 'Hello');
@@ -393,11 +393,11 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
 
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -411,11 +411,11 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
     await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
 
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
     const dialogs = screen.getAllByRole('button', { name: 'Cancel' });
@@ -431,9 +431,9 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm('/cards/new');
 
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^French Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
     await user.click(screen.getByPlaceholderText('Deck'));
-    await user.click(await screen.findByRole('option', { name: /^Spanish Vocab/ }));
+    await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
 
     expect(screen.queryByText('Change deck?')).not.toBeInTheDocument();
     expect(await screen.findByRole('textbox', { name: 'Word' })).toBeInTheDocument();

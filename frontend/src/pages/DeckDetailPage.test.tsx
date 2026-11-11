@@ -114,7 +114,7 @@ describe('DeckDetailPage', () => {
     mockDeck();
     renderAtDeckRoute();
 
-    expect(await screen.findByRole('heading', { name: 'Vocab Deck' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Deck Vocab Deck' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Cards in Vocab Deck' })).toBeInTheDocument();
     expect(screen.getByText('Front')).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe('DeckDetailPage', () => {
     mockDeck({ deckData: { ...deck, readiness: 0.42 } });
     renderAtDeckRoute();
 
-    const heading = await screen.findByRole('heading', { name: 'Vocab Deck' });
+    const heading = await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     const circle = heading.nextElementSibling!;
     expect(circle).toBe(screen.getByRole('img', { name: 'Mastery 42%' }));
     expect(
@@ -142,8 +142,26 @@ describe('DeckDetailPage', () => {
     mockDeck({ deckData: { ...deck, readiness: null, cards: [] } });
     renderAtDeckRoute();
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     expect(screen.queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it("the heading shows the deck's mark before the deck's name", async () => {
+    mockDeck();
+    renderAtDeckRoute();
+
+    const heading = await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
+    const mark = within(heading).getByRole('img', { name: 'Deck' });
+    expect(heading).toHaveTextContent(/^Vocab Deck$/);
+    expect(heading.firstElementChild!.firstElementChild).toBe(mark);
+  });
+
+  it('the pencil Edit deck carries no mark', async () => {
+    mockDeck();
+    renderAtDeckRoute();
+
+    const edit = await screen.findByRole('button', { name: 'Edit deck' });
+    expect(within(edit).queryByRole('img', { name: 'Deck' })).not.toBeInTheDocument();
   });
 
   it("shows each card's mastery on its row", async () => {
@@ -164,7 +182,7 @@ describe('DeckDetailPage', () => {
     mockDeck();
     renderAtDeckRoute();
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
     const links = within(row).getAllByRole('link');
     expect(links).toHaveLength(1);
@@ -186,7 +204,9 @@ describe('DeckDetailPage', () => {
         deckData: {
           ...deck,
           field_defs: [twoFields[0]!],
-          cards: [{ id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' }, readiness: 0.5 }],
+          cards: [
+            { id: 'c1', deck_id: 'd1', created_at: '', values: { f1: 'Bonjour' }, readiness: 0.5 },
+          ],
         },
       });
       renderAtDeckRoute();
@@ -238,7 +258,7 @@ describe('DeckDetailPage', () => {
     mockDeck();
     renderAtDeckRoute();
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     expect(screen.getByRole('button', { name: 'Edit deck' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
     // The add control lives in the tab it acts on, labeled.
@@ -251,7 +271,7 @@ describe('DeckDetailPage', () => {
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     await user.click(screen.getByRole('button', { name: 'Add card' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/cards/new');
@@ -281,7 +301,7 @@ describe('DeckDetailPage', () => {
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     await user.click(screen.getByRole('button', { name: 'Practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practice');
@@ -293,7 +313,7 @@ describe('DeckDetailPage', () => {
     const user = userEvent.setup();
     renderAtDeckRoute(<LocationProbe />);
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     await user.click(screen.getByRole('button', { name: 'Edit deck' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1/edit');
@@ -307,7 +327,7 @@ describe('DeckDetailPage', () => {
     mockDeck({ deckData: { ...deck, field_defs: [], cards: [] } });
     renderAtDeckRoute();
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     expect(await screen.findByText('0 cards · 0 fields')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();
   });
@@ -336,7 +356,7 @@ describe('DeckDetailPage', () => {
     });
     renderAtDeckRoute();
 
-    await screen.findByRole('heading', { name: 'Vocab Deck' });
+    await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
     const card = screen.getByRole('link', { name: /v-f0/ });
     manyFields.forEach((f) => expect(within(card).getByText(`v-${f.id}`)).toBeInTheDocument());
     expect(consoleError).not.toHaveBeenCalled();
@@ -367,7 +387,7 @@ describe('DeckDetailPage', () => {
       const configRequests = mockDeck({ configurations: [configuration()] });
       const user = userEvent.setup();
       renderAtDeckRoute();
-      await screen.findByRole('heading', { name: 'Vocab Deck' });
+      await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
 
       expect(screen.getByRole('tab', { name: 'Cards' })).toHaveAttribute('aria-selected', 'true');
       expect(screen.queryByText('Front to Back')).not.toBeInTheDocument();
@@ -395,7 +415,7 @@ describe('DeckDetailPage', () => {
       mockDeck({ configurations: [] });
       const user = userEvent.setup();
       renderAtDeckRoute(<LocationProbe />);
-      await screen.findByRole('heading', { name: 'Vocab Deck' });
+      await screen.findByRole('heading', { name: 'Deck Vocab Deck' });
 
       expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add configuration' })).not.toBeInTheDocument();
