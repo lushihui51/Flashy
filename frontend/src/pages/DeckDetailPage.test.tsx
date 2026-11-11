@@ -117,8 +117,8 @@ describe('DeckDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Deck Vocab Deck' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Cards in Vocab Deck' })).toBeInTheDocument();
-    expect(screen.getByText('Front')).toBeInTheDocument();
-    expect(screen.getByText('Back')).toBeInTheDocument();
+    expect(screen.getByText('[Front]')).toBeInTheDocument();
+    expect(screen.getByText('[Back]')).toBeInTheDocument();
     expect(screen.getByText('Bonjour')).toBeInTheDocument();
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();

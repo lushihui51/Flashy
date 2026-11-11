@@ -139,7 +139,7 @@ const DESTINATION_LABELS: Record<string, string> = {
 };
 
 async function assign(user: ReturnType<typeof userEvent.setup>, fieldName: string, slot: string) {
-  await user.click(screen.getByRole('button', { name: fieldName }));
+  await user.click(screen.getByRole('button', { name: `[${fieldName}]` }));
   const sheet = await screen.findByRole('dialog');
   await user.click(within(sheet).getByRole('button', { name: DESTINATION_LABELS[slot] }));
 }
@@ -300,9 +300,9 @@ describe('DeckConfigurationEditor — create', () => {
     renderCreate('/deck-configurations/new?deck=d1');
 
     const unused = await screen.findByRole('region', { name: 'Not used' });
-    expect(within(unused).getByText('Term')).toBeInTheDocument();
-    expect(within(unused).getByText('Meaning')).toBeInTheDocument();
-    expect(within(unused).getByText('Reading')).toBeInTheDocument();
+    expect(within(unused).getByText('[Term]')).toBeInTheDocument();
+    expect(within(unused).getByText('[Meaning]')).toBeInTheDocument();
+    expect(within(unused).getByText('[Reading]')).toBeInTheDocument();
   });
 
   it('a deck in context is preselected, and the options keep the order the decks arrive in', async () => {
@@ -457,8 +457,8 @@ describe('DeckConfigurationEditor — create', () => {
     await assign(user, 'Term', 'prompt_fields');
 
     const unused = screen.getByRole('region', { name: 'Not used' });
-    expect(within(unused).queryByText('Term')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Term')).toHaveLength(1);
+    expect(within(unused).queryByText('[Term]')).not.toBeInTheDocument();
+    expect(screen.getAllByText('[Term]')).toHaveLength(1);
   });
 
   it('tapping a chip opens a sheet offering the other four slots; choosing one moves it there', async () => {
@@ -467,15 +467,15 @@ describe('DeckConfigurationEditor — create', () => {
     renderCreate('/deck-configurations/new?deck=d1');
     await screen.findByRole('region', { name: 'Not used' });
 
-    await user.click(screen.getByRole('button', { name: 'Term' }));
-    const sheet = await screen.findByRole('dialog', { name: 'Move "Term" to…' });
+    await user.click(screen.getByRole('button', { name: '[Term]' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Move "[Term]" to…' });
     expect(within(sheet).getAllByRole('button')).toHaveLength(4);
 
     await user.click(within(sheet).getByRole('button', { name: 'Prompt · always shown' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const promptAlways = screen.getByRole('region', { name: 'Prompt · always shown' });
-    expect(within(promptAlways).getByRole('button', { name: 'Term' })).toBeInTheDocument();
+    expect(within(promptAlways).getByRole('button', { name: '[Term]' })).toBeInTheDocument();
   });
 
   it('the random draw frequency row appears only once its area has a field, then lists 1…n', async () => {
@@ -693,7 +693,7 @@ describe('DeckConfigurationEditor — create', () => {
 
     await waitFor(() => {
       const unused = screen.getByRole('region', { name: 'Not used' });
-      expect(within(unused).getByText('Term')).toBeInTheDocument();
+      expect(within(unused).getByText('[Term]')).toBeInTheDocument();
     });
   });
 
@@ -710,7 +710,7 @@ describe('DeckConfigurationEditor — create', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     const unused = screen.getByRole('region', { name: 'Not used' });
-    expect(within(unused).queryByText('Term')).not.toBeInTheDocument();
+    expect(within(unused).queryByText('[Term]')).not.toBeInTheDocument();
   });
 });
 
@@ -724,13 +724,13 @@ describe('DeckConfigurationEditor — edit', () => {
     await screen.findByRole('region', { name: 'Not used' });
     expect(screen.getByLabelText('Name')).toHaveValue('Recall');
     expect(
-      within(screen.getByRole('region', { name: 'Prompt · always shown' })).getByText('Term'),
+      within(screen.getByRole('region', { name: 'Prompt · always shown' })).getByText('[Term]'),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'Answer · always shown' })).getByText('Meaning'),
+      within(screen.getByRole('region', { name: 'Answer · always shown' })).getByText('[Meaning]'),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'Not used' })).getByText('Reading'),
+      within(screen.getByRole('region', { name: 'Not used' })).getByText('[Reading]'),
     ).toBeInTheDocument();
 
     // Edit mode keeps the stored name; the board never re-derives it.

@@ -69,6 +69,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Deck | Confirming a deck's deletion | "Delete deck?" | Edit deck | `confirmDeleteOpen` |
 | Deck | A deck with no cards | "No cards in this deck yet." | Deck page's Cards tab | `DeckDetailPage` |
 | Field | A field | "field" | New deck; Edit deck; counts | `field_def`; `FieldDef`; `DeckFieldDefRead`; `/api/decks/{deck_id}/fields`; `/api/fields/{field_id}`; `fieldDefs` |
+| Field | A field's mark | its name in square brackets, as "[Definition]" | every field's name, never the word "field" | `fieldLabel` |
 | Field | A deck's fields | "Fields" | New deck; Edit deck; a summary card's detail | `field_defs`; `fields` |
 | Field | Adding a field to the deck | "Add field" | New deck; Edit deck | `FieldDefBatchCreate`; `FieldDefBatchOps` |
 | Field | A field's inputs | "Field name"; "Field type" | New deck; Edit deck | `name`; `type` |
@@ -107,7 +108,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Configuration | Fields drawn at random | "Random draw"; "Prompt · random draw"; "Answer · random draw" | The board; the move sheet | `prompt_pool`; `answer_pool`; `prompt_pool_ids`; `answer_pool_ids`; `SLOT_LABELS` |
 | Configuration | How many random fields each card shows | "How many random prompt fields each card shows" and "How many random answer fields each card shows", spoken; "Each card shows [1] [2] … of these" | The board | `prompt_pool_counts`; `answer_pool_counts` |
 | Configuration | A field left out | "Not used" | The board; the move sheet | `unassigned` |
-| Configuration | Moving a field on the board | "Move "<field>" to…" | The board | `BottomSheet`; `BoardSlot` |
+| Configuration | Moving a field on the board | "Move "[<field>]" to…" | The board | `BottomSheet`; `BoardSlot` |
 | Configuration | The deck's fields still loading | "Loading fields…" | New configuration; Edit configuration | `DeckConfigurationEditor` |
 | Configuration | A configuration name already taken | "A configuration with this name already exists." | New configuration; Edit configuration | `configuration_name_taken` |
 | Configuration | New configuration with a blank name | "Give this configuration a name to create it." | New configuration; under the Name input | `nameMissing` |

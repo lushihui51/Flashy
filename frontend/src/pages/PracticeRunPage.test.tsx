@@ -151,7 +151,7 @@ describe('PracticeRunPage', () => {
     renderRun();
 
     expect(await screen.findByText('Bonjour')).toBeInTheDocument();
-    expect(screen.getByText('Front')).toBeInTheDocument();
+    expect(screen.getByText('[Front]')).toBeInTheDocument();
   });
 
   it.each([
@@ -185,7 +185,7 @@ describe('PracticeRunPage', () => {
     await user.click(screen.getByRole('button', { name: 'Show answer' }));
 
     expect(screen.getByText('Hello')).toBeInTheDocument();
-    expect(screen.getByText('Back')).toBeInTheDocument();
+    expect(screen.getByText('[Back]')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show answer' })).not.toBeInTheDocument();
   });
 
@@ -207,13 +207,14 @@ describe('PracticeRunPage', () => {
     renderRun();
 
     await user.click(await screen.findByRole('button', { name: 'Show answer' }));
-    const chip = screen.getByRole('button', { name: 'Photo' });
+    const chip = screen.getByRole('button', { name: '[Photo]' });
     // Scoped by name: the page's own progress bar also carries role="img".
     expect(screen.queryByRole('img', { name: 'Photo' })).not.toBeInTheDocument();
 
     await user.click(chip);
 
-    const image = await screen.findByRole('img', { name: 'Photo' });
+    expect(await screen.findByRole('dialog', { name: '[Photo]' })).toBeInTheDocument();
+    const image = screen.getByRole('img', { name: 'Photo' });
     expect(image).toHaveAttribute('src', 'https://x/img.png');
   });
 
@@ -396,7 +397,7 @@ describe('PracticeRunPage pre-reveal answer zone (MD-6)', () => {
     renderRun();
 
     await screen.findByText('Bonjour');
-    expect(screen.getByText('Back')).toBeInTheDocument();
+    expect(screen.getByText('[Back]')).toBeInTheDocument();
     expect(screen.getByText('Hidden')).toBeInTheDocument();
     expect(screen.queryByText('Hello')).not.toBeInTheDocument();
   });
@@ -418,9 +419,9 @@ describe('PracticeRunPage pre-reveal answer zone (MD-6)', () => {
     renderRun();
 
     await screen.findByText('Bonjour');
-    expect(screen.getByText('Photo')).toBeInTheDocument();
+    expect(screen.getByText('[Photo]')).toBeInTheDocument();
     expect(screen.getByText('Hidden')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Photo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '[Photo]' })).not.toBeInTheDocument();
   });
 
   it('keeps the zone headers and clears the "Hidden" markers after Show answer', async () => {

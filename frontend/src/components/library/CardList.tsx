@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import type { components } from 'src/api/types';
+import { fieldLabel } from 'src/lib/fieldLabel';
 
 type CardListProps = {
   deckName: string;
@@ -36,7 +37,7 @@ export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardL
             {leadField && (
               <span className="flex items-center gap-2.5 py-3">
                 <span className="flex min-w-0 flex-1 flex-col gap-px">
-                  <span className="text-label text-(--color-aside)">{leadField.name}</span>
+                  <span className="text-label text-(--color-aside)">{fieldLabel(leadField.name)}</span>
                   <span className="text-value leading-[1.1] font-bold tracking-[-0.01em] break-words">
                     <FieldValueText value={card.values[leadField.id] ?? ''} />
                   </span>
@@ -55,7 +56,7 @@ export default function CardList({ deckName, fieldDefs, cards, cardHref }: CardL
                         value.length > HALF_WIDTH_CHARACTERS ? 'col-span-2' : ''
                       }`}
                     >
-                      <span className="text-label text-(--color-aside)">{fieldDef.name}</span>
+                      <span className="text-label text-(--color-aside)">{fieldLabel(fieldDef.name)}</span>
                       <span className="text-body leading-[1.35] font-medium break-words">
                         <FieldValueText value={value} />
                       </span>

@@ -307,7 +307,7 @@ describe('RunBreakdown', () => {
         'Answer',
       ]);
       const answerHeading = sheet.getByRole('heading', { level: 3, name: 'Answer' });
-      const os = sheet.getByText('OS');
+      const os = sheet.getByText('[OS]');
       expect(
         os.compareDocumentPosition(answerHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();

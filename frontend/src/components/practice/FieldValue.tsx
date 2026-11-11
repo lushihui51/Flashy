@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Image as ImageIcon, Music } from 'lucide-react';
 import type { components } from 'src/api/types';
+import { fieldLabel } from 'src/lib/fieldLabel';
 
 type ResolvedFieldValue = components['schemas']['ResolvedFieldValue'];
 
@@ -44,7 +45,7 @@ export default function FieldValue({ field, labeled, hidden, zone }: FieldValueP
             zone ? 'text-label text-(--color-aside)' : 'text-xs font-medium text-(--color-aside)'
           }
         >
-          {field.name}
+          {fieldLabel(field.name)}
         </div>
       )}
       {hidden ? (
@@ -78,7 +79,7 @@ function MediaChip({ field, block }: { field: ResolvedFieldValue; block: boolean
           }`}
         >
           <Icon aria-hidden="true" className="h-4 w-4" />
-          {field.name}
+          {fieldLabel(field.name)}
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -88,7 +89,7 @@ function MediaChip({ field, block }: { field: ResolvedFieldValue; block: boolean
           className="fixed inset-x-4 top-1/2 z-60 -translate-y-1/2 rounded-2xl bg-(--color-surface) p-4 focus:outline-none"
         >
           <Dialog.Title className="text-sm font-semibold text-(--color-ink)">
-            {field.name}
+            {fieldLabel(field.name)}
           </Dialog.Title>
           <div className="mt-3">
             {field.type === 'image' ? (

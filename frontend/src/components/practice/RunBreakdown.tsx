@@ -15,6 +15,7 @@ import type { components } from 'src/api/types';
 import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
 import { formatDateTime } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
+import { fieldLabel } from 'src/lib/fieldLabel';
 import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
@@ -101,7 +102,7 @@ function SheetField({
   return (
     <div className="flex flex-col gap-1 pt-2.5 pb-3">
       <div className="flex items-center gap-2.5">
-        <span className="min-w-0 flex-1 text-label text-(--color-aside)">{field.name}</span>
+        <span className="min-w-0 flex-1 text-label text-(--color-aside)">{fieldLabel(field.name)}</span>
         <span
           role="img"
           aria-label={`${field.name}: ${marks.map((mark) => mark.word).join(', then ')}`}

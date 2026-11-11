@@ -10,6 +10,7 @@ import {
   type BoardState,
   type PoolSlot,
 } from 'src/lib/deckConfigurationBoard';
+import { fieldLabel } from 'src/lib/fieldLabel';
 import type { components } from 'src/api/types';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
@@ -57,7 +58,7 @@ export default function FieldAssignmentBoard({
   onToggleCount,
   problem,
 }: FieldAssignmentBoardProps) {
-  const nameById = new Map(fieldDefs.map((field) => [field.id, field.name]));
+  const labelById = new Map(fieldDefs.map((field) => [field.id, fieldLabel(field.name)]));
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   // One shared trigger ref, reassigned to whichever chip was tapped most recently, so
   // BottomSheet's onCloseAutoFocus returns focus to that exact chip.
@@ -78,7 +79,7 @@ export default function FieldAssignmentBoard({
       }}
       className="tappable-sm h-tab max-w-full truncate rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
     >
-      {nameById.get(fieldId) ?? fieldId}
+      {labelById.get(fieldId) ?? fieldId}
     </button>
   );
 
@@ -162,7 +163,7 @@ export default function FieldAssignmentBoard({
   };
 
   const activeSlot = activeFieldId ? state.slots[activeFieldId] : null;
-  const activeName = activeFieldId ? (nameById.get(activeFieldId) ?? activeFieldId) : '';
+  const activeLabel = activeFieldId ? (labelById.get(activeFieldId) ?? activeFieldId) : '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -184,7 +185,7 @@ export default function FieldAssignmentBoard({
         ariaLabelledBy={titleId}
       >
         <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
-          Move "{activeName}" to…
+          Move "{activeLabel}" to…
         </h2>
         <ul className="mt-3 flex flex-col gap-3">
           {DESTINATIONS.filter((destination) => destination !== activeSlot).map((destination) => (

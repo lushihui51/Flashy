@@ -101,7 +101,7 @@ What to read: `DeckDetailPage`'s heading, in `frontend/src/pages/DeckDetailPage.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -158,4 +158,20 @@ export function fieldLabel(name: string): string;
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/lib/fieldLabel.test.ts src/components/library/CardList.test.tsx src/components/library/CardFieldsForm.test.tsx src/components/practice/RunBreakdown.test.tsx src/pages/PracticeRunPage.test.tsx src/components/library/DeckConfigurationEditor.test.tsx` printed `Test Files  6 passed (6)` and `Tests  138 passed (138)`.
+- The cycle's judgement, on the live server at 390 by 844, in headless Chromium, the console logging no error:
+  - Your library's rows and the Commands deck's page's heading show the stack before the deck's name. New card's Deck picker shows it before every deck in its list, and the Practice page's deck filter shows it before every deck and none on "All decks".
+  - The Commands deck's page labels each value "[Command]", "[Command purpose]" … "[Privilege needed]", and the toolbar's "54 cards · 12 fields" carries no mark.
+  - New card, with Commands picked, and Edit card label each of the twelve inputs the same way.
+  - The run page's Prompt zone reads "[Key options or switches]" and its Answer zone "[OS]", before and after Show answer, and the rate chip is still spoken "Rate OS".
+  - A card opened from a completed practice's summary reads "[Front]" and "[Back]", and its marks are still spoken "Front: shown" and "Back: Good".
+  - New configuration's Not used chips read "[Command]", "[Command purpose]" …, and a chip's move sheet reads Move "[Command]" to….
+  - No heading, button, link or label whose words name "deck" or "field" carries either mark. The only matches were Your library's rows, whose mark stands before the deck's name and whose subtitle reads "N fields".
+
+Departures from guidance:
+
+- `fieldLabel`'s comment adds a sentence to the one Details gives: a name only spoken, as an accessible name or an image's alt, is used bare. It tells a caller when not to call it.
+
+What to read: nothing beyond the diff.

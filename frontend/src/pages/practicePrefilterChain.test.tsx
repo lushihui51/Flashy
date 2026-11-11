@@ -241,7 +241,7 @@ function renderChain(initialPath: string) {
 
 // The board's one interaction path: tap the chip, then tap a destination row.
 async function assign(user: ReturnType<typeof userEvent.setup>, fieldName: string, label: string) {
-  await user.click(screen.getByRole('button', { name: fieldName }));
+  await user.click(screen.getByRole('button', { name: `[${fieldName}]` }));
   const sheet = await screen.findByRole('dialog');
   await user.click(within(sheet).getByRole('button', { name: label }));
 }
@@ -288,7 +288,7 @@ describe('practice pre-filter chains', () => {
     expect(builder.params.get('returnTo')).toBe(newPractice.full);
 
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
-    expect(within(notUsed).getByText('Term')).toBeInTheDocument();
+    expect(within(notUsed).getByText('[Term]')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Alpha Deck'));
   });
 
@@ -361,7 +361,7 @@ describe('practice pre-filter chains', () => {
     await waitFor(() => expect(currentLocation().full).toBe(builderLocation));
     await waitFor(() => expect(screen.getByPlaceholderText('Deck')).toHaveValue('Fresh Deck'));
     const notUsed = await screen.findByRole('region', { name: 'Not used' });
-    expect(within(notUsed).getByText('Term')).toBeInTheDocument();
+    expect(within(notUsed).getByText('[Term]')).toBeInTheDocument();
 
     // Author and save a minimal configuration on it.
     await assign(user, 'Term', 'Prompt · always shown');

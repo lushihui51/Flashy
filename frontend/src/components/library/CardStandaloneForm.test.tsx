@@ -140,7 +140,7 @@ describe.each([
 
   const open = async (search: string) => {
     renderForm({ pathname, search, state: { deckId: 'd1' } });
-    await screen.findByRole('textbox', { name: 'Front' });
+    await screen.findByRole('textbox', { name: '[Front]' });
   };
 
   it.each([
@@ -175,7 +175,7 @@ describe.each([
     const user = userEvent.setup();
     await open('?cancelTo=%2Fopener&returnTo=%2Fother');
 
-    await user.type(screen.getByRole('textbox', { name: 'Front' }), 'x');
+    await user.type(screen.getByRole('textbox', { name: '[Front]' }), 'x');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(await screen.findByRole('button', { name: 'Discard' }));
 
@@ -212,7 +212,7 @@ describe('CardStandaloneForm — the heading and the bar', () => {
     const user = userEvent.setup();
     renderForm('/cards/c1/edit');
 
-    await user.type(await screen.findByRole('textbox', { name: 'Front' }), '!');
+    await user.type(await screen.findByRole('textbox', { name: '[Front]' }), '!');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const bar = within(screen.getByTestId('form-bar'));
@@ -284,7 +284,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByRole('button', { name: 'Arrive' }));
 
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('French Vocab'));
-    expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: '[Front]' })).toBeInTheDocument();
   });
 
   it('deck is preselected but still an editable combobox when opened with a deckId in location state', async () => {
@@ -292,7 +292,7 @@ describe('CardStandaloneForm — create mode', () => {
     renderForm({ pathname: '/cards/new', state: { deckId: 'd1' } });
 
     expect(await screen.findByRole('combobox')).toHaveValue('French Vocab');
-    expect(await screen.findByRole('textbox', { name: 'Front' })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: '[Front]' })).toBeInTheDocument();
   });
 
   it('Create reads not ready until a deck is chosen', async () => {
@@ -379,8 +379,8 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
 
-    await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
-    await user.type(screen.getByRole('textbox', { name: 'Back' }), 'Hello');
+    await user.type(await screen.findByRole('textbox', { name: '[Front]' }), 'Bonjour');
+    await user.type(screen.getByRole('textbox', { name: '[Back]' }), 'Hello');
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
@@ -394,7 +394,7 @@ describe('CardStandaloneForm — create mode', () => {
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
-    await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
+    await user.type(await screen.findByRole('textbox', { name: '[Front]' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
@@ -402,7 +402,7 @@ describe('CardStandaloneForm — create mode', () => {
     expect(await screen.findByText('Change deck?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
-    expect(await screen.findByRole('textbox', { name: 'Word' })).toHaveValue('');
+    expect(await screen.findByRole('textbox', { name: '[Word]' })).toHaveValue('');
   });
 
   it('changing deck after typing values, then cancelling, reverts to the original deck with values intact', async () => {
@@ -412,7 +412,7 @@ describe('CardStandaloneForm — create mode', () => {
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /^Deck French Vocab/ }));
-    await user.type(await screen.findByRole('textbox', { name: 'Front' }), 'Bonjour');
+    await user.type(await screen.findByRole('textbox', { name: '[Front]' }), 'Bonjour');
 
     await user.click(screen.getByPlaceholderText('Deck'));
     await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
@@ -422,7 +422,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(dialogs[dialogs.length - 1]!);
 
     expect(await screen.findByPlaceholderText('Deck')).toHaveValue('French Vocab');
-    expect(screen.getByRole('textbox', { name: 'Front' })).toHaveValue('Bonjour');
+    expect(screen.getByRole('textbox', { name: '[Front]' })).toHaveValue('Bonjour');
   });
 
   it('changing deck with no typed values switches immediately, no confirm', async () => {
@@ -436,7 +436,7 @@ describe('CardStandaloneForm — create mode', () => {
     await user.click(await screen.findByRole('option', { name: /^Deck Spanish Vocab/ }));
 
     expect(screen.queryByText('Change deck?')).not.toBeInTheDocument();
-    expect(await screen.findByRole('textbox', { name: 'Word' })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: '[Word]' })).toBeInTheDocument();
   });
 
   it('Cancel with no changes navigates back to /library when no deck is chosen', async () => {
@@ -478,7 +478,7 @@ describe('CardStandaloneForm — create mode', () => {
     );
     renderForm({ pathname: '/cards/new', state: { deckId: 'd1' } });
 
-    const input = await screen.findByRole('textbox', { name: /Diagram/ });
+    const input = await screen.findByRole('textbox', { name: /^\[Diagram\]/ });
     expect(input).toHaveAttribute('readonly');
     expect(screen.getByText('Unsupported field type')).toBeInTheDocument();
     expect(consoleError).not.toHaveBeenCalled();
@@ -492,8 +492,8 @@ describe('CardStandaloneForm — edit mode', () => {
 
     expect(await screen.findByText('French Vocab')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Deck')).not.toBeInTheDocument();
-    expect(await screen.findByRole('textbox', { name: 'Front' })).toHaveValue('Bonjour');
-    expect(screen.getByRole('textbox', { name: 'Back' })).toHaveValue('Hello');
+    expect(await screen.findByRole('textbox', { name: '[Front]' })).toHaveValue('Bonjour');
+    expect(screen.getByRole('textbox', { name: '[Back]' })).toHaveValue('Hello');
   });
 
   it('sends only the changed field on submit and navigates back to the deck', async () => {
@@ -508,7 +508,7 @@ describe('CardStandaloneForm — edit mode', () => {
     const user = userEvent.setup();
     renderForm('/cards/c1/edit');
 
-    const back = await screen.findByRole('textbox', { name: 'Back' });
+    const back = await screen.findByRole('textbox', { name: '[Back]' });
     await user.clear(back);
     await user.type(back, 'Salut');
     await user.click(screen.getByRole('button', { name: 'Save' }));
