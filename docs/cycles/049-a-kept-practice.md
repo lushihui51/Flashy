@@ -615,7 +615,7 @@ What to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -678,7 +678,31 @@ class PracticeUpdate(AppModel):
 
 **Debrief**
 
-None.
+Evidence:
+
+- `uv run pytest tests/api_tests/test_practices.py tests/api_tests/test_auth_scoping.py -q` printed `37 passed`. Among them: `TestRename`'s "a rename moves no practice and touches no run", a never-run practice and a run practice renamed with `GET /api/practices` reading the same ids in the same order and the run's rows unchanged; "a taken name is refused with its code"; "a blank name is a plain 400"; `TestDelete`'s "deleting a practice deletes its runs and leaves every card's readiness", a completed and an active run gone with their copies, card rows and counted cards, the practice's configurations gone, their `mastery_log` rows kept with `run_id` null, `review_log` the same count, and every card of the deck reading the same readiness; and a 404 for another user on `PATCH` and `DELETE`, in `test_practices.py` and in `test_auth_scoping.py`'s `test_practice_endpoints`. The whole backend suite printed `364 passed`.
+- `cd frontend && npx vitest run src/pages/PracticeEditPage.test.tsx src/test/practice.test.ts` printed `Test Files  2 passed (2)`, `Tests  23 passed (23)`. The whole frontend printed `653 passed`; `npm run lint` and `npm run build` were clean.
+- On the live server at 390 by 844, in headless Chromium, signed out with the dev user, on a practice made for the check through New practice:
+  - `/practices/<id>/edit`: the tab read "Edit practice · Flashy"; the heading "Edit practice"; Name holding the practice's name, outlined in ink; "Delete practice" with its trash icon, 358 by 48; the bar "Cancel" and "Save", Save yellow. Nothing scrolled sideways.
+  - Name cleared and Save pressed: "Name is required." under Name, and the page stayed. Another practice's name and Save: "A practice with this name already exists." under Name, inside Name's part.
+  - A new name and Save landed on `/practices/<id>` headed by the new name, and `GET /api/practices` read the same ids in the same order as before the rename.
+  - A changed Name and Cancel landed on `/practices/<id>` with no dialog, the name as saved.
+  - Delete practice opened "Delete this practice?" over "Its runs will be gone. Its decks and your mastery stay as they are.", with Cancel and Delete. Delete landed on `/practices`, which no longer listed the practice, and `GET /api/practices/<id>` answered 404.
+  - No page error was logged.
+
+Departures from guidance:
+
+- `PATCH` strips the name before storing it, as a create strips a typed name, so a name of spaces alone is the plain 400.
+- Save is ready whenever Name is not blank, an unchanged name included, as drawing 4-edit draws Save live over the practice's own name; saving a practice's own name is no conflict.
+- Name is outlined in ink, as drawing 4-edit draws it; New practice's Name keeps the line colour.
+- The route calls `db_delete_practice` itself, with no service between, as ADR 118 states it; the handlers are `patch_practice` and `delete_practice`.
+- A save reads again the practice's page, All practices, Home and every cached run page, each of which names the practice; a deletion reads again All practices and Home.
+- `docs/vocabulary.md`: the two new rows give the paths as the code names them, `/api/practices/{practice_id}`, as every other practice row does, where Details write `{id}`. Following the vocabulary rules, "Deleting a practice" also carries `deletePractice`, as "Deleting a deck" carries `deleteDeck`, and "Confirming a practice's deletion" now carries `confirmDeleteOpen` in place of "—", as the deck's confirm does.
+- A second run of the check script, before its edit to reuse the first practice, made a second practice, "Cycle 049 T4 check 2026-11-11T22:05:18.648Z", which served as the taken name and stays in the dev database, since AGENTS.md forbids deleting rows as cleanup.
+
+What to read:
+
+- `PracticeEditBody` in `frontend/src/pages/PracticeEditPage.tsx`, for the queries a save and a deletion read again.
 
 ### T5 — A practice's page
 

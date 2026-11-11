@@ -9,6 +9,7 @@ const FORMS = [
   'components/library/CardStandaloneForm.tsx',
   'components/library/DeckEditor.tsx',
   'pages/PracticeCreatePage.tsx',
+  'pages/PracticeEditPage.tsx',
 ];
 
 describe('every form draws its sentences and its Create or Save through the two components', () => {

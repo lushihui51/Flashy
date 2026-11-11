@@ -97,6 +97,10 @@ class TestForeignResourcesAreNotFound:
         )
         assert client.get(f"/api/practices/{practice_id}").status_code == 404
         assert client.post(f"/api/practices/{practice_id}/runs").status_code == 404
+        assert (
+            client.patch(f"/api/practices/{practice_id}", json={"name": "x"}).status_code == 404
+        )
+        assert client.delete(f"/api/practices/{practice_id}").status_code == 404
 
     def test_run_endpoints(self, client, other_user, act_as, owned):
         run_id = owned["run"]["id"]

@@ -34,7 +34,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Why leaving discards | "You have unsaved changes. Leaving now will discard them." | New deck; Edit deck; New card; Edit card | `confirmCancelOpen` |
 | App | Deleting a thing that takes nothing else with it | "This can't be undone." | Edit card; Edit deck | `deletionSummaryText`; `ConfirmDialog` |
 | App | Switching the deck a form is filling in | "Change deck?" | New card | `deckChange` |
-| App | A name left blank | "Name is required." | New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name | `nameError`; `FieldsSection` |
+| App | A name left blank | "Name is required." | New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name; Edit practice, under Name | `nameError`; `FieldsSection` |
 | Places | The main places | "Home"; "Your library"; "All practices" | Side menu | `NAV_ITEMS`; `/`; `/library`; `/practices` |
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
@@ -114,6 +114,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | Adding a practice to the list in view | "Add practice" | All practices' header | `PracticeOverviewPage` |
 | Practice | A practice's mark | a flash of lightning, drawn as an outline in the color of the words beside it; "Practice", spoken | beside every practice's name, never beside the word "practice" | `PracticeMark` |
 | Practice | The page where a practice is made | "New practice" | Its heading | `/practices/new`; `PracticeCreatePage`; `PracticeCreate`; `/api/practices` |
+| Practice | The page where a practice is changed | "Edit practice" | Its heading | `/practices/:practiceId/edit`; `PracticeEditPage`; `PATCH /api/practices/{practice_id}` |
 | Practice | A new practice's suggested name | its decks' names in the order picked, joined by " + ", in grey inside Name, as "Commands + Ports"; a name another practice already has, with the next untaken number in parentheses, as "Ports (1)" | New practice | `suggest_practice_name`; `/api/practices/suggested-name`; `SuggestedPracticeName`; `readSuggestedPracticeName` |
 | Practice | The chosen decks | "Choose decks"; "Search decks", spoken, on its search; "Decks", spoken, on the list it opens, each row a deck's name alone and "New deck…" as the last row; each picked deck beneath with its cross; "Remove <name>", spoken; "N selected", above Cancel and Create, once a deck is picked | New practice | `deck`; `deck_ids`; `DeckPicker` |
 | Practice | A practice's own page | its name with its mark and its circle; each of its decks on a line; "Runs" over its runs | A practice's page | `/practices/:practiceId`; `PracticeDetailsPage`; `PracticeDetail`; `/api/practices/{practice_id}` |
@@ -125,9 +126,10 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | Running a practice again | "Re-run" | A completed run's page, as its main action | `/api/runs/{run_id}/rerun`; `rerunRun`; `RerunButton` |
 | Practice | A run that would have no cards | "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." | A practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button | `no_cards`; `NO_CARDS_MESSAGE` |
 | Practice | Starting a next run while one is active | "Finish the active run first." | A completed run's page, under Re-run or Re-run these | `practice_has_active_run` |
-| Practice | A practice name already taken | "A practice with this name already exists." | New practice; Edit practice; under Name | `practice_name_taken` |
+| Practice | A practice name already taken | "A practice with this name already exists." | New practice, under Name; Edit practice, under Name | `practice_name_taken` |
 | Practice | Practicing the cards the summary lists | "Practice these" | The summary, under the counts, once a count is chosen | `/api/runs/{run_id}/chosen_cards`; `RunChosenCards`; `startChosenCards`; `card_ids` |
-| Practice | Confirming a practice's deletion | "Delete this practice?" | Edit practice | — |
+| Practice | Deleting a practice | "Delete practice" | Edit practice | `deletePractice`; `DELETE /api/practices/{practice_id}` |
+| Practice | Confirming a practice's deletion | "Delete this practice?" | Edit practice | `confirmDeleteOpen` |
 | Practice | What deleting a practice takes and leaves | "Its runs will be gone. Its decks and your mastery stay as they are." | Edit practice | — |
 | Run | The page a run runs on | no heading of its own; its practice named in the row of places | Run page | `/runs/:runId`; `RunPage`; `RunState`; `/api/runs/{run_id}/state`; `practice_name` |
 | Run | A run's day | the day it was run, as "2026-11-03"; a later run of one day adds the next number, as "2026-11-03 (1)" | Home, in a run's block; a practice's page, under "Runs"; a completed run's page, its heading | `day`; `day_index`; `formatRunDay` |

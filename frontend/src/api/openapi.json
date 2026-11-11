@@ -1632,6 +1632,157 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Patch Practice",
+        "description": "404 for an unknown or foreign practice; 400 `practice_name_taken` for a name the\nuser's other practice has; a plain 400 for a blank name.",
+        "operationId": "patch_practice_api_practices__practice_id__patch",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Delete Practice",
+        "description": "Deletes the practice with its runs; the user's mastery stays. 404 for an unknown or\nforeign practice.",
+        "operationId": "delete_practice_api_practices__practice_id__delete",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/practices/{practice_id}/runs": {
@@ -3404,6 +3555,19 @@
           "readiness"
         ],
         "title": "PracticeSummary"
+      },
+      "PracticeUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PracticeUpdate"
       },
       "RatedFieldValue": {
         "properties": {

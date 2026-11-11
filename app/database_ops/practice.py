@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Collection
 
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, or_, select
 
@@ -24,6 +25,30 @@ def db_try_stage_create_practice(
     except IntegrityError:
         return None
     return practice
+
+
+def db_try_stage_rename_practice(db: Session, practice: Practice, name: str) -> bool:
+    """Renames `practice` to `name` and flushes, or returns False when the user's other
+    practice already has that name, owning its savepoint. No commit."""
+    try:
+        with db.begin_nested():
+            practice.name = name
+            db.add(practice)
+            db.flush()
+    except IntegrityError:
+        return False
+    return True
+
+
+def db_delete_practice(db: Session, practice_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    """Deletes the user's practice and commits; its configurations and its runs, with all
+    that hangs from them, go with it, its runs' mastery rows stay with no run, and review
+    history stays whole. False when the practice is missing or not the user's."""
+    result = db.execute(
+        delete(Practice).where(Practice.id == practice_id, Practice.user_id == user_id)
+    )
+    db.commit()
+    return result.rowcount > 0
 
 
 def db_read_practice(

@@ -3,14 +3,19 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.database_ops.run import db_try_stage_create_run
 from app.mastery.ema import EmaStrategy
 from app.models.app_user import AppUser
+from app.models.mastery_log import MasteryLog
+from app.models.practice import Practice
 from app.models.practice_configuration import PracticeConfiguration
+from app.models.review_log import ReviewLog
 from app.models.run import Run, RunStatus
 from app.models.run_card import RunCard, RunCardStatus
+from app.models.run_configuration import RunConfiguration
+from app.models.run_counted_card import RunCountedCard
 from app.services.run import start_run
 from tests.conftest import configuration, create_practice, engine, start_practice
 
@@ -396,3 +401,138 @@ class TestReadiness:
         assert practice["readiness"] is None
         assert client.get(f"/api/practices/{practice['id']}").json()["readiness"] is None
         assert client.get("/api/practices").json()[0]["readiness"] is None
+
+
+class TestRename:
+    def test_a_rename_moves_no_practice_and_touches_no_run(self, client, db):
+        ports, _ = _deck(client, "Ports")
+        oldest = create_practice(client, {ports["id"]: None}, "Oldest")
+        run = start_practice(client, {ports["id"]: None}, "Run")
+        newest = create_practice(client, {ports["id"]: None}, "Newest")
+        now = datetime.now(UTC)
+        for practice_id, stamp in (
+            (oldest["id"], now - timedelta(days=3)),
+            (newest["id"], now + timedelta(days=1)),
+        ):
+            row = db.get(Practice, uuid.UUID(practice_id))
+            row.created_at = stamp
+            db.add(row)
+        db.commit()
+        before = client.get("/api/practices").json()
+        runs_before = client.get(f"/api/practices/{run['practice_id']}").json()["runs"]
+        assert [p["name"] for p in before] == ["Newest", "Run", "Oldest"]
+
+        for practice_id in (oldest["id"], run["practice_id"]):
+            res = client.patch(
+                f"/api/practices/{practice_id}", json={"name": "  Renamed " + practice_id}
+            )
+            assert res.status_code == 200, res.text
+            assert res.json()["name"] == "Renamed " + practice_id
+
+        after = client.get("/api/practices").json()
+        assert [p["id"] for p in after] == [p["id"] for p in before]
+        assert [p["name"] for p in after] == [
+            "Newest",
+            "Renamed " + run["practice_id"],
+            "Renamed " + oldest["id"],
+        ]
+        runs_after = client.get(f"/api/practices/{run['practice_id']}").json()["runs"]
+        assert runs_after == runs_before
+
+    def test_a_taken_name_is_refused_with_its_code(self, client):
+        ports, _ = _deck(client, "Ports")
+        create_practice(client, {ports["id"]: None}, "Evening")
+        morning = create_practice(client, {ports["id"]: None}, "Morning")
+
+        res = client.patch(f"/api/practices/{morning['id']}", json={"name": "Evening"})
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "practice_name_taken"
+        assert client.get(f"/api/practices/{morning['id']}").json()["name"] == "Morning"
+
+    def test_keeping_its_own_name_is_no_conflict(self, client):
+        ports, _ = _deck(client, "Ports")
+        morning = create_practice(client, {ports["id"]: None}, "Morning")
+
+        res = client.patch(f"/api/practices/{morning['id']}", json={"name": "Morning"})
+        assert res.status_code == 200, res.text
+
+    def test_a_blank_name_is_a_plain_400(self, client):
+        ports, _ = _deck(client, "Ports")
+        morning = create_practice(client, {ports["id"]: None}, "Morning")
+
+        res = client.patch(f"/api/practices/{morning['id']}", json={"name": "   "})
+        assert res.status_code == 400, res.text
+        assert isinstance(res.json()["detail"], str)
+        assert client.get(f"/api/practices/{morning['id']}").json()["name"] == "Morning"
+
+
+class TestDelete:
+    def test_deleting_a_practice_deletes_its_runs_and_leaves_every_cards_readiness(
+        self, client, db
+    ):
+        ports, _ = _deck(client, "Ports", cards=3)
+        kept = create_practice(client, {ports["id"]: None}, "Kept")
+        finished = start_practice(client, {ports["id"]: None}, "Gone")
+        _finish(client, finished["id"])
+        practice_id = finished["practice_id"]
+        active = client.post(f"/api/practices/{practice_id}/runs").json()
+        run_ids = {uuid.UUID(finished["id"]), uuid.UUID(active["id"])}
+
+        def readiness():
+            cards = client.get(f"/api/decks/{ports['id']}").json()["cards"]
+            return {card["id"]: card["readiness"] for card in cards}
+
+        readiness_before = readiness()
+        assert any(value for value in readiness_before.values())
+        db.expire_all()
+        mastery_rows = db.exec(
+            select(MasteryLog.id).where(col(MasteryLog.run_id).in_(run_ids))
+        ).all()
+        assert mastery_rows
+        reviews_before = len(db.exec(select(ReviewLog.id)).all())
+
+        res = client.delete(f"/api/practices/{practice_id}")
+        assert res.status_code == 204, res.text
+
+        assert client.get(f"/api/practices/{practice_id}").status_code == 404
+        assert [p["id"] for p in client.get("/api/practices").json()] == [kept["id"]]
+        assert client.get(f"/api/runs/{finished['id']}").status_code == 404
+        db.expire_all()
+        for model, column in (
+            (Run, Run.id),
+            (RunConfiguration, RunConfiguration.run_id),
+            (RunCard, RunCard.run_id),
+            (RunCountedCard, RunCountedCard.run_id),
+        ):
+            assert db.exec(select(model).where(col(column).in_(run_ids))).all() == []
+        assert (
+            db.exec(
+                select(PracticeConfiguration).where(
+                    PracticeConfiguration.practice_id == uuid.UUID(practice_id)
+                )
+            ).all()
+            == []
+        )
+        assert [
+            row.run_id
+            for row in db.exec(select(MasteryLog).where(col(MasteryLog.id).in_(mastery_rows)))
+        ] == [None] * len(mastery_rows)
+        assert len(db.exec(select(ReviewLog.id)).all()) == reviews_before
+        assert readiness() == readiness_before
+        assert client.get(f"/api/practices/{kept['id']}").status_code == 200
+
+    def test_another_users_practice_is_a_404_on_both_paths_and_stays(
+        self, client, act_as, other_user, existing_user
+    ):
+        ports, _ = _deck(client, "Ports")
+        practice = create_practice(client, {ports["id"]: None}, "Mine")
+
+        act_as(other_user)
+        assert (
+            client.patch(f"/api/practices/{practice['id']}", json={"name": "Theirs"}).status_code
+            == 404
+        )
+        assert client.delete(f"/api/practices/{practice['id']}").status_code == 404
+
+        act_as(existing_user)
+        assert client.get(f"/api/practices/{practice['id']}").json()["name"] == "Mine"

@@ -15,6 +15,11 @@ class PracticeCreate(AppModel):
     deck_ids: list[uuid.UUID]
 
 
+class PracticeUpdate(AppModel):
+    # Stripped before it is stored; blank after stripping is refused.
+    name: str
+
+
 class DeckNameRead(AppModel):
     deck_id: uuid.UUID
     deck_name: str

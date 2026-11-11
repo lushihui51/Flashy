@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import SessionDep
+from app.database_ops.practice import db_delete_practice
 from app.database_ops.run import db_read_run_reads_for_practice
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
@@ -11,11 +12,17 @@ from app.models.practice_payloads import (
     PracticeCreate,
     PracticeDetail,
     PracticeSummary,
+    PracticeUpdate,
     SuggestedPracticeName,
 )
 from app.models.run import RunRead
 from app.refusals import Refusal
-from app.services.practice import create_practice, practice_summaries, suggest_practice_name
+from app.services.practice import (
+    create_practice,
+    practice_summaries,
+    rename_practice,
+    suggest_practice_name,
+)
 from app.services.run import start_run
 
 router = APIRouter(prefix="/practices", tags=["Practice"])
@@ -65,6 +72,32 @@ def get_practice(db: SessionDep, current_user: CurrentUserDep, practice_id: uuid
     return PracticeDetail(
         **summaries[0].model_dump(), runs=db_read_run_reads_for_practice(db, practice_id)
     )
+
+
+@router.patch("/{practice_id}", response_model=PracticeSummary, status_code=200)
+def patch_practice(
+    db: SessionDep, current_user: CurrentUserDep, practice_id: uuid.UUID, payload: PracticeUpdate
+):
+    """404 for an unknown or foreign practice; 400 `practice_name_taken` for a name the
+    user's other practice has; a plain 400 for a blank name."""
+    try:
+        return rename_practice(
+            db, get_mastery_strategy(), current_user.id, practice_id, payload.name
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail="Practice not found") from e
+    except Refusal as e:
+        raise HTTPException(status_code=400, detail=e.detail) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.delete("/{practice_id}", status_code=204)
+def delete_practice(db: SessionDep, current_user: CurrentUserDep, practice_id: uuid.UUID):
+    """Deletes the practice with its runs; the user's mastery stays. 404 for an unknown or
+    foreign practice."""
+    if not db_delete_practice(db, practice_id, current_user.id):
+        raise HTTPException(status_code=404, detail="Practice not found")
 
 
 @router.post("/{practice_id}/runs", response_model=RunRead, status_code=200)

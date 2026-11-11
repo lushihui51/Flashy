@@ -3,9 +3,11 @@ import { http, HttpResponse } from 'msw';
 import { server } from 'src/test/server';
 import {
   createPractice,
+  deletePractice,
   readPractice,
   readPractices,
   readSuggestedPracticeName,
+  renamePractice,
   startRun,
 } from 'src/api/practice';
 import { ApiDetailError } from 'src/api/unwrap';
@@ -143,5 +145,65 @@ describe('startRun', () => {
 
     const error = await startRun('practice_1').catch((e: unknown) => e);
     expect((error as ApiDetailError).detail.code).toBe('no_cards');
+  });
+});
+
+describe('renamePractice', () => {
+  it('patches the practice with its new name and returns the practice', async () => {
+    let requested: unknown;
+    let body: unknown;
+    server.use(
+      http.patch(`${BASE}/api/practices/:practice_id`, async ({ params, request }) => {
+        requested = params.practice_id;
+        body = await request.json();
+        return HttpResponse.json({ ...SUMMARY, name: 'Evening' });
+      }),
+    );
+
+    await expect(renamePractice('practice_1', 'Evening')).resolves.toEqual({
+      ...SUMMARY,
+      name: 'Evening',
+    });
+    expect(requested).toBe('practice_1');
+    expect(body).toEqual({ name: 'Evening' });
+  });
+
+  it('throws an ApiDetailError carrying practice_name_taken', async () => {
+    server.use(
+      http.patch(`${BASE}/api/practices/:practice_id`, () =>
+        HttpResponse.json(
+          { detail: { code: 'practice_name_taken', message: 'x' } },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    const error = await renamePractice('practice_1', 'Evening').catch((e: unknown) => e);
+    expect((error as ApiDetailError).detail.code).toBe('practice_name_taken');
+  });
+});
+
+describe('deletePractice', () => {
+  it('deletes the practice and resolves with nothing', async () => {
+    let requested: unknown;
+    server.use(
+      http.delete(`${BASE}/api/practices/:practice_id`, ({ params }) => {
+        requested = params.practice_id;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(deletePractice('practice_1')).resolves.toBeUndefined();
+    expect(requested).toBe('practice_1');
+  });
+
+  it('throws for an unknown or foreign practice', async () => {
+    server.use(
+      http.delete(`${BASE}/api/practices/:practice_id`, () =>
+        HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
+      ),
+    );
+
+    await expect(deletePractice('practice_1')).rejects.toThrow('Practice not found');
   });
 });

@@ -6,9 +6,11 @@ from app.database_ops.app_user import db_stage_set_first_practice_at
 from app.database_ops.field_def import db_read_field_defs_for_decks
 from app.database_ops.practice import (
     db_read_owned_deck_names,
+    db_read_practice,
     db_read_practice_names_from,
     db_read_practice_listings,
     db_try_stage_create_practice,
+    db_try_stage_rename_practice,
 )
 from app.database_ops.practice_configuration import (
     db_try_stage_create_practice_configurations,
@@ -126,3 +128,26 @@ def create_practice(
     db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     return practice_summaries(db, strategy, user_id, practice.id)[0]
+
+
+def rename_practice(
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    practice_id: uuid.UUID,
+    name: str,
+) -> PracticeSummary:
+    """Renames the user's practice to `name`, stripped, and commits. Nothing is touched, so
+    the practice keeps its place in every list. Raises LookupError when the practice is
+    missing or not the user's, ValueError when `name` is blank, and
+    `Refusal("practice_name_taken")` when the user's other practice has that name."""
+    practice = db_read_practice(db, practice_id, user_id)
+    if practice is None:
+        raise LookupError("practice not found")
+    stripped = name.strip()
+    if not stripped:
+        raise ValueError("a practice's name cannot be blank")
+    if not db_try_stage_rename_practice(db, practice, stripped):
+        raise Refusal("practice_name_taken", "the user already has a practice of this name")
+    db.commit()
+    return practice_summaries(db, strategy, user_id, practice_id)[0]

@@ -216,10 +216,20 @@ export interface paths {
         get: operations["get_practice_api_practices__practice_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Practice
+         * @description Deletes the practice with its runs; the user's mastery stays. 404 for an unknown or
+         *     foreign practice.
+         */
+        delete: operations["delete_practice_api_practices__practice_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Patch Practice
+         * @description 404 for an unknown or foreign practice; 400 `practice_name_taken` for a name the
+         *     user's other practice has; a plain 400 for a blank name.
+         */
+        patch: operations["patch_practice_api_practices__practice_id__patch"];
         trace?: never;
     };
     "/api/practices/{practice_id}/runs": {
@@ -921,6 +931,11 @@ export interface components {
             active_run_id: string | null;
             /** Readiness */
             readiness: number | null;
+        };
+        /** PracticeUpdate */
+        PracticeUpdate: {
+            /** Name */
+            name: string;
         };
         /**
          * RatedFieldValue
@@ -1854,6 +1869,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PracticeDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_practice_api_practices__practice_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_practice_api_practices__practice_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSummary"];
                 };
             };
             /** @description Validation Error */

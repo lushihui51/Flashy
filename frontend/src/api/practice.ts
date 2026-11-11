@@ -1,5 +1,5 @@
 import { client } from 'src/api/client';
-import { unwrap } from 'src/api/unwrap';
+import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
 export const createPractice = async (payload: components['schemas']['PracticeCreate']) =>
@@ -10,6 +10,22 @@ export const readPractices = async () => unwrap(await client.GET('/api/practices
 export const readPractice = async (practiceId: string) =>
   unwrap(
     await client.GET('/api/practices/{practice_id}', {
+      params: { path: { practice_id: practiceId } },
+    }),
+  );
+
+export const renamePractice = async (practiceId: string, name: string) =>
+  unwrap(
+    await client.PATCH('/api/practices/{practice_id}', {
+      params: { path: { practice_id: practiceId } },
+      body: { name },
+    }),
+  );
+
+/** Deletes the practice with its runs; the user's mastery stays. */
+export const deletePractice = async (practiceId: string) =>
+  unwrapVoid(
+    await client.DELETE('/api/practices/{practice_id}', {
       params: { path: { practice_id: practiceId } },
     }),
   );
