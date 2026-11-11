@@ -3,7 +3,6 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import SessionDep
-from app.database_ops.run import db_read_run_read
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.run import RunRead
@@ -12,11 +11,13 @@ from app.models.run_payloads import (
     RatingSubmissionResult,
     RunBreakdownRead,
     RunChosenCards,
+    RunDetail,
     RunState,
 )
 from app.refusals import Refusal
 from app.services.run import (
     read_run_breakdown,
+    read_run_detail,
     read_run_state,
     rerun,
     start_chosen_cards,
@@ -26,9 +27,10 @@ from app.services.run import (
 router = APIRouter(tags=["Run"])
 
 
-@router.get("/runs/{run_id}", response_model=RunRead, status_code=200)
+@router.get("/runs/{run_id}", response_model=RunDetail, status_code=200)
 def get_run(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
-    run = db_read_run_read(db, run_id, current_user.id)
+    """404 for an unknown or foreign run."""
+    run = read_run_detail(db, run_id, current_user.id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run

@@ -173,3 +173,139 @@ class TestWithoutFields:
         }
         assert not has_empty_side(arrays)
         assert has_empty_side(without_fields(arrays, {b}))
+
+
+def _deck_of_four_fields(client, name="Ports"):
+    """A deck with fields a, b, c and d and one card filling each, and its field ids by
+    name."""
+    deck = client.post(
+        "/api/decks",
+        json={"name": name, "field_defs": [{"name": f, "type": "text"} for f in "abcd"]},
+    )
+    assert deck.status_code == 201, deck.text
+    fields = {fd["name"]: fd["id"] for fd in deck.json()["field_defs"]}
+    card = client.post(
+        "/api/cards",
+        json={"deck_id": deck.json()["id"], "values": {fid: "v" for fid in fields.values()}},
+    )
+    assert card.status_code == 201, card.text
+    return deck.json(), fields
+
+
+def _arrays(prompt=(), answer=(), prompt_pool=(), prompt_counts=(), answer_pool=(), answer_counts=()):
+    return {
+        "prompt_field_ids": list(prompt),
+        "answer_field_ids": list(answer),
+        "prompt_pool_ids": list(prompt_pool),
+        "prompt_pool_counts": list(prompt_counts),
+        "answer_pool_ids": list(answer_pool),
+        "answer_pool_counts": list(answer_counts),
+    }
+
+
+def _practice(client, deck_ids):
+    res = client.post("/api/practices", json={"deck_ids": deck_ids})
+    assert res.status_code == 201, res.text
+    return res.json()
+
+
+def _save(client, practice_id, deck_id, arrays):
+    return client.put(f"/api/practices/{practice_id}/configurations/{deck_id}", json=arrays)
+
+
+def _practice_configurations(client, practice_id):
+    res = client.get(f"/api/practices/{practice_id}")
+    assert res.status_code == 200, res.text
+    return {c["deck_id"]: c for c in res.json()["configurations"]}
+
+
+def _run_configurations(client, run_id):
+    res = client.get(f"/api/runs/{run_id}")
+    assert res.status_code == 200, res.text
+    return {c["deck_id"]: c for c in res.json()["configurations"]}
+
+
+def _finish(client, run_id):
+    for _ in range(50):
+        card = client.get(f"/api/runs/{run_id}/state").json()["current_card"]
+        if card is None:
+            return
+        res = client.post(
+            f"/api/run_cards/{card['run_card_id']}/rate",
+            json={"ratings": {a["field_def_id"]: 4 for a in card["answers"]}},
+        )
+        assert res.status_code == 200, res.text
+    raise AssertionError("the run never completed")
+
+
+class TestSave:
+    """PUT /api/practices/{id}/configurations/{deck_id}."""
+
+    def test_a_save_replaces_the_whole_configuration_and_answers_it(self, client):
+        deck, f = _deck_of_four_fields(client)
+        practice = _practice(client, [deck["id"]])
+        arrays = _arrays([f["b"]], [], [], [], [f["a"], f["c"], f["d"]], [1, 3])
+
+        res = _save(client, practice["id"], deck["id"], arrays)
+
+        assert res.status_code == 200, res.text
+        assert res.json() == {"deck_id": deck["id"], **arrays}
+        assert _practice_configurations(client, practice["id"]) == {deck["id"]: res.json()}
+
+    def test_a_save_reaches_the_next_run_and_leaves_the_active_runs_copy(self, client):
+        deck, f = _deck_of_four_fields(client)
+        practice = _practice(client, [deck["id"]])
+        active = client.post(f"/api/practices/{practice['id']}/runs").json()
+        cut = _run_configurations(client, active["id"])
+        saved = _arrays([f["d"]], [f["c"]], [], [], [f["a"], f["b"]], [2])
+
+        res = _save(client, practice["id"], deck["id"], saved)
+        assert res.status_code == 200, res.text
+
+        assert _run_configurations(client, active["id"]) == cut
+        _finish(client, active["id"])
+        next_run = client.post(f"/api/practices/{practice['id']}/runs").json()
+        assert next_run["id"] != active["id"]
+        assert _run_configurations(client, next_run["id"]) == {
+            deck["id"]: {"deck_id": deck["id"], **saved}
+        }
+        assert _run_configurations(client, active["id"]) == cut
+
+    @pytest.mark.parametrize(
+        "broken",
+        ["a field of another deck", "a field on both sides", "a count above its pool"],
+    )
+    def test_a_configuration_breaking_a_rule_is_refused_and_writes_nothing(
+        self, client, broken
+    ):
+        deck, f = _deck_of_four_fields(client)
+        _, other = _deck_of_four_fields(client, "Commands")
+        practice = _practice(client, [deck["id"]])
+        before = _practice_configurations(client, practice["id"])
+        arrays = {
+            "a field of another deck": _arrays([f["a"]], [other["b"]]),
+            "a field on both sides": _arrays([f["a"]], [f["a"], f["b"]]),
+            "a count above its pool": _arrays([f["a"]], [], [], [], [f["b"], f["c"]], [3]),
+        }[broken]
+
+        res = _save(client, practice["id"], deck["id"], arrays)
+
+        assert res.status_code == 400, res.text
+        assert isinstance(res.json()["detail"], str)
+        assert _practice_configurations(client, practice["id"]) == before
+
+    def test_a_deck_that_is_not_the_practices_is_a_404(self, client):
+        deck, f = _deck_of_four_fields(client)
+        outside, g = _deck_of_four_fields(client, "Commands")
+        practice = _practice(client, [deck["id"]])
+
+        res = _save(client, practice["id"], outside["id"], _arrays([g["a"]], [g["b"]]))
+
+        assert res.status_code == 404, res.text
+
+    def test_an_unknown_practice_is_a_404(self, client):
+        deck, f = _deck_of_four_fields(client)
+
+        res = _save(client, uuid.uuid4(), deck["id"], _arrays([f["a"]], [f["b"]]))
+
+        assert res.status_code == 404, res.text

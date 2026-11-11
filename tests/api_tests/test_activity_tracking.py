@@ -5,7 +5,7 @@ it. A card write, a create, an edit or a delete, reaches the deck, and an edit o
 by id reaches the card. A field create, rename, reorder or delete reaches the deck. A
 write over every card of a deck, a field created or deleted, moves no card. A run is
 touched when it is cut and on every rating in it; creating a practice or running it
-touches no deck or card."""
+touches no deck or card, and saving how a practice asks a deck touches nothing."""
 
 import uuid
 from datetime import datetime
@@ -292,6 +292,39 @@ class TestRunWrites:
 
         after_deck = client.get(f"/api/decks/{deck['id']}").json()
         assert after_deck["last_activity_at"] == before_deck["last_activity_at"]
+
+
+    def test_saving_a_practices_configuration_moves_no_practice_and_touches_nothing(
+        self, client
+    ):
+        deck = _make_deck(client)
+        _make_card(client, deck)
+        run = _start_run(client, deck)
+        later = client.post("/api/practices", json={"deck_ids": [deck["id"]]})
+        assert later.status_code == 201, later.text
+        order = [p["id"] for p in client.get("/api/practices").json()]
+        before_deck = client.get(f"/api/decks/{deck['id']}").json()
+        before_run = client.get(f"/api/runs/{run['id']}").json()
+        front_id, back_id = _field_ids(deck)
+
+        saved = client.put(
+            f"/api/practices/{run['practice_id']}/configurations/{deck['id']}",
+            json={
+                "prompt_field_ids": [back_id],
+                "answer_field_ids": [front_id],
+                "prompt_pool_ids": [],
+                "prompt_pool_counts": [],
+                "answer_pool_ids": [],
+                "answer_pool_counts": [],
+            },
+        )
+        assert saved.status_code == 200, saved.text
+
+        assert [p["id"] for p in client.get("/api/practices").json()] == order
+        after_deck = client.get(f"/api/decks/{deck['id']}").json()
+        assert after_deck["last_activity_at"] == before_deck["last_activity_at"]
+        after_run = client.get(f"/api/runs/{run['id']}").json()
+        assert after_run["last_activity_at"] == before_run["last_activity_at"]
 
 
 class TestRecencyOrdering:

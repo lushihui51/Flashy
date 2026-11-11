@@ -40,6 +40,22 @@ def db_read_practice_configurations(
     )
 
 
+def db_read_practice_configuration(
+    db: Session, user_id: uuid.UUID, practice_id: uuid.UUID, deck_id: uuid.UUID
+) -> PracticeConfiguration | None:
+    """The user's practice's configuration of the deck, or None when the practice is
+    missing or not the user's, or the deck is not one of the practice's."""
+    return db.exec(
+        select(PracticeConfiguration)
+        .join(Practice, Practice.id == PracticeConfiguration.practice_id)
+        .where(
+            PracticeConfiguration.practice_id == practice_id,
+            PracticeConfiguration.deck_id == deck_id,
+            Practice.user_id == user_id,
+        )
+    ).first()
+
+
 def db_read_practice_configurations_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> list[PracticeConfiguration]:

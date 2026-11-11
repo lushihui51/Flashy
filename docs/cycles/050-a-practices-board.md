@@ -32,7 +32,7 @@ Judgement: The engineer judges on the live server at 390 wide: on a practice wit
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -66,6 +66,7 @@ None.
 - `frontend/src/api/run.ts`
 - `frontend/src/test/practice.test.ts`
 - `frontend/src/test/run.test.ts`
+- `frontend/src/pages/PracticeEditPage.test.tsx`
 
 **Details**
 
@@ -112,7 +113,15 @@ class RunDetail(RunRead):
 
 **Debrief**
 
-None.
+- Done when, the pytest line: `166 passed in 23.33s`. New tests: `TestSave` in `test_practice_configuration.py` (a save replaces the whole row and answers it; a save reaches the next run's copy and leaves the active run's copy as cut; a field of another deck, a field on both sides and a count above its pool are each a plain-string 400 that writes nothing; a deck not the practice's and an unknown practice are 404s); `TestDetail` in `test_practices.py` (one configuration per deck, in the order of `decks`, equal to its row); `TestRunDetail` in `test_runs.py` (the practice's name, the decks and the copies, and a run of chosen cards carrying a deck that holds no chosen card); the PUT on another user's practice in `test_auth_scoping.py::test_practice_endpoints`; `test_saving_a_practices_configuration_moves_no_practice_and_touches_nothing` in `test_activity_tracking.py`.
+- Done when, the vitest line: `Test Files 2 passed (2)`, `Tests 23 passed (23)`, with new cases for `savePracticeConfiguration` (its PUT path, body and answer, and a 404) and `readRun` answering a `RunDetail`.
+- AGENTS.md's checks: `npx vitest run` 663 passed, `npm run lint` clean, `npm run build` clean; the full `pytest`, run with no other connection to the test database, 379 passed.
+- Path added with the engineer's go-ahead: `frontend/src/pages/PracticeEditPage.test.tsx`, whose `PRACTICE` fixture is typed `PracticeDetail` and failed `tsc -b` without `configurations`; it gained one configuration for its deck and nothing it checks changed.
+- Departure: `RunListing` moved from `app/models/run_payloads.py` to `app/models/practice_payloads.py`, since `run_payloads.py` now imports `ConfigurationArrays` and `DeckNameRead` from `practice_payloads.py`, which imported `RunListing` back, a circular import. Its name and shape are unchanged; cycles 051 and 052 name it without its module.
+- Departure: `RunDetail.decks` carries its comment without "(PDR 047)", which the comment rules forbid on a member; `configurations` on both reads says it comes in the order of `decks`.
+- The reads are composed in services: `practice_detail` in `app/services/practice.py`, which `GET /api/practices/{id}` now calls in place of composing in the router, and `read_run_detail` in `app/services/run.py`. Each adds one statement for the configurations, `db_read_practice_configurations` or the new `db_read_run_configurations`.
+- The save reads its row with `db_read_practice_configuration`, one statement scoped to the user through the practice, so an unknown or foreign practice and a deck not the practice's are one 404 with the detail "Deck not found".
+- Read `save_practice_configuration` in `app/services/practice_configuration.py`: it looks up the row before validating, so a 404 wins over a 400, and it writes all six columns.
 
 ### T2 — The board as a form
 

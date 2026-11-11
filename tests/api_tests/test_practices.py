@@ -378,6 +378,34 @@ class TestList:
         assert names == ["Run lately", "Never run, new", "Run long ago", "Never run, old"]
 
 
+class TestDetail:
+    def test_the_read_carries_one_configuration_per_deck_in_the_order_of_its_decks(
+        self, client, db
+    ):
+        older, older_fields = _deck(client, "Older")
+        newer, _ = _deck(client, "Newer")
+        asked = configuration([older_fields[2]], [older_fields[0]], [older_fields[1]], [1])
+        practice = create_practice(client, {older["id"]: asked, newer["id"]: None})
+
+        detail = client.get(f"/api/practices/{practice['id']}").json()
+
+        assert [c["deck_id"] for c in detail["configurations"]] == [
+            d["deck_id"] for d in detail["decks"]
+        ]
+        for read in detail["configurations"]:
+            row = _configuration_row(db, practice["id"], read["deck_id"])
+            assert read == {
+                "deck_id": read["deck_id"],
+                **{
+                    column: [str(v) if isinstance(v, uuid.UUID) else v for v in getattr(row, column)]
+                    for column in configuration()
+                },
+            }
+        older_read = next(c for c in detail["configurations"] if c["deck_id"] == older["id"])
+        assert older_read["prompt_field_ids"] == [older_fields[2]]
+        assert older_read["prompt_pool_ids"] == [older_fields[1]]
+
+
 class TestReadiness:
     def test_a_practice_carries_the_readiness_of_all_its_decks_cards(self, client):
         small, _ = _deck(client, "Small", cards=1)

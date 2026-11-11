@@ -24,6 +24,7 @@ from app.database_ops.practice_configuration import db_read_practice_configurati
 from app.database_ops.run import (
     db_read_active_run,
     db_read_run,
+    db_read_run_decks,
     db_read_run_read,
     db_stage_create_run,
     db_stage_update_run_status,
@@ -44,6 +45,7 @@ from app.database_ops.run_card import (
 )
 from app.database_ops.run_configuration import (
     db_read_run_configuration_for_deck,
+    db_read_run_configurations,
     db_stage_create_run_configuration,
 )
 from app.database_ops.run_counted_card import db_stage_create_run_counted_cards
@@ -64,6 +66,8 @@ from app.models.run_payloads import (
     RatedFieldValue,
     ResolvedFieldValue,
     RunBreakdownRead,
+    RunConfigurationRead,
+    RunDetail,
     RunProgress,
     RunState,
 )
@@ -238,6 +242,26 @@ def start_run(
     cut_run(db, strategy, practice, run, rng=rng)
     db.commit()
     return _read_run(db, run.id, user_id)
+
+
+def read_run_detail(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunDetail | None:
+    """The user's run with its practice's name, every deck it asked, a deck of a run of
+    chosen cards holding none of them included, and how it asked each, as cut; None when
+    the run is missing or not the user's."""
+    run = db_read_run_read(db, run_id, user_id)
+    if run is None:
+        return None
+    practice = db_read_practice(db, run.practice_id, user_id)
+    assert practice is not None, "a run's practice has the run's owner"
+    return RunDetail(
+        **run.model_dump(),
+        practice_name=practice.name,
+        decks=db_read_run_decks(db, [run_id]).get(run_id, []),
+        configurations=[
+            RunConfigurationRead.model_validate(configuration)
+            for configuration in db_read_run_configurations(db, run_id)
+        ],
+    )
 
 
 def _next_run_practice(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> tuple[Run, Practice]:

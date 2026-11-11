@@ -2549,6 +2549,64 @@ class TestChosenCards:
             assert res.status_code == 400, res.text
 
 
+class TestRunDetail:
+    """GET /api/runs/{id}: the run with its practice's name, its decks and how it asked
+    each."""
+
+    @staticmethod
+    def _as_read(copy):
+        return {
+            "deck_id": str(copy.deck_id),
+            **{
+                column: [str(v) if isinstance(v, uuid.UUID) else v for v in getattr(copy, column)]
+                for column in _ARRAYS
+            },
+        }
+
+    def test_carries_the_practices_name_its_decks_and_their_copies(self, client, db):
+        _, _, config_a = _two_field_deck(client, "Deck A")
+        _, _, config_b = _two_field_deck(client, "Deck B")
+        run = start_practice(client, _decks([config_a, config_b]), "Two decks")
+
+        detail = client.get(f"/api/runs/{run['id']}")
+
+        assert detail.status_code == 200, detail.text
+        body = detail.json()
+        assert body["practice_name"] == "Two decks"
+        assert [d["deck_name"] for d in body["decks"]] == ["Deck B", "Deck A"]
+        assert [c["deck_id"] for c in body["configurations"]] == [
+            config_b["deck_id"],
+            config_a["deck_id"],
+        ]
+        copies = {str(c.deck_id): self._as_read(c) for c in _snapshots(db, run["id"])}
+        assert body["configurations"] == [copies[config_b["deck_id"]], copies[config_a["deck_id"]]]
+        assert body["configurations"][1] == {
+            k: v for k, v in config_a.items() if k == "deck_id" or k in _ARRAYS
+        }
+
+    def test_a_run_of_chosen_cards_carries_a_deck_holding_no_chosen_card(self, client):
+        _, card_a, config_a = _two_field_deck(client, "Deck A")
+        _, _, config_b = _two_field_deck(client, "Deck B")
+        run = _start(client, [config_a, config_b])
+        _finish_run(client, run["id"])
+        chosen = _chosen(client, run["id"], [card_a])
+        assert chosen.status_code == 201, chosen.text
+
+        body = client.get(f"/api/runs/{chosen.json()['id']}").json()
+
+        assert {d["deck_id"] for d in body["decks"]} == {
+            config_a["deck_id"],
+            config_b["deck_id"],
+        }
+        assert {c["deck_id"] for c in body["configurations"]} == {
+            config_a["deck_id"],
+            config_b["deck_id"],
+        }
+
+    def test_404_for_unknown_run(self, client):
+        assert client.get(f"/api/runs/{uuid.uuid4()}").status_code == 404
+
+
 def _counted_card_ids(db, run_id):
     return set(
         db.exec(

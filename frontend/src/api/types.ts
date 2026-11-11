@@ -232,6 +232,29 @@ export interface paths {
         patch: operations["patch_practice_api_practices__practice_id__patch"];
         trace?: never;
     };
+    "/api/practices/{practice_id}/configurations/{deck_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Practice Configuration
+         * @description Replaces how the practice's next run asks the deck; a run already cut keeps how it
+         *     asks it, so the save is taken while the practice has an active run. 404 for an unknown
+         *     or foreign practice or a deck that is not the practice's; a plain 400 naming the first
+         *     rule the configuration breaks, writing nothing.
+         */
+        put: operations["put_practice_configuration_api_practices__practice_id__configurations__deck_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/practices/{practice_id}/runs": {
         parameters: {
             query?: never;
@@ -260,7 +283,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Run */
+        /**
+         * Get Run
+         * @description 404 for an unknown or foreign run.
+         */
         get: operations["get_run_api_runs__run_id__get"];
         put?: never;
         post?: never;
@@ -576,6 +602,25 @@ export interface components {
          * @enum {string}
          */
         ChangeKind: "up_a_lot" | "up" | "no_change" | "down" | "down_a_lot";
+        /**
+         * ConfigurationArrays
+         * @description How a deck is asked: the fields every card shows or asks on each side, and the
+         *     fields drawn at random on each side with the counts one draw picks from.
+         */
+        ConfigurationArrays: {
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+        };
         /** CurrentRunCard */
         CurrentRunCard: {
             /**
@@ -881,6 +926,29 @@ export interface components {
             /** Has Card */
             has_card: boolean;
         };
+        /**
+         * PracticeConfigurationRead
+         * @description How the practice's next run asks one of its decks.
+         */
+        PracticeConfigurationRead: {
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+        };
         /** PracticeCreate */
         PracticeCreate: {
             /** Name */
@@ -910,6 +978,8 @@ export interface components {
             readiness: number | null;
             /** Runs */
             runs: components["schemas"]["RunListing"][];
+            /** Configurations */
+            configurations: components["schemas"]["PracticeConfigurationRead"][];
         };
         /** PracticeSummary */
         PracticeSummary: {
@@ -1040,6 +1110,66 @@ export interface components {
         RunChosenCards: {
             /** Card Ids */
             card_ids: string[];
+        };
+        /**
+         * RunConfigurationRead
+         * @description How a run asked one deck, as it stood when the run was cut.
+         */
+        RunConfigurationRead: {
+            /** Prompt Field Ids */
+            prompt_field_ids: string[];
+            /** Answer Field Ids */
+            answer_field_ids: string[];
+            /** Prompt Pool Ids */
+            prompt_pool_ids: string[];
+            /** Prompt Pool Counts */
+            prompt_pool_counts: number[];
+            /** Answer Pool Ids */
+            answer_pool_ids: string[];
+            /** Answer Pool Counts */
+            answer_pool_counts: number[];
+            /**
+             * Deck Id
+             * Format: uuid
+             */
+            deck_id: string;
+        };
+        /** RunDetail */
+        RunDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Practice Id
+             * Format: uuid
+             */
+            practice_id: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Index */
+            day_index: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Practice Name */
+            practice_name: string;
+            /** Decks */
+            decks: components["schemas"]["DeckNameRead"][];
+            /** Configurations */
+            configurations: components["schemas"]["RunConfigurationRead"][];
         };
         /**
          * RunListing
@@ -1990,6 +2120,45 @@ export interface operations {
             };
         };
     };
+    put_practice_configuration_api_practices__practice_id__configurations__deck_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                practice_id: string;
+                deck_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigurationArrays"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeConfigurationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_runs_api_practices__practice_id__runs_post: {
         parameters: {
             query?: never;
@@ -2044,7 +2213,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunRead"];
+                    "application/json": components["schemas"]["RunDetail"];
                 };
             };
             /** @description Validation Error */

@@ -8,13 +8,12 @@ from sqlmodel import Session, col, select
 from app.models.app_user import AppUser
 from app.models.deck import Deck
 from app.models.practice import Practice
-from app.models.practice_payloads import DeckNameRead
+from app.models.practice_payloads import DeckNameRead, RunListing
 from app.models.review_log import ReviewLog
 from app.models.run import Run, RunRead, RunStatus
 from app.models.run_card import RunCard, RunCardStatus
 from app.models.run_configuration import RunConfiguration
 from app.models.run_counted_card import RunCountedCard
-from app.models.run_payloads import RunListing
 
 
 def db_try_stage_create_run(db: Session, practice_id: uuid.UUID) -> Run | None:

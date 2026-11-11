@@ -35,6 +35,17 @@ const PRACTICE: components['schemas']['PracticeDetail'] = {
   active_run_id: null,
   readiness: null,
   runs: [],
+  configurations: [
+    {
+      deck_id: 'd1',
+      prompt_field_ids: ['f1'],
+      answer_field_ids: ['f2'],
+      prompt_pool_ids: [],
+      prompt_pool_counts: [],
+      answer_pool_ids: [],
+      answer_pool_counts: [],
+    },
+  ],
 };
 
 function LocationProbe() {

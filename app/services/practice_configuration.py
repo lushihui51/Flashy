@@ -4,6 +4,11 @@ from collections.abc import Collection, Mapping
 from sqlmodel import Session
 
 from app.database_ops.field_def import db_read_field_ids_for_decks
+from app.database_ops.practice_configuration import (
+    db_read_practice_configuration,
+    db_stage_update_practice_configuration,
+)
+from app.models.practice_payloads import PracticeConfigurationRead
 
 ARRAY_COLUMNS = (
     "prompt_field_ids",
@@ -91,3 +96,27 @@ def validate_configuration(db: Session, deck_id: uuid.UUID, arrays: Mapping[str,
         raise ValueError("at least one prompt field or prompt pool id is required")
     if not arrays["answer_field_ids"] and not arrays["answer_pool_ids"]:
         raise ValueError("at least one answer field or answer pool id is required")
+
+
+def save_practice_configuration(
+    db: Session,
+    user_id: uuid.UUID,
+    practice_id: uuid.UUID,
+    deck_id: uuid.UUID,
+    arrays: Mapping[str, list],
+) -> PracticeConfigurationRead:
+    """Replaces how the user's practice asks the deck with `arrays`, six columns keyed by
+    column name, and commits. The practice's next run asks the deck so; a run already cut,
+    active or completed, keeps its own copy. Touches nothing, so no list reorders. Raises
+    LookupError when the practice is missing or not the user's, or the deck is not one of
+    the practice's, and ValueError, writing nothing, as `validate_configuration` does."""
+    configuration = db_read_practice_configuration(db, user_id, practice_id, deck_id)
+    if configuration is None:
+        raise LookupError(f"deck {deck_id} is not a deck of practice {practice_id}")
+    validate_configuration(db, deck_id, arrays)
+    db_stage_update_practice_configuration(
+        db, configuration, {column: list(arrays[column]) for column in ARRAY_COLUMNS}
+    )
+    db.commit()
+    db.refresh(configuration)
+    return PracticeConfigurationRead.model_validate(configuration)

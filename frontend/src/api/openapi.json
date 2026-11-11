@@ -1785,6 +1785,102 @@
         }
       }
     },
+    "/api/practices/{practice_id}/configurations/{deck_id}": {
+      "put": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Put Practice Configuration",
+        "description": "Replaces how the practice's next run asks the deck; a run already cut keeps how it\nasks it, so the save is taken while the practice has an active run. 404 for an unknown\nor foreign practice or a deck that is not the practice's; a plain 400 naming the first\nrule the configuration breaks, writing nothing.",
+        "operationId": "put_practice_configuration_api_practices__practice_id__configurations__deck_id__put",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurationArrays"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeConfigurationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/practices/{practice_id}/runs": {
       "post": {
         "tags": [
@@ -1867,6 +1963,7 @@
           "Run"
         ],
         "summary": "Get Run",
+        "description": "404 for an unknown or foreign run.",
         "operationId": "get_run_api_runs__run_id__get",
         "parameters": [
           {
@@ -1918,7 +2015,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunRead"
+                  "$ref": "#/components/schemas/RunDetail"
                 }
               }
             }
@@ -2734,6 +2831,67 @@
         ],
         "title": "ChangeKind"
       },
+      "ConfigurationArrays": {
+        "properties": {
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts"
+        ],
+        "title": "ConfigurationArrays",
+        "description": "How a deck is asked: the fields every card shows or asks on each side, and the\nfields drawn at random on each side with the counts one draw picks from."
+      },
       "CurrentRunCard": {
         "properties": {
           "run_card_id": {
@@ -3404,6 +3562,73 @@
         "title": "HomeSteps",
         "description": "Whether the user has a deck and a card, the first two steps; the third, a\npractice, never exists while the steps show."
       },
+      "PracticeConfigurationRead": {
+        "properties": {
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "deck_id"
+        ],
+        "title": "PracticeConfigurationRead",
+        "description": "How the practice's next run asks one of its decks."
+      },
       "PracticeCreate": {
         "properties": {
           "name": {
@@ -3484,6 +3709,13 @@
             },
             "type": "array",
             "title": "Runs"
+          },
+          "configurations": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeConfigurationRead"
+            },
+            "type": "array",
+            "title": "Configurations"
           }
         },
         "type": "object",
@@ -3494,7 +3726,8 @@
           "decks",
           "active_run_id",
           "readiness",
-          "runs"
+          "runs",
+          "configurations"
         ],
         "title": "PracticeDetail"
       },
@@ -3780,6 +4013,141 @@
           "card_ids"
         ],
         "title": "RunChosenCards"
+      },
+      "RunConfigurationRead": {
+        "properties": {
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "deck_id"
+        ],
+        "title": "RunConfigurationRead",
+        "description": "How a run asked one deck, as it stood when the run was cut."
+      },
+      "RunDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "practice_name": {
+            "type": "string",
+            "title": "Practice Name"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckNameRead"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "configurations": {
+            "items": {
+              "$ref": "#/components/schemas/RunConfigurationRead"
+            },
+            "type": "array",
+            "title": "Configurations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at",
+          "practice_name",
+          "decks",
+          "configurations"
+        ],
+        "title": "RunDetail"
       },
       "RunListing": {
         "properties": {

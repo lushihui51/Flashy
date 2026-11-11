@@ -2,6 +2,7 @@ import { client } from 'src/api/client';
 import { unwrap } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
+/** The run with its practice's name, every deck it asked and how it asked each. */
 export const readRun = async (runId: string) =>
   unwrap(await client.GET('/api/runs/{run_id}', { params: { path: { run_id: runId } } }));
 

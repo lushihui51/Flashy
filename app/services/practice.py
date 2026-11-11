@@ -13,12 +13,18 @@ from app.database_ops.practice import (
     db_try_stage_rename_practice,
 )
 from app.database_ops.practice_configuration import (
+    db_read_practice_configurations,
     db_try_stage_create_practice_configurations,
 )
+from app.database_ops.run import db_read_run_reads_for_practice
 from app.database_ops.run_configuration import db_read_last_run_configurations
 from app.mastery.strategy import MasteryStrategy
 from app.models.base import utcnow
-from app.models.practice_payloads import PracticeSummary
+from app.models.practice_payloads import (
+    PracticeConfigurationRead,
+    PracticeDetail,
+    PracticeSummary,
+)
 from app.refusals import Refusal
 from app.services.mastery import practice_readiness
 from app.services.practice_configuration import (
@@ -70,6 +76,24 @@ def practice_summaries(
     return [
         PracticeSummary(**row.model_dump(), readiness=readiness[row.id]) for row in listings
     ]
+
+
+def practice_detail(
+    db: Session, strategy: MasteryStrategy, user_id: uuid.UUID, practice_id: uuid.UUID
+) -> PracticeDetail | None:
+    """The user's practice as `practice_summaries` gives it, with its runs and how its next
+    run asks each of its decks; None when the practice is missing or not the user's."""
+    summaries = practice_summaries(db, strategy, user_id, practice_id)
+    if not summaries:
+        return None
+    return PracticeDetail(
+        **summaries[0].model_dump(),
+        runs=db_read_run_reads_for_practice(db, practice_id),
+        configurations=[
+            PracticeConfigurationRead.model_validate(configuration)
+            for configuration in db_read_practice_configurations(db, practice_id)
+        ],
+    )
 
 
 def _starting_arrays(db: Session, deck_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict[str, list]]:

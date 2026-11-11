@@ -8,6 +8,7 @@ import {
   readPractices,
   readSuggestedPracticeName,
   renamePractice,
+  savePracticeConfiguration,
   startRun,
 } from 'src/api/practice';
 import { ApiDetailError } from 'src/api/unwrap';
@@ -25,6 +26,15 @@ const SUMMARY: components['schemas']['PracticeSummary'] = {
   ],
   active_run_id: null,
   readiness: null,
+};
+
+const ARRAYS: components['schemas']['ConfigurationArrays'] = {
+  prompt_field_ids: ['field_port'],
+  answer_field_ids: ['field_protocol'],
+  prompt_pool_ids: [],
+  prompt_pool_counts: [],
+  answer_pool_ids: ['field_service', 'field_layer'],
+  answer_pool_counts: [1, 2],
 };
 
 describe('createPractice', () => {
@@ -71,9 +81,13 @@ describe('readPractices', () => {
 });
 
 describe('readPractice', () => {
-  it('requests the practice and returns it with its runs and their counts', async () => {
+  it('requests the practice and returns it with its runs, their counts and its configurations', async () => {
     const detail: components['schemas']['PracticeDetail'] = {
       ...SUMMARY,
+      configurations: [
+        { deck_id: 'deck_1', ...ARRAYS },
+        { deck_id: 'deck_2', ...ARRAYS },
+      ],
       runs: [
         {
           id: 'run_1',
@@ -160,6 +174,42 @@ describe('startRun', () => {
 
     const error = await startRun('practice_1').catch((e: unknown) => e);
     expect((error as ApiDetailError).detail.code).toBe('no_cards');
+  });
+});
+
+describe('savePracticeConfiguration', () => {
+  it("puts the arrays at the practice's deck and returns the saved configuration", async () => {
+    let requested: unknown;
+    let body: unknown;
+    server.use(
+      http.put(
+        `${BASE}/api/practices/:practice_id/configurations/:deck_id`,
+        async ({ params, request }) => {
+          requested = params;
+          body = await request.json();
+          return HttpResponse.json({ deck_id: 'deck_2', ...ARRAYS });
+        },
+      ),
+    );
+
+    await expect(savePracticeConfiguration('practice_1', 'deck_2', ARRAYS)).resolves.toEqual({
+      deck_id: 'deck_2',
+      ...ARRAYS,
+    });
+    expect(requested).toEqual({ practice_id: 'practice_1', deck_id: 'deck_2' });
+    expect(body).toEqual(ARRAYS);
+  });
+
+  it('throws for a deck that is not one of the practice\'s', async () => {
+    server.use(
+      http.put(`${BASE}/api/practices/:practice_id/configurations/:deck_id`, () =>
+        HttpResponse.json({ detail: 'Deck not found' }, { status: 404 }),
+      ),
+    );
+
+    await expect(savePracticeConfiguration('practice_1', 'deck_9', ARRAYS)).rejects.toThrow(
+      'Deck not found',
+    );
   });
 });
 

@@ -30,6 +30,19 @@ def db_read_run_configuration_for_deck(
     ).first()
 
 
+def db_read_run_configurations(db: Session, run_id: uuid.UUID) -> list[RunConfiguration]:
+    """The run's copies, one per deck it asked, most recently changed deck first.
+    Unscoped: the caller has already ownership-checked the run."""
+    return list(
+        db.exec(
+            select(RunConfiguration)
+            .join(Deck, Deck.id == RunConfiguration.deck_id)
+            .where(RunConfiguration.run_id == run_id)
+            .order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
+        ).all()
+    )
+
+
 def db_read_run_configurations_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> list[RunConfiguration]:

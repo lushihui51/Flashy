@@ -86,6 +86,7 @@ class TestForeignResourcesAreNotFound:
     def test_practice_endpoints(self, client, other_user, act_as, owned):
         deck_id = owned["deck"]["id"]
         practice_id = owned["practice"]["id"]
+        [asked] = client.get(f"/api/practices/{practice_id}").json()["configurations"]
         act_as(other_user)
 
         assert client.post("/api/practices", json={"deck_ids": [deck_id]}).status_code == 404
@@ -99,6 +100,12 @@ class TestForeignResourcesAreNotFound:
         assert client.post(f"/api/practices/{practice_id}/runs").status_code == 404
         assert (
             client.patch(f"/api/practices/{practice_id}", json={"name": "x"}).status_code == 404
+        )
+        assert (
+            client.put(
+                f"/api/practices/{practice_id}/configurations/{deck_id}", json=asked
+            ).status_code
+            == 404
         )
         assert client.delete(f"/api/practices/{practice_id}").status_code == 404
 

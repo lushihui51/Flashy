@@ -22,6 +22,22 @@ export const renamePractice = async (practiceId: string, name: string) =>
     }),
   );
 
+/**
+ * Replaces how the practice's next run asks the deck; a run already cut keeps how it
+ * asks it. Answers the saved configuration.
+ */
+export const savePracticeConfiguration = async (
+  practiceId: string,
+  deckId: string,
+  arrays: components['schemas']['ConfigurationArrays'],
+) =>
+  unwrap(
+    await client.PUT('/api/practices/{practice_id}/configurations/{deck_id}', {
+      params: { path: { practice_id: practiceId, deck_id: deckId } },
+      body: arrays,
+    }),
+  );
+
 /** Deletes the practice with its runs; the user's mastery stays. */
 export const deletePractice = async (practiceId: string) =>
   unwrapVoid(

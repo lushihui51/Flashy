@@ -24,6 +24,35 @@ const RUN: components['schemas']['RunRead'] = {
   last_activity_at: '2026-11-03T18:05:00Z',
 };
 
+const RUN_DETAIL: components['schemas']['RunDetail'] = {
+  ...RUN,
+  practice_name: 'Commands + Ports',
+  decks: [
+    { deck_id: 'deck_2', deck_name: 'Ports' },
+    { deck_id: 'deck_1', deck_name: 'Commands' },
+  ],
+  configurations: [
+    {
+      deck_id: 'deck_2',
+      prompt_field_ids: ['field_port'],
+      answer_field_ids: ['field_protocol'],
+      prompt_pool_ids: [],
+      prompt_pool_counts: [],
+      answer_pool_ids: [],
+      answer_pool_counts: [],
+    },
+    {
+      deck_id: 'deck_1',
+      prompt_field_ids: [],
+      answer_field_ids: ['field_flag'],
+      prompt_pool_ids: ['field_command', 'field_summary'],
+      prompt_pool_counts: [1],
+      answer_pool_ids: [],
+      answer_pool_counts: [],
+    },
+  ],
+};
+
 const STATE: components['schemas']['RunState'] = {
   practice_id: 'practice_1',
   practice_name: 'Commands + Ports',
@@ -41,16 +70,16 @@ const STATE: components['schemas']['RunState'] = {
 };
 
 describe('readRun', () => {
-  it('requests the run and returns it', async () => {
+  it('requests the run and returns it with its decks and how it asked each', async () => {
     let requested: unknown;
     server.use(
       http.get(`${BASE}/api/runs/:run_id`, ({ params }) => {
         requested = params.run_id;
-        return HttpResponse.json(RUN);
+        return HttpResponse.json(RUN_DETAIL);
       }),
     );
 
-    await expect(readRun('run_8')).resolves.toEqual(RUN);
+    await expect(readRun('run_8')).resolves.toEqual(RUN_DETAIL);
     expect(requested).toBe('run_8');
   });
 
