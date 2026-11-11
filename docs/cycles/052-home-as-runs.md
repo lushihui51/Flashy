@@ -14,6 +14,7 @@ Judgement: The engineer judges on the live server at 390 wide, signed in as a us
 
 ## Records
 
+- PDR 017: A row of the places above a page, led by a way back
 - PDR 037: Runs at the user's initiative, with nothing due
 - PDR 047: What the user changed most recently first, with runs and practices by what the user last did in a run
 - PDR 048: Home as the runs the user can continue or start again
@@ -55,6 +56,8 @@ None.
 - `frontend/src/pages/HomePage.tsx`
 - `frontend/src/pages/HomePage.test.tsx`
 - `frontend/src/components/run/HomeRunRow.tsx` (new)
+- `app/database_ops/deck.py`
+- `frontend/src/components/ui/FormBar.tsx`
 - `frontend/src/components/run/HomeRunRow.test.tsx` (new)
 - `docs/vocabulary.md`
 
@@ -80,16 +83,23 @@ class HomeRead(AppModel):
     recent_runs: list[HomeRun]
 ```
 
+- `db_read_deck_listings` loses its `deck_ids` parameter, Home having been its only caller; `FormBar`'s interface comment says it holds any bar at the foot, Home's included.
 - `GET /api/home` must return `HomeRead` in a number of statements fixed whatever the user's data (ADR 123, ADR 091); `recent_decks`, `RecentDecks` and `RECENT_DECK_LIMIT` go, `RECENT_RUN_LIMIT` taking the last's place.
 - Once `steps` is null, Home must read as drawings 2-before and 17: the heading "Home"; "Active" over one row per active run; "Recently completed" over one row per completed run; a section with no run is left out. A row opens with a small outlined block holding the run's `RunMark` and its day as `formatRunDay` writes it; beneath stand the practice's name in semibold, as the drawings draw it, with no mark, then its decks as `DeckLine` writes them, then, for an active run, its `RunProgressBar`. Nothing is indented. At the right stands a round play button, a triangle inside a circle, spoken "Practice <practice name>".
-- The play button of the first active run must be yellow and every other white; with no active run, the first completed run's is yellow (PDR 048). An active run's play button opens `/runs/:runId`; a completed run's calls `POST /api/practices/{practice_id}/runs` and opens the run it returns, with no confirm, a refusal showing its sentence beneath the row, through `failureSentence` with "Practice not found." for a 404: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."
+- The play button of the first active run must be yellow and every other white; with no active run, the first completed run's is yellow (PDR 048). An active run's play button opens `/runs/:runId`; a completed run's calls `POST /api/practices/{practice_id}/runs`, through a mutation `HomePage` owns (ADR 088), and opens the run it returns, with no confirm, a refusal showing its sentence beneath the row, through `failureSentence` with "Practice not found." for a 404: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows."
 - Once `steps` is null, Home must end with `FormBar` holding one white button, "All practices", opening `/practices`, fixed at the foot while Home scrolls (ADR 127). Home's link to New practice goes.
 - The row and its play button must go in `HomeRunRow`, which T2 extends with the details:
 
 ```ts
 /** One run's row on Home: its block, its practice's name, its decks, an active run's bar
- * and its play button, yellow when `isMain`. */
-export default function HomeRunRow({ run, isMain }: { run: HomeRun; isMain: boolean }): ReactNode;
+ * and its play button, yellow when `isMain`. `onPlay` runs on the play button; `playError`
+ * is the sentence beneath the row, or null. It holds no query or mutation of its own. */
+export default function HomeRunRow(props: {
+  run: HomeRun;
+  isMain: boolean;
+  onPlay: () => void;
+  playError: string | null;
+}): ReactNode;
 ```
 
 - In this task a tap on the row anywhere but its play button does nothing: the row is no link, and T2 gives the tap its details.
@@ -97,7 +107,7 @@ export default function HomeRunRow({ run, isMain }: { run: HomeRun; isMain: bool
 - `docs/vocabulary.md`, each row's columns as given:
   - "The practices the user can go on with": Concept "The active runs the user can continue"; User reads "Active" over up to three runs, each its mark and day in a block, its practice's name, its decks and its progress, with a play button; Where Home; Code `active_runs`; `ACTIVE_RUN_LIMIT`; `HomeRun`.
   - "The decks of the most recently completed practices": Concept "The most recently completed runs"; User reads "Recently completed" over up to three runs, each its mark and day in a block, its practice's name and its decks, with a play button; Where Home; Code `recent_runs`; `RECENT_RUN_LIMIT`; `HomeRun`.
-  - "Going to New practice from Home": the row leaves the file, Home holding no way to New practice and the code no name for one.
+  - "Going to New practice from Home": the row leaves the file, Home's foot holding no way to New practice and the code no name for one; the steps' New practice stays in "The steps to a first practice".
   - A new row in the Home area: Concept "Going to All practices from Home"; User reads "All practices"; Where Home, in the bar at the foot, once the user has made a practice; Code `FormBar`; `/practices`.
   - A new row in the Home area: Concept "A run's play button"; User reads a triangle inside a circle; "Practice <name>", spoken, naming the run's practice, as "Practice Commands + Ports"; Where Home, on each run's row; Code `HomeRunRow`.
 
@@ -135,6 +145,8 @@ Tapping a run's row on Home anywhere but its play button opens its details benea
 
 - `frontend/src/components/run/HomeRunRow.tsx`
 - `frontend/src/components/run/HomeRunRow.test.tsx`
+- `frontend/src/pages/HomePage.tsx`
+- `frontend/src/pages/HomePage.test.tsx`
 - `frontend/src/components/run/RunBreakdown.tsx`
 - `frontend/src/components/run/RunProgressBar.tsx`
 - `frontend/src/components/run/runProgressColors.ts` (new)
@@ -152,11 +164,22 @@ export function countChanges(cards: { change: ChangeKind }[]): Record<ChangeKind
 ```
 
 - `countChanges` must live in `frontend/src/lib/changeKinds.ts`, and `RunBreakdown` must count its kinds through it, so Home's details and the summary count with one function.
-- A tap on the row anywhere but its play button must open the details beneath it, as drawings 2-active and 2-done draw them, and "Hide" closes them; each row opens and closes on its own, its state kept in `HomeRunRow`.
-- An active run's details must list each of its decks on a line, its `DeckMark` and name, then its counts from `progress`: "N passed", "N failed", "N retrying" and "N unseen", each beside its square in the bar's color for it, the four colors as string constants in `frontend/src/components/run/runProgressColors.ts`, which `RunProgressBar` reads too, since a component file may export only components under the lint rule `only-export-components`, then "Hide".
-- A completed run's details must list each deck on a line, then "N of M cards", then the five change counts, each its `ChangeBadge` and its number, spoken as "N up a lot", "N up", "N no change", "N down" or "N down a lot", counted by `countChanges` over `GET /api/runs/{id}/breakdown`, read through TanStack Query under `['run_breakdown', runId]`, the summary's key, once the details open; until it arrives the details hold their deck lines and "N of M cards", from `HomeRun`, and no change count, with no words of their own, and "Could not load this run." stands in the counts' place when it fails.
+- `HomeRunRow` must gain three props, and `HomePage` owns the state and the read they carry (ADR 088):
+
+```ts
+  /** Whether the row's details are open. */
+  open: boolean;
+  /** Opens or closes the details. */
+  onToggle: () => void;
+  /** A completed run's breakdown for its counts: its cards, or 'loading' or 'error'; absent for an active run. */
+  breakdown?: { change: ChangeKind }[] | 'loading' | 'error';
+```
+
+- The row's block, name, decks and bar, everything but its play button, must be one button with `aria-expanded`, spoken as the practice's name; a tap on it opens the details beneath, as drawings 2-active and 2-done draw them, and a second tap or "Hide" closes them. Each row opens and closes on its own; `HomePage` keeps the open rows in its URL as one `open` parameter per run id, written through `useViewParams` (PDR 017).
+- An active run's details must list each of its decks on a line, its `DeckMark` and name, then its counts from `progress`: "N passed", "N failed", "N retrying" and "N unseen", each beside its square in the bar's color for it, the four colors as string constants in `frontend/src/components/run/runProgressColors.ts`, which `RunProgressBar` reads too, then "Hide".
+- A completed run's details must list each deck on a line, then "N of M cards", then the five change counts, each its `ChangeBadge` and its number, spoken as "N up a lot", "N up", "N no change", "N down" or "N down a lot", counted by `countChanges` over `GET /api/runs/{id}/breakdown`, read by `HomePage` through TanStack Query under `['run_breakdown', runId]`, the summary's key, for each open completed run; until it arrives the details hold their deck lines and "N of M cards", from `HomeRun`, and no change count, with no words of their own, and "Could not load this run." stands in the counts' place when it fails.
 - Tests: `countChanges` over five kinds; a tap on the row opens the details and a tap on the play button does not; the active run's four counts; the completed run's count line and five counts from a mocked breakdown; the details before the breakdown arrives and when it fails; "Hide" closes.
-- `docs/vocabulary.md`: a new row in the Home area: Concept "A run's details on Home"; User reads "Hide"; each of its decks on a line; for an active run, "N passed", "N failed", "N retrying" and "N unseen"; for a completed run, "N of M cards" and the number under each kind of change's badge; Where Home, beneath a run's row once tapped; Code `HomeRunRow`; `countChanges`.
+- `docs/vocabulary.md`: a new row in the Home area: Concept "A run's details on Home"; User reads "Hide"; each of its decks on a line; for an active run, "N passed", "N failed", "N retrying" and "N unseen"; Where Home, beneath a run's row once tapped; Code `HomeRunRow`. A completed run's count and change counts there stand in the rows "How many of its practice's cards a run reached" and "How many cards had each kind of change", whose Where already name Home's details; the second row's Code gains `countChanges`.
 
 **Out of scope**
 
