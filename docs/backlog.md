@@ -50,3 +50,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B34. May a single word wider than its whole line break inside itself, so that nothing on the page scrolls sideways, while PDR 050 has a name or a heading break only between words?
   - Reason: PDR 050 asks both that a name or a heading break only between words and that nothing on a page scroll sideways, and a word wider than its line can keep only one of the two; `overflow-wrap: break-word` breaks such a word inside itself, and no record says it should.
   - Owner: /product-decide
+- B35. Do the practice's vocabulary row and the run's rows give their code names, `practice`, `Practice` and `/practices` for a practice and `RunStatus` and `status` for a run's state?
+  - Reason: the row "A named set of decks the user keeps and runs as many times as they like" reads "—" in Code, though the `practice` table and the `Practice` model name its concept; no row's Code names `RunStatus` or `RunRead.status`, and "A run that can still be continued" and "A run that has finished" give only `active` and `completed`.
+  - Owner: /code-decide
