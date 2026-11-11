@@ -26,7 +26,7 @@
   - Reason: ADR 006
 - Commit a frontend change only when `npx vitest run`, `npm run lint` and `npm run build` are all clean over the whole frontend.
   - Reason: ADR 041
-- Never push to main; a change reaches main only by a pull request with both CI checks green.
+- Never push to main; a change reaches main only by a pull request with every CI check green.
   - Reason: ADR 041
 - Change a database's schema only through an alembic migration, never from code under app/.
   - Reason: ADR 045
@@ -77,7 +77,7 @@
 - Scope every read and write to the requesting user, so another user's resource returns 404.
   - Reason: ADR 034
   - Guard: tests/api_tests/test_auth_scoping.py
-- Keep the three backend layers, app/routers/api/ over app/services/ over app/database_ops/, dependencies downward only, every statement and session call in a `db_*` function.
+- Keep the backend layers, app/routers/api/ over app/services/ over app/database_ops/, dependencies downward only, every statement and session call in a `db_*` function.
   - Reason: ADR 034, ADR 055
   - Guard: tests/api_tests/test_layering_guard.py
 - Write last_activity_at only through touch() in app/services/activity.py, on every write that is user activity.
@@ -85,10 +85,10 @@
   - Guard: tests/api_tests/test_activity_tracking.py
 - Carry a form's return addresses as the ?cancelTo= and ?returnTo= URL parameters, read only through internalReturnTo in frontend/src/lib/returnTo.ts.
   - Reason: ADR 124
-- Render every failure inline where it happened; AppShell's connectivity banner, the one reader of useConnectionStatus, is the only app-level error channel, with no cache handler or toast, and App.tsx's route for a page that cannot be shown is the one error boundary.
+- Render every failure inline where it happened; AppShell's connectivity banner is the only app-level error channel, and App.tsx's route for a page that cannot be shown is the only error boundary.
   - Reason: PDR 031, ADR 063, ADR 104
-- Carry a rename through every tracked file and path, quoted literals and generated files included; only an occurrence with a different meaning stays.
-  - Reason: one word per concept, history included
+- Carry a rename through every tracked file and path, quoted literals and generated files included, but a record on main; only an occurrence with a different meaning stays.
+  - Reason: one word per concept
 
 # Conventions
 
