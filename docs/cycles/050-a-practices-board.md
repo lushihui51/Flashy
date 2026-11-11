@@ -69,7 +69,7 @@ None.
 
 **Details**
 
-ADR 107 and ADR 109:
+ADR 107 and ADR 109. `ConfigurationArrays` and `PracticeConfigurationRead` go in `app/models/practice_payloads.py`, beside `DeckNameRead`; `RunConfigurationRead` and `RunDetail` in `app/models/run_payloads.py`, which imports from it:
 
 ```python
 class ConfigurationArrays(AppModel):
@@ -147,7 +147,7 @@ A deck's line on a practice's page opens the deck's board as a form, as drawing 
 Drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 - `App.tsx` must route `/practices/:practiceId/decks/:deckId` and `/runs/:runId/decks/:deckId` to `DeckBoardPage`.
-- `DeckBoardPage` must be a form with no row of places, headed by the deck's `DeckMark` and name, and beneath it the practice's `PracticeMark` and name, as drawing 16 draws them. The board below is `FieldAssignmentBoard` over the deck's live fields, from `GET /api/decks/{id}`, and the configuration from `PracticeDetail.configurations`, read under `['practice', practiceId]`, or `RunDetail.configurations`, read under `['run_detail', runId]`, a key of its own beside the run page's `['run', runId]`; "Loading fields…" stands while any of its reads loads; in place of the board, "Deck not found." stands when the deck read answers 404 or the deck is none of the practice's or the run's, "Practice not found." or "Run not found." when that read answers 404, and "Could not load this deck." when a read fails otherwise. The browser tab reads the deck's name, through `usePageTitle`. A failed Save shows its sentence in the bar, through `failureSentence` with "Deck not found." for a 404.
+- `DeckBoardPage` must be a form with no row of places, headed by the deck's `DeckMark` and name, and beneath it the practice's `PracticeMark` and name, as drawing 16 draws them. The board below is `FieldAssignmentBoard` over the deck's live fields, from `GET /api/decks/{id}`, and the configuration from `PracticeDetail.configurations`, read under `['practice', practiceId]`, or `RunDetail.configurations`, read under `['run_detail', runId]`, a key of its own beside the run page's `['run', runId]`; "Loading fields…" stands while any of its reads loads; in place of the board, "Deck not found." stands when the deck read answers 404 or the deck is none of the practice's or the run's, "Practice not found." or "Run not found." when that read answers 404, and "Could not load this deck." when a read fails otherwise, each drawn without `role="alert"`, which `formParts.test.ts` forbids in a form's source, through `FormPart`'s `wrong` look. The browser tab reads the deck's name, through `usePageTitle`. A failed Save shows its sentence in the bar, through `failureSentence` with "Deck not found." for a 404.
 - From a practice's page while the practice has no active run, the board's moves and counts must stay in the form's own state and send nothing until Save; the bar at the foot holds Cancel and Save, and Save, a `SubmitButton` ready only when `boardProblem` finds nothing, shows the board's problem at its part on a tap while not ready and saves through `savePracticeConfiguration`; `formParts.test.ts`'s list of forms gains `DeckBoardPage.tsx`. Cancel leaves through `useLeaveForm` for `cancelTo`, else the practice's page, sending nothing; Save leaves for `returnTo`, else the practice's page.
 - While the practice has an active run, and always at `/runs/:runId/decks/:deckId`, every field must be greyed and do nothing when tapped, the counts too, one line above the board reading "A run is active." from a practice's page and "How this run asked it." from a run's page, and the bar holding Done alone, which leaves through `useLeaveForm` for `cancelTo`, else the practice's page or the run's page (PDR 051).
 - `frontend/src/lib/deckConfigurationBoard.ts` must become `frontend/src/lib/deckBoard.ts`, after the board's user word, "the deck's board", since a configuration of a deck is no longer a thing of its own; its exports keep their names but `ConfigPayloadArrays`, which becomes `BoardArrays`, the generated `ConfigurationArrays` type from `frontend/src/api/types.ts`.
@@ -155,11 +155,11 @@ Drawing 16, under PDR 051, ADR 124 and ADR 127:
 - The per-deck line in `PracticeDetailsPage` must open `/practices/:practiceId/decks/:deckId` with the page's own address as `cancelTo` and `returnTo`, and end in a chevron, `ChevronRight` from lucide-react, as a run's row does.
 - Tests: a move then Cancel sends no request; Save sends one `PUT` with the board's arrays; with an active run, a tap on a field opens no move sheet and the bar holds Done alone; the run's board reads its run's configuration.
 - `docs/vocabulary.md`, each row's columns as given, every other column as it stands:
-  - "Leaving when nothing is unsaved": Where Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page.
+  - "Leaving when nothing is unsaved": Where Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page; Code `showDone`; `DeckBoardPage`.
   - "A deck's prompt and answer layout": Code `practice_configuration`; `run_configuration`; `PracticeConfigurationRead`; `RunConfigurationRead`; `ConfigurationArrays`; `PUT /api/practices/{id}/configurations/{deck_id}`; `savePracticeConfiguration`; `deckBoard.ts`; `BoardArrays`.
   - "The page where a configuration is changed": Code `/practices/:practiceId/decks/:deckId`; `/runs/:runId/decks/:deckId`; `DeckBoardPage`.
   - "The deck's fields still loading": Code `DeckBoardPage`.
-  - A new row in the Configuration area: Concept "Why a deck's board cannot be changed"; User reads "A run is active." from a practice's page; "How this run asked it." from a completed run's page; Where a deck's board, one line above the greyed board; Code `DeckBoardPage`; `readOnly`.
+  - A new row in the Configuration area: Concept "Why a deck's board cannot be changed"; User reads "A run is active."; "How this run asked it."; Where a deck's board, one line above the greyed board, the first opened from a practice's page and the second from a completed run's page; Code `DeckBoardPage`; `readOnly`.
 
 **Out of scope**
 
