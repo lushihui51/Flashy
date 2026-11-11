@@ -508,7 +508,7 @@ What to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -521,6 +521,7 @@ All practices reads as drawing 15 draws it, every practice a row of its mark, it
 **Files**
 
 - `app/models/practice_payloads.py`
+- `app/database_ops/practice.py`
 - `app/database_ops/mastery_log.py`
 - `app/services/mastery.py`
 - `app/services/practice.py`
@@ -534,6 +535,8 @@ All practices reads as drawing 15 draws it, every practice a row of its mark, it
 - `frontend/src/components/practice/DeckLine.tsx` (new)
 - `frontend/src/components/practice/DeckLine.test.tsx` (new)
 - `frontend/src/components/practice/DeckChips.tsx` (deleted)
+- `frontend/src/lib/capList.ts` (deleted)
+- `frontend/src/lib/capList.test.ts` (deleted)
 - `frontend/src/pages/PracticeOverviewPage.tsx`
 - `frontend/src/pages/PracticeOverviewPage.test.tsx`
 - `frontend/src/pages/RunPage.tsx`
@@ -581,7 +584,32 @@ PDR 045, PDR 046, PDR 049 and drawing 15, under ADR 116:
 
 **Debrief**
 
-None.
+Evidence:
+
+- `uv run pytest tests/api_tests/test_practices.py tests/api_tests/test_mastery.py -q` printed `68 passed`. Among them: `TestPracticeReadiness` in `test_mastery.py`, a ready card in a deck of one beside a deck of three reading 0.25 where averaging the two decks would read 0.5, None for a practice whose decks hold no card, and every practice read in one `mastery_log` statement; and `TestReadiness` in `test_practices.py`, the same through `POST`, `GET /api/practices` and `GET /api/practices/{id}`. The whole backend suite printed `358 passed`.
+- `cd frontend && npx vitest run src/components/ui/PracticeMark.test.tsx src/components/practice/DeckLine.test.tsx src/pages/PracticeOverviewPage.test.tsx src/pages/RunPage.test.tsx` printed `Test Files  4 passed (4)`, `Tests  53 passed (53)`. Among them: "a row is the practice mark and name over its decks, with its circle", "choosing a deck leaves only the practices holding it, and keeps it in the URL", "All decks lifts the filter" and "a filter holding no practice says so, and Clear filters lifts it". The whole frontend printed `637 passed`; `npm run lint` and `npm run build` were clean.
+- On the live server at 390 by 844, in headless Chromium, signed out with the dev user:
+  - All practices: the tab read "All practices · Flashy", the heading "All practices" beside "Add practice", then the filter reading "All decks", then 32 rows in one block. Each row was a link spoken as "Practice <name> Deck <deck> · Deck <deck> Mastery N%": the practice mark and name in bold, the decks beneath in grey each with its deck mark, joined by " · ", and the circle at the right. No row had a chevron, a date, a progress bar or a play button, and nothing scrolled sideways.
+  - The filter: choosing "Deck Ports" wrote `?deck=<Ports' id>`, the filter read "Ports", and the list held 10 rows, exactly the 10 of the 32 whose decks name Ports, in the same order. "All decks" cleared the parameter and brought back all 32. Tapping a row opened `/practices/<its id>`.
+  - The side menu read "Home", "Your library", "All practices".
+  - The run page's row of places was spoken as "All practices" and "Practice <the practice's name>", with the practice mark before the name.
+  - On Home, each recently practiced deck's Practice linked to `/practices?deck=<its id>`. The first one landed on All practices with the filter reading that deck and 4 rows.
+  - No page error was logged.
+
+Departures from guidance:
+
+- On your go-ahead, `app/database_ops/practice.py` joined Files. `PracticeSummary` now extends a new `PracticeListing`, which holds its other five fields, as `DeckSummary` extends `DeckListing`. `db_read_practice_summaries` became `db_read_practice_listings`, returning `PracticeListing`. A new `practice_summaries(db, strategy, user_id, practice_id=None)` in `app/services/practice.py` adds each readiness, and `create_practice` and both of the router's reads go through it, so `create_practice` now takes the strategy. No route returns `PracticeListing`, so the schema gains only `readiness`.
+- `_fetch_collection_mastery_read_rows` in `app/database_ops/mastery_log.py` now takes the owner's deck column beside its id column. A deck is its own owner, and a practice owns its decks through `practice_configuration`, so `db_fetch_deck_mastery_read_rows` and `db_fetch_practice_mastery_read_rows` both use the one statement.
+- On your go-ahead, `frontend/src/lib/capList.ts` and its test were deleted, since `DeckChips` had been their only user. `DeckLine` writes every deck with no "+N", and a line too long for its row ends in an ellipsis until cycle 053.
+- The filter lists all of the user's decks from `GET /api/decks`, as Your library's do. Choosing a deck that no practice holds says "No practices match these filters." with "Clear filters".
+- The circle is `MasteryCircle` at its row size, 22 pixels, as on Your library's rows, where drawing 15 draws 24.
+- The run page puts the mark through `Breadcrumb`'s existing `icon`, followed by a space, so the link is spoken "Practice <name>".
+- `docs/vocabulary.md`: the rows "The main places" and "The page listing every practice the user has" already read as Details give them, so they were left as they stand. The new row "A practice's mark" opens its Where in lower case, as the deck mark's row does.
+
+What to read:
+
+- `practice_summaries` in `app/services/practice.py`, and `_fetch_collection_mastery_read_rows` in `app/database_ops/mastery_log.py`, for the practice's readiness.
+- `PracticeOverviewPage` in `frontend/src/pages/PracticeOverviewPage.tsx`, for the filter over the whole list.
 
 ### T4 — Edit practice
 

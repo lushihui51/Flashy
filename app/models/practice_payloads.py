@@ -20,7 +20,9 @@ class DeckNameRead(AppModel):
     deck_name: str
 
 
-class PracticeSummary(AppModel):
+class PracticeListing(AppModel):
+    """A practice as its tables give it, before its readiness is folded in."""
+
     id: uuid.UUID
     name: str
     created_at: datetime
@@ -28,6 +30,11 @@ class PracticeSummary(AppModel):
     decks: list[DeckNameRead]
     # The practice's active run, or None.
     active_run_id: uuid.UUID | None
+
+
+class PracticeSummary(PracticeListing):
+    # 0 to 1, over every card of the practice's decks; None when they hold no card.
+    readiness: float | None
 
 
 class PracticeDetail(PracticeSummary):

@@ -22,6 +22,7 @@ from app.models.card import Card
 from app.models.deck import Deck
 from app.models.field_def import FieldDef
 from app.models.mastery_log import MasteryLog
+from app.models.practice_configuration import PracticeConfiguration
 
 # This module fetches and writes state; it never computes it. Every value
 # written below is already-computed Python data handed in by a MasteryStrategy — no
@@ -160,12 +161,19 @@ def db_fetch_mastery_read_rows(
 
 
 def _fetch_collection_mastery_read_rows(
-    db: Session, owner_id: InstrumentedAttribute[uuid.UUID], owner_ids: list[uuid.UUID]
+    db: Session,
+    owner_id: InstrumentedAttribute[uuid.UUID],
+    owner_deck_id: InstrumentedAttribute[uuid.UUID],
+    owner_ids: list[uuid.UUID],
 ) -> list[Row]:
+    """One row per (owner, card, field of the card's deck), the owner being whatever row
+    `owner_id` and `owner_deck_id` are columns of, joined to each card through its deck."""
     if not owner_ids:
         return []
     owned_card_ids = (
-        select(Card.id).join(Deck, Deck.id == Card.deck_id).where(col(owner_id).in_(owner_ids))
+        select(Card.id)
+        .join(owner_deck_id.class_, owner_deck_id == Card.deck_id)
+        .where(col(owner_id).in_(owner_ids))
     )
     latest_mastery = _latest_mastery_subquery(col(MasteryLog.card_id).in_(owned_card_ids))
     query = (
@@ -179,7 +187,7 @@ def _fetch_collection_mastery_read_rows(
             latest_mastery.c.answer_review_count,
         )
         .select_from(Card)
-        .join(Deck, Deck.id == Card.deck_id)
+        .join(owner_deck_id.class_, owner_deck_id == Card.deck_id)
         .join(FieldDef, FieldDef.deck_id == Card.deck_id)
         .outerjoin(
             latest_mastery,
@@ -195,7 +203,19 @@ def db_fetch_deck_mastery_read_rows(db: Session, deck_ids: list[uuid.UUID]) -> l
     """Raw material for deck_readiness: one row per (card, field of its deck) over these
     decks, `owner_id` being the deck's id and the mastery columns NULL when never
     reviewed. A deck with no card has no row. One statement whatever the count."""
-    return _fetch_collection_mastery_read_rows(db, Deck.id, deck_ids)
+    return _fetch_collection_mastery_read_rows(db, Deck.id, Deck.id, deck_ids)
+
+
+def db_fetch_practice_mastery_read_rows(
+    db: Session, practice_ids: list[uuid.UUID]
+) -> list[Row]:
+    """Raw material for practice_readiness: one row per (card, field of its deck) over every
+    deck of these practices, `owner_id` being the practice's id and the mastery columns NULL
+    when never reviewed. A practice whose decks hold no card has no row. One statement
+    whatever the count."""
+    return _fetch_collection_mastery_read_rows(
+        db, PracticeConfiguration.practice_id, PracticeConfiguration.deck_id, practice_ids
+    )
 
 
 def db_fetch_run_mastery_log_rows(db: Session, run_id: uuid.UUID) -> list[MasteryLog]:

@@ -9,6 +9,7 @@ import RerunButton from 'src/components/run/RerunButton';
 import RunProgressBar from 'src/components/run/RunProgressBar';
 import RunBreakdown from 'src/components/run/RunBreakdown';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import PracticeMark from 'src/components/ui/PracticeMark';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { CHANGE_KINDS } from 'src/lib/changeKinds';
@@ -68,6 +69,13 @@ export default function RunPage() {
                 {
                   label: runQuery.data.practice_name,
                   to: `/practices/${runQuery.data.practice_id}`,
+                  // The space keeps the mark and the name two words when spoken; on screen the
+                  // link's gap spaces them.
+                  icon: (
+                    <>
+                      <PracticeMark />{' '}
+                    </>
+                  ),
                 },
               ]
             : []),

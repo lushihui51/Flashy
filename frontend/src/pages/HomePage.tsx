@@ -5,7 +5,7 @@ import { readHome } from 'src/api/home';
 import type { components } from 'src/api/types';
 import RunStatusBadge from 'src/components/run/RunStatusBadge';
 import RunProgressBar from 'src/components/run/RunProgressBar';
-import DeckChips from 'src/components/practice/DeckChips';
+import DeckLine from 'src/components/practice/DeckLine';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { pluralize } from 'src/lib/pluralize';
@@ -100,9 +100,7 @@ function ActiveRuns({ runs }: { runs: HomeRun[] }) {
               </span>
               <RunStatusBadge status={run.status} />
             </span>
-            <span className="flex flex-wrap items-center gap-x-2">
-              <DeckChips decks={run.decks} variant="summary" />
-            </span>
+            <DeckLine decks={run.decks} />
           </Link>
           <RunProgressBar progress={run.progress} />
           {index === 0 && (
@@ -143,7 +141,7 @@ function RecentDecks({ decks, firstIsMainAction }: RecentDecksProps) {
             </Link>
             {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="row" />}
             <Link
-              to="/practices"
+              to={`/practices?${new URLSearchParams({ deck: deck.id })}`}
               className={`flex h-10 shrink-0 items-center gap-1.5 px-3.5 text-body font-semibold text-(--color-ink) ${
                 firstIsMainAction && index === 0
                   ? 'tappable rounded-2xl bg-(--color-main-action)'

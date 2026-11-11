@@ -39,7 +39,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Deck page; a practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
-| Places | Several decks named in one line | each deck's name with its mark, joined by " · ", as "Commands · Ports" | A run's row on Home; All practices' rows | `DeckChips`; `DeckNameRead`; `deck_name` |
+| Places | Several decks named in one line | each deck's name with its mark, joined by " · ", as "Commands · Ports" | A run's row on Home; All practices' rows | `DeckLine`; `DeckNameRead`; `deck_name` |
 | Home | The steps to a first practice | "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
 | Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_runs`; `HomeRun` |
 | Home | The decks of the most recently completed practices | "Recently practiced"; "Practice" on each deck | Home | `recent_decks` |
@@ -111,7 +111,8 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A named set of decks the user keeps and runs as many times as they like | "practice" | All practices; New practice; Edit practice; a practice's page; Home | — |
 | Practice | One go through a practice, from its first card until it ends | "run"; "Runs" over a practice's runs | A practice's page; the run page; a completed run's page; Home | `run`; `Run`; `RunRead`; `/api/runs`; `runId` |
 | Practice | The page listing every practice the user has | "All practices" | Its heading; side menu; Home's foot; the row of places | `PracticeOverviewPage`; `/practices`; `readPractices` |
-| Practice | Adding a practice to the list in view | "Add practice" | Practice page's header | `PracticeOverviewPage` |
+| Practice | Adding a practice to the list in view | "Add practice" | All practices' header | `PracticeOverviewPage` |
+| Practice | A practice's mark | a flash of lightning, drawn as an outline in the color of the words beside it; "Practice", spoken | beside every practice's name, never beside the word "practice" | `PracticeMark` |
 | Practice | The page where a practice is made | "New practice" | Its heading | `/practices/new`; `PracticeCreatePage`; `PracticeCreate`; `/api/practices` |
 | Practice | A new practice's suggested name | its decks' names in the order picked, joined by " + ", in grey inside Name, as "Commands + Ports"; a name another practice already has, with the next untaken number in parentheses, as "Ports (1)" | New practice | `suggest_practice_name`; `/api/practices/suggested-name`; `SuggestedPracticeName`; `readSuggestedPracticeName` |
 | Practice | The chosen decks | "Choose decks"; "Search decks", spoken, on its search; "Decks", spoken, on the list it opens, each row a deck's name alone and "New deck…" as the last row; each picked deck beneath with its cross; "Remove <name>", spoken; "N selected", above Cancel and Create, once a deck is picked | New practice | `deck`; `deck_ids`; `DeckPicker` |

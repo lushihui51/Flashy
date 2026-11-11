@@ -31,10 +31,13 @@ from app.models.run_card import RunCard, RunCardStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import (
     apply_rating,
+    deck_readiness,
+    practice_readiness,
     rebuild_deck_mastery,
     rebuild_mastery,
     record_review_group,
 )
+from tests.conftest import create_practice
 
 STRATEGIES = [EmaStrategy()]
 
@@ -200,6 +203,73 @@ class TestReadinessFolds:
 
     def test_collection_with_no_card_has_none(self):
         assert fold_collection_readiness([]) is None
+
+
+def _deck_of_cards(client, name, cards):
+    """A deck of the client's user with fields "front" and "back" and `cards` cards; its id
+    and its cards' ids."""
+    res = client.post(
+        "/api/decks",
+        json={"name": name, "field_defs": [{"name": n, "type": "text"} for n in ("front", "back")]},
+    )
+    assert res.status_code == 201, res.text
+    deck = res.json()
+    card_ids = []
+    for i in range(cards):
+        card = client.post(
+            "/api/cards",
+            json={
+                "deck_id": deck["id"],
+                "values": {fd["id"]: f"{name}-{i}" for fd in deck["field_defs"]},
+            },
+        )
+        assert card.status_code == 201, card.text
+        card_ids.append(uuid.UUID(card.json()["id"]))
+    return uuid.UUID(deck["id"]), [uuid.UUID(fd["id"]) for fd in deck["field_defs"]], card_ids
+
+
+class TestPracticeReadiness:
+    def test_each_card_counts_once_over_decks_of_different_sizes(self, client, db):
+        strategy = EmaStrategy()
+        small, small_fields, (small_card,) = _deck_of_cards(client, "Small", 1)
+        large, _, _ = _deck_of_cards(client, "Large", 3)
+        ready = _rated_side(strategy, ReviewSide.answer, [100.0] * 4)
+        db_stage_append_mastery_log(
+            db,
+            small_card,
+            {field_id: ready for field_id in small_fields},
+            datetime.now(UTC),
+            uuid.uuid4(),
+            None,
+        )
+        db.commit()
+        practice = uuid.UUID(create_practice(client, {small: None, large: None})["id"])
+
+        decks = deck_readiness(db, strategy, [small, large])
+        assert decks == {small: 1.0, large: 0.0}
+        # Four cards, one of them ready: a quarter, where averaging the two decks would give a half.
+        assert practice_readiness(db, strategy, [practice]) == {practice: pytest.approx(0.25)}
+
+    def test_a_practice_whose_decks_hold_no_card_has_none(self, client, db):
+        empty, _, _ = _deck_of_cards(client, "Empty", 0)
+        practice = uuid.UUID(create_practice(client, {empty: None})["id"])
+
+        assert practice_readiness(db, EmaStrategy(), [practice]) == {practice: None}
+
+    def test_every_practice_is_read_in_one_statement(
+        self, client, db, mastery_log_statement_counter
+    ):
+        decks = [_deck_of_cards(client, f"Deck {i}", 2)[0] for i in range(3)]
+        practices = [
+            uuid.UUID(create_practice(client, {deck: None for deck in decks[: i + 1]})["id"])
+            for i in range(3)
+        ]
+
+        mastery_log_statement_counter.reset()
+        readiness = practice_readiness(db, EmaStrategy(), practices)
+
+        assert mastery_log_statement_counter.count == 1
+        assert readiness == {practice: 0.0 for practice in practices}
 
 
 class TestClassifyChange:

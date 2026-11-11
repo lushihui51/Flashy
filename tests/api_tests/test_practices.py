@@ -2,6 +2,7 @@ import threading
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from sqlmodel import Session, select
 
 from app.database_ops.run import db_try_stage_create_run
@@ -370,3 +371,28 @@ class TestList:
 
         names = [p["name"] for p in client.get("/api/practices").json()]
         assert names == ["Run lately", "Never run, new", "Run long ago", "Never run, old"]
+
+
+class TestReadiness:
+    def test_a_practice_carries_the_readiness_of_all_its_decks_cards(self, client):
+        small, _ = _deck(client, "Small", cards=1)
+        large, _ = _deck(client, "Large", cards=3)
+        _finish(client, start_practice(client, {small["id"]: None})["id"])
+        (small_card,) = client.get(f"/api/decks/{small['id']}").json()["cards"]
+        assert small_card["readiness"] > 0
+        practice = create_practice(client, {small["id"]: None, large["id"]: None})
+
+        expected = small_card["readiness"] / 4
+        assert practice["readiness"] == pytest.approx(expected)
+        detail = client.get(f"/api/practices/{practice['id']}").json()
+        assert detail["readiness"] == pytest.approx(expected)
+        listed = next(p for p in client.get("/api/practices").json() if p["id"] == practice["id"])
+        assert listed["readiness"] == pytest.approx(expected)
+
+    def test_a_practice_whose_decks_hold_no_card_has_none(self, client):
+        empty, _ = _deck(client, "Empty", cards=0)
+        practice = create_practice(client, {empty["id"]: None})
+
+        assert practice["readiness"] is None
+        assert client.get(f"/api/practices/{practice['id']}").json()["readiness"] is None
+        assert client.get("/api/practices").json()[0]["readiness"] is None

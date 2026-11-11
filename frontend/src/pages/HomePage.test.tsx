@@ -128,6 +128,9 @@ describe('HomePage', () => {
       );
       expect(screen.getAllByText('Active')).toHaveLength(3);
       expect(screen.getByText('Deck of First practice')).toBeInTheDocument();
+      // An active row writes its decks with their marks and names its practice with none.
+      expect(screen.getAllByRole('img', { name: 'Deck' }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole('img', { name: 'Practice' })).not.toBeInTheDocument();
       expect(
         screen.getAllByRole('img', { name: '1 passed, 0 failed, 0 retrying, 3 unseen' }),
       ).toHaveLength(3);
@@ -160,8 +163,9 @@ describe('HomePage', () => {
       expect(screen.getByRole('img', { name: 'Mastery 50%' })).toBeInTheDocument();
 
       const practiceLinks = screen.getAllByRole('link', { name: 'Practice' });
-      expect(practiceLinks[0]).toHaveAttribute('href', '/practices');
-      expect(practiceLinks[1]).toHaveAttribute('href', '/practices');
+      // Each opens All practices narrowed to its deck.
+      expect(practiceLinks[0]).toHaveAttribute('href', '/practices?deck=d1');
+      expect(practiceLinks[1]).toHaveAttribute('href', '/practices?deck=d2');
       expect(practiceLinks[0]).toHaveClass(MAIN_ACTION_CLASS);
       expect(practiceLinks[1]).not.toHaveClass(MAIN_ACTION_CLASS);
     });

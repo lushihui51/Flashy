@@ -22,6 +22,7 @@ const SUMMARY: components['schemas']['PracticeSummary'] = {
     { deck_id: 'deck_2', deck_name: 'Ports' },
   ],
   active_run_id: null,
+  readiness: null,
 };
 
 describe('createPractice', () => {

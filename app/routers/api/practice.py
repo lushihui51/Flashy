@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import SessionDep
-from app.database_ops.practice import db_read_practice_summaries
 from app.database_ops.run import db_read_run_reads_for_practice
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
@@ -16,7 +15,7 @@ from app.models.practice_payloads import (
 )
 from app.models.run import RunRead
 from app.refusals import Refusal
-from app.services.practice import create_practice, suggest_practice_name
+from app.services.practice import create_practice, practice_summaries, suggest_practice_name
 from app.services.run import start_run
 
 router = APIRouter(prefix="/practices", tags=["Practice"])
@@ -27,7 +26,9 @@ def post_practices(db: SessionDep, current_user: CurrentUserDep, payload: Practi
     """404 naming a deck that is missing or not the user's; 400 `practice_name_taken` for a
     name the user's other practice has; a plain 400 for no deck or a deck picked twice."""
     try:
-        return create_practice(db, current_user.id, payload.name, payload.deck_ids)
+        return create_practice(
+            db, get_mastery_strategy(), current_user.id, payload.name, payload.deck_ids
+        )
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Refusal as e:
@@ -39,7 +40,7 @@ def post_practices(db: SessionDep, current_user: CurrentUserDep, payload: Practi
 @router.get("", response_model=list[PracticeSummary], status_code=200)
 def get_practices(db: SessionDep, current_user: CurrentUserDep):
     """Most recently run first; a practice never run by when it was made."""
-    return db_read_practice_summaries(db, current_user.id)
+    return practice_summaries(db, get_mastery_strategy(), current_user.id)
 
 
 @router.get("/suggested-name", response_model=SuggestedPracticeName, status_code=200)
@@ -58,7 +59,7 @@ def get_suggested_practice_name(
 
 @router.get("/{practice_id}", response_model=PracticeDetail, status_code=200)
 def get_practice(db: SessionDep, current_user: CurrentUserDep, practice_id: uuid.UUID):
-    summaries = db_read_practice_summaries(db, current_user.id, practice_id)
+    summaries = practice_summaries(db, get_mastery_strategy(), current_user.id, practice_id)
     if not summaries:
         raise HTTPException(status_code=404, detail="Practice not found")
     return PracticeDetail(

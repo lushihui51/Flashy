@@ -31,6 +31,7 @@ function detail(overrides: Record<string, unknown> = {}) {
       { deck_id: 'd2', deck_name: 'Ports' },
     ],
     active_run_id: null,
+    readiness: null,
     runs: [],
     ...overrides,
   };

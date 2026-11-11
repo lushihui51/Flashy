@@ -7,7 +7,7 @@ from sqlmodel import Session, col, func, or_, select
 from app.models.deck import Deck
 from app.models.practice import Practice
 from app.models.practice_configuration import PracticeConfiguration
-from app.models.practice_payloads import DeckNameRead, PracticeSummary
+from app.models.practice_payloads import DeckNameRead, PracticeListing
 from app.models.run import Run, RunStatus
 
 
@@ -65,9 +65,9 @@ def db_read_practice_names_from(db: Session, user_id: uuid.UUID, name: str) -> s
     )
 
 
-def db_read_practice_summaries(
+def db_read_practice_listings(
     db: Session, user_id: uuid.UUID, practice_id: uuid.UUID | None = None
-) -> list[PracticeSummary]:
+) -> list[PracticeListing]:
     """The user's practices, or only `practice_id` when given, in two statements: by the
     latest `last_activity_at` of their runs, or `created_at` with none, newest first, then
     id; each with its decks, most recently changed first, and its active run."""
@@ -114,7 +114,7 @@ def db_read_practice_summaries(
         )
 
     return [
-        PracticeSummary(
+        PracticeListing(
             id=practice.id,
             name=practice.name,
             created_at=practice.created_at,

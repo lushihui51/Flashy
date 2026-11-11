@@ -896,6 +896,8 @@ export interface components {
             decks: components["schemas"]["DeckNameRead"][];
             /** Active Run Id */
             active_run_id: string | null;
+            /** Readiness */
+            readiness: number | null;
             /** Runs */
             runs: components["schemas"]["RunRead"][];
         };
@@ -917,6 +919,8 @@ export interface components {
             decks: components["schemas"]["DeckNameRead"][];
             /** Active Run Id */
             active_run_id: string | null;
+            /** Readiness */
+            readiness: number | null;
         };
         /**
          * RatedFieldValue

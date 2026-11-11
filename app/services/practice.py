@@ -7,16 +7,18 @@ from app.database_ops.field_def import db_read_field_defs_for_decks
 from app.database_ops.practice import (
     db_read_owned_deck_names,
     db_read_practice_names_from,
-    db_read_practice_summaries,
+    db_read_practice_listings,
     db_try_stage_create_practice,
 )
 from app.database_ops.practice_configuration import (
     db_try_stage_create_practice_configurations,
 )
 from app.database_ops.run_configuration import db_read_last_run_configurations
+from app.mastery.strategy import MasteryStrategy
 from app.models.base import utcnow
 from app.models.practice_payloads import PracticeSummary
 from app.refusals import Refusal
+from app.services.mastery import practice_readiness
 from app.services.practice_configuration import (
     arrays_of,
     starting_configuration,
@@ -52,6 +54,22 @@ def suggest_practice_name(db: Session, user_id: uuid.UUID, deck_ids: list[uuid.U
     return f"{base} ({number})"
 
 
+def practice_summaries(
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    practice_id: uuid.UUID | None = None,
+) -> list[PracticeSummary]:
+    """The user's practices, or only `practice_id` when given, empty when it is not the
+    user's: most recently run first, a practice never run by when it was made, then id; each
+    with its decks, most recently changed first, its active run and its readiness."""
+    listings = db_read_practice_listings(db, user_id, practice_id)
+    readiness = practice_readiness(db, strategy, [row.id for row in listings])
+    return [
+        PracticeSummary(**row.model_dump(), readiness=readiness[row.id]) for row in listings
+    ]
+
+
 def _starting_arrays(db: Session, deck_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict[str, list]]:
     live_by_deck: dict[uuid.UUID, list[uuid.UUID]] = {deck_id: [] for deck_id in deck_ids}
     for field_def in db_read_field_defs_for_decks(db, deck_ids):
@@ -60,7 +78,11 @@ def _starting_arrays(db: Session, deck_ids: list[uuid.UUID]) -> dict[uuid.UUID, 
 
 
 def create_practice(
-    db: Session, user_id: uuid.UUID, name: str | None, deck_ids: list[uuid.UUID]
+    db: Session,
+    strategy: MasteryStrategy,
+    user_id: uuid.UUID,
+    name: str | None,
+    deck_ids: list[uuid.UUID],
 ) -> PracticeSummary:
     """Creates a practice of `deck_ids` named `name`, or the suggested name when `name` is
     None or blank, and stamps the user's first practice. Each deck's configuration is the
@@ -103,5 +125,4 @@ def create_practice(
 
     db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
-    summaries = db_read_practice_summaries(db, user_id, practice.id)
-    return summaries[0]
+    return practice_summaries(db, strategy, user_id, practice.id)[0]

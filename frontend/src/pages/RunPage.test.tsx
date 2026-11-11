@@ -226,7 +226,9 @@ describe('RunPage', () => {
     renderRun();
 
     const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(await within(row).findByRole('link', { name: 'Kanji drills' })).toBeInTheDocument();
+    expect(
+      await within(row).findByRole('link', { name: 'Practice Kanji drills' }),
+    ).toBeInTheDocument();
     await waitFor(() => expect(document.title).toContain('Kanji drills'));
   });
 
@@ -236,10 +238,13 @@ describe('RunPage', () => {
     renderRun();
 
     const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    await within(row).findByRole('link', { name: 'Evening practice' });
+    const practice = await within(row).findByRole('link', { name: 'Practice Evening practice' });
     const links = within(row).getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['All practices', 'Evening practice']);
-    expect(row).toHaveTextContent(/^All practices›Evening practice$/);
+    expect(links.map((link) => link.textContent)).toEqual(['All practices', ' Evening practice']);
+    expect(row).toHaveTextContent(/^All practices› Evening practice$/);
+    // The practice mark leads the practice's name, and All practices carries none.
+    expect(practice.firstElementChild).toHaveAttribute('aria-label', 'Practice');
+    expect(within(links[0]!).queryByRole('img')).not.toBeInTheDocument();
 
     await user.click(within(row).getByRole('link', { name: 'All practices' }));
 
@@ -251,7 +256,7 @@ describe('RunPage', () => {
     const user = userEvent.setup();
     renderRun('run9');
 
-    await user.click(await screen.findByRole('link', { name: 'Evening practice' }));
+    await user.click(await screen.findByRole('link', { name: 'Practice Evening practice' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/practices/practice9');
   });

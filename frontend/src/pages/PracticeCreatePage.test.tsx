@@ -218,7 +218,7 @@ describe('PracticeCreatePage', () => {
       http.post(`${BASE}/api/practices`, async ({ request }) => {
         body = await request.json();
         return HttpResponse.json(
-          { id: 'p9', name: 'Commands', created_at: '', decks: [], active_run_id: null },
+          { id: 'p9', name: 'Commands', created_at: '', decks: [], active_run_id: null, readiness: null },
           { status: 201 },
         );
       }),
@@ -281,6 +281,7 @@ describe('PracticeCreatePage', () => {
             created_at: '',
             decks: [],
             active_run_id: null,
+            readiness: null,
           },
           { status: 201 },
         );
@@ -303,7 +304,7 @@ describe('PracticeCreatePage', () => {
       http.post(`${BASE}/api/practices`, async ({ request }) => {
         body = await request.json();
         return HttpResponse.json(
-          { id: 'p9', name: 'Evening', created_at: '', decks: [], active_run_id: null },
+          { id: 'p9', name: 'Evening', created_at: '', decks: [], active_run_id: null, readiness: null },
           { status: 201 },
         );
       }),

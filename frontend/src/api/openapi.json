@@ -3316,6 +3316,17 @@
             ],
             "title": "Active Run Id"
           },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
+          },
           "runs": {
             "items": {
               "$ref": "#/components/schemas/RunRead"
@@ -3331,6 +3342,7 @@
           "created_at",
           "decks",
           "active_run_id",
+          "readiness",
           "runs"
         ],
         "title": "PracticeDetail"
@@ -3369,6 +3381,17 @@
               }
             ],
             "title": "Active Run Id"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
           }
         },
         "type": "object",
@@ -3377,7 +3400,8 @@
           "name",
           "created_at",
           "decks",
-          "active_run_id"
+          "active_run_id",
+          "readiness"
         ],
         "title": "PracticeSummary"
       },

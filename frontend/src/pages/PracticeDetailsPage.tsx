@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readPractice, startRun } from 'src/api/practice';
 import { isNotFound } from 'src/api/unwrap';
-import DeckChips from 'src/components/practice/DeckChips';
+import DeckLine from 'src/components/practice/DeckLine';
 import RunRow from 'src/components/run/RunRow';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -57,9 +57,7 @@ export default function PracticeDetailsPage() {
         {practice.name}
       </h1>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-2">
-        <DeckChips decks={practice.decks} variant="full" />
-      </div>
+      <DeckLine decks={practice.decks} className="mt-3" />
 
       <button
         type="button"
