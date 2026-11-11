@@ -1,6 +1,6 @@
 # 051 — A run's end and its page
 
-Waits for: 048, its `DeckMark`; 049, its `run` and `run_card` tables, `RunListing`, `RunPage` at `/runs/:runId`, `RunMark`, `PracticeMark`, `formatRunDay`, `RunStatusBadge`, `RerunButton`, `RunBreakdown` on the new paths, `failureSentence`'s map of sentences by code, and `practice_has_active_run`; 050, its `RunDetail` from `GET /api/runs/{id}` with `decks`, and the run's board at `/runs/:runId/decks/:deckId`; and `docs/vocabulary.md`, which it shares with each.
+Waits for: 048, its `DeckMark`; 049, its `run` and `run_card` tables, `RunListing`, `RunPage` at `/runs/:runId`, `RunMark`, `PracticeMark`, `formatRunDay`, `RunStatusBadge`, `RerunButton`, `RunBreakdown` on the new paths and `practice_has_active_run`; 050, its `RunDetail` from `GET /api/runs/{id}` with `decks`, and the run's board at `/runs/:runId/decks/:deckId`; and `docs/vocabulary.md`, which it shares with each.
 
 Canvas: https://claude.ai/artifact/NdSpFVAWQESu3S2ydqJoNS
 
@@ -170,7 +170,7 @@ PDR 040, PDR 041 and drawing 6:
 
 - A kind in the page's `kind` parameter whose count is zero must be ignored, so an address can no more narrow the list to nothing than a tap can.
 - Each kind of change with a count above zero must stay a button drawn as a block, pressed while chosen, narrowing the list as today. A kind with no card must show its `ChangeBadge` in its own color and its 0 with no block around them, as drawing 6 draws "0 up" and "0 down", and must be no button: nothing happens when it is tapped and it is not reached by Tab.
-- Under the counts, once one or more counts are chosen, "Re-run these" must start a run of exactly the cards the list shows through `POST /api/runs/{id}/chosen_cards`, with no confirm, and open `/runs/:newRunId`, as drawing 6-chosen draws it; a refusal shows beneath it: `no_cards` "These cards can't be run. Each is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first." It reads its words alone with no sign, a white button, as drawing 6-chosen draws it, Re-run alone being yellow.
+- Under the counts, once one or more counts are chosen, "Re-run these" must start a run of exactly the cards the list shows through `POST /api/runs/{id}/chosen_cards`, with no confirm, and open `/runs/:newRunId`, as drawing 6-chosen draws it; a refusal shows beneath it: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first." It reads its words alone with no sign, a white button, as drawing 6-chosen draws it, Re-run alone being yellow.
 - The chosen counts and the order must stay in the page's `kind` and `order` parameters, so they survive a refresh, browser back and the address; a run's page reached by its address with neither opens on every card ordered by mastery, as drawing 6-fresh draws it (PDR 017, PDR 041).
 - Tests: a zero count is no button and a tap on it changes nothing; "Re-run these" appears once a count is chosen and sends the listed cards; a render from `?kind=down_a_lot&order=drops` shows that narrowing and order.
 - `docs/vocabulary.md`, each row's columns as given:
