@@ -75,6 +75,7 @@ export default function DeckMark(): ReactNode;
 - A name wrapping to two lines and shortened after that, in drawing 9, and everything drawing 7-deck shows of the largest text size: cycle 053.
 - The deck page's tabs and its Practice button, absent from drawing 7-deck: cycle 049.
 - A mark inside a picker's input once a deck is chosen: never; the input holds the text the user can edit.
+- Edit configuration's deck name, shown in its locked span: never; cycle 049 deletes Edit configuration.
 
 **Done when**
 
@@ -115,6 +116,7 @@ Every field's name the user reads, on a deck's page's cards, the card form, the 
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/pages/DeckDetailPage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
