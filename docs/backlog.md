@@ -33,7 +33,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 072); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 072); and a startup check that the database is at alembic head (ADR 045).
   - Owner: /code-decide
 - B18. In what order does a practice show its cards, across its decks and within one, and where does a card come back after it is rated Again?
-  - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in `start_practice_run`'s docstring in `app/services/practice_run.py`, while the retry's placement is ADR 037 and ADR 058.
+  - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in the docstring of the run service's function that starts a run, while the retry's placement is ADR 037 and ADR 058.
   - Owner: /product-decide
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck or a practice, beyond the summary of one run?
   - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the run that caused it (ADR 042), and how each run asked each deck (ADR 107). Today one run's summary (PDR 041) is the only change the user sees.
@@ -46,4 +46,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Owner: /product-decide
 - B33. When the user ends a run that is already completed, from a page that still shows it active, is the end refused with a sentence, or does the page turn into the completed run's page with nothing said?
   - Reason: PDR 038 lets the user end an active run and says nothing of ending one already completed; a second tab, or a run page that has not caught up, sends `POST /api/runs/{id}/end` for a completed run. A refusal needs a code and a sentence (ADR 070); answering with the run unchanged needs neither, and the user sees the completed run's page.
+  - Owner: /product-decide
+- B34. May a single word wider than its whole line break inside itself, so that nothing on the page scrolls sideways, while PDR 050 has a name or a heading break only between words?
+  - Reason: PDR 050 asks both that a name or a heading break only between words and that nothing on a page scroll sideways, and a word wider than its line can keep only one of the two; `overflow-wrap: break-word` breaks such a word inside itself, and no record says it should.
   - Owner: /product-decide
