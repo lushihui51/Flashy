@@ -7,7 +7,6 @@ from sqlmodel import Session, col, func, select
 
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
-from app.models.subject import Subject
 from app.refusals import Refusal
 
 
@@ -17,8 +16,7 @@ def db_read_field_def(
     return db.exec(
         select(FieldDef)
         .join(Deck, Deck.id == FieldDef.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(FieldDef.id == field_def_id, Subject.user_id == user_id)
+        .where(FieldDef.id == field_def_id, Deck.user_id == user_id)
     ).first()
 
 
@@ -29,8 +27,7 @@ def db_read_field_defs(
         db.exec(
             select(FieldDef)
             .join(Deck, Deck.id == FieldDef.deck_id)
-            .join(Subject, Subject.id == Deck.subject_id)
-            .where(FieldDef.deck_id == deck_id, Subject.user_id == user_id)
+            .where(FieldDef.deck_id == deck_id, Deck.user_id == user_id)
             .order_by(col(FieldDef.position))
         ).all()
     )
@@ -97,7 +94,7 @@ def db_rename_field_def(db: Session, field_def: FieldDef, name: str) -> FieldDef
 def db_read_owned_field_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """The subset of `ids` that exist and belong to user_id (via the subject chain) —
+    """The subset of `ids` that exist and belong to user_id (via their deck) —
     compute_deletion_impact's ownership check."""
     if not ids:
         return set()
@@ -105,8 +102,7 @@ def db_read_owned_field_ids(
         db.exec(
             select(FieldDef.id)
             .join(Deck, Deck.id == FieldDef.deck_id)
-            .join(Subject, Subject.id == Deck.subject_id)
-            .where(col(FieldDef.id).in_(ids), Subject.user_id == user_id)
+            .where(col(FieldDef.id).in_(ids), Deck.user_id == user_id)
         ).all()
     )
 

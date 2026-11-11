@@ -176,7 +176,7 @@ What to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -257,6 +257,7 @@ Every deck belongs to its user with nothing above it: the schema, the API, the d
 - `frontend/src/components/library/SubjectIconPicker.test.tsx` (deleted)
 - `frontend/src/components/ui/Breadcrumb.test.tsx`
 - `frontend/src/components/ui/Tabs.test.tsx`
+- `frontend/src/components/ui/BottomSheet.tsx`
 - `frontend/src/components/ui/ConfirmDialog.tsx`
 - `frontend/src/components/ui/FullScreenDialog.tsx`
 - `frontend/src/components/ui/ListRow.tsx`
@@ -339,4 +340,37 @@ ADR 120, PDR 033 and PDR 034:
 
 **Debrief**
 
-None.
+Evidence, in the order of Done when:
+
+- `uv run alembic heads` printed `ef3634bbfc33 (head)`.
+- Before applying, the migration ran on a `pg_dump` copy of the dev database: the same `psql` check printed `t|6`, and `alembic check` against the copy printed `No new upgrade operations detected.` After `alembic upgrade head` on the dev database, the check printed `t|6`.
+- The seven named files: `59 passed`. The whole backend: `377 passed`. The whole frontend: `Test Files 67 passed (67)`, `Tests 759 passed (759)`; `npm run lint` and `npm run build` are clean, and `npm run gen:api` run again left `openapi.json` and `types.ts` unchanged.
+- The `git grep` printed nothing and exited 1.
+- Headless Chromium through playwright-core at 390 by 844, signed out of Clerk, against localhost:5173 with `ENV=development` and `DEV_AUTH_USER_ID` set:
+  - New deck, opened from the New sheet, read "New deck | Deck name | Fields | The first field identifies this card in lists and summaries. | Primary | Text | Text | Add field | Cancel | Create". Its only comboboxes were the two "Field type" selects, it held 3 textboxes, and it showed no sideways scroll. Laid beside drawing 10, it differs only in the top bar's "Log in", which comes from being signed out.
+  - Deck name "Commands", then Create: "A deck with this name already exists." stood in the part holding the Deck name input and not in the bar, the page stayed on `/decks/new`, and no deck was written.
+  - `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/subjects` printed `404`.
+- The cycle's judgement:
+  - `/library` showed 0 tablists and 0 tabs, "18 decks", one "Add deck" and 18 rows, each its name over "N cards · N fields" with a circle on every deck that has a card. The six renamed decks read "Practiced", "Empty" and "Untouched", each followed by " (Cycle 032 T3 judgement 2026-11-05 11:49)" or " (Cycle 032 T3 judgement 2026-11-05 11:47)".
+  - The New sheet's rows were "New deck", "New card" and "New practice", each holding 0 `svg`.
+  - `/subjects/new` showed "Page not found.".
+  - The page of "Commands" showed "Your library" alone above its heading. Its Practice landed on `/practice?deck=<id>`, with "Commands" in the one deck filter and each row reading "Commands · <configuration>". New practice held one filter, "All decks", whose rows each read a deck's name, and each group was headed by a deck's name alone.
+  - A second backend ran on port 8001 with `DEV_AUTH_USER_ID=user_cycle046_t2_check`, an id no `app_user` row held (`select count(*)` printed `0`), and every `/api/…` call of the page was routed to it. Home showed "Your first practice", "0 of 3" and the steps "1 New deck", "2 New card" and "3 New practice". New deck from the first step made "T2 delete check" and landed on its page, whose breadcrumb was one link, "Your library -> /library", and Home then read "1 of 3". Delete deck on its Edit deck, confirmed, landed on `/library` with "No decks yet.". That backend has since stopped, and the `app_user` row it made stays in the dev database.
+
+Departures and choices beyond Details:
+
+- `copy_deck`'s tests copy as `other_user`. A copy into the owner's own decks always clashes with the source's own name, and a test covers that clash.
+- `tests/conftest.py`'s `two_deck_library` fixture, decks "Alpha" and "Beta" each with two cards and one configuration, takes the place of `multi_subject_library`. Tests of the subject filters, of the two filters combined, and of a run deleted with its deck's subject are gone, and "deck filter disambiguates same-named decks" became "deck filter".
+- `db_stage_create_deck_practice_config` is deleted as well as `db_read_deck_practice_config_for_copy`, since the copy was the only caller of each. On the human's order, `db_read_deck_practice_configs`, which had no caller before this task either, is deleted too.
+- On the human's order, `frontend/src/components/ui/FullScreenDialog.tsx` is deleted, since nothing renders it once the deck form's overlay is gone. `PickerCombobox`'s `inputRef`, whose one caller was that overlay's picker, goes with it, and `ConfirmDialog`'s comment now names the header and the sheets as the layers it stands above. On the human's go-ahead, `frontend/src/components/ui/BottomSheet.tsx` joined Files and lost `aboveDialogs`, which no caller passed once the dialog was gone, so every sheet stands at z-20/z-30. A run's decks are now ordered by the deck's name alone.
+- The recency comment on `last_activity_at` now sits on `Deck` itself, and `Card` and `DeckPracticeConfig` point to it.
+- The frontend tests T1 added to prove a subject is ignored are gone: "a subject in the URL narrows nothing" on the Practice page, New practice and the configuration editor; the subject asserts of `DeckRow.test.tsx` and `DeckPicker.test.tsx`; and the `subject_id` and "All subjects" absence asserts. Nothing can carry a subject any more, and the grep forbids the word. Where `subject=` was only an arbitrary parameter, in `practiceSelection.test.ts` and `returnTo.test.ts`, it became `deck=`.
+- `DeckEditor.test.tsx` gains "asks for Deck name and the fields alone".
+- In `docs/Flashy-ERD.drawio`, the edge that ran from `subject` to `deck` now runs from `app_user`'s id, the edge from `app_user` to `subject` is gone, and the deck's row reads `user_id: uuid`.
+- In `docs/vocabulary.md`, every Subject row and "The Subjects tab's toolbar label" left the file. "Adding a subject to the list in view" left too, though its `AddButton` is still in the code under other rows.
+
+What to read:
+
+- `alembic/versions/ef3634bbfc33_decks_owned_by_their_user.py`, the one irreversible change.
+- The deck confirm reads "This also deletes 1 deck and 2 fields": `deletionSummaryText` counts the deck being deleted. It did so before this task, and the deck confirm's counts are cycle 049's.
+- `HomePage`'s `StepFlag`, outside Files, still extracts `has_deck` and `has_card` from `HomeSteps`, which now holds only those two.

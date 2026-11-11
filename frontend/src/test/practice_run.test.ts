@@ -111,9 +111,7 @@ describe('readPracticeRuns', () => {
     decks: [
       {
         deck_id: '00000000-0000-0000-0000-000000000301',
-        deck_name: 'Shared Deck Name',
-        subject_id: '00000000-0000-0000-0000-000000000201',
-        subject_name: 'Alpha',
+        deck_name: 'Alpha',
       },
     ],
   };
@@ -131,7 +129,7 @@ describe('readPracticeRuns', () => {
     expect(search).toBe('');
   });
 
-  it('sends the subject and deck filters', async () => {
+  it('sends the deck filter', async () => {
     let search = '';
     server.use(
       http.get(`${BASE}/api/practice_runs`, ({ request }) => {
@@ -140,10 +138,9 @@ describe('readPracticeRuns', () => {
       }),
     );
 
-    await readPracticeRuns({ subjectId: 'subject_1', deckId: 'deck_1' });
+    await readPracticeRuns({ deckId: 'deck_1' });
 
     const params = new URLSearchParams(search);
-    expect(params.get('subject_id')).toBe('subject_1');
     expect(params.get('deck_id')).toBe('deck_1');
   });
 });

@@ -26,9 +26,6 @@ export function buildDeckBatchEditPayload(
   if (trimmedName !== original.name.trim()) {
     payload.name = trimmedName;
   }
-  if (current.subjectId !== null && current.subjectId !== original.subjectId) {
-    payload.subject_id = current.subjectId;
-  }
 
   const fieldDefsPatch = buildFieldDefsPatch(original.fields, current.fields);
   if (fieldDefsPatch) payload.field_defs = fieldDefsPatch;

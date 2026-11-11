@@ -41,7 +41,7 @@ def fold_card_readiness(field_readiness: Sequence[float]) -> float:
 
 
 def fold_collection_readiness(card_readiness: Sequence[float]) -> float | None:
-    """A deck's or a subject's readiness: the average over its cards, each card once;
+    """A deck's readiness: the average over its cards, each card once;
     None with no card."""
     if not card_readiness:
         return None

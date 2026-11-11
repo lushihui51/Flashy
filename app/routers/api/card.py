@@ -11,7 +11,6 @@ from app.database_ops.card import (
 )
 from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import db_read_field_defs
-from app.database_ops.subject import db_read_subject
 from app.dependencies import CurrentUserDep
 from app.mastery.config import get_mastery_strategy
 from app.models.card import CardCreate, CardRead, CardUpdate
@@ -64,9 +63,7 @@ def create_card(db: SessionDep, current_user: CurrentUserDep, card: CardCreate):
     if all(_is_blank(v) for v in dense_values.values()):
         raise HTTPException(status_code=422, detail="card has no values")
 
-    subject = db_read_subject(db, deck.subject_id, current_user.id)
-    assert subject is not None, "a deck's subject always exists"
-    touch(db, deck, subject)
+    touch(db, deck)
     new_card = db_create_card(db, card.deck_id, dense_values)
     return _card_read(new_card, active_field_ids)
 
@@ -112,9 +109,7 @@ def update_card(
 
     deck = db_read_deck(db, card.deck_id, current_user.id)
     assert deck is not None, "a card's deck always exists"
-    subject = db_read_subject(db, deck.subject_id, current_user.id)
-    assert subject is not None, "a deck's subject always exists"
-    touch(db, card, deck, subject)
+    touch(db, card, deck)
     updated_card = db_update_card_values(db, card, payload.values)
     return _card_read(updated_card, active_field_ids)
 

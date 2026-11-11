@@ -1,5 +1,5 @@
 """Service tests for compute_deletion_impact + apply_deletion — calling the pair
-directly and committing, the same way delete_subject/delete_deck/delete_card do
+directly and committing, the same way delete_deck/delete_field/delete_card do
 internally. review_log.card_id/field_def_id are NOT NULL ON DELETE CASCADE: a deleted
 card's or field's review rows are gone entirely, never left behind with a nulled
 reference."""
@@ -23,7 +23,6 @@ from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
-from app.models.subject import Subject
 from app.services.deletion import apply_deletion, compute_deletion_impact
 from app.services.mastery import record_review_group
 
@@ -106,18 +105,14 @@ def _snapshot(
     return snap
 
 
-def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
+def test_deck_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     db, existing_user
 ):
     strategy = EmaStrategy()
 
-    subject = Subject(user_id=existing_user.id, name="Doomed subject")
-    db.add(subject)
-    db.commit()
-    db.refresh(subject)
-    subject_id = subject.id
-    deck1 = Deck(subject_id=subject_id, name="D1")
-    deck2 = Deck(subject_id=subject_id, name="D2")
+    user_id = existing_user.id
+    deck1 = Deck(user_id=user_id, name="D1")
+    deck2 = Deck(user_id=user_id, name="D2")
     db.add_all([deck1, deck2])
     db.commit()
     db.refresh(deck1)
@@ -147,14 +142,10 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     config = _config(db, deck1_id, "cfg", [d1_front.id], [d1_back.id])
     config_id = config.id
 
-    # A survivor subject with its own deck, and a run spanning deck1 (about to be
-    # deleted) and this survivor deck — not entirely inside the doomed subject, so it
-    # must not be deleted; its survivor snapshot must be untouched.
-    other_subject = Subject(user_id=existing_user.id, name="Survivor subject")
-    db.add(other_subject)
-    db.commit()
-    db.refresh(other_subject)
-    other_deck = Deck(subject_id=other_subject.id, name="D3")
+    # A survivor deck, and a run spanning deck1 (about to be deleted) and this
+    # survivor deck — not entirely inside the deleted decks, so it must not be
+    # deleted; its survivor snapshot must be untouched.
+    other_deck = Deck(user_id=user_id, name="D3")
     db.add(other_deck)
     db.commit()
     db.refresh(other_deck)
@@ -171,11 +162,10 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     survivor_snapshot_id = survivor_snapshot.id
     _snapshot(db, spanning_run_id, deck1_id, [d1_front.id], [d1_back.id])
 
-    impact = compute_deletion_impact(db, existing_user.id, subject_ids=[subject_id])
+    impact = compute_deletion_impact(db, user_id, deck_ids=[deck1_id, deck2_id])
     apply_deletion(db, strategy, impact)
     db.commit()
 
-    assert db.get(Subject, subject_id) is None
     assert db.get(Deck, deck1_id) is None
     assert db.get(Deck, deck2_id) is None
     assert db.get(DeckPracticeConfig, config_id) is None
@@ -184,7 +174,7 @@ def test_subject_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
         is None
     )
 
-    # The spanning run itself survives (not entirely inside the doomed subject).
+    # The spanning run itself survives (not entirely inside the deleted decks).
     assert db.get(PracticeRun, spanning_run_id) is not None
     surviving_snapshot = db.get(PracticeDeck, survivor_snapshot_id)
     assert surviving_snapshot is not None
@@ -200,12 +190,8 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
 ):
     strategy = EmaStrategy()
 
-    subject = Subject(user_id=existing_user.id, name="S")
-    db.add(subject)
-    db.commit()
-    db.refresh(subject)
-    subject_id = subject.id
-    deck1 = Deck(subject_id=subject_id, name="D1")
+    user_id = existing_user.id
+    deck1 = Deck(user_id=user_id, name="D1")
     db.add(deck1)
     db.commit()
     db.refresh(deck1)
@@ -254,7 +240,7 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     # A second, unrelated deck whose review_log row's shown_prompt_ids array is
     # deliberately made to also name B's id — proves the scrub is scoped to deck1's
     # own cards, not to every row anywhere that happens to name B.
-    deck2 = Deck(subject_id=subject_id, name="D2")
+    deck2 = Deck(user_id=user_id, name="D2")
     db.add(deck2)
     db.commit()
     db.refresh(deck2)
@@ -374,11 +360,7 @@ def test_card_deletion_issues_no_mastery_log_statements_beyond_its_own_cascade(
 ):
     strategy = EmaStrategy()
 
-    subject = Subject(user_id=existing_user.id, name="S")
-    db.add(subject)
-    db.commit()
-    db.refresh(subject)
-    deck = Deck(subject_id=subject.id, name="D")
+    deck = Deck(user_id=existing_user.id, name="D")
     db.add(deck)
     db.commit()
     db.refresh(deck)

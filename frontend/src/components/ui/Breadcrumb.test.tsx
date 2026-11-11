@@ -55,15 +55,15 @@ describe('Breadcrumb', () => {
       <Breadcrumb
         places={[
           { label: 'Your library', to: '/library' },
-          { label: 'French', to: '/subjects/s1' },
+          { label: 'Vocab', to: '/decks/d1' },
         ]}
       />,
     );
 
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
     const links = within(row).getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['Your library', 'French']);
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/library', '/subjects/s1']);
+    expect(links.map((link) => link.textContent)).toEqual(['Your library', 'Vocab']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/library', '/decks/d1']);
   });
 
   it('puts one separator between places and none before the first', () => {
@@ -71,14 +71,14 @@ describe('Breadcrumb', () => {
       <Breadcrumb
         places={[
           { label: 'Your library', to: '/library' },
-          { label: 'French', to: '/subjects/s1' },
           { label: 'Vocab', to: '/decks/d1' },
+          { label: 'Bonjour', to: '/cards/c1' },
         ]}
       />,
     );
 
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(row).toHaveTextContent(/^Your library›French›Vocab$/);
+    expect(row).toHaveTextContent(/^Your library›Vocab›Bonjour$/);
   });
 
   it("renders a place's icon inside its link", () => {
@@ -86,14 +86,14 @@ describe('Breadcrumb', () => {
       <Breadcrumb
         places={[
           { label: 'Your library', to: '/library' },
-          { label: 'French', to: '/subjects/s1', icon: <svg data-testid="subject-icon" /> },
+          { label: 'Vocab', to: '/decks/d1', icon: <svg data-testid="place-icon" /> },
         ]}
       />,
     );
 
-    const link = screen.getByRole('link', { name: 'French' });
-    expect(within(link).getByTestId('subject-icon')).toBeInTheDocument();
-    expect(link.firstChild).toBe(screen.getByTestId('subject-icon'));
+    const link = screen.getByRole('link', { name: 'Vocab' });
+    expect(within(link).getByTestId('place-icon')).toBeInTheDocument();
+    expect(link.firstChild).toBe(screen.getByTestId('place-icon'));
   });
 
   it('renders a single place with no separator', () => {

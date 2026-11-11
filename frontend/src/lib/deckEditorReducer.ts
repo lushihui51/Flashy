@@ -18,12 +18,11 @@ export type EditorField = {
   pendingRemoval?: boolean;
 };
 
-/** Identity and schema — a deck's name, where it lives, and what a card of it is made
- * of. Cards are not here: they are routine content, added and edited from the deck's
- * own card list, not from the form that defines the deck. */
+/** Identity and schema — a deck's name and what a card of it is made of. Cards are not
+ * here: they are routine content, added and edited from the deck's own card list, not
+ * from the form that defines the deck. */
 export type DeckEditorState = {
   name: string;
-  subjectId: string | null;
   fields: EditorField[];
   dirty: boolean;
 };
@@ -34,10 +33,9 @@ function makeKey(): string {
 
 /** A brand-new deck starts with the two fields most decks need — the user renames or
  * replaces them rather than starting from an empty list. */
-export function initialDeckEditorState(subjectId: string | null = null): DeckEditorState {
+export function initialDeckEditorState(): DeckEditorState {
   return {
     name: '',
-    subjectId,
     fields: [
       { key: makeKey(), name: 'Term', type: 'text' },
       { key: makeKey(), name: 'Definition', type: 'text' },
@@ -63,7 +61,6 @@ export function deckDetailToEditorState(deck: DeckDetail): DeckEditorState {
   }));
   return {
     name: deck.name,
-    subjectId: deck.subject_id,
     fields,
     dirty: false,
   };
@@ -71,7 +68,6 @@ export function deckDetailToEditorState(deck: DeckDetail): DeckEditorState {
 
 export type DeckEditorAction =
   | { type: 'SET_NAME'; name: string }
-  | { type: 'SET_SUBJECT'; subjectId: string }
   | { type: 'ADD_FIELD' }
   | { type: 'RENAME_FIELD'; key: string; name: string }
   | { type: 'SET_FIELD_TYPE'; key: string; fieldType: FieldType }
@@ -92,9 +88,6 @@ export function deckEditorReducer(
   switch (action.type) {
     case 'SET_NAME':
       return { ...state, name: action.name, dirty: true };
-
-    case 'SET_SUBJECT':
-      return { ...state, subjectId: action.subjectId, dirty: true };
 
     case 'ADD_FIELD': {
       const field: EditorField = { key: makeKey(), name: '', type: 'text' };
@@ -162,7 +155,6 @@ export function deckEditorReducer(
 
 export function isDeckEditorValid(state: DeckEditorState): boolean {
   if (state.name.trim() === '') return false;
-  if (state.subjectId === null) return false;
   // A pending-removal field is on its way out on save, so it neither counts toward
   // the two-field floor nor blocks Save with a struck-through duplicate name.
   const activeFields = state.fields.filter((f) => !f.pendingRemoval);
@@ -173,13 +165,12 @@ export function isDeckEditorValid(state: DeckEditorState): boolean {
   return true;
 }
 
-/** The create payload: name, subject, and fields in list order. A deck is born with a
+/** The create payload: name and fields in list order. A deck is born with a
  * schema and no content — the first card is added from the new deck's own card list,
  * and the create contract has no `cards` field at all. */
 export function buildDeckCreatePayload(state: DeckEditorState): DeckCreate {
   return {
     name: state.name.trim(),
-    subject_id: state.subjectId!,
     field_defs: state.fields.map((f) => ({ name: f.name.trim(), type: f.type })),
   };
 }

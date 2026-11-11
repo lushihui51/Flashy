@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import Scrim from 'src/components/ui/Scrim';
@@ -9,7 +9,7 @@ export type PickerItem = { id: string; name: string };
 /** Choosing a value to *keep* (a form field) versus choosing one to *narrow by* (a
  * filter) differ in exactly one place: the extra row the list always carries. Picking
  * one of these decides which row that is, and makes the other variant's props a type
- * error — a filter can't accidentally offer "New subject…", and a form field can't
+ * error — a filter can't accidentally offer "New deck…", and a form field can't
  * offer a clear row that would leave it empty. */
 type PurposeProps =
   | {
@@ -23,7 +23,7 @@ type PurposeProps =
     }
   | {
       purpose: 'filter';
-      /** The always-present, always-**first** row, e.g. "All subjects" — the way back to
+      /** The always-present, always-**first** row, e.g. "All decks" — the way back to
        * no filter at all. First, not last, because it is where the eye starts when the
        * question is "which of these am I narrowing to?". */
       clearLabel: string;
@@ -44,10 +44,6 @@ export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   /** Drawn under the item's name on its row in the list, and nowhere else. */
   renderBeneath?: (item: T) => ReactNode;
   disabled?: boolean;
-  /** So a caller opening an overlay from the create row (DeckEditor) can pass this
-   * straight through as FullScreenDialog's triggerRef, returning focus to the actual
-   * input on close rather than to nothing in particular. */
-  inputRef?: RefObject<HTMLInputElement | null>;
 };
 
 /** The one combobox in the app, under `DeckPicker` for a list of decks: open-on-focus-or-click,
@@ -73,7 +69,6 @@ export default function PickerCombobox<T extends PickerItem>({
   renderLeading,
   renderBeneath,
   disabled,
-  inputRef,
 }: PickerComboboxProps<T>) {
   const listboxId = useId();
   const controlRef = useRef<HTMLDivElement>(null);
@@ -179,7 +174,6 @@ export default function PickerCombobox<T extends PickerItem>({
       <Popover.Anchor asChild>
         <div ref={controlRef} className="relative">
           <input
-            ref={inputRef}
             type="text"
             role="combobox"
             aria-expanded={open}

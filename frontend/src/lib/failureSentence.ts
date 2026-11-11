@@ -15,7 +15,6 @@ const SOMETHING_WENT_WRONG = 'Something went wrong.';
 // `run_active` has no row: no screen reaches it, so it falls to SOMETHING_WENT_WRONG.
 const SENTENCE_BY_CODE: ReadonlyMap<string, string> = new Map(
   Object.entries({
-    subject_name_taken: 'A subject with this name already exists.',
     deck_name_taken: 'A deck with this name already exists.',
     field_name_taken: 'A field with this name already exists.',
     configuration_name_taken: 'A configuration with this name already exists.',

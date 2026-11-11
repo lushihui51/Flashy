@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from 'src/test/server';
-import { readSubjects } from 'src/api/subject';
+import { readDecks } from 'src/api/deck';
 import { ApiError, CONNECTION_FAILED_MESSAGE, SERVER_TROUBLE_MESSAGE } from 'src/api/unwrap';
 
 const BASE = 'http://localhost:8000';
@@ -17,9 +17,9 @@ async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
 
 describe('client', () => {
   it('turns a request with no response into a plain Error with readable text', async () => {
-    server.use(http.get(`${BASE}/api/subjects`, () => HttpResponse.error()));
+    server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.error()));
 
-    const thrown = await rejectionOf(readSubjects());
+    const thrown = await rejectionOf(readDecks());
 
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown).not.toBeInstanceOf(ApiError);
@@ -29,9 +29,9 @@ describe('client', () => {
   it('rejects an empty-body 502 with a status-carrying ApiError', async () => {
     // An empty error body must still reject: `unwrap` decides on `response.ok`, not on
     // `error`.
-    server.use(http.get(`${BASE}/api/subjects`, () => new HttpResponse(null, { status: 502 })));
+    server.use(http.get(`${BASE}/api/decks`, () => new HttpResponse(null, { status: 502 })));
 
-    const thrown = await rejectionOf(readSubjects());
+    const thrown = await rejectionOf(readDecks());
 
     expect(thrown).toBeInstanceOf(ApiError);
     expect((thrown as ApiError).status).toBe(502);

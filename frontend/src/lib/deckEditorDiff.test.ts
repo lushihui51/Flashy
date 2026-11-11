@@ -8,7 +8,6 @@ const BACK: EditorField = { key: 'k-back', id: 'back-id', name: 'Back', type: 't
 function baseState(overrides: Partial<DeckEditorState> = {}): DeckEditorState {
   return {
     name: 'French Vocab',
-    subjectId: 'subject-id',
     fields: [FRONT, BACK],
     dirty: false,
     ...overrides,
@@ -26,12 +25,6 @@ describe('buildDeckBatchEditPayload', () => {
     const original = baseState();
     const current = baseState({ name: 'Renamed Deck' });
     expect(buildDeckBatchEditPayload(original, current)).toEqual({ name: 'Renamed Deck' });
-  });
-
-  it('subject change only', () => {
-    const original = baseState();
-    const current = baseState({ subjectId: 'other-subject-id' });
-    expect(buildDeckBatchEditPayload(original, current)).toEqual({ subject_id: 'other-subject-id' });
   });
 
   it('reorder only: field_defs.order flips, no create/update/delete', () => {

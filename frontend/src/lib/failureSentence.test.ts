@@ -30,7 +30,6 @@ function thrownBy(fn: () => unknown): unknown {
 describe('failureSentence', () => {
   it("renders each known code's sentence, whatever the status", () => {
     const sentences: Record<string, string> = {
-      subject_name_taken: 'A subject with this name already exists.',
       deck_name_taken: 'A deck with this name already exists.',
       field_name_taken: 'A field with this name already exists.',
       configuration_name_taken: 'A configuration with this name already exists.',
@@ -46,7 +45,7 @@ describe('failureSentence', () => {
       nothing_to_practice: NOTHING_TO_PRACTICE_MESSAGE,
       database_unavailable: 'Flashy is temporarily unavailable.',
     };
-    expect(Object.keys(sentences)).toHaveLength(14);
+    expect(Object.keys(sentences)).toHaveLength(13);
 
     for (const [code, sentence] of Object.entries(sentences)) {
       for (const status of [400, 404, 409, 422, 500, 503]) {
@@ -112,8 +111,8 @@ describe('failureSentence', () => {
   });
 
   it('never reads the message', () => {
-    expect(failureSentence(detailError(400, 'subject_name_taken', 'xyz'), NOT_FOUND)).toBe(
-      'A subject with this name already exists.',
+    expect(failureSentence(detailError(422, 'deck_name_taken', 'xyz'), NOT_FOUND)).toBe(
+      'A deck with this name already exists.',
     );
     expect(failureSentence(detailError(409, 'run_active', 'xyz'), NOT_FOUND)).not.toContain('xyz');
     expect(failureSentence(new ApiError(400, 'xyz'), NOT_FOUND)).not.toContain('xyz');

@@ -13,8 +13,8 @@ describe.each<ReturnAddressKey>(['cancelTo', 'returnTo'])('internalReturnTo read
   });
 
   it('accepts a full internal path with its own query string', () => {
-    expect(internalReturnTo(paramsWith(key, '/practice/new?subject=s1'), key)).toBe(
-      '/practice/new?subject=s1',
+    expect(internalReturnTo(paramsWith(key, '/practice/new?deck=d1'), key)).toBe(
+      '/practice/new?deck=d1',
     );
   });
 

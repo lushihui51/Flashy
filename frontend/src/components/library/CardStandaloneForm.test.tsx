@@ -13,8 +13,6 @@ const BASE = 'http://localhost:8000';
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Languages',
     name: 'French Vocab',
     created_at: '',
     card_count: 1,
@@ -23,8 +21,6 @@ const decks = [
   },
   {
     id: 'd2',
-    subject_id: 's1',
-    subject_name: 'Languages',
     name: 'Spanish Vocab',
     created_at: '',
     card_count: 0,
@@ -36,7 +32,6 @@ const decks = [
 const deckD1 = {
   id: 'd1',
   name: 'French Vocab',
-  subject_id: 's1',
   created_at: '',
   readiness: null,
   field_defs: [
@@ -48,7 +43,6 @@ const deckD1 = {
 const deckD2 = {
   id: 'd2',
   name: 'Spanish Vocab',
-  subject_id: 's1',
   created_at: '',
   readiness: null,
   field_defs: [{ id: 'g1', name: 'Word', type: 'text', position: 0 }],

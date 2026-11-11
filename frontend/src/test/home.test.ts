@@ -9,7 +9,7 @@ const BASE = 'http://localhost:8000';
 describe('readHome', () => {
   it('returns what GET /api/home answers', async () => {
     const home: components['schemas']['HomeRead'] = {
-      steps: { has_subject: true, has_deck: false, has_card: false, has_configuration: false },
+      steps: { has_deck: true, has_card: false },
       active_practices: [],
       recent_decks: [],
     };

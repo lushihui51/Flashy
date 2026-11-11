@@ -39,35 +39,19 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The start page | "Home" | Side menu; its heading | `HomePage`; `/` |
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Deck page; a practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
-| Places | A thing's address, widest place first | "Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `subject_name`; `deck_name`; `configuration_name` |
+| Places | A thing's address, widest place first | "Deck · Configuration" | New practice's groups and Selected rows; a practice's row; a practice's page | `SessionDeckChips`; `PracticeRunDeckSummary`; `deck_name`; `configuration_name` |
 | Home | The steps to a first practice | "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
 | Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_practices`; `HomeActivePractice` |
 | Home | The decks of the most recently completed practices | "Recently practiced"; "Practice" on each deck | Home | `recent_decks` |
 | Home | Going to New practice from Home | "New practice" | Home, last | `/practice/new` |
-| Library | The Subjects tab's toolbar label | — | — | `readSubjects`; `/api/subjects` |
 | Library | The library's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
-| Library | Deleting a subject or deck that takes other things with it, each count present only above zero | "This also deletes N decks, N cards, N fields, N deck configurations and N practices. This can't be undone." | Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `/api/deletion-impact` |
-| Subject | A subject | "subject" | New deck; Edit deck; the deck form's overlay | `subject`; `Subject`; `SubjectRead`; `SubjectSummary`; `/api/subjects`; `subjectId` |
-| Subject | Adding a subject to the list in view | — | — | `AddButton` |
-| Subject | The page where a subject is made | "New subject" | the deck form's overlay | `SubjectForm` |
-| Subject | The page where a subject is changed | — | — | `SubjectForm` |
-| Subject | Choosing a subject | "Subject"; "New subject…" as the last row | New deck; Edit deck | `PickerCombobox`; `createLabel`; `subject_id` |
-| Subject | A subject's description | "Description" | the deck form's overlay | `description` |
-| Subject | A subject's picture | "Icon"; the control spoken as "Icon: <picture>"; the sheet of pictures spoken as "Icon" | the deck form's overlay | `icon`; `SubjectIcon`; `SubjectIconPicker` |
-| Subject | Each picture, spoken only and never shown as text | "Atom"; "Open book"; "Brain"; "Calculator"; "Camera"; "Code"; "Coins"; "DNA"; "Dumbbell"; "Flask"; "Gavel"; "Globe"; "Heart"; "Headset"; "Landmark"; "Languages"; "Leaf"; "Microscope"; "Music"; "Palette"; "Pen"; "Rocket"; "Scale"; "Theater"; "Trophy"; "Utensils" | Icon sheet; every subject icon | `ICONS`; `subjectIconName` |
-| Subject | A subject counted | — | — | `deck_count` |
-| Subject | The subject page's toolbar label | — | — | `readDecks`; `card_count` |
-| Subject | Deleting a subject | — | — | `deleteSubject`; `/api/subjects/{subject_id}` |
-| Subject | A subject name already taken | "A subject with this name already exists." | the deck form's overlay | `subject_name_taken` |
-| Subject | Confirming a subject's deletion | — | — | `confirmDeleteOpen` |
-| Subject | Leaving the subject form with unsaved changes | "Discard changes?" | the deck form's overlay | `confirmCancelOpen` |
-| Subject | A subject left unchosen | "Choose a subject to create a deck." | New deck | `subjectError` |
+| Library | Deleting a deck that takes other things with it, each count present only above zero | "This also deletes N decks, N cards, N fields, N deck configurations and N practices. This can't be undone." | Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `/api/deletion-impact` |
 | Deck | A deck | "deck" | Library; deck page; forms; New practice; a practice's page; a deck's board; Home | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |
 | Deck | A deck's name | "Deck name" | New deck; Edit deck | `name`; `DeckCreate`; `DeckBatchEdit` |
 | Deck | Adding a deck to the list in view | "Add deck" | Library | `AddButton` |
 | Deck | The page where a deck is made | "New deck" | Its heading | `/decks/new`; `DeckEditor` |
 | Deck | The page where a deck is changed | "Edit deck" | Its heading | `/decks/:deckId/edit`; `DeckEditor`; `PATCH /api/decks/{deck_id}` |
-| Deck | Choosing a deck | "Deck"; each row a deck's name alone; "New deck…" as the last row | New card; Edit card | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id`; `subject_name` |
+| Deck | Choosing a deck | "Deck"; each row a deck's name alone; "New deck…" as the last row | New card; Edit card | `DeckPicker`; `PickerCombobox`; `renderBeneath`; `createLabel`; `deck_id` |
 | Deck | A deck counted | "N cards"; "N fields" | Library rows | `card_count`; `field_names` |
 | Deck | A deck's row | its name, then "N cards · N fields" beneath, as "48 cards · 12 fields" | Library; New practice's picked decks | `DeckRow` |
 | Deck | The deck page's tabs | "Cards"; "Configurations"; "Deck contents", spoken | Deck page | `TABS`; `tab` |

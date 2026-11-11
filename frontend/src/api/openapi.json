@@ -5,372 +5,6 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/subjects": {
-      "post": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Create Subject",
-        "operationId": "create_subject_api_subjects_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subjects",
-        "operationId": "read_subjects_api_subjects_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SubjectSummary"
-                  },
-                  "title": "Response Read Subjects Api Subjects Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/subjects/{subject_id}": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subject",
-        "operationId": "read_subject_api_subjects__subject_id__get",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectSummary"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Update Subject",
-        "operationId": "update_subject_api_subjects__subject_id__patch",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Delete Subject",
-        "operationId": "delete_subject_api_subjects__subject_id__delete",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/decks": {
       "post": {
         "tags": [
@@ -452,23 +86,6 @@
         "summary": "Read Decks",
         "operationId": "read_decks_api_decks_get",
         "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1690,26 +1307,9 @@
           "Practice Config"
         ],
         "summary": "Read Deck Practice Configs",
-        "description": "Every config the user owns unless narrowed by subject and/or deck. Each row\ncarries its deck and subject: the creation page groups by deck, and two decks in\ndifferent subjects may share a name, so the subject has to travel with the row\nrather than be joined back in on the client.",
+        "description": "Every config the user owns unless narrowed to one deck. Each row carries its\ndeck's name, since the creation page groups by deck.",
         "operationId": "read_deck_practice_configs_api_deck_practice_configs_get",
         "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
           {
             "name": "deck_id",
             "in": "query",
@@ -2018,23 +1618,9 @@
           "Deletion"
         ],
         "summary": "Get Deletion Impact",
-        "description": "The advisory preview behind every delete confirm: the same closure a deletion\ntransaction computes for itself, reported as counts. 404 for the first id that's\nforeign or doesn't exist; 422 when all four lists are empty \u2014 there's nothing to\npreview.",
+        "description": "The advisory preview behind every delete confirm: the same closure a deletion\ntransaction computes for itself, reported as counts. 404 for the first id that's\nforeign or doesn't exist; 422 when all three lists are empty \u2014 there's nothing to\npreview.",
         "operationId": "get_deletion_impact_api_deletion_impact_get",
         "parameters": [
-          {
-            "name": "subject_ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "default": [],
-              "title": "Subject Ids"
-            }
-          },
           {
             "name": "deck_ids",
             "in": "query",
@@ -2214,26 +1800,9 @@
           "Practice"
         ],
         "summary": "Read Practice Runs",
-        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (`source_config_id`\nis attribution only, never a filter).",
+        "description": "Newest first, each row carrying the decks it snapshotted. The filter is the same\nrelation, asked as a question: a session matches a deck if any of its practice_deck\nrows points at it (`source_config_id` is attribution only, never a filter).",
         "operationId": "read_practice_runs_api_practice_runs_get",
         "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
           {
             "name": "deck_id",
             "in": "query",
@@ -3317,18 +2886,6 @@
             ],
             "title": "Name"
           },
-          "subject_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Id"
-          },
           "field_defs": {
             "anyOf": [
               {
@@ -3360,11 +2917,6 @@
             "type": "string",
             "title": "Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
           "field_defs": {
             "items": {
               "$ref": "#/components/schemas/FieldDefCreate"
@@ -3376,7 +2928,6 @@
         "type": "object",
         "required": [
           "name",
-          "subject_id",
           "field_defs"
         ],
         "title": "DeckCreate"
@@ -3391,11 +2942,6 @@
           "name": {
             "type": "string",
             "title": "Name"
-          },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
           },
           "created_at": {
             "type": "string",
@@ -3437,7 +2983,6 @@
         "required": [
           "id",
           "name",
-          "subject_id",
           "created_at",
           "last_activity_at",
           "readiness",
@@ -3709,15 +3254,6 @@
           "deck_name": {
             "type": "string",
             "title": "Deck Name"
-          },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
           }
         },
         "type": "object",
@@ -3733,12 +3269,10 @@
           "id",
           "created_at",
           "last_activity_at",
-          "deck_name",
-          "subject_id",
-          "subject_name"
+          "deck_name"
         ],
         "title": "DeckPracticeConfigSummary",
-        "description": "A list row for the config picker and the config management surface: the config\nplus where it lives. Two decks in different subjects may share a name, so a row is\nonly unambiguous with its subject alongside its deck."
+        "description": "A list row for the config picker and the config management surface: the config\nplus the name of the deck it lives on."
       },
       "DeckPracticeConfigUpdate": {
         "properties": {
@@ -3847,11 +3381,6 @@
       },
       "DeckSummary": {
         "properties": {
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -3870,10 +3399,6 @@
             "type": "string",
             "format": "date-time",
             "title": "Last Activity At"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
           },
           "card_count": {
             "type": "integer",
@@ -3900,25 +3425,19 @@
         },
         "type": "object",
         "required": [
-          "subject_id",
           "name",
           "id",
           "created_at",
           "last_activity_at",
-          "subject_name",
           "card_count",
           "field_names",
           "readiness"
         ],
         "title": "DeckSummary",
-        "description": "A deck as a list row shows it. The single-deck reads\n(`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which\nalready includes everything here except the subject's name, card_count and\nfield_names."
+        "description": "A deck as a list row shows it. The single-deck reads\n(`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which\nalready includes everything here except card_count and field_names."
       },
       "DeletionImpactRead": {
         "properties": {
-          "subjects_deleted": {
-            "type": "integer",
-            "title": "Subjects Deleted"
-          },
           "decks_deleted": {
             "type": "integer",
             "title": "Decks Deleted"
@@ -3946,7 +3465,6 @@
         },
         "type": "object",
         "required": [
-          "subjects_deleted",
           "decks_deleted",
           "fields_deleted",
           "cards_deleted",
@@ -4291,10 +3809,6 @@
       },
       "HomeSteps": {
         "properties": {
-          "has_subject": {
-            "type": "boolean",
-            "title": "Has Subject"
-          },
           "has_deck": {
             "type": "boolean",
             "title": "Has Deck"
@@ -4302,21 +3816,15 @@
           "has_card": {
             "type": "boolean",
             "title": "Has Card"
-          },
-          "has_configuration": {
-            "type": "boolean",
-            "title": "Has Configuration"
           }
         },
         "type": "object",
         "required": [
-          "has_subject",
           "has_deck",
-          "has_card",
-          "has_configuration"
+          "has_card"
         ],
         "title": "HomeSteps",
-        "description": "Whether each of the first four things exists; the fifth, a practice, never does\nwhile the steps show."
+        "description": "Whether the user has a deck and a card, the first two steps; the third, a\npractice, never exists while the steps show."
       },
       "PracticeCardRead": {
         "properties": {
@@ -4464,15 +3972,6 @@
             "type": "string",
             "title": "Deck Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
-          },
           "configuration_name": {
             "anyOf": [
               {
@@ -4489,12 +3988,10 @@
         "required": [
           "deck_id",
           "deck_name",
-          "subject_id",
-          "subject_name",
           "configuration_name"
         ],
         "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` is read here for the label\nonly: `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
+        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck`.\n\nThis chain is the only link between a session and a deck, and the only thing\nthe filter uses. `practice_deck.source_config_id` is read here for the label\nonly: `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
       },
       "PracticeRunRead": {
         "properties": {
@@ -4620,7 +4117,7 @@
           "decks"
         ],
         "title": "PracticeRunSummary",
-        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` never outlives its\ndeck: deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state for a summary to represent."
+        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` never outlives its\ndeck: deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state for a summary to represent."
       },
       "RatedFieldValue": {
         "properties": {
@@ -4769,180 +4266,6 @@
         ],
         "title": "RunStatus",
         "description": "Two states, not three: nothing could distinguish an \"abandoned\" session from a\n`completed` one without tracking why it ran out of pending cards, and no state is\nkept for that. A session is either still practisable or it isn't."
-      },
-      "SubjectCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "SubjectCreate"
-      },
-      "SubjectRead": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "id",
-          "user_id",
-          "created_at",
-          "last_activity_at"
-        ],
-        "title": "SubjectRead"
-      },
-      "SubjectSummary": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
-          },
-          "deck_count": {
-            "type": "integer",
-            "title": "Deck Count"
-          },
-          "readiness": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Readiness"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "id",
-          "user_id",
-          "created_at",
-          "last_activity_at",
-          "deck_count",
-          "readiness"
-        ],
-        "title": "SubjectSummary",
-        "description": "A subject as a library row and its own page show it."
-      },
-      "SubjectUpdate": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          }
-        },
-        "type": "object",
-        "title": "SubjectUpdate"
       },
       "ValidationError": {
         "properties": {

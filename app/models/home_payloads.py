@@ -7,13 +7,11 @@ from app.models.practice_run_payloads import PracticeRunSummary, RunProgress
 
 
 class HomeSteps(AppModel):
-    """Whether each of the first four things exists; the fifth, a practice, never does
-    while the steps show."""
+    """Whether the user has a deck and a card, the first two steps; the third, a
+    practice, never exists while the steps show."""
 
-    has_subject: bool
     has_deck: bool
     has_card: bool
-    has_configuration: bool
 
 
 class HomeActivePractice(PracticeRunSummary):

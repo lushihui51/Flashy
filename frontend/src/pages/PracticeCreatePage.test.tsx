@@ -16,8 +16,6 @@ const BASE = 'http://localhost:8000';
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Alpha',
     name: 'Commands',
     created_at: '',
     last_activity_at: '',
@@ -27,8 +25,6 @@ const decks = [
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Beta',
     name: 'Ports',
     created_at: '',
     last_activity_at: '',
@@ -51,8 +47,6 @@ function config(overrides: Record<string, unknown> = {}) {
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
     deck_name: 'Commands',
-    subject_id: 's1',
-    subject_name: 'Alpha',
     ...overrides,
   };
 }
@@ -64,8 +58,6 @@ const configBasics = config({
   deck_id: 'd2',
   name: 'Basics',
   deck_name: 'Ports',
-  subject_id: 's2',
-  subject_name: 'Beta',
 });
 
 const ALL_CONFIGS = [configRecall, configRecognition, configBasics];
@@ -201,21 +193,10 @@ describe('PracticeCreatePage', () => {
     await screen.findByText('Recall');
 
     expect(within(screen.getByTestId('practice-filters')).getAllByRole('combobox')).toHaveLength(1);
-    expect(screen.queryByPlaceholderText('All subjects')).not.toBeInTheDocument();
     await user.click(screen.getByPlaceholderText('All decks'));
     const rows = screen.getAllByRole('option');
     // The first row is "All decks".
     expect(rows.map((row) => row.textContent)).toEqual(['All decks', 'Commands', 'Ports']);
-  });
-
-  it('a subject in the URL narrows nothing and is not sent', async () => {
-    const requests = mockLibrary();
-    renderCreate('/practice/new?deck=d1');
-    await screen.findByText('Basics');
-
-    expect(screen.getByText('Recall')).toBeInTheDocument();
-    expect(requests.every((query) => !query.has('subject_id'))).toBe(true);
-    expect(screen.queryByText('No configurations match these filters.')).not.toBeInTheDocument();
   });
 
   it('a checkbox per configuration: at most one ticked per deck, and a tick can be cleared (MD-1)', async () => {
@@ -829,7 +810,6 @@ describe('PracticeCreatePage', () => {
     const [path, search] = (screen.getByTestId('new-config-location').textContent ?? '').split('?');
     const params = new URLSearchParams(search);
     expect(path).toBe('/deck-configurations/new');
-    expect(params.has('subject')).toBe(false);
     expect(params.get('deck')).toBe('d1');
     expect(params.get('cancelTo')).toBe('/practice/new?deck=d1');
     expect(params.get('returnTo')).toBe('/practice/new?deck=d1');
@@ -900,7 +880,7 @@ describe('PracticeCreatePage', () => {
   it('Cancel returns to the practice list with the overview’s own params and none of the draft', async () => {
     mockLibrary();
     const user = userEvent.setup();
-    renderCreate('/practice/new?subject=s1&deck=d1&status=completed&config=c1');
+    renderCreate('/practice/new?deck=d1&status=completed&config=c1');
     await screen.findByRole('checkbox', { name: 'Recall' });
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));

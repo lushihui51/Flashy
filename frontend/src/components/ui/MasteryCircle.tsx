@@ -33,9 +33,9 @@ function wedgePath(readiness: number, centre: number, radius: number): string {
   return `M${centre},${centre} L${centre},${centre - radius} A${radius},${radius} 0 ${largeArc} 1 ${endX.toFixed(2)},${endY.toFixed(2)} Z`;
 }
 
-/** How ready the user is to recall a subject, deck, card or field: an ink-outlined circle
- * filled clockwise from the top, spoken "Mastery N%". A subject or deck with no card has no
- * readiness, and its caller renders no circle. */
+/** How ready the user is to recall a deck, card or field: an ink-outlined circle filled
+ * clockwise from the top, spoken "Mastery N%". A deck with no card has no readiness, and
+ * its caller renders no circle. */
 export default function MasteryCircle({ readiness, size, change, className }: MasteryCircleProps): ReactNode {
   const { box, radius, sizeClass } = SIZES[size];
   const centre = box / 2;

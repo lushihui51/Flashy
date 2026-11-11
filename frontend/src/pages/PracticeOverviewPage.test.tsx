@@ -13,8 +13,6 @@ const BASE = 'http://localhost:8000';
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Alpha',
     name: 'Commands',
     created_at: '',
     last_activity_at: '',
@@ -24,8 +22,6 @@ const decks = [
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Beta',
     name: 'Ports',
     created_at: '',
     last_activity_at: '',
@@ -46,8 +42,6 @@ function session(overrides: Record<string, unknown> = {}) {
       {
         deck_id: 'd1',
         deck_name: 'Commands',
-        subject_id: 's1',
-        subject_name: 'Alpha',
         configuration_name: 'Config A',
       },
     ],
@@ -64,8 +58,6 @@ const betaRun = session({
     {
       deck_id: 'd2',
       deck_name: 'Ports',
-      subject_id: 's2',
-      subject_name: 'Beta',
       configuration_name: 'Config B',
     },
   ],
@@ -164,8 +156,6 @@ describe('PracticeOverviewPage', () => {
         {
           deck_id: 'd3',
           deck_name: 'Third Deck',
-          subject_id: 's2',
-          subject_name: 'Beta',
           configuration_name: 'Config C',
         },
       ],
@@ -196,7 +186,6 @@ describe('PracticeOverviewPage', () => {
     renderOverview();
 
     await screen.findByText('Alpha run');
-    expect(requests[0]!.get('subject_id')).toBeNull();
     expect(requests[0]!.get('deck_id')).toBeNull();
   });
 
@@ -207,17 +196,6 @@ describe('PracticeOverviewPage', () => {
     await screen.findByText('Beta run');
     expect(screen.queryByText('Alpha run')).not.toBeInTheDocument();
     expect(requests[0]!.get('deck_id')).toBe('d2');
-    expect(requests[0]!.get('subject_id')).toBeNull();
-  });
-
-  it('a subject in the URL narrows nothing', async () => {
-    const requests = mockLibrary();
-    renderOverview('/practice?subject=s1');
-
-    await screen.findByText('Alpha run');
-    expect(screen.getByText('Beta run')).toBeInTheDocument();
-    expect(requests[0]!.get('subject_id')).toBeNull();
-    expect(screen.queryByText('No practices match these filters.')).not.toBeInTheDocument();
   });
 
   it('holds the deck filter alone', async () => {
@@ -228,7 +206,6 @@ describe('PracticeOverviewPage', () => {
     const filters = screen.getByTestId('practice-filters');
     expect(within(filters).getAllByRole('combobox')).toHaveLength(1);
     expect(screen.getByPlaceholderText('All decks')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('All subjects')).not.toBeInTheDocument();
   });
 
   it('picking a deck writes it to the URL and refetches', async () => {

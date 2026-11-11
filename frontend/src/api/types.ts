@@ -4,43 +4,6 @@
  */
 
 export interface paths {
-    "/api/subjects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Subjects */
-        get: operations["read_subjects_api_subjects_get"];
-        put?: never;
-        /** Create Subject */
-        post: operations["create_subject_api_subjects_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/subjects/{subject_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Subject */
-        get: operations["read_subject_api_subjects__subject_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Subject */
-        delete: operations["delete_subject_api_subjects__subject_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Subject */
-        patch: operations["update_subject_api_subjects__subject_id__patch"];
-        trace?: never;
-    };
     "/api/decks": {
         parameters: {
             query?: never;
@@ -182,10 +145,8 @@ export interface paths {
         };
         /**
          * Read Deck Practice Configs
-         * @description Every config the user owns unless narrowed by subject and/or deck. Each row
-         *     carries its deck and subject: the creation page groups by deck, and two decks in
-         *     different subjects may share a name, so the subject has to travel with the row
-         *     rather than be joined back in on the client.
+         * @description Every config the user owns unless narrowed to one deck. Each row carries its
+         *     deck's name, since the creation page groups by deck.
          */
         get: operations["read_deck_practice_configs_api_deck_practice_configs_get"];
         put?: never;
@@ -227,7 +188,7 @@ export interface paths {
          * Get Deletion Impact
          * @description The advisory preview behind every delete confirm: the same closure a deletion
          *     transaction computes for itself, reported as counts. 404 for the first id that's
-         *     foreign or doesn't exist; 422 when all four lists are empty — there's nothing to
+         *     foreign or doesn't exist; 422 when all three lists are empty — there's nothing to
          *     preview.
          */
         get: operations["get_deletion_impact_api_deletion_impact_get"];
@@ -248,10 +209,9 @@ export interface paths {
         };
         /**
          * Read Practice Runs
-         * @description Newest first, each row carrying the decks (and their subjects) it snapshotted.
-         *     Filters are the same relation, asked as a question: a session matches a subject or
-         *     deck if any of its practice_deck rows points at a matching deck (`source_config_id`
-         *     is attribution only, never a filter).
+         * @description Newest first, each row carrying the decks it snapshotted. The filter is the same
+         *     relation, asked as a question: a session matches a deck if any of its practice_deck
+         *     rows points at it (`source_config_id` is attribution only, never a filter).
          */
         get: operations["read_practice_runs_api_practice_runs_get"];
         put?: never;
@@ -637,8 +597,6 @@ export interface components {
         DeckBatchEdit: {
             /** Name */
             name?: string | null;
-            /** Subject Id */
-            subject_id?: string | null;
             field_defs?: components["schemas"]["FieldDefBatchOps"] | null;
             cards?: components["schemas"]["CardBatchOps"] | null;
         };
@@ -646,11 +604,6 @@ export interface components {
         DeckCreate: {
             /** Name */
             name: string;
-            /**
-             * Subject Id
-             * Format: uuid
-             */
-            subject_id: string;
             /** Field Defs */
             field_defs: components["schemas"]["FieldDefCreate"][];
         };
@@ -663,11 +616,6 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            /**
-             * Subject Id
-             * Format: uuid
-             */
-            subject_id: string;
             /**
              * Created At
              * Format: date-time
@@ -760,8 +708,7 @@ export interface components {
         /**
          * DeckPracticeConfigSummary
          * @description A list row for the config picker and the config management surface: the config
-         *     plus where it lives. Two decks in different subjects may share a name, so a row is
-         *     only unambiguous with its subject alongside its deck.
+         *     plus the name of the deck it lives on.
          */
         DeckPracticeConfigSummary: {
             /**
@@ -800,13 +747,6 @@ export interface components {
             last_activity_at: string;
             /** Deck Name */
             deck_name: string;
-            /**
-             * Subject Id
-             * Format: uuid
-             */
-            subject_id: string;
-            /** Subject Name */
-            subject_name: string;
         };
         /** DeckPracticeConfigUpdate */
         DeckPracticeConfigUpdate: {
@@ -829,15 +769,9 @@ export interface components {
          * DeckSummary
          * @description A deck as a list row shows it. The single-deck reads
          *     (`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which
-         *     already includes everything here except the subject's name, card_count and
-         *     field_names.
+         *     already includes everything here except card_count and field_names.
          */
         DeckSummary: {
-            /**
-             * Subject Id
-             * Format: uuid
-             */
-            subject_id: string;
             /** Name */
             name: string;
             /**
@@ -855,8 +789,6 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
-            /** Subject Name */
-            subject_name: string;
             /** Card Count */
             card_count: number;
             /** Field Names */
@@ -873,8 +805,6 @@ export interface components {
          *     `len()` of the matching id set. Never nests another shape.
          */
         DeletionImpactRead: {
-            /** Subjects Deleted */
-            subjects_deleted: number;
             /** Decks Deleted */
             decks_deleted: number;
             /** Fields Deleted */
@@ -1031,18 +961,14 @@ export interface components {
         };
         /**
          * HomeSteps
-         * @description Whether each of the first four things exists; the fifth, a practice, never does
-         *     while the steps show.
+         * @description Whether the user has a deck and a card, the first two steps; the third, a
+         *     practice, never exists while the steps show.
          */
         HomeSteps: {
-            /** Has Subject */
-            has_subject: boolean;
             /** Has Deck */
             has_deck: boolean;
             /** Has Card */
             has_card: boolean;
-            /** Has Configuration */
-            has_configuration: boolean;
         };
         /** PracticeCardRead */
         PracticeCardRead: {
@@ -1111,10 +1037,10 @@ export interface components {
         };
         /**
          * PracticeRunDeckSummary
-         * @description One deck a session touches, resolved through `practice_deck → deck → subject`.
+         * @description One deck a session touches, resolved through `practice_deck → deck`.
          *
-         *     This chain is the only link between a session and a subject/deck, and the only thing
-         *     the filters use. `practice_deck.source_config_id` is read here for the label
+         *     This chain is the only link between a session and a deck, and the only thing
+         *     the filter uses. `practice_deck.source_config_id` is read here for the label
          *     only: `configuration_name` is the live configuration's name while
          *     the link resolves, else the snapshot's stored `source_config_name`, else None. The
          *     link is never read for filtering, generation, validation or rerun.
@@ -1127,13 +1053,6 @@ export interface components {
             deck_id: string;
             /** Deck Name */
             deck_name: string;
-            /**
-             * Subject Id
-             * Format: uuid
-             */
-            subject_id: string;
-            /** Subject Name */
-            subject_name: string;
             /** Configuration Name */
             configuration_name: string | null;
         };
@@ -1183,7 +1102,7 @@ export interface components {
         /**
          * PracticeRunSummary
          * @description A list row for the practice overview: the session plus the decks it snapshotted,
-         *     so the client can render and filter by subject/deck without a second round trip or a
+         *     so the client can render and filter by deck without a second round trip or a
          *     client-side join.
          *
          *     `decks` lists every snapshot of the run — a `practice_deck` never outlives its
@@ -1292,107 +1211,6 @@ export interface components {
          * @enum {string}
          */
         RunStatus: "active" | "completed";
-        /** SubjectCreate */
-        SubjectCreate: {
-            /** Name */
-            name: string;
-            /**
-             * Icon
-             * @default book-open
-             */
-            icon?: string;
-            /**
-             * Description
-             * @default
-             */
-            description?: string;
-        };
-        /** SubjectRead */
-        SubjectRead: {
-            /** Name */
-            name: string;
-            /**
-             * Icon
-             * @default book-open
-             */
-            icon?: string;
-            /**
-             * Description
-             * @default
-             */
-            description?: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Last Activity At
-             * Format: date-time
-             */
-            last_activity_at: string;
-        };
-        /**
-         * SubjectSummary
-         * @description A subject as a library row and its own page show it.
-         */
-        SubjectSummary: {
-            /** Name */
-            name: string;
-            /**
-             * Icon
-             * @default book-open
-             */
-            icon?: string;
-            /**
-             * Description
-             * @default
-             */
-            description?: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Last Activity At
-             * Format: date-time
-             */
-            last_activity_at: string;
-            /** Deck Count */
-            deck_count: number;
-            /** Readiness */
-            readiness: number | null;
-        };
-        /** SubjectUpdate */
-        SubjectUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Icon */
-            icon?: string | null;
-            /** Description */
-            description?: string | null;
-        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1415,183 +1233,9 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    read_subjects_api_subjects_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubjectSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_subject_api_subjects_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubjectCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubjectRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_subject_api_subjects__subject_id__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                subject_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubjectSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_subject_api_subjects__subject_id__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                subject_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_subject_api_subjects__subject_id__patch: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                subject_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubjectUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubjectRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_decks_api_decks_get: {
         parameters: {
-            query?: {
-                subject_id?: string | null;
-            };
+            query?: never;
             header?: {
                 authorization?: string | null;
                 "x-timezone"?: string | null;
@@ -2152,7 +1796,6 @@ export interface operations {
     read_deck_practice_configs_api_deck_practice_configs_get: {
         parameters: {
             query?: {
-                subject_id?: string | null;
                 deck_id?: string | null;
             };
             header?: {
@@ -2327,7 +1970,6 @@ export interface operations {
     get_deletion_impact_api_deletion_impact_get: {
         parameters: {
             query?: {
-                subject_ids?: string[];
                 deck_ids?: string[];
                 field_ids?: string[];
                 card_ids?: string[];
@@ -2364,7 +2006,6 @@ export interface operations {
     read_practice_runs_api_practice_runs_get: {
         parameters: {
             query?: {
-                subject_id?: string | null;
                 deck_id?: string | null;
             };
             header?: {

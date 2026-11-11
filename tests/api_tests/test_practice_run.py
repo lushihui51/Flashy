@@ -945,12 +945,12 @@ def _bare_practice_card(card_id, status):
 
 class TestPracticeRunList:
     """GET /api/practice_runs — the practice overview's only read. Relevance to a
-    subject or deck is answered through practice_deck → deck → subject and nothing else:
+    deck is answered through practice_deck → deck and nothing else:
     a run reads only its own frozen snapshot and carries no behavioural link to its
     source configuration."""
 
-    def test_lists_newest_first_with_name_and_deck_context(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_lists_newest_first_with_name_and_deck_context(self, client, two_deck_library):
+        lib = two_deck_library
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
@@ -963,21 +963,19 @@ class TestPracticeRunList:
         assert rows[0]["decks"] == [
             {
                 "deck_id": lib["decks"]["b"]["id"],
-                "deck_name": "Shared Deck Name",
-                "subject_id": lib["subjects"]["b"]["id"],
-                "subject_name": "Beta",
+                "deck_name": "Beta",
                 "configuration_name": "Config B",
             }
         ]
 
-    def test_name_is_stored_verbatim(self, client, multi_subject_library):
+    def test_name_is_stored_verbatim(self, client, two_deck_library):
         name = "Aug 24, 2026, 2:15 PM"
-        created = _start(client, name, [multi_subject_library["configs"]["a"]["id"]])
+        created = _start(client, name, [two_deck_library["configs"]["a"]["id"]])
         assert created["name"] == name
         assert client.get(f"/api/practice_runs/{created['id']}").json()["name"] == name
 
-    def test_session_spanning_two_decks_lists_both(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_session_spanning_two_decks_lists_both(self, client, two_deck_library):
+        lib = two_deck_library
         _start(
             client,
             "Both decks",
@@ -985,20 +983,10 @@ class TestPracticeRunList:
         )
         rows = client.get("/api/practice_runs").json()
         assert len(rows) == 1
-        assert {deck["subject_name"] for deck in rows[0]["decks"]} == {"Alpha", "Beta"}
+        assert [deck["deck_name"] for deck in rows[0]["decks"]] == ["Alpha", "Beta"]
 
-    def test_subject_filter(self, client, multi_subject_library):
-        lib = multi_subject_library
-        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
-        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
-
-        rows = client.get(
-            "/api/practice_runs", params={"subject_id": lib["subjects"]["a"]["id"]}
-        ).json()
-        assert [row["name"] for row in rows] == ["Alpha run"]
-
-    def test_deck_filter_disambiguates_same_named_decks(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_deck_filter(self, client, two_deck_library):
+        lib = two_deck_library
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
         _start(client, "Beta run", [lib["configs"]["b"]["id"]])
 
@@ -1007,31 +995,17 @@ class TestPracticeRunList:
         ).json()
         assert [row["name"] for row in rows] == ["Beta run"]
 
-    def test_filters_combine_with_and(self, client, multi_subject_library):
-        lib = multi_subject_library
-        _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
-        _start(client, "Beta run", [lib["configs"]["b"]["id"]])
-
-        rows = client.get(
-            "/api/practice_runs",
-            params={
-                "subject_id": lib["subjects"]["a"]["id"],
-                "deck_id": lib["decks"]["b"]["id"],
-            },
-        ).json()
-        assert rows == []
-
     def test_another_users_sessions_are_invisible(
-        self, client, act_as, other_user, multi_subject_library
+        self, client, act_as, other_user, two_deck_library
     ):
-        lib = multi_subject_library
+        lib = two_deck_library
         _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
 
         act_as(other_user)
         assert client.get("/api/practice_runs").json() == []
         assert (
             client.get(
-                "/api/practice_runs", params={"subject_id": lib["subjects"]["a"]["id"]}
+                "/api/practice_runs", params={"deck_id": lib["decks"]["a"]["id"]}
             ).json()
             == []
         )
@@ -1174,13 +1148,12 @@ class TestNoCards:
         assert client.get("/api/practice_runs").json() == []
 
     def test_start_succeeds_when_any_selected_deck_has_cards(
-        self, client, existing_subject, session_cards, session_config
+        self, client, session_cards, session_config
     ):
         empty_deck = client.post(
             "/api/decks",
             json={
                 "name": "Empty deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "q", "type": "text"}, {"name": "a", "type": "text"}],
             },
         )
@@ -1329,8 +1302,8 @@ class TestPracticeRunDetailShape:
     already carries, so the single-session read returns PracticeRunSummary too — not
     a client-side join of the list endpoint."""
 
-    def test_detail_carries_decks_after_one_is_deleted(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_detail_carries_decks_after_one_is_deleted(self, client, two_deck_library):
+        lib = two_deck_library
         created = _start(
             client,
             "Both decks",
@@ -1344,28 +1317,26 @@ class TestPracticeRunDetailShape:
         assert res.status_code == 200, res.text
         data = res.json()
         assert data["name"] == "Both decks"
-        assert [deck["subject_name"] for deck in data["decks"]] == ["Beta"]
+        assert [deck["deck_name"] for deck in data["decks"]] == ["Beta"]
 
-    def test_detail_with_every_deck_intact(self, client, multi_subject_library):
-        created = _start(client, "Alpha run", [multi_subject_library["configs"]["a"]["id"]])
+    def test_detail_with_every_deck_intact(self, client, two_deck_library):
+        created = _start(client, "Alpha run", [two_deck_library["configs"]["a"]["id"]])
 
         res = client.get(f"/api/practice_runs/{created['id']}")
         assert res.status_code == 200, res.text
         data = res.json()
         assert data["decks"] == [
             {
-                "deck_id": multi_subject_library["decks"]["a"]["id"],
-                "deck_name": "Shared Deck Name",
-                "subject_id": multi_subject_library["subjects"]["a"]["id"],
-                "subject_name": "Alpha",
+                "deck_id": two_deck_library["decks"]["a"]["id"],
+                "deck_name": "Alpha",
                 "configuration_name": "Config A",
             }
         ]
 
     def test_detail_for_a_foreign_session_404s(
-        self, client, act_as, other_user, multi_subject_library
+        self, client, act_as, other_user, two_deck_library
     ):
-        created = _start(client, "Not yours", [multi_subject_library["configs"]["a"]["id"]])
+        created = _start(client, "Not yours", [two_deck_library["configs"]["a"]["id"]])
 
         act_as(other_user)
         assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
@@ -1379,8 +1350,8 @@ class TestRunEmptiedByDeckDeletion:
     run that still has another deck's snapshot survives the loss of just one, and
     lists/filters accordingly."""
 
-    def test_run_is_gone_after_its_only_deck_is_deleted(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_run_is_gone_after_its_only_deck_is_deleted(self, client, two_deck_library):
+        lib = two_deck_library
         created = _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
 
         deleted = client.delete(f"/api/decks/{lib['decks']['a']['id']}")
@@ -1389,27 +1360,13 @@ class TestRunEmptiedByDeckDeletion:
         assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
         assert client.get("/api/practice_runs").json() == []
 
-    def test_run_is_gone_after_its_only_decks_subject_is_deleted(
-        self, client, multi_subject_library
-    ):
-        """Same rule, one level up: deleting a subject cascades its deck with it, and
-        a run left owning no snapshot goes right along."""
-        lib = multi_subject_library
-        created = _start(client, "Alpha run", [lib["configs"]["a"]["id"]])
-
-        deleted = client.delete(f"/api/subjects/{lib['subjects']['a']['id']}")
-        assert deleted.status_code == 204, deleted.text
-
-        assert client.get(f"/api/practice_runs/{created['id']}").status_code == 404
-        assert client.get("/api/practice_runs").json() == []
-
     def test_a_deleted_deck_no_longer_matches_its_own_filter(
-        self, client, multi_subject_library
+        self, client, two_deck_library
     ):
         """A two-deck run losing one deck survives — the other deck's filter still
         matches it, but the deleted deck's own filter can't, since there is no
         snapshot left for it to match."""
-        lib = multi_subject_library
+        lib = two_deck_library
         _start(
             client, "Both decks", [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]]
         )
@@ -1876,7 +1833,7 @@ class TestBreakdown:
         assert res.status_code == 201, res.text
         return res.json()["id"]
 
-    def test_full_breakdown_lists_every_card_once(self, client, db, existing_deck, existing_subject):
+    def test_full_breakdown_lists_every_card_once(self, client, db, existing_deck):
         """The stuck card lives in a second deck, and its only answer value is blanked
         right after the run starts: only the current card can be rated, and a single
         deck of four cannot fail one card twice before the blanking and still leave
@@ -1896,7 +1853,6 @@ class TestBreakdown:
             "/api/decks",
             json={
                 "name": "Stuck deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "prompt", "type": "text"},
                     {"name": "answer", "type": "text"},
@@ -2097,7 +2053,6 @@ class TestBreakdown:
         self,
         client,
         existing_user,
-        existing_subject,
         session_cards,
         session_config,
         statement_counter,
@@ -2110,7 +2065,6 @@ class TestBreakdown:
             "/api/decks",
             json={
                 "name": "Small breakdown deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
@@ -2745,8 +2699,8 @@ class TestRerun:
         assert len(new_cards) > 0
         assert all(c.status == PracticeCardStatus.pending for c in new_cards)
 
-    def test_rerun_drops_a_deleted_deck_but_keeps_others(self, client, db, multi_subject_library):
-        lib = multi_subject_library
+    def test_rerun_drops_a_deleted_deck_but_keeps_others(self, client, db, two_deck_library):
+        lib = two_deck_library
         session = _start(
             client, "Both decks", [lib["configs"]["a"]["id"], lib["configs"]["b"]["id"]]
         )
@@ -2767,14 +2721,13 @@ class TestRerun:
         # Dropping a stale deck from the new snapshot never touches the original run.
         assert client.get(f"/api/practice_runs/{session['id']}").status_code == 200
 
-    def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db, existing_subject):
+    def test_rerun_drops_a_stale_deck_but_keeps_others(self, client, db):
         # Deck A: three fields so `answer` can be deleted afterward without hitting
         # the deck's two-field floor — this is what makes A's snapshot go stale.
         deck_a = client.post(
             "/api/decks",
             json={
                 "name": "Deck A",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "prompt", "type": "text"},
                     {"name": "answer", "type": "text"},
@@ -2814,7 +2767,6 @@ class TestRerun:
             "/api/decks",
             json={
                 "name": "Deck B",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
@@ -2930,14 +2882,13 @@ def _add_card(client, deck, fields):
     return uuid.UUID(res.json()["id"])
 
 
-def _two_field_deck(client, subject, name, extra_fields=()):
+def _two_field_deck(client, name, extra_fields=()):
     """A deck of one card, with a configuration asking `front` and answering `back`;
     `extra_fields` lets a test delete `back` without hitting the deck's field floor."""
     deck = client.post(
         "/api/decks",
         json={
             "name": name,
-            "subject_id": subject["id"],
             "field_defs": [
                 {"name": field, "type": "text"} for field in ("front", "back", *extra_fields)
             ],
@@ -3064,12 +3015,12 @@ class TestChosenCards:
         assert client.get("/api/practice_runs").json() == before
 
     def test_a_stale_snapshot_is_dropped_with_its_chosen_cards(
-        self, client, db, existing_subject
+        self, client, db
     ):
         fields_a, card_a, config_a = _two_field_deck(
-            client, existing_subject, "Deck A", extra_fields=("filler",)
+            client, "Deck A", extra_fields=("filler",)
         )
-        _, card_b, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        _, card_b, config_b = _two_field_deck(client, "Deck B")
         session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
         _finish_session(client, session["id"])
 
@@ -3084,10 +3035,10 @@ class TestChosenCards:
         assert snapshot.card_ids == [card_b]
 
     def test_only_the_decks_holding_a_chosen_card_get_a_snapshot(
-        self, client, db, existing_subject
+        self, client, db
     ):
-        _, card_a, config_a = _two_field_deck(client, existing_subject, "Deck A")
-        _, _, config_b = _two_field_deck(client, existing_subject, "Deck B")
+        _, card_a, config_a = _two_field_deck(client, "Deck A")
+        _, _, config_b = _two_field_deck(client, "Deck B")
         session = _start(client, "Two decks", [config_a["id"], config_b["id"]])
         _finish_session(client, session["id"])
 
@@ -3496,8 +3447,8 @@ class TestConfigurationLabel:
 
         assert self._label(client, session["id"]) is None
 
-    def test_list_carries_each_decks_label(self, client, multi_subject_library):
-        configs = multi_subject_library["configs"]
+    def test_list_carries_each_decks_label(self, client, two_deck_library):
+        configs = two_deck_library["configs"]
         created = _start(client, "Both decks", [configs["a"]["id"], configs["b"]["id"]])
 
         res = client.get("/api/practice_runs")

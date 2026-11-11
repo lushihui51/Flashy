@@ -8,7 +8,6 @@ from sqlmodel import Session, col, select
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
-from app.models.subject import Subject
 
 
 def _read_card_with_values(db: Session, card_id: uuid.UUID) -> Card | None:
@@ -47,8 +46,7 @@ def db_read_card(db: Session, card_id: uuid.UUID, user_id: uuid.UUID) -> Card | 
     return db.exec(
         select(Card)
         .join(Deck, Deck.id == Card.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(Card.id == card_id, Subject.user_id == user_id)
+        .where(Card.id == card_id, Deck.user_id == user_id)
         .options(selectinload(Card.values))
     ).first()
 
@@ -84,8 +82,7 @@ def db_read_cards_for_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) 
         db.exec(
             select(Card)
             .join(Deck, Deck.id == Card.deck_id)
-            .join(Subject, Subject.id == Deck.subject_id)
-            .where(Card.deck_id == deck_id, Subject.user_id == user_id)
+            .where(Card.deck_id == deck_id, Deck.user_id == user_id)
             .order_by(col(Card.last_activity_at).desc(), col(Card.id))
             .options(selectinload(Card.values))
         ).all()
@@ -129,7 +126,7 @@ def db_update_card_values(db: Session, card: Card, values: dict[uuid.UUID, str])
 def db_read_owned_card_ids(
     db: Session, user_id: uuid.UUID, ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
-    """The subset of `ids` that exist and belong to user_id (via the subject chain) —
+    """The subset of `ids` that exist and belong to user_id (via their deck) —
     compute_deletion_impact's ownership check."""
     if not ids:
         return set()
@@ -137,8 +134,7 @@ def db_read_owned_card_ids(
         db.exec(
             select(Card.id)
             .join(Deck, Deck.id == Card.deck_id)
-            .join(Subject, Subject.id == Deck.subject_id)
-            .where(col(Card.id).in_(ids), Subject.user_id == user_id)
+            .where(col(Card.id).in_(ids), Deck.user_id == user_id)
         ).all()
     )
 

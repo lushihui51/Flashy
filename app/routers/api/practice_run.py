@@ -67,14 +67,12 @@ def create_practice_run(
 def read_practice_runs(
     db: SessionDep,
     current_user: CurrentUserDep,
-    subject_id: uuid.UUID | None = None,
     deck_id: uuid.UUID | None = None,
 ):
-    """Newest first, each row carrying the decks (and their subjects) it snapshotted.
-    Filters are the same relation, asked as a question: a session matches a subject or
-    deck if any of its practice_deck rows points at a matching deck (`source_config_id`
-    is attribution only, never a filter)."""
-    return db_read_practice_runs_with_decks(db, current_user.id, subject_id, deck_id)
+    """Newest first, each row carrying the decks it snapshotted. The filter is the same
+    relation, asked as a question: a session matches a deck if any of its practice_deck
+    rows points at it (`source_config_id` is attribution only, never a filter)."""
+    return db_read_practice_runs_with_decks(db, current_user.id, deck_id)
 
 
 @router.get(

@@ -147,7 +147,7 @@ class TestDeckDeleteCascade:
         assert db.exec(select(PracticeRun).where(PracticeRun.id == ids["session_id"])).first() is None
 
     def test_delete_leaves_a_two_deck_runs_other_snapshot_and_run_intact(
-        self, db, client, existing_subject, existing_deck
+        self, db, client, existing_deck
     ):
         """A run spanning two decks survives a delete of just one of them: the deleted
         deck's own snapshot cascades away, but the run is not "left with no decks" —
@@ -180,7 +180,6 @@ class TestDeckDeleteCascade:
             "/api/decks",
             json={
                 "name": "Other deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
@@ -262,7 +261,7 @@ class TestDeckDeleteCascade:
         assert surviving_logs == []
 
     def test_rebuild_mastery_after_a_deck_delete_leaves_the_other_decks_rows_equal(
-        self, db, client, existing_subject, existing_deck
+        self, db, client, existing_deck
     ):
         """A user-wide rebuild after a deck delete must not disturb another deck's
         mastery: replaying review_log through the strategy reproduces the live rows
@@ -273,7 +272,6 @@ class TestDeckDeleteCascade:
             "/api/decks",
             json={
                 "name": "Surviving deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "prompt", "type": "text"},
                     {"name": "answer", "type": "text"},

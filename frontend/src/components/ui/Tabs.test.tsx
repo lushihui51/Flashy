@@ -5,12 +5,12 @@ import userEvent from '@testing-library/user-event';
 import Tabs from 'src/components/ui/Tabs';
 
 const items = [
-  { value: 'subjects', label: 'Subjects' },
+  { value: 'cards', label: 'Cards' },
   { value: 'decks', label: 'Decks' },
 ] as const;
 
-function renderTabs(onChange: (value: 'subjects' | 'decks') => void = () => {}) {
-  render(<Tabs ariaLabel="Library" items={[...items]} value="subjects" onChange={onChange} />);
+function renderTabs(onChange: (value: 'cards' | 'decks') => void = () => {}) {
+  render(<Tabs ariaLabel="Library" items={[...items]} value="cards" onChange={onChange} />);
 }
 
 describe('Tabs', () => {
@@ -18,13 +18,13 @@ describe('Tabs', () => {
     renderTabs();
 
     expect(screen.getByRole('tablist', { name: 'Library' })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Subjects', 'Decks']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Cards', 'Decks']);
   });
 
   it('marks only the chosen tab selected', () => {
     renderTabs();
 
-    expect(screen.getByRole('tab', { name: 'Subjects' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Cards' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Decks' })).toHaveAttribute('aria-selected', 'false');
   });
 

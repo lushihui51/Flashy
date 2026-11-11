@@ -223,56 +223,33 @@ class TestDeckPracticeConfigValidation:
 
 
 class TestDeckPracticeConfigList:
-    """GET /api/deck_practice_configs — the config picker's read. Rows carry their deck
-    and subject so the picker can group by deck without a client-side join, and so two
-    same-named decks in different subjects stay distinguishable."""
+    """GET /api/deck_practice_configs — the config picker's read. Rows carry their deck's
+    id and name so the picker can group by deck without a client-side join."""
 
-    def test_lists_every_config_with_deck_and_subject_context(
-        self, client, multi_subject_library
-    ):
-        lib = multi_subject_library
+    def test_lists_every_config_with_its_deck(self, client, two_deck_library):
+        lib = two_deck_library
         rows = {row["name"]: row for row in client.get("/api/deck_practice_configs").json()}
 
         assert set(rows) == {"Config A", "Config B"}
         config_a = rows["Config A"]
         assert config_a["deck_id"] == lib["decks"]["a"]["id"]
-        assert config_a["deck_name"] == "Shared Deck Name"
-        assert config_a["subject_id"] == lib["subjects"]["a"]["id"]
-        assert config_a["subject_name"] == "Alpha"
+        assert config_a["deck_name"] == "Alpha"
         assert config_a["prompt_field_ids"] == [lib["fields"]["a"]["front"]]
         config_b = rows["Config B"]
         assert config_b["deck_id"] == lib["decks"]["b"]["id"]
-        assert config_b["subject_name"] == "Beta"
+        assert config_b["deck_name"] == "Beta"
 
-    def test_subject_filter(self, client, multi_subject_library):
-        lib = multi_subject_library
-        rows = client.get(
-            "/api/deck_practice_configs", params={"subject_id": lib["subjects"]["b"]["id"]}
-        ).json()
-        assert [row["name"] for row in rows] == ["Config B"]
-
-    def test_deck_filter_disambiguates_same_named_decks(self, client, multi_subject_library):
-        lib = multi_subject_library
+    def test_deck_filter(self, client, two_deck_library):
+        lib = two_deck_library
         rows = client.get(
             "/api/deck_practice_configs", params={"deck_id": lib["decks"]["a"]["id"]}
         ).json()
         assert [row["name"] for row in rows] == ["Config A"]
 
-    def test_filters_combine_with_and(self, client, multi_subject_library):
-        lib = multi_subject_library
-        rows = client.get(
-            "/api/deck_practice_configs",
-            params={
-                "subject_id": lib["subjects"]["a"]["id"],
-                "deck_id": lib["decks"]["b"]["id"],
-            },
-        ).json()
-        assert rows == []
-
     def test_another_users_configs_are_invisible(
-        self, client, act_as, other_user, multi_subject_library
+        self, client, act_as, other_user, two_deck_library
     ):
-        lib = multi_subject_library
+        lib = two_deck_library
         act_as(other_user)
         assert client.get("/api/deck_practice_configs").json() == []
         assert (

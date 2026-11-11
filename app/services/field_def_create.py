@@ -5,19 +5,18 @@ from app.database_ops.card import db_read_card_ids_for_deck, db_stage_create_car
 from app.database_ops.field_def import db_next_position, db_stage_create_field_def
 from app.models.deck import Deck
 from app.models.field_def import FieldDef, FieldType
-from app.models.subject import Subject
 from app.refusals import Refusal
 from app.services.activity import touch
 
 
 def create_field_def(
-    db: Session, deck: Deck, subject: Subject, name: str, field_type: FieldType
+    db: Session, deck: Deck, name: str, field_type: FieldType
 ) -> FieldDef:
     """Adds one active field at the deck's next position and, in the same transaction,
     a `""` value row for every existing card, keeping `card_field_value` dense, and
-    touches `deck` and `subject`, the deck's own. An active-name collision rolls
+    touches `deck`. An active-name collision rolls
     everything back and raises a `field_name_taken` `Refusal`."""
-    touch(db, deck, subject)
+    touch(db, deck)
     try:
         field_def = db_stage_create_field_def(
             db, deck.id, name, field_type, db_next_position(db, deck.id)

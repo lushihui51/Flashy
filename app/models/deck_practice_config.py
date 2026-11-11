@@ -22,7 +22,7 @@ class DeckPracticeConfigBase(AppModel):
 
 class DeckPracticeConfig(DeckPracticeConfigBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # The recency sort key — see Subject's identical field (app/models/subject.py).
+    # The recency sort key — see Deck's identical field (app/models/deck.py).
     # No `onupdate`; the only writer is `touch()`.
     last_activity_at: datetime = Field(
         sa_type=DateTime(timezone=True), sa_column_kwargs={"server_default": func.now()}
@@ -41,12 +41,9 @@ class DeckPracticeConfigRead(DeckPracticeConfigBase):
 
 class DeckPracticeConfigSummary(DeckPracticeConfigRead):
     """A list row for the config picker and the config management surface: the config
-    plus where it lives. Two decks in different subjects may share a name, so a row is
-    only unambiguous with its subject alongside its deck."""
+    plus the name of the deck it lives on."""
 
     deck_name: str
-    subject_id: uuid.UUID
-    subject_name: str
 
 
 class DeckPracticeConfigUpdate(AppModel):

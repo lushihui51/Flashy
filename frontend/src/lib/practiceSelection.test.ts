@@ -21,7 +21,7 @@ describe('readSelectedConfigIds', () => {
   });
 
   it('is empty when the URL carries no config param', () => {
-    expect(readSelectedConfigIds(new URLSearchParams('subject=s1'))).toEqual([]);
+    expect(readSelectedConfigIds(new URLSearchParams('deck=d1'))).toEqual([]);
   });
 });
 
@@ -32,17 +32,14 @@ describe('withSelectedConfigIds', () => {
   });
 
   it('removes every config param when given no ids', () => {
-    const next = withSelectedConfigIds(new URLSearchParams('config=c1&subject=s1'), []);
+    const next = withSelectedConfigIds(new URLSearchParams('config=c1&deck=d1'), []);
     expect(next.has('config')).toBe(false);
-    expect(next.get('subject')).toBe('s1');
+    expect(next.get('deck')).toBe('d1');
   });
 
-  it('leaves subject, name, and status untouched', () => {
-    const params = new URLSearchParams(
-      'subject=s1&config=c1&name=Exam+cram&status=completed&deck=d1',
-    );
+  it('leaves deck, name, and status untouched', () => {
+    const params = new URLSearchParams('config=c1&name=Exam+cram&status=completed&deck=d1');
     const next = withSelectedConfigIds(params, ['c2']);
-    expect(next.get('subject')).toBe('s1');
     expect(next.get('deck')).toBe('d1');
     expect(next.get('name')).toBe('Exam cram');
     expect(next.get('status')).toBe('completed');

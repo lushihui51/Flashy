@@ -11,7 +11,6 @@ from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.practice_run_payloads import PracticeRunDeckSummary, PracticeRunSummary
 from app.models.review_log import ReviewLog
-from app.models.subject import Subject
 
 
 def db_stage_create_practice_run(db: Session, user_id: uuid.UUID, name: str) -> PracticeRun:
@@ -48,29 +47,24 @@ def _summaries_for_runs(
             PracticeDeck.practice_run_id,
             Deck.id,
             Deck.name,
-            Subject.id,
-            Subject.name,
             func.coalesce(DeckPracticeConfig.name, PracticeDeck.source_config_name),
         )
         .join(Deck, Deck.id == PracticeDeck.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
         # For the label only — live name while linked, else the stored name.
         .outerjoin(
             DeckPracticeConfig,
             col(DeckPracticeConfig.id) == PracticeDeck.source_config_id,
         )
         .where(col(PracticeDeck.practice_run_id).in_(session_ids))
-        .order_by(col(Subject.name), col(Deck.name))
+        .order_by(col(Deck.name))
     ).all()
 
     decks_by_session: dict[uuid.UUID, list[PracticeRunDeckSummary]] = {}
-    for session_id, deck_id_, deck_name, subject_id_, subject_name, config_name in rows:
+    for session_id, deck_id_, deck_name, config_name in rows:
         decks_by_session.setdefault(session_id, []).append(
             PracticeRunDeckSummary(
                 deck_id=deck_id_,
                 deck_name=deck_name,
-                subject_id=subject_id_,
-                subject_name=subject_name,
                 configuration_name=config_name,
             )
         )
@@ -89,29 +83,22 @@ def _summaries_for_runs(
 def db_read_practice_runs_with_decks(
     db: Session,
     user_id: uuid.UUID,
-    subject_id: uuid.UUID | None = None,
     deck_id: uuid.UUID | None = None,
 ) -> list[PracticeRunSummary]:
     """The user's sessions, newest first, each with the decks it snapshotted — two
     queries regardless of how many sessions there are, never one per session (the same
     shape as db_read_deck_listings).
 
-    `subject_id`/`deck_id` filter by EXISTS over `practice_deck → deck`: a session
-    matches if *any* of its snapshots points at a matching deck. A run left with no
+    `deck_id` filters by EXISTS over `practice_deck`: a session
+    matches if *any* of its snapshots points at that deck. A run left with no
     snapshot at all is deleted alongside its last deck, so there is
     no dangling snapshot state for this filter to have to account for."""
     query = select(PracticeRun).where(PracticeRun.user_id == user_id)
 
-    if subject_id is not None or deck_id is not None:
-        matching = (
-            select(PracticeDeck.id)
-            .join(Deck, Deck.id == PracticeDeck.deck_id)
-            .where(PracticeDeck.practice_run_id == PracticeRun.id)
+    if deck_id is not None:
+        matching = select(PracticeDeck.id).where(
+            PracticeDeck.practice_run_id == PracticeRun.id, PracticeDeck.deck_id == deck_id
         )
-        if subject_id is not None:
-            matching = matching.where(Deck.subject_id == subject_id)
-        if deck_id is not None:
-            matching = matching.where(PracticeDeck.deck_id == deck_id)
         query = query.where(matching.exists())
 
     query = query.order_by(col(PracticeRun.created_at).desc(), col(PracticeRun.id))

@@ -21,36 +21,9 @@ const BASE = 'http://localhost:8000';
  * these tests only assert the context that travels between pages.
  */
 
-const subjects = [
-  {
-    id: 's1',
-    name: 'Alpha',
-    icon: 'brain',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-  {
-    id: 's2',
-    name: 'Beta',
-    icon: 'music',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    last_activity_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-];
-
 const initialDeckSummaries = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
@@ -60,8 +33,6 @@ const initialDeckSummaries = [
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
@@ -75,7 +46,6 @@ const initialDeckDetails: Record<string, object> = {
   d1: {
     id: 'd1',
     name: 'Alpha Deck',
-    subject_id: 's1',
     created_at: '',
     last_activity_at: '',
     readiness: null,
@@ -88,7 +58,6 @@ const initialDeckDetails: Record<string, object> = {
   d2: {
     id: 'd2',
     name: 'Beta Deck',
-    subject_id: 's2',
     created_at: '',
     last_activity_at: '',
     readiness: null,
@@ -113,8 +82,6 @@ const initialConfigs = [
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
     deck_name: 'Alpha Deck',
-    subject_id: 's1',
-    subject_name: 'Alpha',
   },
   {
     id: 'c2',
@@ -128,8 +95,6 @@ const initialConfigs = [
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
     deck_name: 'Beta Deck',
-    subject_id: 's2',
-    subject_name: 'Beta',
   },
   {
     id: 'c3',
@@ -143,8 +108,6 @@ const initialConfigs = [
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
     deck_name: 'Alpha Deck',
-    subject_id: 's1',
-    subject_name: 'Alpha',
   },
 ];
 
@@ -158,8 +121,6 @@ function mockLibrary() {
   const configRequests: URLSearchParams[] = [];
 
   server.use(
-    // The deck form's subject picker reads these.
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjects)),
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
     http.get(`${BASE}/api/decks/:deckId`, ({ params }) => {
       const detail = deckDetails[params.deckId as string];
@@ -189,13 +150,11 @@ function mockLibrary() {
     http.post(`${BASE}/api/decks`, async ({ request }) => {
       const body = (await request.json()) as {
         name: string;
-        subject_id: string;
         field_defs: { name: string; type: string }[];
       };
       const detail = {
         id: 'd9',
         name: body.name,
-        subject_id: body.subject_id,
         created_at: '',
         last_activity_at: '',
         readiness: null,
@@ -210,8 +169,6 @@ function mockLibrary() {
       deckDetails.d9 = detail;
       decks.push({
         id: 'd9',
-        subject_id: body.subject_id,
-        subject_name: subjects.find((subject) => subject.id === body.subject_id)!.name,
         name: body.name,
         created_at: '',
         last_activity_at: '',
@@ -233,13 +190,10 @@ function mockLibrary() {
         answer_pool_counts: number[];
       };
       const deck = decks.find((d) => d.id === body.deck_id)!;
-      const subject = subjects.find((s) => s.id === deck.subject_id)!;
       const saved = { id: 'c9', created_at: '', ...body };
       configs.push({
         ...saved,
         deck_name: deck.name,
-        subject_id: subject.id,
-        subject_name: subject.name,
       });
       return HttpResponse.json(saved, { status: 201 });
     }),
@@ -321,13 +275,11 @@ describe('practice pre-filter chains', () => {
     // Some request, not the last — New practice also asks for every configuration,
     // unfiltered, for its Selected section.
     expect(configRequests.some((query) => query.get('deck_id') === 'd1')).toBe(true);
-    expect(configRequests.every((query) => !query.has('subject_id'))).toBe(true);
 
     // New practice → the builder: the deck arrives pre-selected, straight to its board.
     await user.click(screen.getByRole('button', { name: 'New configuration…' }));
     const builder = currentLocation();
     expect(builder.pathname).toBe('/deck-configurations/new');
-    expect(builder.params.has('subject')).toBe(false);
     expect(builder.params.get('deck')).toBe('d1');
     expect(builder.params.get('cancelTo')).toBe('/practice/new?deck=d1');
     expect(builder.params.get('returnTo')).toBe('/practice/new?deck=d1');
@@ -400,8 +352,6 @@ describe('practice pre-filter chains', () => {
 
     // Create the deck; its default Term/Definition fields are enough.
     await user.type(await screen.findByRole('textbox', { name: 'Deck name' }), 'Fresh Deck');
-    await user.click(screen.getByPlaceholderText('Subject'));
-    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Back on the builder, resumed on the freshly created deck.

@@ -2,7 +2,7 @@
 together in one transaction, in a fixed order (field create -> field update -> field
 delete -> reorder -> card delete -> card update -> card create). The field and card
 delete phases run through compute_deletion_impact + apply_deletion, the same closure a
-direct subject/deck/card delete uses."""
+direct deck/card delete uses."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -195,7 +195,7 @@ class TestFieldDefsDeleteAlone:
 
 class TestFieldDeleteGoesThroughTheClosure:
     def test_field_delete_drops_prompt_influence_scopes_scrub_updates_configs_and_runs(
-        self, client, db, existing_user, existing_subject
+        self, client, db, existing_user
     ):
         """The field-B scenario from the service test in test_deletion.py, asserted
         end to end through PATCH /api/decks/{id} instead of calling
@@ -210,7 +210,6 @@ class TestFieldDeleteGoesThroughTheClosure:
             "/api/decks",
             json={
                 "name": "D1",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "P", "type": "text"},
                     {"name": "A", "type": "text"},
@@ -270,7 +269,6 @@ class TestFieldDeleteGoesThroughTheClosure:
             "/api/decks",
             json={
                 "name": "D2",
-                "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "X", "type": "text"}, {"name": "Y", "type": "text"}],
             },
         ).json()
@@ -758,13 +756,12 @@ class TestForeignAndUnknownIdsRejected:
         assert response.status_code == 422
 
     def test_field_from_another_deck_rejected(
-        self, client, existing_subject, existing_deck, existing_field_defs
+        self, client, existing_deck, existing_field_defs
     ):
         other_deck = client.post(
             "/api/decks",
             json={
                 "name": "Other Deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "A", "type": "text"}, {"name": "B", "type": "text"}],
             },
         ).json()
@@ -791,13 +788,12 @@ class TestForeignAndUnknownIdsRejected:
         assert response.status_code == 422
 
     def test_card_from_another_deck_rejected(
-        self, client, existing_subject, existing_deck, existing_field_defs
+        self, client, existing_deck, existing_field_defs
     ):
         other_deck = client.post(
             "/api/decks",
             json={
                 "name": "Other Deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "A", "type": "text"}, {"name": "B", "type": "text"}],
             },
         ).json()
@@ -835,22 +831,15 @@ class TestForeignAndUnknownIdsRejected:
         )
         assert response.status_code == 422
 
-    def test_subject_id_not_found_rejected(self, client, existing_deck, existing_field_defs):
-        response = client.patch(
-            f"/api/decks/{existing_deck['id']}", json={"subject_id": str(uuid.uuid4())}
-        )
-        assert response.status_code == 422
-
 
 class TestNameClashes:
     def test_batch_edit_deck_name_clash_answers_deck_name_taken(
-        self, client, existing_subject, existing_deck, existing_field_defs
+        self, client, existing_deck, existing_field_defs
     ):
         other = client.post(
             "/api/decks",
             json={
                 "name": "Other Deck",
-                "subject_id": existing_subject["id"],
                 "field_defs": [{"name": "Front", "type": "text"}, {"name": "Back", "type": "text"}],
             },
         )

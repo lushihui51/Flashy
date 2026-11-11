@@ -33,7 +33,6 @@ const twoFields = [
 const deck = {
   id: 'd1',
   name: 'Vocab Deck',
-  subject_id: 's1',
   created_at: '',
   readiness: 0.5 as number | null,
   field_defs: twoFields,
@@ -60,8 +59,6 @@ function configuration(overrides: Record<string, unknown> = {}) {
     answer_pool_ids: [] as string[],
     answer_pool_counts: [] as number[],
     deck_name: 'Vocab Deck',
-    subject_id: 's1',
-    subject_name: 'French',
     ...overrides,
   };
 }

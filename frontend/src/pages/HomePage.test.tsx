@@ -24,8 +24,6 @@ const practice = (id: string, name: string): HomeActivePractice => ({
     {
       deck_id: `deck-of-${id}`,
       deck_name: `Deck of ${name}`,
-      subject_id: 's1',
-      subject_name: 'Networking',
       configuration_name: `Configuration of ${name}`,
     },
   ],
@@ -34,8 +32,6 @@ const practice = (id: string, name: string): HomeActivePractice => ({
 
 const deck = (id: string, name: string, readiness: number | null): DeckSummary => ({
   id,
-  subject_id: `subject-of-${id}`,
-  subject_name: 'Networking',
   name,
   created_at: '2026-11-01T00:00:00Z',
   last_activity_at: '2026-11-01T00:00:00Z',
@@ -61,13 +57,9 @@ describe('HomePage', () => {
   });
 
   describe('the steps', () => {
-    // `has_subject` and `has_configuration` stand opposite to the steps' state throughout, so a
-    // step that read either would show.
     const steps = (hasDeck: boolean, hasCard: boolean) => ({
-      has_subject: !hasDeck,
       has_deck: hasDeck,
       has_card: hasCard,
-      has_configuration: !hasCard,
     });
 
     it('a user with nothing made reads "0 of 3" over New deck, New card and New practice', async () => {

@@ -6,10 +6,8 @@ from sqlmodel import select
 from app.models.practice_run import PracticeRun, RunStatus
 
 NO_STEPS_DONE = {
-    "has_subject": False,
     "has_deck": False,
     "has_card": False,
-    "has_configuration": False,
 }
 
 
@@ -22,18 +20,11 @@ def _home(client, db, user):
     return res.json()
 
 
-def _subject(client, name="Subject"):
-    res = client.post("/api/subjects", json={"name": name})
-    assert res.status_code == 201, res.text
-    return res.json()
-
-
-def _deck(client, subject_id, name):
+def _deck(client, name):
     res = client.post(
         "/api/decks",
         json={
             "name": name,
-            "subject_id": subject_id,
             "field_defs": [{"name": "front", "type": "text"}, {"name": "back", "type": "text"}],
         },
     )
@@ -70,9 +61,9 @@ def _config(client, deck):
     return res.json()
 
 
-def _practisable_deck(client, subject_id, name, cards=1):
+def _practisable_deck(client, name, cards=1):
     """A deck with `cards` cards and one configuration: `(deck, config)`."""
-    deck = _deck(client, subject_id, name)
+    deck = _deck(client, name)
     for i in range(cards):
         _card(client, deck, front=f"q{i}", back=f"a{i}")
     return deck, _config(client, deck)
@@ -121,45 +112,26 @@ class TestSteps:
         }
 
     def test_each_thing_made_flips_its_flag(self, client, db, existing_user):
-        subject = _subject(client)
+        deck = _deck(client, "Deck")
         assert _home(client, db, existing_user)["steps"] == {
             **NO_STEPS_DONE,
-            "has_subject": True,
-        }
-
-        deck = _deck(client, subject["id"], "Deck")
-        assert _home(client, db, existing_user)["steps"] == {
-            **NO_STEPS_DONE,
-            "has_subject": True,
             "has_deck": True,
         }
 
         _card(client, deck)
         assert _home(client, db, existing_user)["steps"] == {
-            **NO_STEPS_DONE,
-            "has_subject": True,
             "has_deck": True,
             "has_card": True,
-        }
-
-        _config(client, deck)
-        assert _home(client, db, existing_user)["steps"] == {
-            "has_subject": True,
-            "has_deck": True,
-            "has_card": True,
-            "has_configuration": True,
         }
 
     def test_steps_are_null_after_a_practice(self, client, db, existing_user):
-        subject = _subject(client)
-        _, config = _practisable_deck(client, subject["id"], "Deck")
+        _, config = _practisable_deck(client, "Deck")
         _start(client, config)
 
         assert _home(client, db, existing_user)["steps"] is None
 
     def test_a_refused_practice_leaves_the_steps(self, client, db, existing_user):
-        subject = _subject(client)
-        deck = _deck(client, subject["id"], "Deck")
+        deck = _deck(client, "Deck")
         config = _config(client, deck)
         res = client.post(
             "/api/practice_runs", json={"name": "Run", "deck_practice_config_ids": [config["id"]]}
@@ -174,8 +146,7 @@ class TestSteps:
     def test_the_stamp_and_null_steps_survive_deleting_everything(
         self, client, db, existing_user
     ):
-        subject = _subject(client)
-        deck, config = _practisable_deck(client, subject["id"], "Deck")
+        deck, config = _practisable_deck(client, "Deck")
         run = _start(client, config)
         db.refresh(existing_user)
         stamped = existing_user.first_practice_at
@@ -183,7 +154,6 @@ class TestSteps:
 
         assert client.delete(f"/api/practice_runs/{run['id']}").status_code == 204
         assert client.delete(f"/api/decks/{deck['id']}").status_code == 204
-        assert client.delete(f"/api/subjects/{subject['id']}").status_code == 204
 
         home = _home(client, db, existing_user)
         assert home == {"steps": None, "active_practices": [], "recent_decks": []}
@@ -192,8 +162,7 @@ class TestSteps:
 
 class TestActivePractices:
     def test_three_of_four_most_recent_first_each_with_its_progress(self, client, db, existing_user):
-        subject = _subject(client)
-        _, config = _practisable_deck(client, subject["id"], "Deck", cards=2)
+        _, config = _practisable_deck(client, "Deck", cards=2)
         runs = [_start(client, config, name=f"Run {i}") for i in range(4)]
         _rate_current(client, runs[3]["id"])
 
@@ -211,8 +180,7 @@ class TestActivePractices:
         assert [d["deck_name"] for d in active[0]["decks"]] == ["Deck"]
 
     def test_a_completed_practice_is_not_active(self, client, db, existing_user):
-        subject = _subject(client)
-        _, config = _practisable_deck(client, subject["id"], "Deck")
+        _, config = _practisable_deck(client, "Deck")
         _complete_practice_of(client, config)
 
         assert _home(client, db, existing_user)["active_practices"] == []
@@ -220,21 +188,19 @@ class TestActivePractices:
 
 class TestRecentDecks:
     def test_a_completed_practices_deck_is_listed_as_a_deck_row(self, client, db, existing_user):
-        subject = _subject(client, "Biology")
-        deck, config = _practisable_deck(client, subject["id"], "Cells", cards=2)
+        deck, config = _practisable_deck(client, "Cells", cards=2)
         _complete_practice_of(client, config)
 
         [row] = _home(client, db, existing_user)["recent_decks"]
 
         assert row["id"] == deck["id"]
-        assert row["subject_name"] == "Biology"
+        assert row["name"] == "Cells"
         assert row["card_count"] == 2
         assert row["field_names"] == ["front", "back"]
         assert row["readiness"] is not None
 
     def test_a_completed_run_with_no_rating_is_absent(self, client, db, existing_user):
-        subject = _subject(client)
-        _, config = _practisable_deck(client, subject["id"], "Deck")
+        _, config = _practisable_deck(client, "Deck")
         run = _start(client, config)
         row = db.exec(select(PracticeRun).where(PracticeRun.id == uuid.UUID(run["id"]))).one()
         row.status = RunStatus.completed
@@ -247,8 +213,7 @@ class TestRecentDecks:
         assert home["recent_decks"] == []
 
     def test_a_deck_of_an_active_practice_is_absent(self, client, db, existing_user):
-        subject = _subject(client)
-        _, config = _practisable_deck(client, subject["id"], "Deck", cards=2)
+        _, config = _practisable_deck(client, "Deck", cards=2)
         run = _start(client, config)
         _rate_current(client, run["id"])
 
@@ -257,9 +222,8 @@ class TestRecentDecks:
     def test_a_deck_in_two_completed_runs_is_listed_once_by_its_newest_rating(
         self, client, db, existing_user
     ):
-        subject = _subject(client)
-        first, first_config = _practisable_deck(client, subject["id"], "First")
-        second, second_config = _practisable_deck(client, subject["id"], "Second")
+        first, first_config = _practisable_deck(client, "First")
+        second, second_config = _practisable_deck(client, "Second")
         _complete_practice_of(client, first_config)
         _complete_practice_of(client, second_config)
         _complete_practice_of(client, first_config)
@@ -271,10 +235,9 @@ class TestRecentDecks:
     def test_the_newest_rating_comes_first_and_the_fourth_deck_is_absent(
         self, client, db, existing_user
     ):
-        subject = _subject(client)
         decks = []
         for i in range(4):
-            deck, config = _practisable_deck(client, subject["id"], f"Deck {i}")
+            deck, config = _practisable_deck(client, f"Deck {i}")
             _complete_practice_of(client, config)
             decks.append(deck)
 
@@ -286,8 +249,7 @@ class TestRecentDecks:
 def test_another_users_practices_and_decks_are_absent(
     client, db, existing_user, other_user, act_as
 ):
-    subject = _subject(client)
-    _, config = _practisable_deck(client, subject["id"], "Deck", cards=2)
+    _, config = _practisable_deck(client, "Deck", cards=2)
     _complete_practice_of(client, config)
     _start(client, config)
 
@@ -317,10 +279,9 @@ def test_the_statement_count_is_equal_for_one_practice_and_for_five(
         assert res.status_code == 200, res.text
         return res.json(), [counter.count for counter in home_statement_counters]
 
-    subject = _subject(client)
 
     def add_deck_with_practices(name):
-        _, config = _practisable_deck(client, subject["id"], name, cards=2)
+        _, config = _practisable_deck(client, name, cards=2)
         _complete_practice_of(client, config)
         _start(client, config)
 

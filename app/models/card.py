@@ -13,7 +13,7 @@ class CardBase(AppModel):
 
 class Card(CardBase, TimestampMixin, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # The recency sort key — see Subject's identical field (app/models/subject.py).
+    # The recency sort key — see Deck's identical field (app/models/deck.py).
     # No `onupdate`; the only writer is `touch()`.
     last_activity_at: datetime = Field(
         sa_type=DateTime(timezone=True), sa_column_kwargs={"server_default": func.now()}

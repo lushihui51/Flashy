@@ -39,7 +39,6 @@ def _deck_detail(db: Session, deck: Deck, user_id: uuid.UUID) -> DeckDetail:
     return DeckDetail(
         id=deck.id,
         name=deck.name,
-        subject_id=deck.subject_id,
         created_at=deck.created_at,
         last_activity_at=deck.last_activity_at,
         readiness=deck_readiness(db, strategy, [deck.id])[deck.id],
@@ -72,7 +71,6 @@ def create_deck(db: SessionDep, current_user: CurrentUserDep, payload: DeckCreat
             db,
             current_user.id,
             payload.name,
-            payload.subject_id,
             payload.field_defs,
         )
     except Refusal as e:
@@ -83,10 +81,8 @@ def create_deck(db: SessionDep, current_user: CurrentUserDep, payload: DeckCreat
 
 
 @router.get("", response_model=list[DeckSummary], status_code=200)
-def read_decks(
-    db: SessionDep, current_user: CurrentUserDep, subject_id: uuid.UUID | None = None
-):
-    listings = db_read_deck_listings(db, current_user.id, subject_id)
+def read_decks(db: SessionDep, current_user: CurrentUserDep):
+    listings = db_read_deck_listings(db, current_user.id)
     return deck_summaries(db, get_mastery_strategy(), listings)
 
 

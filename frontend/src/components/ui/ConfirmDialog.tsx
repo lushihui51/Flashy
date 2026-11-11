@@ -16,15 +16,14 @@ type ConfirmDialogProps = {
 };
 
 /** Centered confirm prompt, shared by any destructive or dirty-state confirmation
- * (subject delete, deck-editor cancel-with-changes, field and card delete). A
+ * (deck delete, deck-editor cancel-with-changes, field and card delete). A
  * separate shape from BottomSheet, which is specifically for the bottom-anchored
  * sheets (Account, Create) — a confirm reads better centered, not slid up from an
  * edge meant for navigation-style content.
  *
- * z-70/z-80, strictly above FullScreenDialog's z-50/z-60: a confirm can be opened
- * from *inside* a FullScreenDialog (e.g. the deck editor's "New subject…" overlay has
- * its own unsaved-changes confirm) and must always win that stack, not render
- * underneath it and become invisible/unclickable. */
+ * z-70/z-80, above AppShell's header (z-40) and every sheet (z-20/z-30): a confirm
+ * opened from inside another layer must always win that stack, not render underneath
+ * it and become invisible/unclickable. */
 export default function ConfirmDialog({
   open,
   title,

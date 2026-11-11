@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 
 const FORMS = [
-  'components/library/SubjectForm.tsx',
   'components/library/CardStandaloneForm.tsx',
   'components/library/DeckEditor.tsx',
   'components/library/DeckConfigurationEditor.tsx',

@@ -7,18 +7,7 @@ from sqlmodel import Session, col, select
 
 from app.models.deck import Deck
 from app.models.deck_practice_config import DeckPracticeConfig, DeckPracticeConfigSummary
-from app.models.subject import Subject
 from app.refusals import Refusal
-
-
-def db_stage_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
-    """Staged counterpart to db_create_deck_practice_config. An `IntegrityError` on the
-    per-deck name constraint propagates rather than becoming a ValueError here, since the
-    caller owns both the transaction and the message."""
-    config = DeckPracticeConfig(**data)
-    db.add(config)
-    db.flush()
-    return config
 
 
 def db_create_deck_practice_config(db: Session, data: dict) -> DeckPracticeConfig:
@@ -42,53 +31,26 @@ def db_read_deck_practice_config(
     return db.exec(
         select(DeckPracticeConfig)
         .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(DeckPracticeConfig.id == config_id, Subject.user_id == user_id)
+        .where(DeckPracticeConfig.id == config_id, Deck.user_id == user_id)
     ).first()
-
-
-def db_read_deck_practice_config_for_copy(
-    db: Session, config_id: uuid.UUID
-) -> DeckPracticeConfig | None:
-    """Deliberately unscoped — see db_read_deck_for_copy. Callers must independently
-    check config.deck_id against the source deck they've already established."""
-    return db.get(DeckPracticeConfig, config_id)
-
-
-def db_read_deck_practice_configs(
-    db: Session, deck_id: uuid.UUID, user_id: uuid.UUID
-) -> list[DeckPracticeConfig]:
-    return list(
-        db.exec(
-            select(DeckPracticeConfig)
-            .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
-            .join(Subject, Subject.id == Deck.subject_id)
-            .where(DeckPracticeConfig.deck_id == deck_id, Subject.user_id == user_id)
-            .order_by(col(DeckPracticeConfig.last_activity_at).desc(), col(DeckPracticeConfig.id))
-        ).all()
-    )
 
 
 def db_read_deck_practice_configs_with_context(
     db: Session,
     user_id: uuid.UUID,
-    subject_id: uuid.UUID | None = None,
     deck_id: uuid.UUID | None = None,
 ) -> list[DeckPracticeConfigSummary]:
-    """Every config the user owns, each carrying its deck and subject, optionally
-    narrowed to one subject or one deck. One query — the deck/subject context comes
-    from the same join chain that already scopes ownership.
+    """Every config the user owns, each carrying its deck's name, optionally narrowed
+    to one deck. One query — the deck's name comes from the same join that already
+    scopes ownership.
 
     Ordered by the deck's most recent change, then by the configuration's own, so a
     grouped list renders in this order without the client re-sorting."""
     query = (
-        select(DeckPracticeConfig, Deck.name, Subject.id, Subject.name)
+        select(DeckPracticeConfig, Deck.name)
         .join(Deck, Deck.id == DeckPracticeConfig.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(Subject.user_id == user_id)
+        .where(Deck.user_id == user_id)
     )
-    if subject_id is not None:
-        query = query.where(Deck.subject_id == subject_id)
     if deck_id is not None:
         query = query.where(DeckPracticeConfig.deck_id == deck_id)
     query = query.order_by(
@@ -102,10 +64,8 @@ def db_read_deck_practice_configs_with_context(
         DeckPracticeConfigSummary(
             **config.model_dump(),
             deck_name=deck_name,
-            subject_id=subject_id_,
-            subject_name=subject_name,
         )
-        for config, deck_name, subject_id_, subject_name in db.exec(query).all()
+        for config, deck_name in db.exec(query).all()
     ]
 
 

@@ -175,11 +175,10 @@ function CardStandaloneFormBody({
     goToCreateDeck();
   };
 
-  const invalidateAfterWrite = async (writtenDeckId: string, subjectId: string | undefined) => {
+  const invalidateAfterWrite = async (writtenDeckId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['deck', writtenDeckId] }),
       queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      ...(subjectId ? [queryClient.invalidateQueries({ queryKey: ['decks', subjectId] })] : []),
     ]);
   };
 
@@ -200,7 +199,7 @@ function CardStandaloneFormBody({
           await updateCard(cardId!, { values: changed });
         }
       }
-      await invalidateAfterWrite(deckId, deckQuery.data.subject_id);
+      await invalidateAfterWrite(deckId);
       navigate(returnTo ?? `/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
@@ -213,7 +212,7 @@ function CardStandaloneFormBody({
     setSubmitting(true);
     try {
       await deleteCard(cardId!);
-      await invalidateAfterWrite(deckId, deckQuery.data?.subject_id);
+      await invalidateAfterWrite(deckId);
       navigate(`/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));

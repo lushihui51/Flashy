@@ -10,9 +10,6 @@ type BottomSheetProps = {
   id?: string;
   ariaLabel?: string;
   ariaLabelledBy?: string;
-  /** Stacks the sheet at z-70/z-80, above FullScreenDialog's z-50/z-60, for a sheet
-   * opened from inside one; otherwise it would open behind the dialog it came from. */
-  aboveDialogs?: boolean;
   children: ReactNode;
 };
 
@@ -26,7 +23,6 @@ export default function BottomSheet({
   id,
   ariaLabel,
   ariaLabelledBy,
-  aboveDialogs = false,
   children,
 }: BottomSheetProps) {
   return (
@@ -39,7 +35,7 @@ export default function BottomSheet({
       <Dialog.Portal>
         <Dialog.Overlay
           data-testid="scrim"
-          className={`fixed inset-0 ${aboveDialogs ? 'z-70' : 'z-20'} bg-(--color-ink)/50`}
+          className="fixed inset-0 z-20 bg-(--color-ink)/50"
         />
         <Dialog.Content
           id={id}
@@ -50,7 +46,7 @@ export default function BottomSheet({
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className={`fixed inset-x-0 bottom-0 ${aboveDialogs ? 'z-80' : 'z-30'} flex flex-col gap-4 rounded-t-block ruled-top bg-(--color-surface) p-4 pb-6 focus:outline-none`}
+          className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-4 rounded-t-block ruled-top bg-(--color-surface) p-4 pb-6 focus:outline-none"
         >
           <div
             aria-hidden="true"

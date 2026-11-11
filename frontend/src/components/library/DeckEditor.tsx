@@ -1,9 +1,8 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
-import { readSubject, readSubjects } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import {
   deckEditorReducer,
@@ -19,10 +18,6 @@ import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
 import { pluralize } from 'src/lib/pluralize';
 import { joinClauses } from 'src/lib/joinClauses';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
-import FullScreenDialog from 'src/components/ui/FullScreenDialog';
-import SubjectIcon from 'src/components/library/SubjectIcon';
-import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
 import type { components } from 'src/api/types';
@@ -35,13 +30,6 @@ import FormPart from 'src/components/ui/FormPart';
 import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckDetail = components['schemas']['DeckDetail'];
-type SubjectRead = components['schemas']['SubjectRead'];
-
-/** Only what the subject combobox displays — satisfied by SubjectSummary (the list
- * from readSubjects), SubjectRead (what createSubject returns), or the `{id, name,
- * icon}` a contextual entry point hands over in router state. Deliberately narrower
- * than any of them so none needs reshaping to pass through. */
-type SubjectItem = { id: string; name: string; icon?: string | null };
 
 // Centres a control's h-9 box on the field name input beside it, in a row aligned to its bottom.
 const FIELD_ICON_MARGIN = 'my-1.25';
@@ -222,22 +210,16 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   );
 }
 
-type CreateLocationState = {
-  subject?: { id: string; name: string; icon: string };
-} | null;
-
 type DeckEditorProps = {
   mode: 'create' | 'edit';
 };
 
 /** Full-screen route page. Mode is derived from the route (`/decks/new` vs.
  * `/decks/:deckId/edit`, App.tsx), same pattern as `CardStandaloneForm`.
- * Edit mode loads the existing `DeckDetail` — and its subject, since the subject
- * combobox needs the full `{id, name, icon}` object, not just an id — before mounting
- * the body, gated the same way `CardStandaloneForm` gates on its deck. */
+ * Edit mode loads the existing `DeckDetail` before mounting the body, gated the same
+ * way `CardStandaloneForm` gates on its deck. */
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
-  const location = useLocation();
   const { params } = useViewParams();
 
   const deckQuery = useQuery({
@@ -245,15 +227,7 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
     queryFn: () => readDeck(deckId!),
     enabled: mode === 'edit' && !!deckId,
   });
-  const subjectId = deckQuery.data?.subject_id;
-  const subjectQuery = useQuery({
-    queryKey: ['subject', subjectId],
-    queryFn: () => readSubject(subjectId!),
-    enabled: mode === 'edit' && !!subjectId,
-  });
-  usePageTitle(
-    mode === 'create' ? 'New deck' : deckQuery.data && subjectQuery.data ? 'Edit deck' : undefined,
-  );
+  usePageTitle(mode === 'create' ? 'New deck' : deckQuery.data ? 'Edit deck' : undefined);
 
   if (mode === 'edit') {
     if (deckQuery.isError) {
@@ -269,18 +243,14 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
         </div>
       );
     }
-    if (!deckQuery.data || !subjectQuery.data) return null;
+    if (!deckQuery.data) return null;
   }
-
-  const createLocationState = mode === 'create' ? (location.state as CreateLocationState) : null;
 
   return (
     <DeckEditorBody
       mode={mode}
       deckId={deckId}
       deck={mode === 'edit' ? deckQuery.data : undefined}
-      subject={mode === 'edit' ? subjectQuery.data : undefined}
-      contextualSubject={createLocationState?.subject ?? null}
       cancelTo={internalReturnTo(params, 'cancelTo')}
       returnTo={internalReturnTo(params, 'returnTo')}
     />
@@ -291,8 +261,6 @@ type DeckEditorBodyProps = {
   mode: 'create' | 'edit';
   deckId: string | undefined;
   deck: DeckDetail | undefined;
-  subject: SubjectRead | undefined;
-  contextualSubject: { id: string; name: string; icon: string } | null;
   cancelTo: string | null;
   returnTo: string | null;
 };
@@ -337,8 +305,6 @@ function DeckEditorBody({
   mode,
   deckId,
   deck,
-  subject,
-  contextualSubject,
   cancelTo,
   returnTo,
 }: DeckEditorBodyProps) {
@@ -346,10 +312,8 @@ function DeckEditorBody({
   const queryClient = useQueryClient();
   const { revealFirstSentence } = useViewParams();
   const rootRef = useRef<HTMLDivElement>(null);
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
-  // Computed once, at mount — the same rule as the subject combobox's own initial
-  // selection below. `original` doubles as the baseline the edit-mode diff compares
+  // Computed once, at mount. `original` doubles as the baseline the edit-mode diff compares
   // against: deckDetailToEditorState mints a fresh client `key` per field, and calling
   // it twice would mint two different sets of keys for the same rows, breaking every
   // id-based comparison in buildDeckBatchEditPayload. It is rebased after every
@@ -357,7 +321,7 @@ function DeckEditorBody({
   const [original, setOriginal] = useState<DeckEditorState>(() =>
     mode === 'edit' && deck
       ? deckDetailToEditorState(deck)
-      : initialDeckEditorState(contextualSubject?.id ?? null),
+      : initialDeckEditorState(),
   );
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
@@ -373,7 +337,6 @@ function DeckEditorBody({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [subjectError, setSubjectError] = useState<string | null>(null);
   // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
@@ -411,11 +374,7 @@ function DeckEditorBody({
 
   const handleSaveCreate = async () => {
     const created = await createDeck(buildDeckCreatePayload(state));
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      queryClient.invalidateQueries({ queryKey: ['decks', state.subjectId] }),
-      queryClient.invalidateQueries({ queryKey: ['subjects'] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: ['decks'] });
     if (returnTo) {
       navigate(returnTo, { state: { deckId: created.id } });
       return;
@@ -436,11 +395,6 @@ function DeckEditorBody({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['deck', deckId] }),
       queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      queryClient.invalidateQueries({ queryKey: ['decks', original.subjectId] }),
-      ...(state.subjectId !== original.subjectId
-        ? [queryClient.invalidateQueries({ queryKey: ['decks', state.subjectId] })]
-        : []),
-      queryClient.invalidateQueries({ queryKey: ['subjects'] }),
     ]);
     setSavedFlash(true);
   };
@@ -480,11 +434,7 @@ function DeckEditorBody({
       // longer exists (a 404) before navigation ever runs. Same reason
       // CardStandaloneForm's own delete never invalidates the entity it just
       // deleted, only the list/parent queries that reference it.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['decks'] }),
-        queryClient.invalidateQueries({ queryKey: ['decks', original.subjectId] }),
-        queryClient.invalidateQueries({ queryKey: ['subjects'] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['decks'] });
       navigate('/library');
     } catch (err) {
       setSaveError(failureSentence(err, 'Deck not found.'));
@@ -562,29 +512,9 @@ function DeckEditorBody({
 
   const sayWhatIsMissing = () => {
     if (state.name.trim() === '') setNameError('Name is required.');
-    if (state.subjectId === null) setSubjectError('Choose a subject to create a deck.');
   };
 
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
-
-  const subjectDefaultValue: SubjectItem | null =
-    mode === 'edit' && subject
-      ? { id: subject.id, name: subject.name, icon: subject.icon }
-      : contextualSubject;
-
-  // The subject combobox is wired here rather than behind a picker component of its own:
-  // the fetch has to live in a page-level component (shared components take their data as
-  // props), and once it does, the wrapper is only holding this selection and the create
-  // overlay — both of which belong to the one screen that uses them.
-  //
-  // `selectedSubject` is owned here, not read straight off `subjectDefaultValue`:
-  // PickerCombobox compares its displayed text against the selected item's name to decide
-  // whether reopening shows the full list or a filtered one, so a selection that never
-  // advanced past the initial default would leave that comparison pointing at the wrong
-  // name.
-  const [selectedSubject, setSelectedSubject] = useState<SubjectItem | null>(subjectDefaultValue);
-  const [subjectOverlayOpen, setSubjectOverlayOpen] = useState(false);
-  const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // "Done" once the editor has nothing unsaved to lose, "Cancel" while it does — create
   // mode never has a "clean, already saved" state to return to, so it always reads
@@ -611,22 +541,6 @@ function DeckEditorBody({
               className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
           </label>
-        </FormPart>
-        <FormPart sentence={subjectError} look="wrong" className="flex flex-col gap-1.5">
-          <PickerCombobox<SubjectItem>
-            items={subjectsQuery.data ?? []}
-            selected={selectedSubject}
-            onSelect={(item) => {
-              setSelectedSubject(item);
-              setSubjectError(null);
-              dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
-            }}
-            onSelectCreate={() => setSubjectOverlayOpen(true)}
-            createLabel="New subject…"
-            placeholder="Subject"
-            renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
-            inputRef={subjectInputRef}
-          />
         </FormPart>
       </div>
 
@@ -679,30 +593,6 @@ function DeckEditorBody({
           {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
         </SubmitButton>
       </FormBar>
-
-      {/* Creating a subject from the combobox's create row happens *over* this editor
-          rather than navigating away — unlike "New deck…" in the card form, there is
-          nothing heavy to nest here and everything typed so far would otherwise be lost. */}
-      <FullScreenDialog
-        open={subjectOverlayOpen}
-        onClose={() => setSubjectOverlayOpen(false)}
-        ariaLabel="New subject"
-        triggerRef={subjectInputRef}
-      >
-        <SubjectFormBody
-          mode="create"
-          subjectId={undefined}
-          original={undefined}
-          onSuccess={(subject) => {
-            void queryClient.invalidateQueries({ queryKey: ['subjects'] });
-            setSelectedSubject(subject);
-            setSubjectError(null);
-            dispatch({ type: 'SET_SUBJECT', subjectId: subject.id });
-            setSubjectOverlayOpen(false);
-          }}
-          onCancel={() => setSubjectOverlayOpen(false)}
-        />
-      </FullScreenDialog>
 
       <ConfirmDialog
         open={confirmCancelOpen}

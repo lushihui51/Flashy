@@ -2,9 +2,9 @@ import { client } from 'src/api/client';
 import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
-/** Subject and deck narrow the run list through `practice_deck → deck → subject`;
+/** A deck narrows the run list to the runs with a `practice_deck` of it;
  * `source_config_id` is attribution only and never a filter. */
-export type PracticeRunFilters = { subjectId?: string; deckId?: string };
+export type PracticeRunFilters = { deckId?: string };
 
 export const createPracticeRun = async (payload: components['schemas']['PracticeRunCreate']) =>
   unwrap(await client.POST('/api/practice_runs', { body: payload }));
@@ -14,7 +14,6 @@ export const readPracticeRuns = async (filters: PracticeRunFilters = {}) =>
     await client.GET('/api/practice_runs', {
       params: {
         query: {
-          ...(filters.subjectId ? { subject_id: filters.subjectId } : {}),
           ...(filters.deckId ? { deck_id: filters.deckId } : {}),
         },
       },

@@ -13,24 +13,22 @@ from app.models.practice_run import PracticeRunRead, RunStatus
 
 
 class PracticeRunDeckSummary(AppModel):
-    """One deck a session touches, resolved through `practice_deck → deck → subject`.
+    """One deck a session touches, resolved through `practice_deck → deck`.
 
-    This chain is the only link between a session and a subject/deck, and the only thing
-    the filters use. `practice_deck.source_config_id` is read here for the label
+    This chain is the only link between a session and a deck, and the only thing
+    the filter uses. `practice_deck.source_config_id` is read here for the label
     only: `configuration_name` is the live configuration's name while
     the link resolves, else the snapshot's stored `source_config_name`, else None. The
     link is never read for filtering, generation, validation or rerun."""
 
     deck_id: uuid.UUID
     deck_name: str
-    subject_id: uuid.UUID
-    subject_name: str
     configuration_name: str | None
 
 
 class PracticeRunSummary(PracticeRunRead):
     """A list row for the practice overview: the session plus the decks it snapshotted,
-    so the client can render and filter by subject/deck without a second round trip or a
+    so the client can render and filter by deck without a second round trip or a
     client-side join.
 
     `decks` lists every snapshot of the run — a `practice_deck` never outlives its

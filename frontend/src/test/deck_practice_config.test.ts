@@ -44,9 +44,7 @@ describe("createDeckPracticeConfig", () => {
 describe("readDeckPracticeConfigs", () => {
   const summaryBody = {
     ...configBody,
-    deck_name: "Shared Deck Name",
-    subject_id: "subject_1",
-    subject_name: "Alpha",
+    deck_name: "Alpha",
   };
 
   it("sends no query params when unfiltered and returns rows with deck context", async () => {
@@ -64,7 +62,7 @@ describe("readDeckPracticeConfigs", () => {
     expect(configs).toEqual([{ id: "config_1", ...summaryBody }]);
   });
 
-  it("sends the subject and deck filters", async () => {
+  it("sends the deck filter", async () => {
     let search = "";
 
     server.use(
@@ -74,10 +72,9 @@ describe("readDeckPracticeConfigs", () => {
       }),
     );
 
-    await readDeckPracticeConfigs({ subjectId: "subject_1", deckId: "deck_1" });
+    await readDeckPracticeConfigs({ deckId: "deck_1" });
 
     const params = new URLSearchParams(search);
-    expect(params.get("subject_id")).toBe("subject_1");
     expect(params.get("deck_id")).toBe("deck_1");
   });
 });

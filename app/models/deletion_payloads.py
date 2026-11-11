@@ -8,7 +8,6 @@ class DeletionImpactRead(AppModel):
     `cards_affected` is `DeletionImpact.affected_card_count`, every other field is
     `len()` of the matching id set. Never nests another shape."""
 
-    subjects_deleted: int
     decks_deleted: int
     fields_deleted: int
     cards_deleted: int

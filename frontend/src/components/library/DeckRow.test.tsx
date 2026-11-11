@@ -6,8 +6,6 @@ import DeckRow from 'src/components/library/DeckRow';
 
 const deck = {
   id: 'd1',
-  subject_id: 's1',
-  subject_name: 'Math',
   name: 'Algebra',
   created_at: '',
   last_activity_at: '',
@@ -22,12 +20,6 @@ describe('DeckRow', () => {
 
     expect(screen.getByText('Algebra')).toBeInTheDocument();
     expect(screen.getByText('6 cards · 2 fields')).toBeInTheDocument();
-  });
-
-  it("never shows its subject's name", () => {
-    renderWithRouter(<DeckRow deck={deck} />);
-
-    expect(screen.queryByText(/Math/)).not.toBeInTheDocument();
   });
 
   it('counts one card and one field in the singular', () => {

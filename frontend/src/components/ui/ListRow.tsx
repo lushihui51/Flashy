@@ -23,8 +23,8 @@ type ListRowBaseProps = {
 type ListRowProps = ListRowBaseProps &
   ({ to: string; onClick?: never } | { to?: never; onClick: () => void });
 
-/** The one row grammar for both /library and /subjects/:subjectId's children lists:
- * a block holding identity, shape and size, chevron last. Whichever element
+/** The one row grammar for a list of things: a block holding identity, shape and
+ * size, chevron last. Whichever element
  * it renders as is a single natively keyboard-reachable, Enter-activated target, so
  * the chevron never needs its own focus stop. */
 export default function ListRow({

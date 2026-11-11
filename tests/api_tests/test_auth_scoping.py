@@ -8,9 +8,9 @@ import pytest
 
 
 @pytest.fixture
-def owned(client, existing_subject, existing_deck, existing_field_defs, existing_card):
+def owned(client, existing_deck, existing_field_defs, existing_card):
     """A full resource tree built as existing_user (the default client identity):
-    subject -> deck -> field_defs -> card, plus a deck_practice_config and a started
+    deck -> field_defs -> card, plus a deck_practice_config and a started
     practice_run with a rateable current card."""
     field_ids = [fd["id"] for fd in existing_field_defs]
     config_res = client.post(
@@ -42,7 +42,6 @@ def owned(client, existing_subject, existing_deck, existing_field_defs, existing
     assert current_card is not None
 
     return {
-        "subject": existing_subject,
         "deck": existing_deck,
         "field_defs": existing_field_defs,
         "card": existing_card,
@@ -53,17 +52,6 @@ def owned(client, existing_subject, existing_deck, existing_field_defs, existing
 
 
 class TestForeignResourcesAreNotFound:
-    def test_subject_endpoints(self, client, other_user, act_as, owned):
-        act_as(other_user)
-        subject_id = owned["subject"]["id"]
-
-        assert client.get(f"/api/subjects/{subject_id}").status_code == 404
-        assert (
-            client.patch(f"/api/subjects/{subject_id}", json={"name": "x"}).status_code
-            == 404
-        )
-        assert client.delete(f"/api/subjects/{subject_id}").status_code == 404
-
     def test_deck_endpoints(self, client, other_user, act_as, owned):
         act_as(other_user)
         deck_id = owned["deck"]["id"]
@@ -71,18 +59,6 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/decks/{deck_id}").status_code == 404
         assert client.patch(f"/api/decks/{deck_id}", json={"name": "x"}).status_code == 404
         assert client.delete(f"/api/decks/{deck_id}").status_code == 404
-
-    def test_deck_create_with_foreign_subject_id_not_found(self, client, other_user, act_as, owned):
-        act_as(other_user)
-        response = client.post(
-            "/api/decks",
-            json={
-                "subject_id": owned["subject"]["id"],
-                "name": "Intruder",
-                "field_defs": [{"name": "Front", "type": "text"}],
-            },
-        )
-        assert response.status_code == 422
 
     def test_field_def_endpoints(self, client, other_user, act_as, owned):
         deck_id = owned["deck"]["id"]
@@ -191,17 +167,13 @@ class TestForeignResourcesAreNotFound:
     def test_list_endpoints_do_not_leak_across_users(self, client, other_user, act_as, owned):
         """Not a 404 case (lists aren't by-id), but the same invariant: the other
         user's resources must not appear."""
-        deck_id = owned["deck"]["id"]
         act_as(other_user)
 
-        assert client.get("/api/subjects").json() == []
-        assert client.get("/api/decks", params={"subject_id": deck_id}).json() == []
+        assert client.get("/api/decks").json() == []
         assert client.get("/api/home").json() == {
             "steps": {
-                "has_subject": False,
                 "has_deck": False,
                 "has_card": False,
-                "has_configuration": False,
             },
             "active_practices": [],
             "recent_decks": [],
@@ -212,7 +184,6 @@ class TestOwnerStillHasAccess:
     """Sanity check the scoping isn't accidentally blocking the actual owner too."""
 
     def test_owner_can_still_read_everything(self, client, owned):
-        assert client.get(f"/api/subjects/{owned['subject']['id']}").status_code == 200
         assert client.get(f"/api/decks/{owned['deck']['id']}").status_code == 200
         assert client.get(f"/api/cards/{owned['card']['id']}").status_code == 200
         assert (
@@ -229,5 +200,5 @@ def test_unauthenticated_request_is_rejected(client):
     from app.main import app
 
     app.dependency_overrides.pop(get_current_app_user, None)
-    response = client.get(f"/api/subjects/{uuid.uuid4()}")
+    response = client.get(f"/api/decks/{uuid.uuid4()}")
     assert response.status_code == 401

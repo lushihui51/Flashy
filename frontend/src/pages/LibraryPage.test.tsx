@@ -18,8 +18,6 @@ function LocationProbe() {
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Math',
     name: 'Algebra',
     created_at: '',
     card_count: 3,
@@ -28,8 +26,6 @@ const decks = [
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Bio',
     name: 'Cells',
     created_at: '',
     card_count: 0,
@@ -47,31 +43,26 @@ afterEach(() => {
 });
 
 describe('LibraryPage', () => {
-  it.each(['/library', '/library?tab=subjects'])(
-    'at %s, shows one list of decks with no tabs',
-    async (path) => {
-      mockDecks();
-      renderWithProviders(<LibraryPage />, [path]);
+  it('shows one list of decks with no tabs', async () => {
+    mockDecks();
+    renderWithProviders(<LibraryPage />, ['/library']);
 
-      await screen.findByRole('link', { name: /Algebra/ });
-      const rows = within(screen.getByRole('list')).getAllByRole('listitem');
-      expect(rows).toHaveLength(2);
-      expect(within(rows[0]!).getByRole('link', { name: /Algebra/ })).toBeInTheDocument();
-      expect(within(rows[1]!).getByRole('link', { name: /Cells/ })).toBeInTheDocument();
-      expect(screen.getByText('2 decks')).toBeInTheDocument();
-      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-      expect(screen.queryByRole('tab')).not.toBeInTheDocument();
-    },
-  );
+    await screen.findByRole('link', { name: /Algebra/ });
+    const rows = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByRole('link', { name: /Algebra/ })).toBeInTheDocument();
+    expect(within(rows[1]!).getByRole('link', { name: /Cells/ })).toBeInTheDocument();
+    expect(screen.getByText('2 decks')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  });
 
-  it('a deck row reads its counts alone beneath its name, with no subject', async () => {
+  it('a deck row reads its counts alone beneath its name', async () => {
     mockDecks();
     renderWithProviders(<LibraryPage />);
 
     expect(await screen.findByText('3 cards · 2 fields')).toBeInTheDocument();
     expect(screen.getByText('0 cards · 1 field')).toBeInTheDocument();
-    expect(screen.queryByText(/Math/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Bio/)).not.toBeInTheDocument();
   });
 
   it('reads "Decks" over the list while it loads', () => {

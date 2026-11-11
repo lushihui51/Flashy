@@ -22,7 +22,6 @@ from app.models.card import Card
 from app.models.deck import Deck
 from app.models.field_def import FieldDef
 from app.models.mastery_log import MasteryLog
-from app.models.subject import Subject
 
 # This module fetches and writes state; it never computes it. Every value
 # written below is already-computed Python data handed in by a MasteryStrategy — no
@@ -199,14 +198,6 @@ def db_fetch_deck_mastery_read_rows(db: Session, deck_ids: list[uuid.UUID]) -> l
     return _fetch_collection_mastery_read_rows(db, Deck.id, deck_ids)
 
 
-def db_fetch_subject_mastery_read_rows(db: Session, subject_ids: list[uuid.UUID]) -> list[Row]:
-    """Raw material for subject_readiness: one row per (card, field of its deck) over
-    these subjects' decks, `owner_id` being the subject's id and the mastery columns NULL
-    when never reviewed. A subject whose decks hold no card has no row. One statement
-    whatever the count."""
-    return _fetch_collection_mastery_read_rows(db, Deck.subject_id, subject_ids)
-
-
 def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
     used by the breakdown's delta computation to find each (card, field) pair this
@@ -280,15 +271,14 @@ def db_fetch_mastery_before_bound(
 
 def db_stage_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     """Delete-scoped clear for rebuild_mastery. user_id=None clears every row; otherwise
-    only rows for cards owned (via deck -> subject) by that user."""
+    only rows for cards owned (via their deck) by that user."""
     if user_id is None:
         db.execute(delete(MasteryLog))
         return
     owned_card_ids = (
         select(Card.id)
         .join(Deck, Deck.id == Card.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(Subject.user_id == user_id)
+        .where(Deck.user_id == user_id)
     )
     db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))
 

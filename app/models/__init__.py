@@ -32,7 +32,6 @@ from app.models.practice_card import PracticeCard, PracticeCardStatus
 from app.models.practice_deck import PracticeDeck
 from app.models.practice_run import PracticeRun, RunStatus
 from app.models.review_log import ReviewLog
-from app.models.subject import Subject, SubjectCreate, SubjectRead, SubjectSummary, SubjectUpdate
 
 __all__ = [
     "AppUser",
@@ -70,9 +69,4 @@ __all__ = [
     "PracticeRun",
     "RunStatus",
     "ReviewLog",
-    "Subject",
-    "SubjectCreate",
-    "SubjectRead",
-    "SubjectSummary",
-    "SubjectUpdate",
 ]

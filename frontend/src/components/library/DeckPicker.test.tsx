@@ -4,10 +4,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckPicker from 'src/components/library/DeckPicker';
 
-// Each deck carries a subject's name, so a row that showed it would fail.
 const decks = [
-  { id: 'd1', name: 'Commands', subject_name: 'Linux' },
-  { id: 'd2', name: 'Ports', subject_name: 'Windows' },
+  { id: 'd1', name: 'Commands' },
+  { id: 'd2', name: 'Ports' },
 ];
 
 describe('DeckPicker', () => {
@@ -30,8 +29,6 @@ describe('DeckPicker', () => {
     expect(commands).toHaveTextContent(/^Commands$/);
     expect(ports).toHaveTextContent(/^Ports$/);
     expect(create).toHaveTextContent(/^New deck…$/);
-    expect(screen.queryByText('Linux')).not.toBeInTheDocument();
-    expect(screen.queryByText('Windows')).not.toBeInTheDocument();
 
     await user.click(ports!);
     expect(onSelect).toHaveBeenCalledWith(decks[1]);
@@ -56,7 +53,5 @@ describe('DeckPicker', () => {
     expect(clear).toHaveTextContent(/^All decks$/);
     expect(commands).toHaveTextContent(/^Commands$/);
     expect(ports).toHaveTextContent(/^Ports$/);
-    expect(screen.queryByText('Linux')).not.toBeInTheDocument();
-    expect(screen.queryByText('Windows')).not.toBeInTheDocument();
   });
 });

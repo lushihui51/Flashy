@@ -864,7 +864,7 @@ class TestDeckScopedRebuild:
         }
 
     def test_scoped_rebuild_matches_user_wide_rebuild_and_leaves_other_deck_untouched(
-        self, db, client, existing_user, existing_subject, existing_deck, mastery_cards
+        self, db, client, existing_user, existing_deck, mastery_cards
     ):
         strategy = EmaStrategy()
         deck_a_id = uuid.UUID(existing_deck["id"])
@@ -875,7 +875,6 @@ class TestDeckScopedRebuild:
             "/api/decks",
             json={
                 "name": "Deck B",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},

@@ -13,7 +13,6 @@ from app.database_ops.mastery_log import (
     db_fetch_deck_mastery_read_rows,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
-    db_fetch_subject_mastery_read_rows,
     db_lock_card,
 )
 from app.database_ops.practice_card import db_read_run_ids_for_practice_cards
@@ -197,16 +196,6 @@ def deck_readiness(
     """Each deck's readiness: every card's fold over every field of the deck, then the
     deck's fold over its cards; None for a deck with no card."""
     return _fold_collections(strategy, db_fetch_deck_mastery_read_rows(db, deck_ids), deck_ids)
-
-
-def subject_readiness(
-    db: Session, strategy: MasteryStrategy, subject_ids: list[uuid.UUID]
-) -> dict[uuid.UUID, float | None]:
-    """Each subject's readiness: the fold over every card of its decks, each card once;
-    None for a subject whose decks hold no card."""
-    return _fold_collections(
-        strategy, db_fetch_subject_mastery_read_rows(db, subject_ids), subject_ids
-    )
 
 
 def _group_review_log_rows(rows: list[ReviewLog]) -> list[ReviewGroup]:

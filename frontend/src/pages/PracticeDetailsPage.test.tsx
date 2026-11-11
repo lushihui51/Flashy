@@ -22,8 +22,6 @@ function session(overrides: Record<string, unknown> = {}) {
       {
         deck_id: 'd1',
         deck_name: 'Shared Deck Name',
-        subject_id: 's1',
-        subject_name: 'Alpha',
         configuration_name: 'Config A',
       },
     ],
@@ -143,8 +141,6 @@ describe('PracticeDetailsPage', () => {
     const deck = (n: number) => ({
       deck_id: `d${n}`,
       deck_name: `Deck ${n}`,
-      subject_id: 's1',
-      subject_name: 'Alpha',
       configuration_name: `Config ${n}`,
     });
     mockSession(session({ decks: [deck(1), deck(2), deck(3)] }));
@@ -164,8 +160,6 @@ describe('PracticeDetailsPage', () => {
           {
             deck_id: 'd1',
             deck_name: 'Shared Deck Name',
-            subject_id: 's1',
-            subject_name: 'Alpha',
             configuration_name: null,
           },
         ],

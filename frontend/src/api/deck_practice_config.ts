@@ -2,9 +2,9 @@ import { client } from 'src/api/client';
 import { unwrap, unwrapVoid } from 'src/api/unwrap';
 import type { components } from 'src/api/types';
 
-/** Both optional: with neither, every config the user owns comes back, each carrying
- * its deck and subject. */
-export type DeckPracticeConfigFilters = { subjectId?: string; deckId?: string };
+/** Optional: without a deck, every config the user owns comes back, each carrying its
+ * deck's name. */
+export type DeckPracticeConfigFilters = { deckId?: string };
 
 export const createDeckPracticeConfig = async (
   payload: components['schemas']['DeckPracticeConfigCreate'],
@@ -15,7 +15,6 @@ export const readDeckPracticeConfigs = async (filters: DeckPracticeConfigFilters
     await client.GET('/api/deck_practice_configs', {
       params: {
         query: {
-          ...(filters.subjectId ? { subject_id: filters.subjectId } : {}),
           ...(filters.deckId ? { deck_id: filters.deckId } : {}),
         },
       },

@@ -12,7 +12,7 @@ import type { components } from 'src/api/types';
 type DeckDetail = components['schemas']['DeckDetail'];
 
 function stateWithFields(names: string[]): DeckEditorState {
-  let state = initialDeckEditorState('subject-1');
+  let state = initialDeckEditorState();
   // Replace the two defaults with a fresh set so tests can pick their own names/keys.
   state = { ...state, fields: names.map((name, i) => ({ key: `f${i}`, name, type: 'text' as const })) };
   return state;
@@ -21,7 +21,7 @@ function stateWithFields(names: string[]): DeckEditorState {
 // A "saved" field carries an `id` — the only thing that distinguishes staged removal
 // from an outright delete of a brand-new one.
 function stateWithSavedFields(names: string[]): DeckEditorState {
-  let state = initialDeckEditorState('subject-1');
+  let state = initialDeckEditorState();
   state = {
     ...state,
     fields: names.map((name, i) => ({ key: `f${i}`, id: `id${i}`, name, type: 'text' as const })),
@@ -34,7 +34,6 @@ describe('deckEditorReducer', () => {
     const state = initialDeckEditorState();
     expect(state.fields.map((f) => f.name)).toEqual(['Term', 'Definition']);
     expect(state.dirty).toBe(false);
-    expect(state.subjectId).toBeNull();
   });
 
   it('ADD_FIELD appends a blank field and marks dirty', () => {
@@ -127,7 +126,6 @@ describe('deckDetailToEditorState', () => {
   const deck: DeckDetail = {
     id: 'deck-1',
     name: 'French Vocab',
-    subject_id: 'subject-1',
     created_at: '',
     last_activity_at: '',
     readiness: 0.5,
@@ -164,16 +162,15 @@ describe('deckDetailToEditorState', () => {
 });
 
 describe('isDeckEditorValid', () => {
-  it('requires a name, a subject, at least two fields, and non-empty non-duplicate field names', () => {
+  it('requires a name, at least two fields, and non-empty non-duplicate field names', () => {
     const base = stateWithFields(['A', 'B']);
     expect(isDeckEditorValid({ ...base, name: '' })).toBe(false);
-    expect(isDeckEditorValid({ ...base, name: 'Deck', subjectId: null })).toBe(false);
     expect(isDeckEditorValid({ ...base, name: 'Deck' })).toBe(true);
     expect(isDeckEditorValid(stateWithFields(['A', '']))).toBe(false);
     expect(isDeckEditorValid({ ...stateWithFields(['A', 'a']), name: 'Deck' })).toBe(false); // case-insensitive dup
   });
 
-  it('D3: fewer than two fields is invalid, even with a name and subject chosen', () => {
+  it('D3: fewer than two fields is invalid, even with a name', () => {
     expect(isDeckEditorValid({ ...stateWithFields(['A']), name: 'Deck' })).toBe(false);
     expect(isDeckEditorValid({ ...stateWithFields([]), name: 'Deck' })).toBe(false);
   });

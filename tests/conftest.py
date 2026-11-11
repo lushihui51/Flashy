@@ -1,5 +1,4 @@
 import os
-import uuid
 
 # Force the dev-auth bypass (app/dependencies.py) off for tests regardless of what a
 # developer has set in their local .env for `fastapi dev` — real OS env vars take
@@ -127,14 +126,7 @@ def act_as(client):
 
 
 @pytest.fixture
-def existing_subject(client):
-    response = client.post("/api/subjects", json={"name": "Test Subject"})
-    assert response.status_code == 201, response.text
-    return response.json()
-
-
-@pytest.fixture
-def existing_deck(db, existing_subject):
+def existing_deck(db, existing_user):
     """Inserted directly, not via POST /api/decks — that endpoint creates the deck's
     field_defs atomically and requires at least two, since a deck always has at least
     two active fields, but most tests that depend on this fixture only care about
@@ -144,13 +136,12 @@ def existing_deck(db, existing_subject):
     idea as existing_user bypassing Clerk."""
     from app.models.deck import Deck
 
-    deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Test Deck")
+    deck = Deck(user_id=existing_user.id, name="Test Deck")
     db.add(deck)
     db.commit()
     db.refresh(deck)
     return {
         "id": str(deck.id),
-        "subject_id": str(deck.subject_id),
         "name": deck.name,
         "created_at": deck.created_at.isoformat(),
     }
@@ -180,25 +171,18 @@ def existing_card(client, existing_deck, existing_field_defs):
 
 
 @pytest.fixture
-def multi_subject_library(client):
-    """Two subjects, each owning a deck with the *same name* and one deck configuration.
+def two_deck_library(client):
+    """Two decks of the requesting user, "Alpha" under key "a" and "Beta" under key
+    "b", each with fields "front" and "back", two cards and one deck configuration
+    ("Config A", "Config B") — for the tests of lists and filters over more than one
+    deck."""
+    library = {"decks": {}, "fields": {}, "configs": {}}
 
-    Two decks can share a name across subjects (uniqueness is per `(subject_id, name)`),
-    which is exactly why the practice filters key on deck **id** with the subject
-    alongside for disambiguation. Every list/filter test needs that collision to be real
-    rather than assumed, so it lives here."""
-    library = {"subjects": {}, "decks": {}, "fields": {}, "configs": {}}
-
-    for key, subject_name in (("a", "Alpha"), ("b", "Beta")):
-        subject_res = client.post("/api/subjects", json={"name": subject_name})
-        assert subject_res.status_code == 201, subject_res.text
-        subject = subject_res.json()
-
+    for key, deck_name in (("a", "Alpha"), ("b", "Beta")):
         deck_res = client.post(
             "/api/decks",
             json={
-                "name": "Shared Deck Name",
-                "subject_id": subject["id"],
+                "name": deck_name,
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
@@ -233,7 +217,6 @@ def multi_subject_library(client):
         )
         assert config_res.status_code == 201, config_res.text
 
-        library["subjects"][key] = subject
         library["decks"][key] = deck
         library["fields"][key] = fields
         library["configs"][key] = config_res.json()

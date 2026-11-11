@@ -14,8 +14,6 @@ const BASE = 'http://localhost:8000';
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Alpha',
     name: 'Alpha Deck',
     created_at: '',
     last_activity_at: '',
@@ -25,8 +23,6 @@ const decks = [
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Beta',
     name: 'Beta Deck',
     created_at: '',
     last_activity_at: '',
@@ -41,7 +37,6 @@ const decks = [
 const deckDetail = {
   id: 'd1',
   name: 'Alpha Deck',
-  subject_id: 's1',
   created_at: '',
   last_activity_at: '',
   readiness: null,
@@ -76,7 +71,6 @@ function mockLibrary(deck: typeof deckDetail = deckDetail) {
             ...deck,
             id: params.deckId as string,
             name: 'Beta Deck',
-            subject_id: 's2',
           }),
     ),
   );
@@ -324,21 +318,6 @@ describe('DeckConfigurationEditor — create', () => {
       'Beta Deck',
       'New deck…',
     ]);
-  });
-
-  it('a subject in the address chooses nothing and orders nothing', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderCreate('/deck-configurations/new?subject=s2');
-
-    const picker = await screen.findByPlaceholderText('Deck');
-    await user.click(picker);
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Alpha Deck',
-      'Beta Deck',
-      'New deck…',
-    ]);
-    expect(picker).toHaveValue('');
   });
 
   it('starts on a deck handed back by the "New deck…" round-trip', async () => {
