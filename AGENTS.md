@@ -58,8 +58,8 @@
   - Reason: an approval covers only the message that gives it
 - When auto mode reaches a skill's Ending or stops earlier, first list in plain words, least sure first, each close call or hard decision you took, the alternative it beat and why, or say none was.
   - Reason: the human reviews what auto mode approved
-- When you could not follow an instruction of this file or the `process` plugin as written, end that reply with one line for each: the instruction, the difficulty and what you did instead; pass on a subagent's lines the same way.
-  - Reason: an unreported difficulty is never fixed
+- When you could not follow an instruction of this file or the `process` plugin as written, and neither settles the case, end that reply with one line for each: the instruction, the difficulty and what you did; pass on a subagent's lines the same way.
+  - Reason: each line is an issue for /process-amend
 - Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
   - Reason: two branches must never take one number
 - Never mark deferred work in code; raise it to the human as a question for docs/backlog.md.
