@@ -288,7 +288,8 @@ def starting_configuration(live_field_ids: list[uuid.UUID]) -> dict[str, list]:
 # in app/services/run_generation.py
 def card_is_askable(values: Mapping[uuid.UUID, str], configuration: RunConfiguration) -> bool:
     """Whether a card with these values, by field id, has a non-blank value among the fields each side of the configuration names."""
-``` A run that writes no `run_card` is refused with `no_cards`, writing nothing. A re-run and a run of chosen cards of a run that is itself active are refused with `run_active`, and otherwise with `practice_has_active_run` while the practice has an active run, both before anything is cut; the completed run supplies only the chosen cards, each checked to be one of its cards (ADR 110, ADR 112).
+```
+- A run that writes no `run_card` is refused with `no_cards`, writing nothing. A re-run and a run of chosen cards of a run that is itself active are refused with `run_active`, and otherwise with `practice_has_active_run` while the practice has an active run, both before anything is cut; the completed run supplies only the chosen cards, each checked to be one of its cards (ADR 110, ADR 112).
 - Starting a practice must, in one transaction, read its active run, complete it when it has no pending card, return it while it is still active, and otherwise create one through `db_try_stage_create_run(db, practice_id) -> Run | None`, reading the concurrent start's run when that returns `None` (ADR 110).
 - `touch()` takes `Deck | Card | Run`; a run is touched when cut, on every rating in it, and on nothing else in this task (ADR 117). `DeckPracticeConfig` leaves `touch()`.
 - Every read that returns a run must return `day` and `day_index`, worked out in its `db_*` read by one window function over the practice's runs (ADR 114).
@@ -573,6 +574,7 @@ class PracticeUpdate(AppModel):
   - A new row in the Practice area: Concept "The page where a practice is changed"; User reads "Edit practice"; Where Its heading; Code `/practices/:practiceId/edit`; `PracticeEditPage`; `PATCH /api/practices/{id}`.
   - A new row in the Practice area: Concept "Deleting a practice"; User reads "Delete practice"; Where Edit practice; Code `DELETE /api/practices/{id}`.
   - "A name left blank": Where New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name; Edit practice, under Name.
+  - "A practice name already taken": Where New practice, under Name; Edit practice, under Name.
 - `frontend/src/api/practice.ts` gains `renamePractice(practiceId, name)` and `deletePractice(practiceId)`.
 
 **Out of scope**
