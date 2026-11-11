@@ -127,7 +127,7 @@ class RunDetail(RunRead):
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -184,4 +184,7 @@ Drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 **Debrief**
 
-None.
+- Attempted: before any edit, read Details' `docs/vocabulary.md` items against the file as it stands.
+- Found: two of the five rows Details names by Concept are not in `docs/vocabulary.md`. "A deck's prompt and answer layout" and "The page where a configuration is changed" were removed by cycle 049 T1's commit, made after this file was planned and last amended. In their place stand "How a practice asks one of its decks, never named" (User reads the deck's board; Code `practice_configuration`; `PracticeConfiguration`) and "The form showing how a practice asks one of its decks" (Code —).
+- Found: putting the given Code cell on the first of those rows would drop `PracticeConfiguration`, the model's name, and repeat `run_configuration`, which the Practice row "The copy of how the practice asks each deck that a run takes at start" already holds with `RunConfiguration`.
+- Why the file cannot settle it: Details gives each row's columns by a Concept that no longer exists, so which row takes each Code cell, and whether `PracticeConfiguration` stays and `run_configuration` moves, is the planner's choice of the vocabulary's rows, not a builder's.
