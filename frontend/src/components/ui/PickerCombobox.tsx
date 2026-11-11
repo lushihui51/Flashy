@@ -44,6 +44,12 @@ export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   /** Drawn under the item's name on its row in the list, and nowhere else. */
   renderBeneath?: (item: T) => ReactNode;
   disabled?: boolean;
+  /** The search input's accessible name. */
+  inputLabel?: string;
+  /** The list's accessible name. */
+  listLabel?: string;
+  /** True: after a pick the input clears and shows no chosen item, for picking several. */
+  clearOnPick?: boolean;
 };
 
 /** The one combobox in the app, under `DeckPicker` for a list of decks: open-on-focus-or-click,
@@ -69,27 +75,32 @@ export default function PickerCombobox<T extends PickerItem>({
   renderLeading,
   renderBeneath,
   disabled,
+  inputLabel,
+  listLabel,
+  clearOnPick = false,
 }: PickerComboboxProps<T>) {
   const listboxId = useId();
   const controlRef = useRef<HTMLDivElement>(null);
 
-  const [query, setQuery] = useState(selected?.name ?? '');
+  // A picker for several shows no chosen item, whatever its caller holds.
+  const chosen = clearOnPick ? null : selected;
+  const [query, setQuery] = useState(chosen?.name ?? '');
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   // Adjusted during render, not in an effect — see React's docs on "adjusting state
-  // when a prop changes." Fires when `selected` changes for any reason: the user
-  // picked something, or a caller (e.g. the create-overlay's onSuccess) updated it.
-  const [syncedName, setSyncedName] = useState(selected?.name);
-  if (!open && selected?.name !== syncedName) {
-    setSyncedName(selected?.name);
-    setQuery(selected?.name ?? '');
+  // when a prop changes." Fires when the chosen item changes for any reason: the user
+  // picked something, or a caller (e.g. the create-overlay's onSuccess) updated `selected`.
+  const [syncedName, setSyncedName] = useState(chosen?.name);
+  if (!open && chosen?.name !== syncedName) {
+    setSyncedName(chosen?.name);
+    setQuery(chosen?.name ?? '');
   }
 
   const trimmed = query.trim();
   // Reopening (click/focus) shows the full capped list, not last time's filtered-down
   // result — the query text still reads as the selected item's name until the user
   // actually types something different, at which point real filtering kicks in.
-  const hasEditedSinceSelection = query !== (selected?.name ?? '');
+  const hasEditedSinceSelection = query !== (chosen?.name ?? '');
   const matches = hasEditedSinceSelection
     ? items.filter((i) => i.name.toLowerCase().includes(trimmed.toLowerCase()))
     : items;
@@ -105,7 +116,7 @@ export default function PickerCombobox<T extends PickerItem>({
 
   const selectItem = (item: T) => {
     onSelect(item);
-    setQuery(item.name);
+    setQuery(clearOnPick ? '' : item.name);
     setOpen(false);
   };
 
@@ -155,7 +166,10 @@ export default function PickerCombobox<T extends PickerItem>({
     );
   }
 
-  const clearChosen = filtering && selected === null;
+  const clearChosen = filtering && chosen === null;
+  // A closed control shows its chevron when it reads as a search over the list, as a filter's
+  // and a picker for several do, rather than as the value it holds.
+  const chevronWhenClosed = filtering || clearOnPick;
   const actionRow = (
     <li
       role="option"
@@ -179,6 +193,7 @@ export default function PickerCombobox<T extends PickerItem>({
             aria-expanded={open}
             aria-controls={listboxId}
             aria-autocomplete="list"
+            aria-label={inputLabel}
             value={query}
             disabled={disabled}
             onChange={(e) => {
@@ -195,12 +210,14 @@ export default function PickerCombobox<T extends PickerItem>({
             placeholder={placeholder}
             className={`h-field w-full rounded-field bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
               open ? 'outlined-ink' : 'outlined-line'
-            } ${filtering || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
+            } ${chevronWhenClosed || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
           />
           {open ? (
             <ChevronUp aria-hidden="true" className={chevronClassName(filtering)} />
           ) : (
-            filtering && <ChevronDown aria-hidden="true" className={chevronClassName(filtering)} />
+            chevronWhenClosed && (
+              <ChevronDown aria-hidden="true" className={chevronClassName(filtering)} />
+            )
           )}
         </div>
       </Popover.Anchor>
@@ -235,7 +252,12 @@ export default function PickerCombobox<T extends PickerItem>({
             </Popover.Arrow>
             {/* Scrolls inside the panel, since the page beneath is locked and a list on a short
                 screen would otherwise leave its last rows out of reach. */}
-            <ul id={listboxId} role="listbox" className="min-h-0 overflow-y-auto">
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-label={listLabel}
+              className="min-h-0 overflow-y-auto"
+            >
               {/* The action row: first when it clears a filter, last when it creates. Same
                   markup either way, so both are one keyboard cycle and one click path. */}
               {filtering && actionRow}
@@ -251,7 +273,7 @@ export default function PickerCombobox<T extends PickerItem>({
                   onMouseDown={() => chooseIndex(index + firstItemIndex)}
                   className={rowClassName(index + firstItemIndex === highlighted)}
                 >
-                  <ChosenMark chosen={selected?.id === item.id} />
+                  <ChosenMark chosen={chosen?.id === item.id} />
                   {renderLeading?.(item)}
                   {renderBeneath ? (
                     <span className="min-w-0 flex-1 leading-tight">

@@ -1,15 +1,19 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { readDecks } from 'src/api/deck';
-import { createPractice } from 'src/api/practice';
+import { createPractice, readSuggestedPracticeName } from 'src/api/practice';
+import { ApiDetailError } from 'src/api/unwrap';
 import DeckPicker from 'src/components/library/DeckPicker';
+import DeckMark from 'src/components/ui/DeckMark';
 import FormBar from 'src/components/ui/FormBar';
+import FormPart from 'src/components/ui/FormPart';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import { failureSentence } from 'src/lib/failureSentence';
 import { useLeaveForm } from 'src/lib/leaveForm';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { pluralize } from 'src/lib/pluralize';
 import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
@@ -25,20 +29,21 @@ function withDecks(params: URLSearchParams, deckIds: readonly string[]): URLSear
 
 /**
  * `/practices/new`: Name and the decks, picked through the deck picker and listed beneath.
- * The picks, in the order picked, and a typed name ride the URL, as one `deck` param per
+ * Name, left blank, shows in grey the name the server would give the picks. The picks, in the order picked, and a typed name ride the URL, as one `deck` param per
  * pick and a `name` param, so a refresh or a round trip through New deck keeps them.
  * Create lands on `returnTo`, else on the new practice's page; Cancel on `cancelTo`, else
  * All practices.
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
-  const { params, setParams } = useViewParams();
+  const { params, setParams, revealFirstSentence } = useViewParams();
   const navigate = useNavigate();
   const leaveForm = useLeaveForm();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const nameInputId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const deckIds = [...new Set(params.getAll(DECK_PARAM))];
   // Read from the URL once, at mount, so a refresh or a round trip comes back to what was
@@ -53,6 +58,15 @@ export default function PracticeCreatePage() {
   // A `deck` param naming no deck of the user's, typed in or left from a deleted deck, is
   // neither counted nor sent.
   const pickedIds = pickedDecks.map((deck) => deck.id);
+
+  const suggestionQuery = useQuery({
+    queryKey: ['suggested_practice_name', pickedIds],
+    queryFn: () => readSuggestedPracticeName(pickedIds),
+    enabled: pickedIds.length > 0,
+    // The last suggestion stays in Name while the next one loads, so the hint does not blink.
+    placeholderData: (previous) => previous,
+  });
+  const suggestedName = pickedIds.length > 0 ? (suggestionQuery.data?.name ?? '') : '';
 
   // New deck hands back the deck it made once, as `location.state.deckId`; the ref keeps a
   // later render from adding it again after the user removes it.
@@ -71,11 +85,21 @@ export default function PracticeCreatePage() {
       await queryClient.invalidateQueries({ queryKey: ['practices'] });
       await leaveForm(internalReturnTo(params, 'returnTo') ?? `/practices/${practice.id}`);
     },
-    onError: (error: Error) => setSaveError(failureSentence(error, 'Deck not found.')),
+    onError: (error: Error) => {
+      const sentence = failureSentence(error, 'Deck not found.');
+      // A taken name is fixed at Name, so it is said there rather than in the bar.
+      if (error instanceof ApiDetailError && error.detail.code === 'practice_name_taken') {
+        setNameError(sentence);
+        revealFirstSentence(rootRef.current);
+      } else {
+        setSaveError(sentence);
+      }
+    },
   });
 
   const changeName = (value: string) => {
     setName(value);
+    setNameError(null);
     const next = new URLSearchParams(params);
     if (value) next.set('name', value);
     else next.delete('name');
@@ -92,41 +116,50 @@ export default function PracticeCreatePage() {
   const cancel = () => void leaveForm(internalReturnTo(params, 'cancelTo') ?? '/practices');
 
   return (
-    <div className="p-4">
+    <div ref={rootRef} className="p-4">
       <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
         New practice
       </h1>
 
-      <div className="mt-4 flex flex-col gap-1.5">
-        <label htmlFor={nameInputId} className="text-label text-(--color-aside)">
-          Name
+      <FormPart sentence={nameError} look="wrong" className="mt-3.5 flex flex-col gap-1.5">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label text-(--color-aside)">Name</span>
+          <input
+            type="text"
+            value={name}
+            placeholder={suggestedName}
+            onChange={(event) => changeName(event.target.value)}
+            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+          />
         </label>
-        <input
-          id={nameInputId}
-          type="text"
-          value={name}
-          onChange={(event) => changeName(event.target.value)}
-          className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
-        />
-      </div>
+      </FormPart>
 
-      <div className="mt-3">
+      <h2 className="mt-4.5 text-title leading-6 font-bold text-(--color-ink)">Choose decks</h2>
+      <div className="mt-2.5">
         <DeckPicker
           items={unpicked}
           selected={null}
           onSelect={(deck) => setParams(withDecks(params, [...deckIds, deck.id]))}
-          placeholder="Choose decks"
+          placeholder="Search decks"
+          inputLabel="Search decks"
+          listLabel="Decks"
+          clearOnPick
           createLabel="New deck…"
           onSelectCreate={newDeck}
         />
       </div>
 
       {pickedDecks.length > 0 && (
-        <ul className="tappable mt-3 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+        <ul className="mt-3.5 flex flex-col divide-y divide-(--color-line) border-y border-(--color-line)">
           {pickedDecks.map((deck) => (
-            <li key={deck.id} className="flex items-center gap-1.5 pr-1 pl-4">
-              <span className="min-w-0 flex-1 truncate py-3 text-body leading-5 font-semibold text-(--color-ink)">
-                {deck.name}
+            <li key={deck.id} className="flex items-center gap-4 py-3">
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
+                  <DeckMark /> {deck.name}
+                </span>
+                <span className="truncate text-label leading-4 text-(--color-aside)">
+                  {`${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`}
+                </span>
               </span>
               <button
                 type="button"
@@ -139,9 +172,9 @@ export default function PracticeCreatePage() {
                     ),
                   )
                 }
-                className="flex h-11 w-10 shrink-0 items-center justify-center text-(--color-aside)"
+                className="tappable-sm flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--color-surface) text-(--color-ink)"
               >
-                <X aria-hidden="true" className="h-4 w-4" />
+                <X aria-hidden="true" strokeWidth={2.2} className="size-icon" />
               </button>
             </li>
           ))}
@@ -164,6 +197,7 @@ export default function PracticeCreatePage() {
           busy={createMutation.isPending}
           onPress={() => {
             setSaveError(null);
+            setNameError(null);
             createMutation.mutate();
           }}
         >

@@ -210,6 +210,7 @@ The schema, ADR 105, ADR 107, ADR 110, ADR 113, ADR 114, ADR 115, ADR 117 and AD
   8. Create `uq_run_practice_id_active` on `run (practice_id) WHERE status = 'active'` and `ix_run_practice_id` on `run (practice_id, last_activity_at)`.
 
   Its downgrade must raise. Applied migrations keep their names.
+
 - The models must follow the schema: `Practice` and `PracticeConfiguration` new; `Run`, `RunConfiguration`, `RunCard` and `RunCountedCard`; `MasteryLog.run_id`. `Run` has no `name` and no `user_id`, and carries `last_activity_at`. Every name in the code in which "practice" or "session" means one go through a practice must become "run", in models, `db_*` functions, services, routes, payloads, tests and the frontend: `PracticeRun` to `Run`, `PracticeCard` to `RunCard`, `PracticeDeck` to `RunConfiguration`, `practice_card_id` to `run_card_id`, `generate_practice_card_fields` to `generate_run_card_fields`, `session_status` to `status`; the full list follows. "Practice" stays only for the thing the user keeps. The renames, across `app/`, `tests/`, `frontend/src/`, the vocabulary's Code cells, `AGENTS.md` and `README.md`:
   - Models and payloads: `PracticeRun` to `Run`, `PracticeRunRead` to `RunRead`, `PracticeCard` to `RunCard`, `PracticeCardRead` to `RunCardRead`, `PracticeCardStatus` to `RunCardStatus`, `PracticeDeck` to `RunConfiguration`, `PracticeRunState` to `RunState`, `PracticeRunBreakdown` to `RunBreakdownRead`, so it shares no name with the `RunBreakdown` component, `PracticeRunChosenCards` to `RunChosenCards`; `PracticeRunCreate`, `PracticeRunRerun`, `PracticeRunSummary`, `PracticeRunDeckSummary` and `HomeActivePractice` go, replaced by the payloads below; `app/models/practice_run_payloads.py` to `app/models/run_payloads.py`.
   - Fields and columns: `practice_run_id` to `run_id`, `practice_card_id` to `run_card_id`, `practice_card_ids` to `run_card_ids`, `rated_practice_card` to `rated_run_card`, `requeued_practice_card` to `requeued_run_card`, `active_practices` to `active_runs`, `session_status` to `status`; `session_name` goes.
@@ -282,6 +283,7 @@ class RunChosenCards(AppModel):
 def starting_configuration(live_field_ids: list[uuid.UUID]) -> dict[str, list]:
     """The six array and count columns, keyed by column name, for a deck whose live field ids are given in position order."""
 ```
+
 - `validate_deck_practice_config` becomes `validate_configuration(db, deck_id, arrays)`, keeping the four rules of ADR 109 and raising `ValueError` naming the first broken, in `app/services/practice_configuration.py`; `update_deck_practice_config` goes; at the cut a violation raises an `AssertionError`. `config_not_found`, `duplicate_deck`, `stale_config`, `configuration_name_taken` and `nothing_to_rerun` go, with their frontend sentences.
 - Every run must be cut by one function, `cut_run(db, strategy, practice, run, card_ids=None) -> None` in `app/services/run.py`, for starting a practice, a re-run and a run of chosen cards (ADR 112), filling a run its caller has staged, through `db_try_stage_create_run` when starting a practice and `db_stage_create_run(db, practice_id) -> Run` for a re-run or a run of chosen cards: for each `practice_configuration` of the practice it validates the configuration, copies it into a `run_configuration` with `card_ids` null for a whole run or that deck's chosen cards for a run of chosen cards, empty for a deck that holds none, generates the deck's cards, and writes one `run_counted_card` per card the copies could ask, judged by the same askability test generation uses, held in one function both call (ADR 113), and written by `db_stage_create_run_counted_cards(db, run_id, card_ids)` in `app/database_ops/run_counted_card.py`:
 
@@ -290,6 +292,7 @@ def starting_configuration(live_field_ids: list[uuid.UUID]) -> dict[str, list]:
 def card_is_askable(values: Mapping[uuid.UUID, str], configuration: RunConfiguration) -> bool:
     """Whether a card with these values, by field id, has a non-blank value among the fields each side of the configuration names."""
 ```
+
 - A run that writes no `run_card` is refused with `no_cards`, writing nothing. A re-run and a run of chosen cards of a run that is itself active are refused with `run_active`, and otherwise with `practice_has_active_run` while the practice has an active run, both before anything is cut; the completed run supplies only the chosen cards, each checked to be one of its cards (ADR 110, ADR 112).
 - Starting a practice must, in one transaction, read its active run, complete it when it has no pending card, return it while it is still active, and otherwise create one through `db_try_stage_create_run(db, practice_id) -> Run | None`, reading the concurrent start's run when that returns `None` (ADR 110).
 - `touch()` takes `Deck | Card | Run`; a run is touched when cut, on every rating in it, and on nothing else in this task (ADR 117). `DeckPracticeConfig` leaves `touch()`.
@@ -422,7 +425,7 @@ What to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -460,6 +463,7 @@ listLabel?: string;
 /** True: after a pick the input clears and shows no chosen item, for picking several. */
 clearOnPick?: boolean;
 ```
+
 - `practice_name_taken` must render "A practice with this name already exists." beside Name and be revealed through `FormPart` and `SubmitButton`, as `DeckEditor` reveals a taken name.
 - Tests: the grey suggestion follows picks and removals; a typed name survives a later pick; Create is not ready with no deck; a taken name shows beside Name.
 
@@ -475,7 +479,30 @@ clearOnPick?: boolean;
 
 **Debrief**
 
-None.
+Evidence:
+
+- `cd frontend && npx vitest run src/pages/PracticeCreatePage.test.tsx src/test/practice.test.ts` printed `Test Files  2 passed (2)`, `Tests  29 passed (29)`. Among them: "the grey suggestion in Name follows the picks and the removals, blank with none", "a typed name stays whatever is picked afterwards", "Create is not ready with no deck picked, and posts nothing", and "a taken name is said beside Name, not in the bar, and goes when Name changes".
+- On the live server at 390 by 844, in headless Chromium, signed out with the dev user:
+  - Empty: the heading read "New practice", then Name with value "" and placeholder "". "Choose decks" read as an h2 over a search with the placeholder "Search decks" and its chevron pointing down. Create had `aria-disabled="true"` and was white with grey words. Cancel was live, and the bar read "Cancel" and "Create" alone.
+  - The list open: a click on "Search decks" opened the list "Decks", with 8 deck rows each led by the deck mark, "Showing 8 of 21 · type to narrow", then "New deck…" last, and the chevron pointing up.
+  - Commands then Ports picked: the search read "" after each pick, and Name's placeholder was "Commands + Ports" in rgb(92, 102, 114), with no value. The rows beneath read Commands with "54 cards · 12 fields" and Ports with "21 cards · 4 fields", with the crosses "Remove Commands" and "Remove Ports". The bar read "2 selected" over Cancel and Create, and Create was live and yellow. The URL held both `deck` params in the order picked.
+  - "Evening drill", typed and then followed by another pick, stayed in Name. With every deck removed, the placeholder went back to "" and Create to `aria-disabled="true"`. Nothing scrolled sideways, and no page error was logged.
+- `npx vitest run` over the whole frontend printed `633 passed`; `npm run lint` and `npm run build` were clean.
+
+Departures from guidance:
+
+- Cancel stays live while no deck is picked, as drawing 8 draws it; only Create is greyed and not ready.
+- A closed `PickerCombobox` with `clearOnPick` shows its chevron pointing down, as drawing 8 draws "Search decks". A closed picker for one value, as on the card form, still shows none.
+- `clearOnPick` also ignores the caller's `selected`, so the input never shows a chosen name and no row carries the check. The list closes after each pick, as it does for one value.
+- The suggestion is read under the query key `['suggested_practice_name', <picked ids>]`, and the last one stays in Name while the next loads, so the hint does not blink between picks.
+- The sentence beside Name goes as soon as Name changes, as `DeckEditor` clears its own.
+- `frontend/src/api/practice.ts`, `frontend/src/test/practice.test.ts` and `frontend/src/components/library/DeckPicker.tsx` needed no change: the api already offered `readSuggestedPracticeName` with its test, and `DeckPicker` passes every prop on. `DeckPicker.test.tsx` gained a test that it passes the three new props on.
+- The vocabulary's "The chosen decks" says each row of the list is "a deck's name alone", while Details give each row its mark. The rows carry the mark, as `DeckPicker` draws every deck row and as drawing 8 draws them.
+
+What to read:
+
+- `PracticeCreatePage` in `frontend/src/pages/PracticeCreatePage.tsx`, for the suggestion's query and the taken name's split between Name and the bar.
+- `chosen` and `chevronWhenClosed` in `frontend/src/components/ui/PickerCombobox.tsx`.
 
 ### T3 — All practices
 

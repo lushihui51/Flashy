@@ -49,7 +49,15 @@ function LocationProbe() {
 function renderCreate(
   entry: string | { pathname: string; search?: string; state?: unknown } = '/practices/new',
 ) {
-  server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.json(DECKS)));
+  server.use(
+    http.get(`${BASE}/api/decks`, () => HttpResponse.json(DECKS)),
+    // The server's suggestion for the picks: their names in the order given.
+    http.get(`${BASE}/api/practices/suggested-name`, ({ request }) => {
+      const ids = new URL(request.url).searchParams.getAll('deck_ids');
+      const names = ids.map((id) => DECKS.find((d) => d.id === id)!.name);
+      return HttpResponse.json({ name: names.join(' + ') });
+    }),
+  );
   return renderWithProviders(
     <Routes>
       <Route
@@ -72,11 +80,12 @@ function address() {
   return { pathname, params: new URLSearchParams(search) };
 }
 
-// The search keeps the last pick's name until the user clears it.
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.clear(screen.getByRole('combobox'));
+  await user.click(screen.getByRole('combobox', { name: 'Search decks' }));
   await user.click(await screen.findByRole('option', { name: new RegExp(`^Deck ${name}`) }));
 }
+
+const nameInput = () => screen.getByRole('textbox', { name: 'Name' });
 
 beforeEach(() => leaveCalls.mockClear());
 afterEach(() => server.resetHandlers());
@@ -88,10 +97,81 @@ describe('PracticeCreatePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'New practice' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('');
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(nameInput()).toHaveValue('');
+    expect(nameInput()).toHaveAttribute('placeholder', '');
+    expect(screen.getByRole('heading', { level: 2, name: 'Choose decks' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Search decks' })).toHaveAttribute(
+      'placeholder',
+      'Search decks',
+    );
     expect(screen.queryByText(/configuration/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('the search opens a list spoken Decks, each row a deck with its mark, New deck… last', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.click(await screen.findByRole('combobox', { name: 'Search decks' }));
+
+    const list = screen.getByRole('listbox', { name: 'Decks' });
+    const options = within(list).getAllByRole('option');
+    expect(options.map((o) => o.textContent?.trim())).toEqual([
+      'Commands',
+      'Ports',
+      'Cells',
+      'New deck…',
+    ]);
+    expect(options[0]).toHaveAccessibleName('Deck Commands');
+  });
+
+  it('a pick clears the search and leaves no deck shown as chosen in it', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('combobox');
+
+    await pick(user, 'Ports');
+
+    expect(screen.getByRole('combobox', { name: 'Search decks' })).toHaveValue('');
+  });
+
+  it('each picked deck reads its mark, its name and its counts beneath, with its cross', async () => {
+    renderCreate('/practices/new?deck=d2');
+
+    const remove = await screen.findByRole('button', { name: 'Remove Ports' });
+    const row = remove.closest('li')!;
+    expect(within(row).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
+    expect(row).toHaveTextContent('Ports2 cards · 2 fields');
+  });
+
+  it('the grey suggestion in Name follows the picks and the removals, blank with none', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await screen.findByRole('combobox');
+
+    await pick(user, 'Commands');
+    await waitFor(() => expect(nameInput()).toHaveAttribute('placeholder', 'Commands'));
+    await pick(user, 'Ports');
+    await waitFor(() => expect(nameInput()).toHaveAttribute('placeholder', 'Commands + Ports'));
+
+    await user.click(screen.getByRole('button', { name: 'Remove Commands' }));
+    await waitFor(() => expect(nameInput()).toHaveAttribute('placeholder', 'Ports'));
+    await user.click(screen.getByRole('button', { name: 'Remove Ports' }));
+    expect(nameInput()).toHaveAttribute('placeholder', '');
+    expect(nameInput()).toHaveValue('');
+  });
+
+  it('a typed name stays whatever is picked afterwards', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Evening');
+    await pick(user, 'Commands');
+    await waitFor(() => expect(nameInput()).toHaveAttribute('placeholder', 'Commands'));
+    await pick(user, 'Ports');
+
+    expect(nameInput()).toHaveValue('Evening');
+    expect(address().params.get('name')).toBe('Evening');
   });
 
   it('lists the picked decks beneath in the order picked, each in the URL, and counts them', async () => {
@@ -237,7 +317,7 @@ describe('PracticeCreatePage', () => {
     await waitFor(() => expect(body).toEqual({ name: 'Evening', deck_ids: ['d1'] }));
   });
 
-  it('a refused Create reads its sentence in the bar', async () => {
+  it('a taken name is said beside Name, not in the bar, and goes when Name changes', async () => {
     server.use(
       http.post(`${BASE}/api/practices`, () =>
         HttpResponse.json(
@@ -252,10 +332,29 @@ describe('PracticeCreatePage', () => {
     await screen.findByRole('button', { name: 'Remove Commands' });
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    const bar = screen.getByTestId('form-bar');
-    expect(await within(bar).findByRole('alert')).toHaveTextContent(
-      'A practice with this name already exists.',
+    const sentence = await screen.findByText('A practice with this name already exists.');
+    expect(sentence).toHaveAttribute('role', 'alert');
+    expect(sentence.closest('[data-reveal-part]')).toContainElement(nameInput());
+    expect(within(screen.getByTestId('form-bar')).queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.type(nameInput(), '2');
+    expect(screen.queryByText('A practice with this name already exists.')).not.toBeInTheDocument();
+  });
+
+  it('any other refused Create reads its sentence in the bar', async () => {
+    server.use(
+      http.post(`${BASE}/api/practices`, () =>
+        HttpResponse.json({ detail: 'Deck not found' }, { status: 404 }),
+      ),
     );
+    const user = userEvent.setup();
+    renderCreate('/practices/new?deck=d1');
+
+    await screen.findByRole('button', { name: 'Remove Commands' });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    const bar = screen.getByTestId('form-bar');
+    expect(await within(bar).findByRole('alert')).toHaveTextContent('Deck not found.');
   });
 
   it('Cancel leaves for cancelTo, else All practices', async () => {

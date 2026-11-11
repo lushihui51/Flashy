@@ -68,4 +68,33 @@ describe('DeckPicker', () => {
     expectMarkBeforeName(ports!, 'Ports');
     expect(within(clear!).queryByRole('img', { name: 'Deck' })).not.toBeInTheDocument();
   });
+
+  it('passes the input and list labels and clearOnPick on', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <DeckPicker
+        items={decks}
+        selected={null}
+        onSelect={onSelect}
+        onSelectCreate={() => {}}
+        createLabel="New deck…"
+        placeholder="Search decks"
+        inputLabel="Search decks"
+        listLabel="Decks"
+        clearOnPick
+      />,
+    );
+    const input = screen.getByRole('combobox', { name: 'Search decks' });
+    await user.click(input);
+
+    await user.click(
+      within(screen.getByRole('listbox', { name: 'Decks' })).getByRole('option', {
+        name: 'Deck Ports',
+      }),
+    );
+
+    expect(onSelect).toHaveBeenCalledWith(decks[1]);
+    expect(input).toHaveValue('');
+  });
 });
