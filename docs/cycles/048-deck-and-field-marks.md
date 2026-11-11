@@ -1,6 +1,6 @@
 # 048 — Deck and field marks
 
-Waits for: 046, its `DeckRow` with no subject, `DeckPicker` with its item type `{ id: string; name: string }`, `DeckDetailPage` with one place in its breadcrumb, and `docs/vocabulary.md`, which it shares; 047, with which it shares `DeckDetailPage.tsx`, `CardStandaloneForm.tsx`, `PracticeCreatePage.tsx` and their tests, and `PracticeOverviewPage.test.tsx`.
+Waits for: 046, its `DeckRow` with no subject, `DeckPicker` with its item type `{ id: string; name: string }`, `DeckDetailPage` with one place in its breadcrumb, and `docs/vocabulary.md`, `CardStandaloneForm.test.tsx`, `practicePrefilterChain.test.tsx`, `DeckConfigurationEditor.test.tsx`, `PracticeOverviewPage.test.tsx` and `PracticeCreatePage.test.tsx`, which it shares; 047, with which it shares `DeckDetailPage.tsx` and its test, `CardStandaloneForm.test.tsx`, `PracticeOverviewPage.test.tsx`, `PracticeCreatePage.test.tsx` and `practicePrefilterChain.test.tsx`.
 
 Canvas: https://claude.ai/artifact/Mhz9bGtbce5kn8ZrD1RM8h
 
@@ -43,7 +43,6 @@ None.
 - `frontend/src/components/library/DeckPicker.test.tsx`
 - `frontend/src/pages/DeckDetailPage.tsx`
 - `frontend/src/pages/DeckDetailPage.test.tsx`
-- `frontend/src/components/library/CardStandaloneForm.tsx`
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/DeckConfigurationEditor.test.tsx`
 - `frontend/src/pages/PracticeOverviewPage.test.tsx`
@@ -63,9 +62,9 @@ export default function DeckMark(): ReactNode;
 
 - `DeckMark` must draw the geometry drawing 9 draws, a `rect` at 3,7 of 14 by 14 with a radius of 2 and the path `M7 3h12a2 2 0 0 1 2 2v12` on a 24 by 24 view box, stroke `currentColor` at width 2 with round caps and joins, no fill, `role="img"` and `aria-label="Deck"`. It is an inline SVG component like `PromptMark` and `RatingMark`, since lucide-react holds no icon of this geometry.
 - Guidance: size it `0.9em`. Where it sits inline with a name, on a row's title and a page's heading, give it `vertical-align: -0.15em` and a right margin of `0.3em`, inside the element holding the name, the mark and the name's first word kept on one line, as drawings 9 and 7-deck place it; in a picker's rows it is `renderLeading`'s own item, spaced by the row's gap.
-- `DeckRow`'s title, `DeckDetailPage`'s heading and every row `DeckPicker` draws must show `DeckMark` before the deck's name. `DeckPicker` passes it through `PickerCombobox`'s `renderLeading`, so the Practice page's filter, New card's picker and New configuration's picker carry it with no change of their own. Edit card, whose deck is locked and shown as the deck's name in `CardStandaloneForm`'s locked branch, must show `DeckMark` before that name too.
+- `DeckRow`'s title, `DeckDetailPage`'s heading and every row `DeckPicker` draws must show `DeckMark` before the deck's name. `DeckPicker` passes it through `PickerCombobox`'s `renderLeading`, so the Practice page's filter, New card's picker and New configuration's picker carry it with no change of their own.
 - A mark must never stand beside a word naming its kind: "Add deck", "New deck", "Edit deck", "Delete deck", "N decks" and "Deck" as a picker's label carry none.
-- Tests: `DeckMark.test.tsx` asserts the image named "Deck"; `DeckRow.test.tsx`, `DeckPicker.test.tsx` and `DeckDetailPage.test.tsx` assert the mark comes before the deck's name, and `DeckDetailPage.test.tsx` that the pencil "Edit deck" carries none. A deck's option in a picker is then named "Deck <name>", so every test in Files that finds an option by the deck's name alone must find it by its new name.
+- Tests: `DeckMark.test.tsx` asserts the image named "Deck"; `DeckRow.test.tsx`, `DeckPicker.test.tsx` and `DeckDetailPage.test.tsx` assert the mark comes before the deck's name, and `DeckDetailPage.test.tsx` that the pencil "Edit deck" carries none. Every caller must put a space between `DeckMark` and the name, so an accessible name reads "Deck <name>", as "Deck Commands", and not "DeckCommands"; the mark's right margin gives way to the space's width. A deck's option in a picker is then named "Deck <name>", so every test in Files that finds an option by the deck's name alone must find it by its new name.
 - `docs/vocabulary.md` must gain a row in the Deck area: Concept "A deck's mark"; User reads a stack of cards, drawn as an outline in the color of the words beside it; "Deck", spoken; Where beside every deck's name, never beside the word "deck"; Code `DeckMark`.
 
 **Out of scope**
@@ -75,6 +74,7 @@ export default function DeckMark(): ReactNode;
 - A name wrapping to two lines and shortened after that, in drawing 9, and everything drawing 7-deck shows of the largest text size: cycle 053.
 - The deck page's tabs and its Practice button, absent from drawing 7-deck: cycle 049.
 - A mark inside a picker's input once a deck is chosen: never; the input holds the text the user can edit.
+- A mark on Edit card's locked deck: never; it stands beside the word "Deck" there.
 - Edit configuration's deck name, shown in its locked span: never; cycle 049 deletes Edit configuration.
 
 **Done when**
