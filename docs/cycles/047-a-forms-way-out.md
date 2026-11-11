@@ -1,6 +1,6 @@
 # 047 — A form's way out
 
-Waits for: 046, its three steps in `HomePage`, its three rows in `CreateSheet`, its one list in `LibraryPage`, its one place in `DeckDetailPage`'s breadcrumb, its deck form with no subject in `DeckEditor`, and the deck-only filters of `PracticeOverviewPage` and `PracticeCreatePage`, files this cycle shares.
+Waits for: 046, its three steps in `HomePage`, its three rows in `CreateSheet`, its one list in `LibraryPage`, its one place in `DeckDetailPage`'s breadcrumb, its deck form with no subject in `DeckEditor` and its test, its `CardStandaloneForm` and its test with no subject, `PracticeCreatePage.test.tsx`, and the deck-only filters of `PracticeOverviewPage` and `PracticeCreatePage`, files this cycle shares.
 
 ## Goal
 
@@ -110,6 +110,7 @@ Every page that opens New deck, Edit deck, New card, Edit card or New practice p
 - `frontend/src/pages/DeckDetailPage.test.tsx`
 - `frontend/src/pages/PracticeOverviewPage.tsx`
 - `frontend/src/pages/PracticeOverviewPage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
 
 **Details**
 
@@ -117,7 +118,7 @@ Under ADR 124:
 
 - Every opener named in the Goal must open its form with `returnAddressParams(location, 'cancelTo')` from `frontend/src/lib/returnTo.ts`, its own `pathname + search`, beside any parameter or router state it passes today: Home's three steps and its New practice link; the New sheet's three rows, with the address of the page beneath the sheet; Your library's Add deck; a deck's page's Add card, its pencil to Edit deck, and its card rows to Edit card; and the Practice page's Add practice, beside the filter parameters it passes today.
 - No opener passes `returnTo`, so Create still lands on the thing made.
-- Tests: `HomePage.test.tsx` asserts, for each of the three states of the steps, that the next step's link carries `cancelTo=%2F`; `CreateSheet.test.tsx` asserts a row opens its form with the current page's address as `cancelTo`; `LibraryPage.test.tsx`, `DeckDetailPage.test.tsx` and `PracticeOverviewPage.test.tsx` assert their openers carry their own address.
+- Tests: `HomePage.test.tsx` asserts, for each of the three states of the steps, that the next step's link carries `cancelTo=%2F`; `CreateSheet.test.tsx` asserts a row opens its form with the current page's address as `cancelTo`; `LibraryPage.test.tsx`, `DeckDetailPage.test.tsx` and `PracticeOverviewPage.test.tsx` assert their openers carry their own address, and `practicePrefilterChain.test.tsx`'s round trips expect the nested `cancelTo` Add practice now carries.
 
 **Out of scope**
 
