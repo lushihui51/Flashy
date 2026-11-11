@@ -54,22 +54,23 @@ ADR 124 and ADR 099:
  * result for the page there. With an earlier page in Flashy's history (`hasEarlierPage()`),
  * it steps back one entry to the form's opener, then replaces that entry with `target` and
  * `state` when the opener's address differs from `target` or `state` is given; otherwise it
- * replaces the form's own entry with `target` and `state`. */
-export function useLeaveForm(): (target: string, state?: Record<string, unknown>) => void;
+ * replaces the form's own entry with `target` and `state`. The promise settles once `target` is current. */
+export function useLeaveForm(): (target: string, state?: Record<string, unknown>) => Promise<void>;
 ```
 
 - The function `useLeaveForm()` returns is ADR 124's `leaveForm(target, state?)`; it comes from a hook because it needs the router's `navigate`.
 
 - `useLeaveForm` must live in `frontend/src/lib/leaveForm.ts` and read the earlier page only through `hasEarlierPage()` in `frontend/src/lib/historyIndex.ts`. An address compares as `pathname + search`.
 - Every way `DeckEditor`, `CardStandaloneForm` and `PracticeCreatePage` leave must go through it, with the address each chooses today: Cancel to `cancelTo`, else the default; Create, Edit card's Save and Edit deck's Done to `returnTo`, else the made or changed thing's page; Delete deck to `/library` and Delete card to its deck's page; an arrival result, such as the new deck's id for a picker, as `state`. Edit deck's Save does not leave: it stays on the form and shows "Saved ✓", as it does today. No `navigate` call in these three files may leave the form; a `navigate` that opens another form from inside one, such as "New deck…" from New card's picker, stays.
-- Before Delete leaves, it must remove the deleted thing's queries from the cache, so the opener's page, mounted for the step back, shows no stale copy of it.
+- Delete must remove the deleted thing's queries from the cache once its leave has settled, never before, since the form watches them until it unmounts. `DeckEditor`'s comment in `handleDeleteDeck` that names `navigate()` goes with the call.
+- A form that receives an arrival result, `CardStandaloneForm` taking a new deck's id, must read it from the location each time the location changes, keyed by `location.key`, not once on mount, since the result arrives by a replace after the opener has mounted for the step back.
 - `PracticeCreatePage` must read `cancelTo` and `returnTo` through `internalReturnTo`, as every other form does: Cancel to `cancelTo`, else `/practice` with no parameter, the deck and status it carries back today going; Create to `returnTo`, else the new practice's page.
 - Guidance: under the data router, `await navigate(-1)` resolves once the opener's entry is current, and the opener's address is then `window.location.pathname + window.location.search`; a router whose history holds no index, such as `createMemoryRouter`, takes the replace branch.
-- Tests, in `leaveForm.test.tsx` with `createBrowserRouter` over jsdom's history: from a form pushed over an opener, leaving for the opener's own address makes the opener's entry current, `window.history.state.idx` back at the opener's, with no replace; leaving for another address replaces the opener's entry with it; leaving with `state` delivers the state; with no earlier page, the form's entry is replaced. In the three forms' tests, Cancel, Create, Edit card's Save, Edit deck's Done and each Delete call the hook's function with the addresses above, and Edit deck's Save calls it not at all.
+- Tests, in `leaveForm.test.tsx` with `createBrowserRouter` over jsdom's history: from a form pushed over an opener, leaving for the opener's own address makes the opener's entry current, the router's location the opener's and `hasEarlierPage()` as it was there, with no replace; leaving for another address replaces the opener's entry with it; leaving with `state` delivers the state; with no earlier page, the form's entry is replaced. In the three forms' tests, Cancel, Create, Edit card's Save, Edit deck's Done and each Delete call the hook's function with the addresses above, and Edit deck's Save calls it not at all.
 
 **Out of scope**
 
-- `DeckConfigurationEditor`: never; cycle 049 deletes it. Until then it still leaves by a new entry, so a round trip from New practice through New configuration leaves its entries in the history.
+- `DeckConfigurationEditor`: never; cycle 049 deletes it. Until then it still leaves by a new entry, so a round trip from New practice through New configuration leaves its entries in the history, and its "New deck…" round trip may not choose the new deck while it reads the arrival result once on mount.
 - Back and the breadcrumb reading `cancelTo` or `returnTo`: never, ADR 124.
 - The openers passing `cancelTo`: T2.
 
