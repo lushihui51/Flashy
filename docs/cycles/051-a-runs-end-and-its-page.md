@@ -64,6 +64,7 @@ None.
 - `frontend/src/test/run.test.ts`
 - `frontend/src/pages/RunPage.tsx`
 - `frontend/src/pages/RunPage.test.tsx`
+- `frontend/src/pages/DeckBoardPage.test.tsx`
 - `docs/vocabulary.md`
 
 **Details**
@@ -121,11 +122,11 @@ A completed run's page reads as drawing 13 draws it: under "All practices › <p
 PDR 040, PDR 041 and drawing 13:
 
 - Once the run is completed, the run page must read as drawing 13, under the row of places "All practices" then the practice's `PracticeMark` and name: the heading, the run's `RunMark` at the heading's size and its day as `formatRunDay` writes it; then the "Completed" badge and "N of M cards" on one line; then one line per deck of `RunDetail.decks`, in its order, its `DeckMark` and name, opening `/runs/:runId/decks/:deckId` with the page's own address as `cancelTo`; then "Re-run" as the page's main action in yellow, its words alone with no sign, spoken "Re-run"; then the summary. "Practice complete", "N cards practiced" and "Done" leave the page.
-- The page reads the run through `readRun` under `['run_detail', runId]` and the summary through the breakdown read under `['run_breakdown', runId]`, each through TanStack Query (ADR 088).
+- The page reads the run through `readRun` under `['run_detail', runId]` and the summary through the breakdown read under `['run_breakdown', runId]`, each through TanStack Query (ADR 088); the state read under `['run', runId]` still decides whether the page shows the card or the completed run. When the `run_detail` read answers 404, "Run not found." stands in place of the count line, the deck lines and Re-run, and "Could not load this run." when it fails otherwise (PDR 031).
 - Re-run must start the run at once through `POST /api/runs/{id}/rerun`, with no confirm, and open `/runs/:newRunId`; a refusal shows its sentence beneath it, through `failureSentence` with "Run not found." for a 404: `no_cards` "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." and `practice_has_active_run` "Finish the active run first."
 - Tests: the heading, the badge and count, the deck lines' addresses, Re-run's words and look, no "Done", and each refusal's sentence.
 - `docs/vocabulary.md`, each row's columns as given:
-  - "How many of its practice's cards a run reached": User reads "N of M cards"; Where a completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details; Code `reached_cards`; `counted_cards`; `RunListing`.
+  - "How many of its practice's cards a run reached": User reads "N of M cards"; Where a completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details; Code `reached_cards`; `counted_cards`; `RunListing`; `total_cards`.
   - "Leaving a finished practice": User reads "—"; Where "—"; the row leaves the file, since "Done" and its code go.
   - "What a practice did to mastery, never named": Concept "What a run did to mastery, never named"; User reads the run's mark and its day heading it; Where a completed run's page.
 
