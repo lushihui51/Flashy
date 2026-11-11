@@ -8,7 +8,7 @@ Outcome: The user makes and keeps decks with nothing above them: Your library li
 
 Scope: The cycle covers the subject's removal from every screen, the deck form included, from every address and API path, from the schema and from the vocabulary; the migration that gives every deck its user and renames a deck whose name another deck of its user has; Your library as one list of decks; a deck's page with "Your library" alone above its heading; every deck filter and picker row naming the deck alone; the top bar's New sheet with three rows of words alone; Home's three steps to a first practice; `copy_deck` copying into the caller's own decks with no configuration; and the README's account of what a deck sits in. It leaves out the deck and field marks drawings 9 and 11 show, cycle 048's; a name wrapping to two lines in a list, cycle 053's; configurations, practices and runs, which stay as they are until cycle 049; and the runs and the All practices bar drawn behind the sheet in drawing 12, cycle 052's.
 
-Judgement: The engineer judges on the live server at 390 wide, against the dev database migrated by T2: Your library shows "N decks", "Add deck" and one list of decks, each row its name over "N cards · N fields" and its circle, with no tabs; the six decks that shared a name read "Empty (Cycle 032 T3 judgement 2026-11-05 11:47)" and the like, each with its former subject's name; New deck asks for Deck name and the fields alone, and a name another deck already has is refused beside Deck name with "A deck with this name already exists."; the New sheet holds New deck, New card and New practice, words alone; a user with no deck sees Home's "Your first practice", "0 of 3" and the steps New deck, New card and New practice; a deck's page has "Your library" alone above its heading, and Delete deck on Edit deck lands on Your library; the Practice page and New practice narrow by deck alone, their rows naming a deck alone; `/subjects/new` shows "Page not found."; and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/subjects` prints `404`.
+Judgement: The engineer judges on the live server at 390 wide, against the dev database migrated by T2: Your library shows "N decks", "Add deck" and one list of decks, each row its name over "N cards · N fields" and its circle, with no tabs; the six decks that shared a name read "Empty", "Practiced" and "Untouched", each followed by " (Cycle 032 T3 judgement 2026-11-05 11:47)" or " (Cycle 032 T3 judgement 2026-11-05 11:49)", its former subject's name; New deck asks for Deck name and the fields alone, and a name another deck already has is refused beside Deck name with "A deck with this name already exists."; the New sheet holds New deck, New card and New practice, words alone; a user with no deck sees Home's "Your first practice", "0 of 3" and the steps New deck, New card and New practice; a deck's page has "Your library" alone above its heading, and Delete deck on Edit deck lands on Your library; the Practice page and New practice narrow by deck alone, their rows naming a deck alone; `/subjects/new` shows "Page not found."; and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/subjects` prints `404`.
 
 ## Records
 
@@ -107,6 +107,7 @@ PDR 033 and PDR 048, the backend unchanged:
   - "Deleting a thing that takes nothing else with it": Where Edit card; Edit deck.
   - "The row above a page's heading naming the places it belongs to, widest first": User reads "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page; Where Deck page; a practice's page; run page; a completed run's page.
   - "The steps to a first practice": User reads "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps.
+  - "Practicing a deck": Code `/practice?deck=`.
   - "The library's tabs", "The Subjects tab's toolbar label", "Adding a subject to the list in view", "The page where a subject is changed", "A subject counted", "The subject page's toolbar label", "Practicing a subject's decks", "Deleting a subject" and "Confirming a subject's deletion": User reads "—"; Where "—".
   - "The Decks tab's toolbar label": Concept "The library's toolbar label".
   - "A deck": Where Library; deck page; forms; New practice; a practice's page; a deck's board; Home.
@@ -119,7 +120,7 @@ PDR 033 and PDR 048, the backend unchanged:
   - "A list that will not load": Where Library; All practices; New practice.
   - "A thing's address, widest place first", which names a subject on screens this task changes: User reads "Deck · Configuration"; Where New practice's groups and Selected rows; a practice's row; a practice's page.
   - "Deleting a subject or deck that takes other things with it, each count present only above zero": Where Edit deck.
-- A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left. Every Code cell must drop a name this task deletes from the code.
+- A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left; "The library's tabs" leaves in this task, the deck page's `TABS` being another concept's. Every Code cell must drop a name this task deletes from the code.
 
 **Out of scope**
 
@@ -250,18 +251,28 @@ Every deck belongs to its user with nothing above it: the schema, the API, the d
 - `frontend/src/test/formParts.test.ts`
 - `frontend/src/test/subject.test.ts` (deleted)
 - `frontend/src/test/testUtils.tsx`
+- `frontend/src/pages/LibraryPage.test.tsx`
+- `frontend/src/pages/HomePage.test.tsx`
+- `frontend/src/pages/DeckDetailPage.test.tsx`
+- `frontend/src/pages/PracticeOverviewPage.test.tsx`
+- `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
+- `frontend/src/pages/practicePrefilterChain.test.tsx`
+- `frontend/src/components/library/DeckRow.test.tsx`
+- `frontend/src/components/library/DeckPicker.test.tsx`
 - `README.md`
+- `docs/Flashy-ERD.drawio`
 - `docs/vocabulary.md`
 
 **Details**
 
 ADR 120, PDR 033 and PDR 034:
 
-- The migration must do ADR 120's data move in one transaction, in this order: add `deck.user_id` and fill it from each deck's subject's `user_id`, then make it not null with `fk_deck_user_id_app_user`; rename every deck whose name another deck of its user also has to its own name, a space and its subject's name in parentheses, as "Verbs (Spanish)"; add `uq_deck_user_id` on `(user_id, name)`, so a clash left over fails the whole migration; then drop `uq_deck_subject_id`, `deck.subject_id` and the `subject` table. Its downgrade must raise, since no downgrade restores a subject. Constraint names must come from the naming convention in `app/database.py` (ADR 054).
+- The migration must do ADR 120's data move in one transaction, in this order: add `deck.user_id` and fill it from each deck's subject's `user_id`, then make it not null with `fk_deck_user_id_app_user`, `ON DELETE CASCADE`; rename every deck whose name another deck of its user also has to its own name, a space and its subject's name in parentheses, as "Verbs (Spanish)"; add `uq_deck_user_id` on `(user_id, name)`, so a clash left over fails the whole migration; then drop `uq_deck_subject_id`, `deck.subject_id` and the `subject` table. Its downgrade must raise, since no downgrade restores a subject. Constraint names must come from the naming convention in `app/database.py` (ADR 054).
 - `Deck` must carry `user_id` and `UniqueConstraint("user_id", "name")`, and no `subject_id`. Every read and write of a deck, a card, a field or a configuration must compare `Deck.user_id` in the statement where it joins `Subject` today (ADR 034).
 - `DeckCreate`, `DeckBatchEdit`, `DeckDetail`, `DeckListing` and every payload must carry no `subject_id` or `subject_name`. `GET /api/decks` must take no `subject_id`, and `GET /api/practice_runs` and `GET /api/deck_practice_configs` must take no `subject_id`. `deck_batch_edit`'s constraint check must name `uq_deck_user_id` for `deck_name_taken`.
 - `app/routers/api/subject.py`, `app/database_ops/subject.py` and `app/models/subject.py` are deleted, and `app/main.py` includes no subject router. `touch()` takes `Deck | Card | DeckPracticeConfig`; a call that touched a subject keeps its other rows, and a call that touched a subject alone, as in deck creation and deck deletion, goes.
-- `db_stage_create_deck(db, user_id, name)` takes the user in place of the subject, `db_read_deck_ids_for_subjects` goes, and every `db_*` function left with no caller goes. `deck.user_id` carries no `ON DELETE` action, as `subject.user_id` has none, and `DeckRead` and `DeckDetail` carry no `user_id`.
+- `db_stage_create_deck(db, user_id, name)` takes the user in place of the subject, `db_read_deck_ids_for_subjects` goes, and every `db_*` function left with no caller goes. `deck.user_id` is `ON DELETE CASCADE`, as `practice.user_id` will be. `user_id` and `UniqueConstraint("user_id", "name")` go on the `Deck` table class, not on `DeckBase`, so `DeckRead`, `DeckCreate` and `DeckDetail` carry no `user_id`.
 - The deletion closure must hold no subject: `compute_deletion_impact` takes no `subject_ids`, `DeletionImpact` has no `subject_ids`, `GET /api/deletion-impact` takes no `subject_ids` and `DeletionImpactRead` has no `subjects_deleted` (ADR 118). `delete_subject` goes.
 - `subject_readiness` in `app/services/mastery.py`, `db_fetch_subject_mastery_read_rows`, and every subject sentence in `app/mastery/readiness.py`'s docstrings go (ADR 116).
 - `HomeSteps` must carry `has_deck` and `has_card` alone, read in one statement by `db_read_home_steps` (ADR 123).
@@ -270,13 +281,15 @@ ADR 120, PDR 033 and PDR 034:
 - The deck form must ask for Deck name and the fields alone, as drawing 10 draws New deck: its subject picker, its New subject overlay, `subjectError`, `SET_SUBJECT`, `subjectId` in `deckEditorReducer` and `subject_id` in `deckEditorDiff` and the create payload go, and a deck is valid with a name and at least two named fields. Edit deck loads no subject.
 - `SubjectForm`, `SubjectIcon`, `SubjectIconPicker`, `lib/subjectIcon.ts`, `api/subject.ts` and their tests are deleted; `readDecks`, `readPracticeRuns`, `readDeckPracticeConfigs` and `readDeletionImpact` take no subject. `failureSentence` holds no `subject_name_taken`. `DeckConfigurationEditor`'s deck option type carries no subject field, and `Tabs.test.tsx`'s sample tabs name no subject. `CardStandaloneForm` must invalidate no `['decks', subjectId]` key.
 - Every comment in Files that names a subject must be brought to what the code now does or go, by `/home/jadenlu/Projects/Process/rules/comment-rules.md`.
+- `docs/Flashy-ERD.drawio`, on the human's order, must draw no `subject` entity and give `deck` its `user_id` to `app_user` in place of `subject_id`.
 - `README.md` must describe decks with nothing above them, a deck's readiness averaged over its cards with no subject's, and the deletion of a deck, field or card, in the sentences that name subjects today, and must stop listing subjects and a subject's icon among what is built.
-- Tests: in `tests/api_tests/test_decks.py`, a create whose name another of the user's decks has is refused with `deck_name_taken`, and another user's deck of the same name is allowed; `test_deck_copy.py` covers the copy into the caller's decks and the refused clashing name; `tests/conftest.py`'s `existing_subject` and `multi_subject_library` go, its decks created with the user's id; `test_auth_scoping.py` drops the subject routes. Every other test in Files is brought to the new shapes.
+- Tests: in `tests/api_tests/test_decks.py`, a create whose name another of the user's decks has is refused with `deck_name_taken`, and another user's deck of the same name is allowed; `test_deck_copy.py` covers the copy into the caller's decks and the refused clashing name; `tests/conftest.py`'s `existing_subject` and `multi_subject_library` go, its decks created with the user's id; `test_auth_scoping.py` drops the subject routes. Every other test in Files is brought to the new shapes, its fixtures carrying no subject field once the types are regenerated; `LibraryPage.test.tsx`'s `?tab=subjects` case goes, the library holding no tab parameter to test, and `practicePrefilterChain.test.tsx` drops the deck form's Subject step.
 - `docs/vocabulary.md` must take these rows' changes, each column as given, every other column as it stands:
   - "Finishing a form that makes a new thing": Where New deck; New card; New practice.
   - "A thing's name": Where New practice; Edit practice.
   - "Why leaving discards": Where New deck; Edit deck; New card; Edit card.
   - "A name left blank": Where New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name.
+  - "Deleting a subject or deck that takes other things with it, each count present only above zero": Concept "Deleting a deck that takes other things with it, each count present only above zero".
   - "A subject", "The page where a subject is made", "Choosing a subject", "A subject's description", "A subject's picture", "Each picture, spoken only and never shown as text", "A subject name already taken", "Leaving the subject form with unsaved changes" and "A subject left unchosen": User reads "—"; Where "—".
 - A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left; every subject row leaves the file in this task. Every Code cell must drop a name this task deletes from the code.
 
