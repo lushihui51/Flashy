@@ -6,8 +6,6 @@
 - Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
   - Reason: ADR 007, ADR 072
   - Guard: tests/api_tests/test_auth_scoping.py
-- The `process` plugin holds the skills and the rules for every file an agent writes under docs/, for comments in code, and for this file.
-- README.md is for a human reader and self-contained; it never points at AGENTS.md or a record.
 
 # Commands
 
@@ -41,33 +39,10 @@
 - Take every instant from the server's clock in UTC, never from a caller, and use app_user.timezone only to render a user-facing date at read time, never to store, order or compare an instant.
   - Reason: ADR 019
   - Guard: tests/api_tests/test_user_timezone.py
-- Stage with `git add -p` and commit only your task's hunks.
-  - Reason: a peer session may share this checkout
 - Start a full `pytest` only when `pg_stat_activity` shows no other connection to the TEST_DATABASE_URL database.
   - Reason: peer sessions share TEST_DATABASE_URL
 - Never delete rows from the dev database as cleanup after a browser check; seeded data stays.
 - Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
-- Never write under docs/ beyond what the running skill lists or the human orders.
-  - Reason: every docs/ file records the human's decision
-- Name code by file and symbol, never by line number, in every file you write.
-  - Reason: a line number changes with the next commit
-- Raise a finding that must outlive the session to the human; never fix it in passing.
-  - Reason: a lasting decision needs the human's approval
-- Treat an explicit order from the human as overriding a rule for that one act: name the rule, show the old and new text of each edit, act after confirmation, and leave the rule as written.
-- After the human orders "auto mode", follow a skill's steps without waiting, show each proposal and take the recommended one as approved, and stop only where you have nothing to recommend; stopping ends auto mode.
-  - Reason: an approval covers only the message that gives it
-- When auto mode reaches a skill's Ending or stops earlier, first list in plain words, least sure first, each close call or hard decision you took, the alternative it beat and why, or say none was.
-  - Reason: the human reviews what auto mode approved
-- When you could not follow an instruction of this file or the `process` plugin as written, and neither settles the case, end that reply with one line for each: the instruction, the difficulty and what you did; pass on a subagent's lines the same way.
-  - Reason: each line is an issue for /process-amend
-- Number a new record, cycle file or docket. Except for a docket, the numbering is one above the highest its folder has ever held on any branch, read after `git fetch`, and is never reused.
-  - Reason: two branches must never take one number
-- Never mark deferred work in code; raise it to the human as a question for docs/backlog.md.
-  - Reason: the backlog is a kept question's one home
-- Show on a screen only words docs/vocabulary.md gives, never a name from the code, and change a word there first, then on every surface.
-  - Reason: PDR 001, ADR 069
-- Write a concept the user meets and name its code as its docs/vocabulary.md row gives, or the roundtable docket rules give in its place, in every file you write; change a name there or on the docket first.
-  - Reason: ADR 069
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070
 - Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
@@ -87,8 +62,6 @@
   - Reason: ADR 124
 - Render every failure inline where it happened; AppShell's connectivity banner is the only app-level error channel, and App.tsx's route for a page that cannot be shown is the only error boundary.
   - Reason: PDR 031, ADR 063, ADR 104
-- Carry a rename through every tracked file and path, quoted literals and generated files included, but a record on main; only an occurrence with a different meaning stays.
-  - Reason: one word per concept
 
 # Conventions
 
