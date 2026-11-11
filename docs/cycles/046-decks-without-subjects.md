@@ -118,6 +118,12 @@ PDR 033 and PDR 048, the backend unchanged:
   - "How ready the user is to recall a card or field, from not ready to ready": Where Library; deck page; All practices; a practice's page; summary.
   - "A thing that will not load": Where Edit deck; deck page; Edit card; Edit practice; a deck's board; a practice's page; run page; a completed run's page; Home; the whole content of a page that failed while it was being drawn.
   - "A list that will not load": Where Library; All practices; New practice.
+  - "Finishing a form that makes a new thing": Where New deck; New card; New practice.
+  - "A thing's name": Where New practice; Edit practice.
+  - "Why leaving discards": Where New deck; Edit deck; New card; Edit card.
+  - "A name left blank": Where New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name.
+  - "A subject": Where New deck; Edit deck; the deck form's overlay.
+  - "The page where a subject is made", "A subject's description", "A subject's picture", "A subject name already taken" and "Leaving the subject form with unsaved changes": Where the deck form's overlay.
   - "A thing's address, widest place first", which names a subject on screens this task changes: User reads "Deck · Configuration"; Where New practice's groups and Selected rows; a practice's row; a practice's page.
   - "Deleting a subject or deck that takes other things with it, each count present only above zero": Where Edit deck.
 - A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left; "The library's tabs" leaves in this task, the deck page's `TABS` being another concept's. Every Code cell must drop a name this task deletes from the code.
@@ -128,7 +134,7 @@ PDR 033 and PDR 048, the backend unchanged:
 - Anything in `frontend/src/api/` or the backend: T2.
 - The deck mark beside each deck's name in drawing 9: cycle 048.
 - A row's name wrapping to two lines and shortened after that, in drawing 9: cycle 053.
-- New practice's, the Practice page's and the deck page's configurations, and their Practice buttons: cycle 049.
+- New practice's, the Practice page's and the deck page's configurations: cycle 049. The deck page's Practice button changes its address here and leaves the page in cycle 049.
 - The runs and the All practices bar drawn behind the sheet in drawing 12: cycle 052.
 
 **Done when**
@@ -285,10 +291,6 @@ ADR 120, PDR 033 and PDR 034:
 - `README.md` must describe decks with nothing above them, a deck's readiness averaged over its cards with no subject's, and the deletion of a deck, field or card, in the sentences that name subjects today, and must stop listing subjects and a subject's icon among what is built.
 - Tests: in `tests/api_tests/test_decks.py`, a create whose name another of the user's decks has is refused with `deck_name_taken`, and another user's deck of the same name is allowed; `test_deck_copy.py` covers the copy into the caller's decks and the refused clashing name; `tests/conftest.py`'s `existing_subject` and `multi_subject_library` go, its decks created with the user's id; `test_auth_scoping.py` drops the subject routes. Every other test in Files is brought to the new shapes, its fixtures carrying no subject field once the types are regenerated; `LibraryPage.test.tsx`'s `?tab=subjects` case goes, the library holding no tab parameter to test, and `practicePrefilterChain.test.tsx` drops the deck form's Subject step.
 - `docs/vocabulary.md` must take these rows' changes, each column as given, every other column as it stands:
-  - "Finishing a form that makes a new thing": Where New deck; New card; New practice.
-  - "A thing's name": Where New practice; Edit practice.
-  - "Why leaving discards": Where New deck; Edit deck; New card; Edit card.
-  - "A name left blank": Where New deck, under Deck name and under a field's name; Edit deck, under Deck name and under a field's name.
   - "Deleting a subject or deck that takes other things with it, each count present only above zero": Concept "Deleting a deck that takes other things with it, each count present only above zero".
   - "A subject", "The page where a subject is made", "Choosing a subject", "A subject's description", "A subject's picture", "Each picture, spoken only and never shown as text", "A subject name already taken", "Leaving the subject form with unsaved changes" and "A subject left unchosen": User reads "—"; Where "—".
 - A row whose User reads and Where both read "—" must keep in its Code cell only the names the code still gives its concept, and must leave the file once none is left; every subject row leaves the file in this task. Every Code cell must drop a name this task deletes from the code.
