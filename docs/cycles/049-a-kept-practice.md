@@ -708,7 +708,7 @@ What to read:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -774,4 +774,34 @@ class RunListing(RunRead):
 
 **Debrief**
 
-None.
+Evidence:
+
+- `uv run pytest tests/api_tests/test_practices.py tests/api_tests/test_runs.py -q` printed `107 passed`. Among them, `TestRunCounts` in `test_practices.py`: a run of three cards with one card rated Again and one passed, then its pending rows deleted and marked completed, reads 2 of 3; a run of one chosen card reads 0 of 1 beside its source's 3 of 3; a card deleted after a finished run of three leaves 2 of 2. The whole backend suite printed `367 passed`.
+- `cd frontend && npx vitest run src/components/ui/RunMark.test.tsx src/components/run/RunRow.test.tsx src/pages/PracticeDetailsPage.test.tsx` printed `Test Files  3 passed (3)`, `Tests  15 passed (15)`. Among them: "is the run's mark and day, its badge and its count, opening the run", "reads Start run with no active run, and opens the run it starts", "reads Continue run while a run is active", "opens Edit practice from the pencil, coming back here either way" and "says No runs yet. under Runs with none". The whole frontend printed `661 passed`; `npm run lint` and `npm run build` were clean.
+- The cycle's judgement, on the live server at 390 by 844, in headless Chromium, signed out with the dev user:
+  - All practices listed 33 rows, the API's 33, among them former runs' practices under their runs' names, as "Judgement practice" and "T7 two-tab check"; each row spoken as "Practice <name> Deck <deck> Mastery N%". T3's check of the deck filter stands, and this task changed nothing on that page.
+  - New practice with Commands then Ports picked: Name's value "", its placeholder "Commands + Ports", and "2 selected" showing. Create landed on `/practices/<id>`.
+  - That page read, top to bottom: "All practices"; the heading spoken "Practice Commands + Ports", its circle "Mastery 40%" at the right; "Start run" in yellow beside the pencil "Edit Commands + Ports"; Commands and Ports each on a line with the deck mark, opening nothing; "Runs" over "No runs yet.". Nothing scrolled sideways.
+  - Start run opened `/runs/<id>` on a card, "Show answer" showing. The practice's page then read "Continue run", and under "Runs" one row spoken "Run 2026-11-11 Active 0 of 74 cards", which the API gave as 0 reached and 74 counted.
+  - A second New practice with Commands and Ports, whose grey suggestion now read "Commands + Ports (1)", with "Commands + Ports" typed and Create pressed, stayed on New practice with "A practice with this name already exists." 6 pixels under Name, aligned to its left edge.
+  - The pencil opened `/practices/<id>/edit` with `cancelTo` and `returnTo` both the practice's page. Saving "Cycle 049 T5 judgement" landed on the practice's page under that name, and `GET /api/practices` read the same ids in the same order as before, the practice still first.
+  - Delete practice asked "Delete this practice?" over "Its runs will be gone. Its decks and your mastery stay as they are.", with Cancel and Delete. Delete landed on `/practices` without the practice, `GET /api/practices/<id>` answered 404, and every one of the 21 decks' readiness read the same as before.
+  - Commands' page had no tablist, no Practice button or link, and its 54 cards; nothing scrolled sideways.
+  - Re-run on "Judgement practice"'s completed run opened `/runs/<new id>`, an active run of the same practice; that practice's page then listed "2026-11-11 Active 0 of 4 cards" over "2026-11-04 Completed 3 of 3 cards".
+  - No page error was logged.
+
+Departures from guidance:
+
+- `db_read_run_reads_for_practice` in `app/database_ops/run.py` keeps its name and now returns `list[RunListing]`, the runs, their days and both counts in one statement, each count a grouped subquery outer-joined to the runs. `get_practice` in `app/routers/api/practice.py`, outside Files, passes it on unchanged, so neither the router nor `app/services/practice.py` changed. `tests/api_tests/test_runs.py` needed no change either.
+- "N of M cards" writes "card" for M of 1, as "1 of 1 card", through `pluralize`.
+- `RunStatusBadge`'s Completed badge now carries the 1.5-pixel line border and semibold words drawing 4-practice draws, on Home too, the badge's only other user.
+- The circle keeps the 10-pixel space at its right that drawing 4-practice draws, and is `MasteryCircle`'s heading size, 30 pixels, as on a deck's page, where the drawing draws 32.
+- A deck's line too long for its row ends in an ellipsis, as All practices' names do, until cycle 053.
+- The heading holds the practice mark to the name's first letter, as a deck's page holds the deck mark.
+- The row of places shows no back chevron when the page is loaded directly, as `Breadcrumb` shows it only when history holds an earlier page in Flashy.
+- The check's own practice was the one it deleted. The Re-run's new active run of "Judgement practice" stays in the dev database, since AGENTS.md forbids deleting rows as cleanup.
+
+What to read:
+
+- `db_read_run_reads_for_practice` in `app/database_ops/run.py`, for the two counts.
+- `PracticeDetailsPage` in `frontend/src/pages/PracticeDetailsPage.tsx`.

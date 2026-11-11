@@ -1,18 +1,24 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readPractice, startRun } from 'src/api/practice';
 import { isNotFound } from 'src/api/unwrap';
-import DeckLine from 'src/components/practice/DeckLine';
 import RunRow from 'src/components/run/RunRow';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import DeckMark from 'src/components/ui/DeckMark';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
+import PracticeMark from 'src/components/ui/PracticeMark';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { returnAddressParams } from 'src/lib/returnTo';
 
-/** One practice's own page: its name, its decks, the way into its run, "Start run" with no
- * active run and "Continue run" with one, and every run it has had. */
+/** One practice's own page: its mark, name and circle; "Start run" with no active run and
+ * "Continue run" with one, beside the pencil to Edit practice; a line per deck; and every run
+ * it has had under "Runs". */
 export default function PracticeDetailsPage() {
   const { practiceId } = useParams<{ practiceId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   const practiceQuery = useQuery({
@@ -49,41 +55,77 @@ export default function PracticeDetailsPage() {
   const practice = practiceQuery.data;
   if (!practice) return null;
 
+  // The heading holds the mark to the name's first letter alone, so the mark always starts the
+  // first word's line and a word too long for one line still breaks inside itself.
+  const [nameFirstLetter = '', ...nameRest] = Array.from(practice.name);
+
   return (
     <div className="p-4">
       <Breadcrumb places={[{ label: 'All practices', to: '/practices' }]} />
 
-      <h1 className="mt-3.5 min-w-0 text-page leading-[1.05] font-bold tracking-[-0.02em] break-words text-(--color-ink)">
-        {practice.name}
-      </h1>
+      <div className="mt-3.5 flex items-center justify-between gap-3">
+        <h1 className="min-w-0 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          <span className="whitespace-nowrap">
+            <PracticeMark /> {nameFirstLetter}
+          </span>
+          {nameRest.join('')}
+        </h1>
+        {practice.readiness !== null && (
+          <MasteryCircle readiness={practice.readiness} size="heading" className="mr-2.5" />
+        )}
+      </div>
 
-      <DeckLine decks={practice.decks} className="mt-3" />
-
-      <button
-        type="button"
-        disabled={startMutation.isPending}
-        onClick={() => startMutation.mutate()}
-        className="tappable mt-6 h-action w-full rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
-      >
-        {practice.active_run_id ? 'Continue run' : 'Start run'}
-      </button>
+      <div className="mt-3.5 flex gap-2.5">
+        <button
+          type="button"
+          disabled={startMutation.isPending}
+          onClick={() => startMutation.mutate()}
+          className="tappable h-action min-w-0 flex-1 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
+        >
+          {practice.active_run_id ? 'Continue run' : 'Start run'}
+        </button>
+        <button
+          type="button"
+          aria-label={`Edit ${practice.name}`}
+          onClick={() =>
+            navigate({
+              pathname: `/practices/${practice.id}/edit`,
+              search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+            })
+          }
+          className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
+        >
+          <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
+        </button>
+      </div>
       {startMutation.isError && (
         <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
           {failureSentence(startMutation.error, 'Practice not found.')}
         </p>
       )}
 
-      {practice.runs.length > 0 && (
-        <>
-          <h2 className="mt-6 text-action font-semibold text-(--color-ink)">Runs</h2>
-          <ul className="tappable mt-2.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
-            {practice.runs.map((run) => (
-              <li key={run.id}>
-                <RunRow run={run} />
-              </li>
-            ))}
-          </ul>
-        </>
+      <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+        {practice.decks.map((deck) => (
+          <li
+            key={deck.deck_id}
+            className="min-h-11 truncate py-3 pr-3 pl-4 text-body leading-5 font-semibold text-(--color-ink)"
+          >
+            <DeckMark /> {deck.deck_name}
+          </li>
+        ))}
+      </ul>
+
+      <h2 className="mt-5 text-action font-semibold text-(--color-ink)">Runs</h2>
+      {practice.runs.length > 0 ? (
+        <ul className="tappable mt-2.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+          {practice.runs.map((run) => (
+            <li key={run.id}>
+              <RunRow run={run} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2.5 text-body text-(--color-aside)">No runs yet.</p>
       )}
     </div>
   );

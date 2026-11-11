@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 from app.models.base import AppModel
-from app.models.run import RunRead
+from app.models.run_payloads import RunListing
 
 
 class PracticeCreate(AppModel):
@@ -44,7 +44,7 @@ class PracticeSummary(PracticeListing):
 
 class PracticeDetail(PracticeSummary):
     # Newest last_activity_at first, then id.
-    runs: list[RunRead]
+    runs: list[RunListing]
 
 
 class SuggestedPracticeName(AppModel):

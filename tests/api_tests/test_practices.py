@@ -403,6 +403,78 @@ class TestReadiness:
         assert client.get("/api/practices").json()[0]["readiness"] is None
 
 
+def _rate_current(client, run_id, rating):
+    card = client.get(f"/api/runs/{run_id}/state").json()["current_card"]
+    res = client.post(
+        f"/api/run_cards/{card['run_card_id']}/rate",
+        json={"ratings": {a["field_def_id"]: rating for a in card["answers"]}},
+    )
+    assert res.status_code == 200, res.text
+    return uuid.UUID(card["card_id"])
+
+
+def _counts(client, practice_id):
+    """Each run's id on the practice's page, newest first, with its cards reached and counted."""
+    detail = client.get(f"/api/practices/{practice_id}").json()
+    return [(r["id"], r["reached_cards"], r["counted_cards"]) for r in detail["runs"]]
+
+
+class TestRunCounts:
+    """A practice's page reads each run's cards reached and counted."""
+
+    def test_a_run_ended_with_cards_unreached_counts_each_reached_card_once(self, client, db):
+        ports, _ = _deck(client, "Ports", cards=3)
+        practice = create_practice(client, {ports["id"]: None})
+        run = client.post(f"/api/practices/{practice['id']}/runs").json()
+        assert _counts(client, practice["id"]) == [(run["id"], 0, 3)]
+
+        # Again leaves a failed row and a pending retry; the next card is passed.
+        failed = _rate_current(client, run["id"], 1)
+        passed = _rate_current(client, run["id"], 4)
+        assert failed != passed
+        # Ending a run comes later; stand in for it by dropping its pending rows.
+        run_id = uuid.UUID(run["id"])
+        for row in db.exec(
+            select(RunCard).where(
+                RunCard.run_id == run_id, RunCard.status == RunCardStatus.pending
+            )
+        ):
+            db.delete(row)
+        db.get(Run, run_id).status = RunStatus.completed
+        db.commit()
+
+        [(_, reached, counted)] = _counts(client, practice["id"])
+        assert (reached, counted) == (2, 3)
+
+    def test_a_run_of_chosen_cards_counts_only_the_chosen(self, client, db):
+        ports, _ = _deck(client, "Ports", cards=3)
+        practice = create_practice(client, {ports["id"]: None})
+        first = client.post(f"/api/practices/{practice['id']}/runs").json()
+        _finish(client, first["id"])
+        card_id = db.exec(
+            select(RunCard.card_id).where(RunCard.run_id == uuid.UUID(first["id"]))
+        ).first()
+
+        res = client.post(
+            f"/api/runs/{first['id']}/chosen_cards", json={"card_ids": [str(card_id)]}
+        )
+        assert res.status_code == 201, res.text
+        chosen = res.json()
+
+        assert _counts(client, practice["id"]) == [(chosen["id"], 0, 1), (first["id"], 3, 3)]
+
+    def test_a_card_deleted_afterward_leaves_both_counts(self, client):
+        ports, _ = _deck(client, "Ports", cards=3)
+        practice = create_practice(client, {ports["id"]: None})
+        run = client.post(f"/api/practices/{practice['id']}/runs").json()
+        _finish(client, run["id"])
+        first_card = client.get(f"/api/decks/{ports['id']}").json()["cards"][0]["id"]
+
+        assert client.delete(f"/api/cards/{first_card}").status_code == 204
+
+        assert _counts(client, practice["id"]) == [(run["id"], 2, 2)]
+
+
 class TestRename:
     def test_a_rename_moves_no_practice_and_touches_no_run(self, client, db):
         ports, _ = _deck(client, "Ports")

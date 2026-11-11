@@ -133,6 +133,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | What deleting a practice takes and leaves | "Its runs will be gone. Its decks and your mastery stay as they are." | Edit practice | — |
 | Run | The page a run runs on | no heading of its own; its practice named in the row of places | Run page | `/runs/:runId`; `RunPage`; `RunState`; `/api/runs/{run_id}/state`; `practice_name` |
 | Run | A run's day | the day it was run, as "2026-11-03"; a later run of one day adds the next number, as "2026-11-03 (1)" | Home, in a run's block; a practice's page, under "Runs"; a completed run's page, its heading | `day`; `day_index`; `formatRunDay` |
+| Run | A run's mark | a flash inside a circle, drawn as an outline in the color of the words beside it; "Run", spoken | beside a run's day on Home, under "Runs" and heading a completed run's page; never on the run page | `RunMark` |
 | Run | The current card's two zones | "Prompt"; "Answer" | Run page; a card opened from the summary | `CurrentRunCard`; `prompts`; `answers`; `side` |
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
@@ -148,7 +149,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | Rating a card that is no longer current | "This is not the current card." | Run page | `not_current_card` |
 | Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; deck page; All practices; a practice's page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
 | Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `RunBreakdownRead`; `/api/runs/{run_id}/breakdown`; `RunBreakdown`; `run_breakdown` |
-| Summary | How many cards were practiced | "N cards practiced" | Run page; a practice's page | `total_cards` |
+| Summary | How many of its practice's cards a run reached | "N of M cards"; "N cards practiced" | a completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details; run page, over its summary, as "N cards practiced" | `total_cards`; `RunListing`; `reached_cards`; `counted_cards`; `run_counted_card` |
 | Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | A completed run's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
 | Summary | A change in mastery, one of five kinds | a badge off the circle's top-right; "up a lot", "up", "no change", "down" or "down a lot", spoken after "Mastery N%" | A completed run's page | `ChangeKind`; `change`; `delta`; `classify_change`; `ChangeBadge`; `CHANGE_WORDS` |
 | Summary | How many cards had each kind of change | the number under its kind's badge, in a block when above zero; "N up a lot", "N up", "N no change", "N down" or "N down a lot", spoken | A completed run's page; Home, in a completed run's details | `kind` |

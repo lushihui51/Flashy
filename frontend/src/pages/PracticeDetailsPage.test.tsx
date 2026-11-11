@@ -19,6 +19,8 @@ const run = (id: string, status: 'active' | 'completed', day: string, dayIndex: 
   day_index: dayIndex,
   created_at: '2026-11-03T18:00:00Z',
   last_activity_at: '2026-11-03T18:00:00Z',
+  reached_cards: status === 'active' ? 3 : 74,
+  counted_cards: 74,
 });
 
 function detail(overrides: Record<string, unknown> = {}) {
@@ -38,7 +40,8 @@ function detail(overrides: Record<string, unknown> = {}) {
 }
 
 function LocationProbe() {
-  return <span data-testid="location">{useLocation().pathname}</span>;
+  const location = useLocation();
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
 function renderPractice(data: Record<string, unknown> | null = detail()) {
@@ -61,18 +64,48 @@ function renderPractice(data: Record<string, unknown> | null = detail()) {
 afterEach(() => server.resetHandlers());
 
 describe('PracticeDetailsPage', () => {
-  it("shows the practice's name, its decks and All practices above it", async () => {
-    renderPractice();
+  it("shows the practice's mark and name, its circle, and All practices above it", async () => {
+    renderPractice(detail({ readiness: 0.46 }));
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Commands + Ports' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Commands')).toBeInTheDocument();
-    expect(screen.getByText('Ports')).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Commands + Ports');
+    expect(within(heading).getByRole('img', { name: 'Practice' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Mastery 46%' })).toBeInTheDocument();
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(row).getByRole('link', { name: 'All practices' })).toHaveAttribute(
       'href',
       '/practices',
+    );
+  });
+
+  it('shows no circle while its decks hold no card', async () => {
+    renderPractice();
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('img', { name: /^Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('writes each deck on a line of its own, its mark and name, opening nothing', async () => {
+    renderPractice();
+
+    const commands = (await screen.findByText('Commands')).closest('li')!;
+    const ports = screen.getByText('Ports').closest('li')!;
+    expect(commands.parentElement).toBe(ports.parentElement);
+    expect(within(commands).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
+    expect(within(ports).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
+    expect(within(commands.parentElement!).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(commands.parentElement!).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('opens Edit practice from the pencil, coming back here either way', async () => {
+    const user = userEvent.setup();
+    renderPractice();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit Commands + Ports' }));
+
+    const here = encodeURIComponent('/practices/p1');
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `/practices/p1/edit?cancelTo=${here}&returnTo=${here}`,
     );
   });
 
@@ -100,7 +133,7 @@ describe('PracticeDetailsPage', () => {
     expect(screen.queryByRole('button', { name: 'Start run' })).not.toBeInTheDocument();
   });
 
-  it('lists each run as its day and its badge, each opening the run', async () => {
+  it('lists each run as its mark and day, its badge and its count, each opening the run', async () => {
     renderPractice(
       detail({
         active_run_id: 'r2',
@@ -111,15 +144,18 @@ describe('PracticeDetailsPage', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Runs' })).toBeInTheDocument();
     const links = screen.getAllByRole('link').filter((link) => link.getAttribute('href')?.startsWith('/runs/'));
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/runs/r2', '/runs/r1']);
-    expect(links[0]).toHaveTextContent('2026-11-03 (1)Active');
-    expect(links[1]).toHaveTextContent('2026-11-03Completed');
+    expect(links[0]).toHaveTextContent('2026-11-03 (1)Active3 of 74 cards');
+    expect(links[1]).toHaveTextContent('2026-11-03Completed74 of 74 cards');
+    for (const link of links) {
+      expect(within(link).getByRole('img', { name: 'Run' })).toBeInTheDocument();
+    }
   });
 
-  it('shows no Runs with none', async () => {
+  it('says No runs yet. under Runs with none', async () => {
     renderPractice();
 
-    await screen.findByRole('button', { name: 'Start run' });
-    expect(screen.queryByRole('heading', { level: 2, name: 'Runs' })).not.toBeInTheDocument();
+    const runs = await screen.findByRole('heading', { level: 2, name: 'Runs' });
+    expect(runs.nextElementSibling).toHaveTextContent('No runs yet.');
   });
 
   it('a refused start reads its sentence beside the button', async () => {
@@ -136,7 +172,7 @@ describe('PracticeDetailsPage', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(NO_CARDS_MESSAGE);
-    expect(button.nextElementSibling).toBe(alert);
+    expect(button.parentElement!.nextElementSibling).toBe(alert);
   });
 
   it('says Practice not found. for an unknown or foreign practice', async () => {

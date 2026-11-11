@@ -909,7 +909,7 @@ export interface components {
             /** Readiness */
             readiness: number | null;
             /** Runs */
-            runs: components["schemas"]["RunRead"][];
+            runs: components["schemas"]["RunListing"][];
         };
         /** PracticeSummary */
         PracticeSummary: {
@@ -1040,6 +1040,44 @@ export interface components {
         RunChosenCards: {
             /** Card Ids */
             card_ids: string[];
+        };
+        /**
+         * RunListing
+         * @description A run as a practice's page lists it, with how many of its cards it reached.
+         */
+        RunListing: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Practice Id
+             * Format: uuid
+             */
+            practice_id: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Index */
+            day_index: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Reached Cards */
+            reached_cards: number;
+            /** Counted Cards */
+            counted_cards: number;
         };
         /**
          * RunProgress

@@ -9,7 +9,7 @@ from enum import Enum
 from app.mastery.readiness import ChangeKind
 from app.models.base import AppModel
 from app.models.field_def import FieldType
-from app.models.run import RunStatus
+from app.models.run import RunRead, RunStatus
 from app.models.run_card import RunCardRead
 
 
@@ -25,6 +25,15 @@ class ResolvedFieldValue(AppModel):
     name: str
     type: FieldType
     value: str
+
+
+class RunListing(RunRead):
+    """A run as a practice's page lists it, with how many of its cards it reached."""
+
+    # Distinct cards among the run's run_card rows that are no longer pending.
+    reached_cards: int
+    # The run's run_counted_card rows: the cards it could ask when cut, less any deleted since.
+    counted_cards: int
 
 
 class RunProgress(AppModel):

@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import Date, cast, delete, exists, func, or_
+from sqlalchemy import Date, cast, delete, distinct, exists, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
@@ -11,8 +11,10 @@ from app.models.practice import Practice
 from app.models.practice_payloads import DeckNameRead
 from app.models.review_log import ReviewLog
 from app.models.run import Run, RunRead, RunStatus
-from app.models.run_card import RunCard
+from app.models.run_card import RunCard, RunCardStatus
 from app.models.run_configuration import RunConfiguration
+from app.models.run_counted_card import RunCountedCard
+from app.models.run_payloads import RunListing
 
 
 def db_try_stage_create_run(db: Session, practice_id: uuid.UUID) -> Run | None:
@@ -94,16 +96,52 @@ def db_read_run_read(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunR
     return _run_read(*row) if row else None
 
 
-def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[RunRead]:
-    """The practice's runs, newest `last_activity_at` first, then id. Unscoped: the caller
-    has already ownership-checked the practice."""
+def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[RunListing]:
+    """The practice's runs, newest `last_activity_at` first, then id, each with its counts
+    of cards reached and counted. Unscoped: the caller has already ownership-checked the
+    practice."""
     days = _run_days(Practice.id == practice_id)
+    practice_runs = select(Run.id).where(Run.practice_id == practice_id)
+    reached = (
+        select(RunCard.run_id, func.count(distinct(RunCard.card_id)).label("n"))
+        .where(
+            col(RunCard.run_id).in_(practice_runs),
+            RunCard.status != RunCardStatus.pending,
+        )
+        .group_by(RunCard.run_id)
+        .subquery()
+    )
+    counted = (
+        select(RunCountedCard.run_id, func.count().label("n"))
+        .where(col(RunCountedCard.run_id).in_(practice_runs))
+        .group_by(RunCountedCard.run_id)
+        .subquery()
+    )
     rows = db.exec(
-        select(Run, days.c.day, days.c.day_index)
+        select(
+            Run,
+            days.c.day,
+            days.c.day_index,
+            func.coalesce(reached.c.n, 0),
+            func.coalesce(counted.c.n, 0),
+        )
         .join(days, days.c.id == Run.id)
+        .outerjoin(reached, reached.c.run_id == Run.id)
+        .outerjoin(counted, counted.c.run_id == Run.id)
         .order_by(col(Run.last_activity_at).desc(), col(Run.id))
     ).all()
-    return [_run_read(*row) for row in rows]
+    return [
+        RunListing.model_validate(
+            run,
+            update={
+                "day": day,
+                "day_index": day_index,
+                "reached_cards": reached_cards,
+                "counted_cards": counted_cards,
+            },
+        )
+        for run, day, day_index, reached_cards, counted_cards in rows
+    ]
 
 
 def db_read_active_run_reads(

@@ -71,8 +71,23 @@ describe('readPractices', () => {
 });
 
 describe('readPractice', () => {
-  it('requests the practice and returns it with its runs', async () => {
-    const detail: components['schemas']['PracticeDetail'] = { ...SUMMARY, runs: [] };
+  it('requests the practice and returns it with its runs and their counts', async () => {
+    const detail: components['schemas']['PracticeDetail'] = {
+      ...SUMMARY,
+      runs: [
+        {
+          id: 'run_1',
+          practice_id: 'practice_1',
+          status: 'completed',
+          day: '2026-11-03',
+          day_index: 0,
+          created_at: '2026-11-03T18:00:00Z',
+          last_activity_at: '2026-11-03T18:00:00Z',
+          reached_cards: 12,
+          counted_cards: 74,
+        },
+      ],
+    };
     let requested: unknown;
     server.use(
       http.get(`${BASE}/api/practices/:practice_id`, ({ params }) => {

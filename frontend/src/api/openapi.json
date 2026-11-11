@@ -3480,7 +3480,7 @@
           },
           "runs": {
             "items": {
-              "$ref": "#/components/schemas/RunRead"
+              "$ref": "#/components/schemas/RunListing"
             },
             "type": "array",
             "title": "Runs"
@@ -3780,6 +3780,64 @@
           "card_ids"
         ],
         "title": "RunChosenCards"
+      },
+      "RunListing": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at",
+          "reached_cards",
+          "counted_cards"
+        ],
+        "title": "RunListing",
+        "description": "A run as a practice's page lists it, with how many of its cards it reached."
       },
       "RunProgress": {
         "properties": {
