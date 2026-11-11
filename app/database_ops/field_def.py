@@ -47,7 +47,7 @@ def db_read_field_defs_for_copy(db: Session, deck_id: uuid.UUID) -> list[FieldDe
 def db_read_field_defs_for_decks(
     db: Session, deck_ids: Collection[uuid.UUID]
 ) -> list[FieldDef]:
-    """Unscoped: the caller has already ownership-checked the practice these decks came
+    """Unscoped: the caller has already ownership-checked the run these decks came
     from. Ordered by deck, then position."""
     return list(
         db.exec(

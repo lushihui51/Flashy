@@ -1,8 +1,6 @@
 import type { components } from 'src/api/types';
-import { formatCappedNames } from 'src/lib/capList';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
-type DeckPracticeConfigCreate = components['schemas']['DeckPracticeConfigCreate'];
 
 /** The five places a field can be. `unassigned` is the box above the table; the other
  * four are the config's four arrays. */
@@ -68,21 +66,12 @@ export function emptyBoard(fieldDefs: DeckFieldDef[]): BoardState {
  *
  * Ids the config references but the deck has no live field for are dropped rather than
  * rendered: deleted fields never appear in the builder, and a config fetched before its
- * field was deleted still names it. Saving from this board therefore
- * also repairs the config — which is the same thing session start would otherwise
- * reject it for.
+ * field was deleted still names it. Saving from this board therefore also repairs the
+ * config.
  */
 export function boardFromConfig(
   fieldDefs: DeckFieldDef[],
-  config: Pick<
-    DeckPracticeConfigCreate,
-    | 'prompt_field_ids'
-    | 'answer_field_ids'
-    | 'prompt_pool_ids'
-    | 'prompt_pool_counts'
-    | 'answer_pool_ids'
-    | 'answer_pool_counts'
-  >,
+  config: ConfigPayloadArrays,
 ): BoardState {
   const board = emptyBoard(fieldDefs);
   const live = new Set(board.order);
@@ -134,19 +123,16 @@ export function toggleCount(state: BoardState, slot: PoolSlot, count: number): B
   return { ...state, counts: { ...state.counts, [slot]: next } };
 }
 
-export function hasAnyAssignment(state: BoardState): boolean {
-  return state.order.some((id) => state.slots[id] !== 'unassigned');
-}
-
-export type ConfigPayloadArrays = Pick<
-  DeckPracticeConfigCreate,
-  | 'prompt_field_ids'
-  | 'answer_field_ids'
-  | 'prompt_pool_ids'
-  | 'prompt_pool_counts'
-  | 'answer_pool_ids'
-  | 'answer_pool_counts'
->;
+/** A configuration's six columns: four arrays of field ids and the counts each random
+ * draw picks from. */
+export type ConfigPayloadArrays = {
+  prompt_field_ids: string[];
+  answer_field_ids: string[];
+  prompt_pool_ids: string[];
+  prompt_pool_counts: number[];
+  answer_pool_ids: string[];
+  answer_pool_counts: number[];
+};
 
 /** Uuids only — names are display strings and never travel. */
 export function boardToPayload(state: BoardState): ConfigPayloadArrays {
@@ -168,7 +154,7 @@ export type BoardProblem = { part: BoardPart; sentence: string };
  * answer counts, or null when the board can be saved. */
 export function boardProblem(state: BoardState): BoardProblem | null {
   // The backend's rules, restated only to decide whether a save is worth asking for;
-  // `app/services/deck_practice_config.py` stays authoritative. Disjointness is absent because
+  // `app/services/practice_configuration.py` stays authoritative. Disjointness is absent because
   // the board cannot express an overlap.
   const promptFields = fieldsIn(state, 'prompt_fields');
   const answerFields = fieldsIn(state, 'answer_fields');
@@ -200,18 +186,4 @@ export function boardProblem(state: BoardState): BoardProblem | null {
     };
   }
   return null;
-}
-
-/** The default name: "<prompt names> → <answer names>", each side `formatCappedNames`
- * over always-shown then random-draw fields in deck order. "" while either side is
- * empty. */
-export function defaultConfigurationName(state: BoardState, fieldDefs: DeckFieldDef[]): string {
-  const names = new Map(fieldDefs.map((f) => [f.id, f.name]));
-  const side = (always: BoardSlot, draw: BoardSlot) =>
-    [...fieldsIn(state, always), ...fieldsIn(state, draw)].map((id) => names.get(id) ?? '');
-
-  const prompt = side('prompt_fields', 'prompt_pool');
-  const answer = side('answer_fields', 'answer_pool');
-  if (prompt.length === 0 || answer.length === 0) return '';
-  return `${formatCappedNames(prompt)} → ${formatCappedNames(answer)}`;
 }

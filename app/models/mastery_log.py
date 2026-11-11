@@ -22,7 +22,7 @@ class MasteryLog(AppModel, table=True):
     increasing per card, so `UNIQUE (card_id, field_def_id, reviewed_at)` can never be
     violated by a live write; a violation means some write bypassed the lock.
 
-    `practice_run_id` is nullable attribution, ON DELETE SET NULL — deleting a run
+    `run_id` is nullable attribution, ON DELETE SET NULL — deleting a run
     must not rewind mastery, it only loses which run gets credit for the movement.
     `card_id`/`field_def_id` CASCADE: a deleted card or field takes its review_log
     rows with it, so its ledger rows would have nothing left to be a
@@ -34,7 +34,7 @@ class MasteryLog(AppModel, table=True):
         UniqueConstraint(
             "card_id", "field_def_id", "reviewed_at", name="uq_mastery_log_card_field_reviewed"
         ),
-        Index("ix_mastery_log_run", "practice_run_id", "reviewed_at"),
+        Index("ix_mastery_log_run", "run_id", "reviewed_at"),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -42,9 +42,7 @@ class MasteryLog(AppModel, table=True):
     field_def_id: uuid.UUID = Field(
         foreign_key="field_def.id", ondelete="CASCADE", nullable=False
     )
-    practice_run_id: uuid.UUID | None = Field(
-        default=None, foreign_key="practice_run.id", ondelete="SET NULL"
-    )
+    run_id: uuid.UUID | None = Field(default=None, foreign_key="run.id", ondelete="SET NULL")
     review_group_id: uuid.UUID
     prompt_mastery: float = Field(sa_column=Column(REAL, nullable=False))
     answer_mastery: float = Field(sa_column=Column(REAL, nullable=False))

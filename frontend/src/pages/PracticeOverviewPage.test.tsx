@@ -1,409 +1,93 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
+import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 
 const BASE = 'http://localhost:8000';
 
-const decks = [
-  {
-    id: 'd1',
-    name: 'Commands',
-    created_at: '',
-    last_activity_at: '',
-    card_count: 2,
-    readiness: 0.5,
-    field_names: [],
-  },
-  {
-    id: 'd2',
-    name: 'Ports',
-    created_at: '',
-    last_activity_at: '',
-    card_count: 2,
-    readiness: 0.5,
-    field_names: [],
-  },
-];
-
-function session(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'ps1',
-    user_id: 'u1',
-    name: 'Alpha run',
-    status: 'active',
-    created_at: '2026-08-24T12:00:00Z',
-    decks: [
-      {
-        deck_id: 'd1',
-        deck_name: 'Commands',
-        configuration_name: 'Config A',
-      },
-    ],
-    ...overrides,
-  };
-}
-
-const alphaRun = session();
-const betaRun = session({
-  id: 'ps2',
-  name: 'Beta run',
-  status: 'completed',
-  decks: [
-    {
-      deck_id: 'd2',
-      deck_name: 'Ports',
-      configuration_name: 'Config B',
-    },
-  ],
+const practice = (id: string, name: string, deckNames: string[]) => ({
+  id,
+  name,
+  created_at: '2026-11-01T00:00:00Z',
+  decks: deckNames.map((deckName, i) => ({ deck_id: `${id}-d${i}`, deck_name: deckName })),
+  active_run_id: null,
 });
-
-/** Records what the page asked the server for — the deck filter is the server's job (it
- * walks practice_deck → deck), so "did the filter work" is really "did the page send the
- * right query". */
-function mockLibrary(
-  sessionsFor: (query: URLSearchParams) => unknown[] = () => [alphaRun, betaRun],
-) {
-  const requests: URLSearchParams[] = [];
-  server.use(
-    http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
-    http.get(`${BASE}/api/practice_runs`, ({ request }) => {
-      const query = new URL(request.url).searchParams;
-      requests.push(query);
-      return HttpResponse.json(sessionsFor(query));
-    }),
-  );
-  return requests;
-}
 
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-/** Rendered outside `<Routes>`, so it reports the page's own URL writes. */
-function CurrentLocationProbe() {
-  const location = useLocation();
-  return <span data-testid="current-location">{location.search}</span>;
-}
-
-function renderOverview(initialPath = '/practice') {
-  return renderWithProviders(
-    <>
-      <CurrentLocationProbe />
-      <Routes>
-        <Route path="/practice" element={<PracticeOverviewPage />} />
-        <Route path="/practice/new" element={<LocationProbe />} />
-        <Route path="/practice/:practiceSessionId" element={<LocationProbe />} />
-      </Routes>
-    </>,
-    [initialPath],
-  );
-}
-
-/** Serves Beta run unfiltered, and holds any filtered answer until `release` is called,
- * so a test can look at the page between the filter's write and the new list. */
-function holdFilteredSessions(respond: () => Response) {
-  mockLibrary();
-  let release = () => {};
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const filteredRequests: URLSearchParams[] = [];
+function renderOverview(practices: unknown[] | null) {
   server.use(
-    http.get(`${BASE}/api/practice_runs`, async ({ request }) => {
-      const query = new URL(request.url).searchParams;
-      if (query.get('deck_id') === null) return HttpResponse.json([betaRun]);
-      filteredRequests.push(query);
-      await released;
-      return respond();
-    }),
+    http.get(`${BASE}/api/practices`, () =>
+      practices
+        ? HttpResponse.json(practices)
+        : HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+    ),
   );
-  return { filteredRequests, release };
+  return renderWithProviders(
+    <Routes>
+      <Route path="/practices" element={<PracticeOverviewPage />} />
+      <Route path="*" element={<LocationProbe />} />
+    </Routes>,
+    ['/practices'],
+  );
 }
 
-let consoleError: ReturnType<typeof vi.spyOn>;
-beforeEach(() => {
-  consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-});
-afterEach(() => {
-  consoleError.mockRestore();
-  server.resetHandlers();
-});
+afterEach(() => server.resetHandlers());
 
 describe('PracticeOverviewPage', () => {
-  it('lists sessions with their status badge, deck · configuration entries and no date', async () => {
-    mockLibrary();
-    renderOverview();
+  it('lists every practice in the order received, each name opening its page', async () => {
+    renderOverview([
+      practice('p2', 'Commands + Ports', ['Commands', 'Ports']),
+      practice('p1', 'Evening', ['Ports']),
+    ]);
 
-    const row = (await screen.findByText('Alpha run')).closest('div')!;
-    expect(within(row).getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('Commands · Config A')).toBeInTheDocument();
-    expect(screen.getByText('Ports · Config B')).toBeInTheDocument();
-    expect(screen.queryByText('Aug 24, 2026')).not.toBeInTheDocument();
+    const list = await screen.findByRole('list');
+    const links = within(list).getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/practices/p2',
+      '/practices/p1',
+    ]);
+    expect(links[0]).toHaveTextContent('Commands + Ports');
+    expect(within(links[0]!).getByText('Commands')).toBeInTheDocument();
+    expect(within(links[0]!).getByText('Ports')).toBeInTheDocument();
   });
 
-  it('a practice over three decks shows two entries and +1', async () => {
-    const threeDecks = session({
-      decks: [
-        ...alphaRun.decks,
-        ...betaRun.decks,
-        {
-          deck_id: 'd3',
-          deck_name: 'Third Deck',
-          configuration_name: 'Config C',
-        },
-      ],
-    });
-    mockLibrary(() => [threeDecks]);
-    renderOverview();
+  it('holds no tabs and no filter', async () => {
+    renderOverview([practice('p1', 'Evening', ['Ports'])]);
 
-    const row = (await screen.findByText('Alpha run')).closest('div')!;
-    expect(within(row).getByText('Commands · Config A')).toBeInTheDocument();
-    expect(within(row).getByText('Ports · Config B')).toBeInTheDocument();
-    expect(within(row).getByText('+1')).toBeInTheDocument();
-    expect(within(row).queryByText(/Third Deck/)).not.toBeInTheDocument();
+    await screen.findByRole('link', { name: /Evening/ });
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('a deck whose snapshot has no configuration name shows the deck alone', async () => {
-    const unnamed = session({
-      decks: [{ ...alphaRun.decks[0], configuration_name: null }],
-    });
-    mockLibrary(() => [unnamed]);
-    renderOverview();
+  it('Add practice opens New practice with this page as cancelTo', async () => {
+    const user = userEvent.setup();
+    renderOverview([]);
 
-    const row = (await screen.findByText('Alpha run')).closest('div')!;
-    expect(within(row).getByText('Commands')).toBeInTheDocument();
-  });
+    await user.click(await screen.findByRole('button', { name: 'Add practice' }));
 
-  it('sends no filters when the URL has none', async () => {
-    const requests = mockLibrary();
-    renderOverview();
-
-    await screen.findByText('Alpha run');
-    expect(requests[0]!.get('deck_id')).toBeNull();
-  });
-
-  it('a deck in the URL is sent as deck_id alone', async () => {
-    const requests = mockLibrary((query) => (query.get('deck_id') === 'd2' ? [betaRun] : []));
-    renderOverview('/practice?deck=d2');
-
-    await screen.findByText('Beta run');
-    expect(screen.queryByText('Alpha run')).not.toBeInTheDocument();
-    expect(requests[0]!.get('deck_id')).toBe('d2');
-  });
-
-  it('holds the deck filter alone', async () => {
-    mockLibrary();
-    renderOverview();
-    await screen.findByText('Alpha run');
-
-    const filters = screen.getByTestId('practice-filters');
-    expect(within(filters).getAllByRole('combobox')).toHaveLength(1);
-    expect(screen.getByPlaceholderText('All decks')).toBeInTheDocument();
-  });
-
-  it('picking a deck writes it to the URL and refetches', async () => {
-    const requests = mockLibrary((query) =>
-      query.get('deck_id') === 'd1' ? [alphaRun] : [alphaRun, betaRun],
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/practices/new?cancelTo=%2Fpractices',
     );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Beta run');
-
-    await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
-
-    await waitFor(() => expect(requests.at(-1)!.get('deck_id')).toBe('d1'));
-    expect(screen.getByTestId('current-location')).toHaveTextContent(/^\?deck=d1$/);
-    await waitFor(() => expect(screen.queryByText('Beta run')).not.toBeInTheDocument());
   });
 
-  it("each deck's row in the deck filter reads its mark and name", async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderOverview('/practice');
-    await screen.findByText('Beta run');
-
-    await user.click(screen.getByPlaceholderText('All decks'));
-    const rows = screen.getAllByRole('option');
-    // The first row is "All decks".
-    expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveAccessibleName('All decks');
-    expect(rows[1]).toHaveAccessibleName('Deck Commands');
-    expect(rows[2]).toHaveAccessibleName('Deck Ports');
-  });
-
-  it('clearing the deck drops it from the URL', async () => {
-    const requests = mockLibrary();
-    const user = userEvent.setup();
-    renderOverview('/practice?deck=d1');
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'All decks' }));
-
-    await waitFor(() => expect(requests.at(-1)!.get('deck_id')).toBeNull());
-    expect(screen.getByTestId('current-location')).toBeEmptyDOMElement();
-  });
-
-  it('the status tabs filter client-side', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByRole('tab', { name: 'Completed' }));
-    expect(screen.queryByText('Alpha run')).not.toBeInTheDocument();
-    expect(screen.getByText('Beta run')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', { name: 'Active' }));
-    expect(screen.getByText('Alpha run')).toBeInTheDocument();
-    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
-  });
-
-  it('a session row links to its details page', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderOverview();
-
-    await user.click(await screen.findByText('Alpha run'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1');
-  });
-
-  it('Add practice carries the current filters into the creation surface, and this page as cancelTo', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderOverview('/practice?deck=d1&status=active');
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByRole('button', { name: 'Add practice' }));
-    const [pathname, search] = screen.getByTestId('location').textContent!.split('?');
-    expect(pathname).toBe('/practice/new');
-    const params = new URLSearchParams(search);
-    expect(params.get('deck')).toBe('d1');
-    expect(params.get('status')).toBe('active');
-    expect(params.get('cancelTo')).toBe('/practice?deck=d1&status=active');
-  });
-
-  it('deleting a session confirms first, then removes it from the list', async () => {
-    let deleted: string | null = null;
-    const requests = mockLibrary(() => (deleted ? [betaRun] : [alphaRun, betaRun]));
-    server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, ({ params }) => {
-        deleted = params.id as string;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
-
-    await waitFor(() => expect(deleted).toBe('ps1'));
-    await waitFor(() => expect(screen.queryByText('Alpha run')).not.toBeInTheDocument());
-    expect(screen.getByText('Beta run')).toBeInTheDocument();
-    expect(requests.length).toBeGreaterThan(1); // the list refetched after the delete
-  });
-
-  it('cancelling the delete confirm leaves the session alone', async () => {
-    let deleteCalls = 0;
-    mockLibrary();
-    server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, () => {
-        deleteCalls += 1;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-
-    expect(deleteCalls).toBe(0);
-    expect(screen.getByText('Alpha run')).toBeInTheDocument();
-  });
-
-  it('a delete of a practice already gone says Practice not found. inside the dialog', async () => {
-    mockLibrary();
-    server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, () =>
-        HttpResponse.json({ detail: 'practice_run not found' }, { status: 404 }),
-      ),
-    );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Alpha run');
-
-    await user.click(screen.getByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
-
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Practice not found.');
-  });
-
-  it('empty with filters offers to clear them; empty with none offers to start one', async () => {
-    mockLibrary(() => []);
-    const user = userEvent.setup();
-    renderOverview('/practice?deck=d1');
-
-    expect(await screen.findByText('No practices match these filters.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+  it('says No practices yet. with none', async () => {
+    renderOverview([]);
 
     expect(await screen.findByText('No practices yet.')).toBeInTheDocument();
   });
 
-  it('a filter whose list is loading keeps the old row until the new list arrives', async () => {
-    const newRun = session({ id: 'ps3', name: 'Gamma run' });
-    const { filteredRequests, release } = holdFilteredSessions(() =>
-      HttpResponse.json([newRun]),
-    );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Beta run');
+  it('says it could not load practices when the read fails', async () => {
+    renderOverview(null);
 
-    await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
-
-    await waitFor(() => expect(filteredRequests).toHaveLength(1));
-    expect(screen.getByTestId('current-location')).toHaveTextContent('?deck=d1');
-    expect(screen.getByText('Beta run')).toBeInTheDocument();
-    expect(screen.queryByText('Gamma run')).not.toBeInTheDocument();
-
-    release();
-
-    expect(await screen.findByText('Gamma run')).toBeInTheDocument();
-    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
-  });
-
-  it('a filter whose list fails removes the old row and says so', async () => {
-    const { filteredRequests, release } = holdFilteredSessions(() =>
-      HttpResponse.json({ detail: 'boom' }, { status: 500 }),
-    );
-    const user = userEvent.setup();
-    renderOverview();
-    await screen.findByText('Beta run');
-
-    await user.click(screen.getByPlaceholderText('All decks'));
-    await user.click(await screen.findByRole('option', { name: 'Deck Commands' }));
-
-    await waitFor(() => expect(filteredRequests).toHaveLength(1));
-    expect(screen.getByText('Beta run')).toBeInTheDocument();
-
-    release();
-
-    expect(await screen.findByText('Could not load practices.')).toBeInTheDocument();
-    expect(screen.queryByText('Beta run')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load practices.');
   });
 });

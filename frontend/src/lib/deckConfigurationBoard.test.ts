@@ -4,10 +4,8 @@ import {
   boardFromConfig,
   boardProblem,
   boardToPayload,
-  defaultConfigurationName,
   emptyBoard,
   fieldsIn,
-  hasAnyAssignment,
   moveField,
   pruneCounts,
   SLOT_LABELS,
@@ -35,7 +33,6 @@ describe('emptyBoard', () => {
 
     expect(board.order).toEqual(['f1', 'f2', 'f3']);
     expect(fieldsIn(board, 'unassigned')).toEqual(['f1', 'f2', 'f3']);
-    expect(hasAnyAssignment(board)).toBe(false);
   });
 });
 
@@ -250,60 +247,6 @@ describe('boardProblem', () => {
       )?.part,
     ).toBe('prompt_counts');
     expect(boardProblem(emptyBoard(fieldDefs))?.part).toBe('prompt_side');
-  });
-});
-
-describe('defaultConfigurationName', () => {
-  it('names an always-shown prompt and answer', () => {
-    let board = emptyBoard(fieldDefs);
-    board = moveField(board, 'f1', 'prompt_fields');
-    board = moveField(board, 'f2', 'answer_fields');
-
-    expect(defaultConfigurationName(board, fieldDefs)).toBe('Term → Meaning');
-  });
-
-  it('lists always-shown before random-draw within a side', () => {
-    let board = emptyBoard(fieldDefs);
-    board = moveField(board, 'f3', 'prompt_fields');
-    board = moveField(board, 'f1', 'prompt_pool');
-    board = moveField(board, 'f2', 'answer_fields');
-
-    expect(defaultConfigurationName(board, fieldDefs)).toBe('Reading, Term → Meaning');
-  });
-
-  it('is empty while the answer side has no field', () => {
-    let board = emptyBoard(fieldDefs);
-    board = moveField(board, 'f1', 'prompt_fields');
-    board = moveField(board, 'f2', 'prompt_fields');
-    board = moveField(board, 'f3', 'prompt_fields');
-
-    expect(defaultConfigurationName(board, fieldDefs)).toBe('');
-  });
-
-  it('is empty for an empty board', () => {
-    expect(defaultConfigurationName(emptyBoard(fieldDefs), fieldDefs)).toBe('');
-  });
-
-  it('is empty with prompt fields only', () => {
-    const board = moveField(emptyBoard(fieldDefs), 'f1', 'prompt_fields');
-
-    expect(defaultConfigurationName(board, fieldDefs)).toBe('');
-  });
-
-  it('caps a side at two names and renders the rest as +N', () => {
-    const defs = [
-      ...fieldDefs,
-      { id: 'f4', name: 'Example', type: 'text' as const, position: 3 },
-      { id: 'f5', name: 'Note', type: 'text' as const, position: 4 },
-    ];
-    let board = emptyBoard(defs);
-    board = moveField(board, 'f1', 'prompt_fields');
-    board = moveField(board, 'f2', 'prompt_fields');
-    board = moveField(board, 'f3', 'prompt_pool');
-    board = moveField(board, 'f4', 'prompt_pool');
-    board = moveField(board, 'f5', 'answer_fields');
-
-    expect(defaultConfigurationName(board, defs)).toBe('Term, Meaning +2 → Note');
   });
 });
 

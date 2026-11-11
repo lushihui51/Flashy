@@ -79,7 +79,7 @@ describe('TopBar', () => {
         onAvatarClick={() => {}}
         onCreateClick={onCreateClick}
       />,
-      ['/practice'],
+      ['/practices'],
     );
 
     await user.click(screen.getByRole('button', { name: 'New' }));

@@ -9,7 +9,7 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   /** Renders below the description — for a caller that wants the failed mutation's
    * error inline in the dialog instead of closing it and showing the error elsewhere
-   * on the page (the practice detail page's delete). */
+   * on the page. */
   children?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;

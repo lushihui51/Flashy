@@ -18,12 +18,7 @@ const ROW_CLASS =
 const LABEL_CLASS = 'text-base font-semibold text-(--color-ink)';
 
 /** The three things a user makes, in the order they nest: a deck holds cards, and a
- * practice is run over them.
- *
- * A deck configuration is deliberately absent. It is not a top-level resource — it
- * belongs to one deck and only means anything beside that deck's fields, so it is made
- * from the deck's own Configurations tab, or from New practice while choosing what to
- * practice. */
+ * practice is a set of decks. */
 export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: CreateSheetProps) {
   const navigate = useNavigate();
   // The sheet has no address of its own, so this is the page beneath it, where the form's
@@ -58,9 +53,8 @@ export default function CreateSheet({ open, onClose, triggerRef, hasDecks }: Cre
           </button>
         </li>
         <li>
-          {/* Straight to where a practice is made — choosing configurations and naming
-              the run — not to the list of past ones. */}
-          <button type="button" onClick={() => go('/practice/new')} className={ROW_CLASS}>
+          {/* Straight to where a practice is made, not to the list of practices. */}
+          <button type="button" onClick={() => go('/practices/new')} className={ROW_CLASS}>
             <span className={LABEL_CLASS}>New practice</span>
           </button>
         </li>

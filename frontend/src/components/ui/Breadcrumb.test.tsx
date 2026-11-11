@@ -97,14 +97,14 @@ describe('Breadcrumb', () => {
   });
 
   it('renders a single place with no separator', () => {
-    renderWithRouter(<Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />);
+    renderWithRouter(<Breadcrumb places={[{ label: 'All practices', to: '/practices' }]} />);
 
     const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(row).getByRole('link', { name: 'Practice' })).toHaveAttribute(
+    expect(within(row).getByRole('link', { name: 'All practices' })).toHaveAttribute(
       'href',
-      '/practice',
+      '/practices',
     );
-    expect(row).toHaveTextContent(/^Practice$/);
+    expect(row).toHaveTextContent(/^All practices$/);
   });
 
   it('shows no Back button under a memory router', () => {

@@ -13,10 +13,11 @@ from sqlmodel import select
 
 from app.mastery.ema import EmaStrategy
 from app.mastery.types import MasteryUpdate, ReviewGroup, ReviewSide
-from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.mastery_log import MasteryLog
-from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice import Practice
+from app.models.practice_configuration import PracticeConfiguration
+from app.models.run import Run, RunStatus
+from app.models.run_configuration import RunConfiguration
 from app.models.review_log import ReviewLog
 from app.services.mastery import record_review_group
 
@@ -293,62 +294,52 @@ class TestFieldDeleteGoesThroughTheClosure:
         )
         db.commit()
 
-        config_with_b = client.post(
-            "/api/deck_practice_configs",
-            json={
-                "deck_id": deck1_id,
-                "name": "with-b",
-                "prompt_field_ids": [str(p_id)],
-                "answer_field_ids": [str(a_id), str(b_id)],
+        def _arrays(prompt_ids, answer_ids):
+            return {
+                "prompt_field_ids": list(prompt_ids),
+                "answer_field_ids": list(answer_ids),
                 "prompt_pool_ids": [],
                 "prompt_pool_counts": [],
                 "answer_pool_ids": [],
                 "answer_pool_counts": [],
-            },
-        ).json()
-        config_without_b = client.post(
-            "/api/deck_practice_configs",
-            json={
-                "deck_id": deck1_id,
-                "name": "without-b",
-                "prompt_field_ids": [str(p_id)],
-                "answer_field_ids": [str(a_id)],
-                "prompt_pool_ids": [],
-                "prompt_pool_counts": [],
-                "answer_pool_ids": [],
-                "answer_pool_counts": [],
-            },
-        ).json()
+            }
 
-        def _run(name, status=RunStatus.active):
-            run = PracticeRun(user_id=existing_user.id, name=name, status=status)
+        def _practice(name, prompt_ids, answer_ids):
+            practice = Practice(user_id=existing_user.id, name=name)
+            db.add(practice)
+            db.commit()
+            configuration = PracticeConfiguration(
+                practice_id=practice.id,
+                deck_id=uuid.UUID(deck1_id),
+                **_arrays(prompt_ids, answer_ids),
+            )
+            db.add(configuration)
+            db.commit()
+            return practice.id, configuration.id
+
+        with_b, config_with_b_id = _practice("with-b", [p_id], [a_id, b_id])
+        without_b, config_without_b_id = _practice("without-b", [p_id], [a_id])
+
+        def _run(practice_id, status=RunStatus.active):
+            run = Run(practice_id=practice_id, status=status)
             db.add(run)
             db.commit()
             db.refresh(run)
             return run.id
 
-        def _snapshot(run_id, deck_id, prompt_ids, answer_ids):
+        def _copy(run_id, deck_id, prompt_ids, answer_ids):
             db.add(
-                PracticeDeck(
-                    practice_run_id=run_id,
-                    deck_id=deck_id,
-                    prompt_field_ids=list(prompt_ids),
-                    answer_field_ids=list(answer_ids),
-                    prompt_pool_ids=[],
-                    prompt_pool_counts=[],
-                    answer_pool_ids=[],
-                    answer_pool_counts=[],
-                )
+                RunConfiguration(run_id=run_id, deck_id=deck_id, **_arrays(prompt_ids, answer_ids))
             )
             db.commit()
 
         deck1_uuid = uuid.UUID(deck1_id)
-        active_run_with_b_id = _run("active-with-b")
-        _snapshot(active_run_with_b_id, deck1_uuid, [p_id], [a_id, b_id])
-        active_run_without_b_id = _run("active-without-b")
-        _snapshot(active_run_without_b_id, deck1_uuid, [p_id], [a_id])
-        completed_run_with_b_id = _run("completed-with-b", RunStatus.completed)
-        _snapshot(completed_run_with_b_id, deck1_uuid, [p_id], [a_id, b_id])
+        active_run_with_b_id = _run(with_b)
+        _copy(active_run_with_b_id, deck1_uuid, [p_id], [a_id, b_id])
+        active_run_without_b_id = _run(without_b)
+        _copy(active_run_without_b_id, deck1_uuid, [p_id], [a_id])
+        completed_run_with_b_id = _run(with_b, RunStatus.completed)
+        _copy(completed_run_with_b_id, deck1_uuid, [p_id], [a_id, b_id])
 
         # The deletion itself, through the real endpoint.
         response = client.patch(
@@ -406,15 +397,16 @@ class TestFieldDeleteGoesThroughTheClosure:
         assert d2_row is not None
         assert d2_row.shown_prompt_ids == [b_id]
 
-        # Configurations: the one naming B is gone, the one that doesn't survives.
-        assert db.get(DeckPracticeConfig, uuid.UUID(config_with_b["id"])) is None
-        assert db.get(DeckPracticeConfig, uuid.UUID(config_without_b["id"])) is not None
+        # Configurations: each practice keeps its configuration of the deck, less B.
+        db.expire_all()
+        assert db.get(PracticeConfiguration, config_with_b_id).answer_field_ids == [a_id]
+        assert db.get(PracticeConfiguration, config_without_b_id).answer_field_ids == [a_id]
 
         # Runs: the active run naming B is gone; the active run not naming it, and
         # the completed run that does name it, both survive.
-        assert db.get(PracticeRun, active_run_with_b_id) is None
-        assert db.get(PracticeRun, active_run_without_b_id) is not None
-        assert db.get(PracticeRun, completed_run_with_b_id) is not None
+        assert db.get(Run, active_run_with_b_id) is None
+        assert db.get(Run, active_run_without_b_id) is not None
+        assert db.get(Run, completed_run_with_b_id) is not None
 
 
 class TestMinimumTwoActiveFields:

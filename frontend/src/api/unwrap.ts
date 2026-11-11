@@ -18,15 +18,13 @@ export class ApiError extends Error {
   }
 }
 
-/** Thrown instead of a bare ApiError when `detail` is a `{code, message, config_id?}`
- * object. `detail.code` names the refusal; `detail.config_id`, when present, names the
- * configuration a session start refused, so the caller can place the sentence against
- * that row. It extends `ApiError`, so it carries `status` too; `.message` is
- * `detail.message`, for a developer. */
+/** Thrown instead of a bare ApiError when `detail` is a `{code, message}` object.
+ * `detail.code` names the refusal. It extends `ApiError`, so it carries `status` too;
+ * `.message` is `detail.message`, for a developer. */
 export class ApiDetailError extends ApiError {
-  detail: { code: string; message: string; config_id?: string };
+  detail: { code: string; message: string };
 
-  constructor(status: number, detail: { code: string; message: string; config_id?: string }) {
+  constructor(status: number, detail: { code: string; message: string }) {
     super(status, detail.message);
     this.detail = detail;
   }
@@ -38,13 +36,11 @@ function detailOf(error: unknown): unknown {
     : undefined;
 }
 
-function structuredDetail(
-  detail: unknown,
-): { code: string; message: string; config_id?: string } | undefined {
+function structuredDetail(detail: unknown): { code: string; message: string } | undefined {
   if (typeof detail !== 'object' || detail === null) return undefined;
-  const { code, message, config_id } = detail as Record<string, unknown>;
+  const { code, message } = detail as Record<string, unknown>;
   if (typeof code !== 'string' || typeof message !== 'string') return undefined;
-  return typeof config_id === 'string' ? { code, message, config_id } : { code, message };
+  return { code, message };
 }
 
 /** The readable text of a usable `detail`, or `undefined` when there is none. */
@@ -55,9 +51,8 @@ function formatError(error: unknown): string | undefined {
   if (Array.isArray(detail)) {
     return detail.map((e) => `${e.loc.join('.')}: ${e.msg}`).join('; ');
   }
-  // A few endpoints answer with an object detail because the message alone isn't
-  // enough to act on — session start names the config that failed, so the caller can
-  // render against that row. Shape-aware callers catch `ApiDetailError`.
+  // A refusal answers with a `{code, message}` detail, and a caller choosing the sentence
+  // by its code catches `ApiDetailError`.
   if (typeof detail === 'object' && detail !== null && 'message' in detail) {
     const { message } = detail as { message?: unknown };
     if (typeof message === 'string') return message;

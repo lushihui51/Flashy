@@ -16,13 +16,14 @@ from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, Rev
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
-from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef, FieldType
 from app.models.mastery_log import MasteryLog
-from app.models.practice_card import PracticeCard, PracticeCardStatus
-from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice import Practice
+from app.models.practice_configuration import PracticeConfiguration
 from app.models.review_log import ReviewLog
+from app.models.run import Run, RunStatus
+from app.models.run_card import RunCard, RunCardStatus
+from app.models.run_configuration import RunConfiguration
 from app.services.deletion import apply_deletion, compute_deletion_impact
 from app.services.mastery import record_review_group
 
@@ -46,16 +47,30 @@ def _card(db, deck_id, field_ids, prefix="card"):
     return card
 
 
-def _config(db, deck_id, name, prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids=()):
-    config = DeckPracticeConfig(
+def _arrays(prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids=()):
+    return {
+        "prompt_field_ids": list(prompt_ids),
+        "answer_field_ids": list(answer_ids),
+        "prompt_pool_ids": list(pool_p_ids),
+        "prompt_pool_counts": [1] if pool_p_ids else [],
+        "answer_pool_ids": list(pool_a_ids),
+        "answer_pool_counts": [1] if pool_a_ids else [],
+    }
+
+
+def _practice(db, user_id, name):
+    practice = Practice(user_id=user_id, name=name)
+    db.add(practice)
+    db.commit()
+    db.refresh(practice)
+    return practice
+
+
+def _config(db, practice_id, deck_id, prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids=()):
+    config = PracticeConfiguration(
+        practice_id=practice_id,
         deck_id=deck_id,
-        name=name,
-        prompt_field_ids=list(prompt_ids),
-        answer_field_ids=list(answer_ids),
-        prompt_pool_ids=list(pool_p_ids),
-        prompt_pool_counts=[1] if pool_p_ids else [],
-        answer_pool_ids=list(pool_a_ids),
-        answer_pool_counts=[1] if pool_a_ids else [],
+        **_arrays(prompt_ids, answer_ids, pool_p_ids, pool_a_ids),
     )
     db.add(config)
     db.commit()
@@ -63,49 +78,40 @@ def _config(db, deck_id, name, prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids
     return config
 
 
-def _run(db, user_id, name, status=RunStatus.active):
-    run = PracticeRun(user_id=user_id, name=name, status=status)
+def _run(db, practice_id, status=RunStatus.active):
+    run = Run(practice_id=practice_id, status=status)
     db.add(run)
     db.commit()
     db.refresh(run)
     return run
 
 
-def _practice_card(db, run_id, card_id, position, prompt_ids, answer_ids):
-    pc = PracticeCard(
-        practice_run_id=run_id,
+def _run_card(db, run_id, card_id, position, prompt_ids, answer_ids):
+    rc = RunCard(
+        run_id=run_id,
         card_id=card_id,
         position=position,
         prompts=list(prompt_ids),
         answers=list(answer_ids),
-        status=PracticeCardStatus.passed,
+        status=RunCardStatus.passed,
     )
-    db.add(pc)
+    db.add(rc)
     db.commit()
-    db.refresh(pc)
-    return pc
+    db.refresh(rc)
+    return rc
 
 
-def _snapshot(
-    db, run_id, deck_id, prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids=()
-):
-    snap = PracticeDeck(
-        practice_run_id=run_id,
-        deck_id=deck_id,
-        prompt_field_ids=list(prompt_ids),
-        answer_field_ids=list(answer_ids),
-        prompt_pool_ids=list(pool_p_ids),
-        prompt_pool_counts=[1] if pool_p_ids else [],
-        answer_pool_ids=list(pool_a_ids),
-        answer_pool_counts=[1] if pool_a_ids else [],
+def _copy(db, run_id, deck_id, prompt_ids, answer_ids, pool_p_ids=(), pool_a_ids=()):
+    copy = RunConfiguration(
+        run_id=run_id, deck_id=deck_id, **_arrays(prompt_ids, answer_ids, pool_p_ids, pool_a_ids)
     )
-    db.add(snap)
+    db.add(copy)
     db.commit()
-    db.refresh(snap)
-    return snap
+    db.refresh(copy)
+    return copy
 
 
-def test_deck_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
+def test_deck_deletion_closure_and_a_two_deck_run_keeps_its_other_copy(
     db, existing_user
 ):
     strategy = EmaStrategy()
@@ -139,12 +145,15 @@ def test_deck_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     d2_front = _field(db, deck2_id, "front", 0)
     d2_back = _field(db, deck2_id, "back", 1)
     _card(db, deck2_id, [d2_front.id, d2_back.id])
-    config = _config(db, deck1_id, "cfg", [d1_front.id], [d1_back.id])
-    config_id = config.id
+    only_deck1 = _practice(db, user_id, "only deck1")
+    only_deck1_id = only_deck1.id
+    config_id = _config(db, only_deck1_id, deck1_id, [d1_front.id], [d1_back.id]).id
+    only_deck1_run_id = _run(db, only_deck1_id, RunStatus.completed).id
+    _copy(db, only_deck1_run_id, deck1_id, [d1_front.id], [d1_back.id])
 
-    # A survivor deck, and a run spanning deck1 (about to be deleted) and this
-    # survivor deck — not entirely inside the deleted decks, so it must not be
-    # deleted; its survivor snapshot must be untouched.
+    # A survivor deck, and a practice and its run spanning deck1 (about to be deleted)
+    # and this survivor deck — not entirely inside the deleted decks, so the run must not
+    # be deleted; its survivor copy must be untouched.
     other_deck = Deck(user_id=user_id, name="D3")
     db.add(other_deck)
     db.commit()
@@ -154,38 +163,45 @@ def test_deck_deletion_closure_and_a_two_deck_run_keeps_its_other_snapshot(
     o_back = _field(db, other_deck_id, "back", 1)
     _card(db, other_deck_id, [o_front.id, o_back.id])
 
-    spanning_run = _run(db, existing_user.id, "spanning")
-    spanning_run_id = spanning_run.id
-    survivor_snapshot = _snapshot(
-        db, spanning_run_id, other_deck_id, [o_front.id], [o_back.id]
-    )
-    survivor_snapshot_id = survivor_snapshot.id
-    _snapshot(db, spanning_run_id, deck1_id, [d1_front.id], [d1_back.id])
+    spanning = _practice(db, user_id, "spanning")
+    spanning_id = spanning.id
+    _config(db, spanning_id, deck1_id, [d1_front.id], [d1_back.id])
+    survivor_config_id = _config(db, spanning_id, other_deck_id, [o_front.id], [o_back.id]).id
+    spanning_run_id = _run(db, spanning_id).id
+    survivor_copy_id = _copy(db, spanning_run_id, other_deck_id, [o_front.id], [o_back.id]).id
+    _copy(db, spanning_run_id, deck1_id, [d1_front.id], [d1_back.id])
 
     impact = compute_deletion_impact(db, user_id, deck_ids=[deck1_id, deck2_id])
+    assert impact.practice_ids == {only_deck1_id, spanning_id}
+    assert impact.run_ids == {only_deck1_run_id}
     apply_deletion(db, strategy, impact)
     db.commit()
 
     assert db.get(Deck, deck1_id) is None
     assert db.get(Deck, deck2_id) is None
-    assert db.get(DeckPracticeConfig, config_id) is None
+    # Each practice loses the deck and stays, with its other decks.
+    assert db.get(PracticeConfiguration, config_id) is None
+    assert db.get(Practice, only_deck1_id) is not None
+    assert db.get(Run, only_deck1_run_id) is None
+    assert db.get(Practice, spanning_id) is not None
+    assert db.get(PracticeConfiguration, survivor_config_id) is not None
     assert (
         db.exec(select(Card).where(col(Card.deck_id).in_([deck1_id, deck2_id]))).first()
         is None
     )
 
     # The spanning run itself survives (not entirely inside the deleted decks).
-    assert db.get(PracticeRun, spanning_run_id) is not None
-    surviving_snapshot = db.get(PracticeDeck, survivor_snapshot_id)
-    assert surviving_snapshot is not None
-    assert surviving_snapshot.deck_id == other_deck_id
-    assert surviving_snapshot.prompt_field_ids == [o_front.id]
+    assert db.get(Run, spanning_run_id) is not None
+    surviving_copy = db.get(RunConfiguration, survivor_copy_id)
+    assert surviving_copy is not None
+    assert surviving_copy.deck_id == other_deck_id
+    assert surviving_copy.prompt_field_ids == [o_front.id]
 
     # No review row references the deleted card either: its rows cascaded with it.
     assert db.exec(select(ReviewLog).where(ReviewLog.card_id == d1_card_id)).first() is None
 
 
-def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_configs_and_runs(
+def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_prunes_configurations_and_runs(
     db, existing_user
 ):
     strategy = EmaStrategy()
@@ -259,31 +275,38 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     record_review_group(db, strategy, existing_user.id, other_deck_appearance, None)
     db.commit()
 
-    config_with_b = _config(db, deck1_id, "with-b", [p_id], [a_id, b_id])
-    config_without_b = _config(db, deck1_id, "without-b", [p_id], [a_id])
-    config_with_b_id, config_without_b_id = config_with_b.id, config_without_b.id
+    with_b = _practice(db, user_id, "with-b").id
+    without_b = _practice(db, user_id, "without-b").id
+    only_b = _practice(db, user_id, "only-b").id
+    pooled_b = _practice(db, user_id, "pooled-b").id
+    config_with_b_id = _config(db, with_b, deck1_id, [p_id], [a_id, b_id]).id
+    config_without_b_id = _config(db, without_b, deck1_id, [p_id], [a_id]).id
+    config_only_b_id = _config(db, only_b, deck1_id, [p_id], [b_id]).id
+    config_pooled_b_id = _config(db, pooled_b, deck1_id, [p_id], [], pool_a_ids=[a_id, b_id]).id
+    pooled = db.get(PracticeConfiguration, config_pooled_b_id)
+    pooled.answer_pool_counts = [2]
+    db.add(pooled)
+    db.commit()
 
-    active_run_with_b = _run(db, existing_user.id, "active-with-b")
-    active_run_with_b_id = active_run_with_b.id
-    _snapshot(db, active_run_with_b_id, deck1_id, [p_id], [a_id, b_id])
-    active_run_without_b = _run(db, existing_user.id, "active-without-b")
-    active_run_without_b_id = active_run_without_b.id
-    _snapshot(db, active_run_without_b_id, deck1_id, [p_id], [a_id])
-    completed_run_with_b = _run(db, existing_user.id, "completed-with-b", RunStatus.completed)
-    completed_run_with_b_id = completed_run_with_b.id
-    _snapshot(db, completed_run_with_b_id, deck1_id, [p_id], [a_id, b_id])
-    # Two practice cards of the completed run name B, one as a prompt and one as an
-    # answer, and a practice card of deck2's run names B too, which proves the scrub
-    # reaches both arrays and only deck1's cards.
-    b_as_prompt_id = _practice_card(
+    active_run_with_b_id = _run(db, with_b).id
+    _copy(db, active_run_with_b_id, deck1_id, [p_id], [a_id, b_id])
+    active_run_without_b_id = _run(db, without_b).id
+    _copy(db, active_run_without_b_id, deck1_id, [p_id], [a_id])
+    completed_run_with_b_id = _run(db, only_b, RunStatus.completed).id
+    completed_copy_id = _copy(db, completed_run_with_b_id, deck1_id, [p_id], [b_id]).id
+    # Two run cards of the completed run name B, one as a prompt and one as an answer,
+    # and a run card of deck2's run names B too, which proves the scrub reaches both
+    # arrays and only deck1's cards.
+    b_as_prompt_id = _run_card(
         db, completed_run_with_b_id, card1_id, 0, [p_id, b_id], [a_id]
     ).id
-    b_as_answer_id = _practice_card(
+    b_as_answer_id = _run_card(
         db, completed_run_with_b_id, card1_id, 1000, [p_id], [a_id, b_id]
     ).id
-    deck2_run_id = _run(db, existing_user.id, "deck2-completed", RunStatus.completed).id
-    _snapshot(db, deck2_run_id, deck2_id, [x.id], [y.id])
-    deck2_card_id = _practice_card(db, deck2_run_id, card2_id, 0, [x.id, b_id], [y.id, b_id]).id
+    deck2_practice = _practice(db, user_id, "deck2").id
+    deck2_run_id = _run(db, deck2_practice, RunStatus.completed).id
+    _copy(db, deck2_run_id, deck2_id, [x.id], [y.id])
+    deck2_card_id = _run_card(db, deck2_run_id, card2_id, 0, [x.id, b_id], [y.id, b_id]).id
 
     impact = compute_deletion_impact(db, existing_user.id, field_ids=[b_id])
     apply_deletion(db, strategy, impact)
@@ -334,21 +357,31 @@ def test_field_deletion_drops_prompt_influence_scopes_the_scrub_and_updates_conf
     assert d2_row is not None
     assert d2_row.shown_prompt_ids == [b_id]
 
-    # Configurations: the one naming B is gone, the one that doesn't survives.
-    assert db.get(DeckPracticeConfig, config_with_b_id) is None
-    assert db.get(DeckPracticeConfig, config_without_b_id) is not None
+    # Practices' configurations: each loses B, a pool's count is lowered to its size, and
+    # one left with a side naming no field takes the deck's starting configuration.
+    db.expire_all()
+    with_b_config = db.get(PracticeConfiguration, config_with_b_id)
+    assert (with_b_config.prompt_field_ids, with_b_config.answer_field_ids) == ([p_id], [a_id])
+    without_b_config = db.get(PracticeConfiguration, config_without_b_id)
+    assert (without_b_config.prompt_field_ids, without_b_config.answer_field_ids) == ([p_id], [a_id])
+    only_b_config = db.get(PracticeConfiguration, config_only_b_id)
+    assert (only_b_config.prompt_field_ids, only_b_config.answer_field_ids) == ([p_id], [a_id])
+    pooled_config = db.get(PracticeConfiguration, config_pooled_b_id)
+    assert (pooled_config.answer_pool_ids, pooled_config.answer_pool_counts) == ([a_id], [1])
 
     # Runs: the active run naming B is gone; the active run not naming it, and the
-    # completed run that does name it, both survive.
-    assert db.get(PracticeRun, active_run_with_b_id) is None
-    assert db.get(PracticeRun, active_run_without_b_id) is not None
-    assert db.get(PracticeRun, completed_run_with_b_id) is not None
+    # completed run that does name it, both survive, the completed run's copy losing B
+    # with no reset.
+    assert db.get(Run, active_run_with_b_id) is None
+    assert db.get(Run, active_run_without_b_id) is not None
+    assert db.get(Run, completed_run_with_b_id) is not None
+    completed_copy = db.get(RunConfiguration, completed_copy_id)
+    assert (completed_copy.prompt_field_ids, completed_copy.answer_field_ids) == ([p_id], [])
 
-    # Practice cards: deck1's lose B from both arrays, deck2's keeps it.
-    db.expire_all()
-    b_as_prompt = db.get(PracticeCard, b_as_prompt_id)
-    b_as_answer = db.get(PracticeCard, b_as_answer_id)
-    deck2_card = db.get(PracticeCard, deck2_card_id)
+    # Run cards: deck1's lose B from both arrays, deck2's keeps it.
+    b_as_prompt = db.get(RunCard, b_as_prompt_id)
+    b_as_answer = db.get(RunCard, b_as_answer_id)
+    deck2_card = db.get(RunCard, deck2_card_id)
     assert b_as_prompt is not None and b_as_answer is not None and deck2_card is not None
     assert (b_as_prompt.prompts, b_as_prompt.answers) == ([p_id], [a_id])
     assert (b_as_answer.prompts, b_as_answer.answers) == ([p_id], [a_id])

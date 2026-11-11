@@ -25,8 +25,9 @@ from app.mastery.readiness import (
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
 from app.models.card import Card
 from app.models.mastery_log import MasteryLog
-from app.models.practice_card import PracticeCard, PracticeCardStatus
-from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice import Practice
+from app.models.run import Run, RunStatus
+from app.models.run_card import RunCard, RunCardStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import (
     apply_rating,
@@ -74,31 +75,34 @@ def _snapshot(db):
     return latest
 
 
-def _make_practice_run(db, user_id, status=RunStatus.active):
-    run = PracticeRun(user_id=user_id, name="attribution test", status=status)
+def _make_run(db, user_id, status=RunStatus.active):
+    practice = Practice(user_id=user_id, name=f"attribution test {uuid.uuid4()}")
+    db.add(practice)
+    db.commit()
+    run = Run(practice_id=practice.id, status=status)
     db.add(run)
     db.commit()
     db.refresh(run)
     return run
 
 
-def _make_practice_card(db, practice_run_id, card_id, position=0):
-    """review_group_id == practice_card.id is submit_rating's actual construction
-    (app/services/practice_run.py); building one directly here, with no generation
+def _make_run_card(db, run_id, card_id, position=0):
+    """review_group_id == run_card.id is submit_rating's actual construction
+    (app/services/run.py); building one directly here, with no generation
     machinery, is enough to exercise the attribution join since it only cares about
-    id and practice_run_id."""
-    practice_card = PracticeCard(
-        practice_run_id=practice_run_id,
+    id and run_id."""
+    run_card = RunCard(
+        run_id=run_id,
         card_id=card_id,
         position=position,
         prompts=[],
         answers=[],
-        status=PracticeCardStatus.pending,
+        status=RunCardStatus.pending,
     )
-    db.add(practice_card)
+    db.add(run_card)
     db.commit()
-    db.refresh(practice_card)
-    return practice_card
+    db.refresh(run_card)
+    return run_card
 
 
 class TestApplyReviewPurity:
@@ -579,7 +583,7 @@ class TestReviewedAtOrder:
 
 
 class TestRunAttribution:
-    """The practice_run_id parameter on the write path: each appended row is
+    """The run_id parameter on the write path: each appended row is
     attributed to the run it happened in, and a retry of an already-logged group
     appends nothing at all — not even an unattributed row."""
 
@@ -587,11 +591,11 @@ class TestRunAttribution:
         strategy = EmaStrategy()
         card_id = mastery_cards["card_ids"][0]
         field_ids = mastery_cards["field_ids"]
-        run = _make_practice_run(db, existing_user.id)
-        practice_card = _make_practice_card(db, run.id, card_id)
+        run = _make_run(db, existing_user.id)
+        run_card = _make_run_card(db, run.id, card_id)
 
         group = ReviewGroup(
-            review_group_id=practice_card.id,
+            review_group_id=run_card.id,
             card_id=card_id,
             reviewed_at=datetime.now(UTC),
             ratings=((field_ids[0], 4),),
@@ -609,17 +613,17 @@ class TestRunAttribution:
             )
         ).all()
         assert rows, "record_review_group should have appended ledger rows"
-        assert all(row.practice_run_id == run.id for row in rows)
+        assert all(row.run_id == run.id for row in rows)
 
     def test_exact_retry_appends_no_rows(self, db, existing_user, mastery_cards):
         strategy = EmaStrategy()
         card_id = mastery_cards["card_ids"][0]
         field_ids = mastery_cards["field_ids"]
-        run = _make_practice_run(db, existing_user.id)
-        practice_card = _make_practice_card(db, run.id, card_id)
+        run = _make_run(db, existing_user.id)
+        run_card = _make_run_card(db, run.id, card_id)
 
         group = ReviewGroup(
-            review_group_id=practice_card.id,
+            review_group_id=run_card.id,
             card_id=card_id,
             reviewed_at=datetime.now(UTC),
             ratings=((field_ids[0], 4),),
@@ -745,20 +749,20 @@ class TestRebuildOracle:
     def test_rebuild_reconstructs_attribution_and_preserves_state(
         self, db, existing_user, mastery_cards
     ):
-        """A group's review_group_id is the practice_card.id it was submitted against,
-        so rebuild_mastery recovers practice_run_id by joining back to still-existing
-        practice_card rows — surviving for a run that's still around, nulled for a run
-        that was deleted (its practice_card cascades away with it; the reviewed card
+        """A group's review_group_id is the run_card.id it was submitted against,
+        so rebuild_mastery recovers run_id by joining back to still-existing
+        run_card rows — surviving for a run that's still around, nulled for a run
+        that was deleted (its run_card cascades away with it; the reviewed card
         itself is untouched and its ledger state must come out unchanged either
         way)."""
         strategy = EmaStrategy()
         card_a, card_b = mastery_cards["card_ids"][0], mastery_cards["card_ids"][1]
         answer_field, prompt_field = mastery_cards["field_ids"][0], mastery_cards["field_ids"][1]
 
-        surviving_run = _make_practice_run(db, existing_user.id)
-        surviving_card = _make_practice_card(db, surviving_run.id, card_a)
-        deleted_run = _make_practice_run(db, existing_user.id)
-        deleted_run_card = _make_practice_card(db, deleted_run.id, card_b)
+        surviving_run = _make_run(db, existing_user.id)
+        surviving_card = _make_run_card(db, surviving_run.id, card_a)
+        deleted_run = _make_run(db, existing_user.id)
+        deleted_run_card = _make_run_card(db, deleted_run.id, card_b)
         # captured now — deleted_run_card is about to be cascade-deleted out from
         # under this session, and accessing an expired ORM attribute on a row that's
         # since vanished raises ObjectDeletedError instead of quietly refreshing.
@@ -789,7 +793,7 @@ class TestRebuildOracle:
         db.delete(deleted_run)
         db.commit()
         assert (
-            db.exec(select(PracticeCard).where(PracticeCard.id == deleted_run_card_id)).first()
+            db.exec(select(RunCard).where(RunCard.id == deleted_run_card_id)).first()
             is None
         )
         assert db.get(Card, card_b) is not None  # the card itself outlives its run
@@ -823,8 +827,8 @@ class TestRebuildOracle:
             .order_by(desc(MasteryLog.reviewed_at))
             .limit(1)
         ).first()
-        assert latest_a.practice_run_id == surviving_run.id
-        assert latest_b.practice_run_id is None
+        assert latest_a.run_id == surviving_run.id
+        assert latest_b.run_id is None
 
 
 class TestDeckScopedRebuild:

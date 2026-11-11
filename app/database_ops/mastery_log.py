@@ -71,7 +71,7 @@ def db_stage_append_mastery_log(
     states: dict[uuid.UUID, FieldMasteryState],
     reviewed_at: datetime,
     review_group_id: uuid.UUID,
-    practice_run_id: uuid.UUID | None,
+    run_id: uuid.UUID | None,
 ) -> None:
     """Writes computed values only. No `SET x = <expression>` — the incoming states are
     already the strategy's output; this just appends them. Plain bulk INSERT — the
@@ -86,7 +86,7 @@ def db_stage_append_mastery_log(
             "id": uuid.uuid4(),
             "card_id": card_id,
             "field_def_id": field_def_id,
-            "practice_run_id": practice_run_id,
+            "run_id": run_id,
             "review_group_id": review_group_id,
             "prompt_mastery": state.prompt_mastery,
             "answer_mastery": state.answer_mastery,
@@ -198,7 +198,7 @@ def db_fetch_deck_mastery_read_rows(db: Session, deck_ids: list[uuid.UUID]) -> l
     return _fetch_collection_mastery_read_rows(db, Deck.id, deck_ids)
 
 
-def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
+def db_fetch_run_mastery_log_rows(db: Session, run_id: uuid.UUID) -> list[MasteryLog]:
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
     used by the breakdown's delta computation to find each (card, field) pair this
     run itself touched and, among those, its own first and last row. `reviewed_at`
@@ -207,7 +207,7 @@ def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> li
     return list(
         db.exec(
             select(MasteryLog)
-            .where(MasteryLog.practice_run_id == practice_run_id)
+            .where(MasteryLog.run_id == run_id)
             .order_by(MasteryLog.reviewed_at)
         ).all()
     )

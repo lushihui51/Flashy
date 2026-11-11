@@ -7,11 +7,7 @@ import {
   unwrap,
 } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
-import {
-  MISSING_CONFIGURATION_MESSAGE,
-  NO_CARDS_MESSAGE,
-  NOTHING_TO_PRACTICE_MESSAGE,
-} from 'src/lib/practiceCopy';
+import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 
 const NOT_FOUND = 'Deck not found.';
 
@@ -32,20 +28,15 @@ describe('failureSentence', () => {
     const sentences: Record<string, string> = {
       deck_name_taken: 'A deck with this name already exists.',
       field_name_taken: 'A field with this name already exists.',
-      configuration_name_taken: 'A configuration with this name already exists.',
+      practice_name_taken: 'A practice with this name already exists.',
       too_few_fields: 'A deck needs at least two fields.',
       card_already_rated: 'This card has already been rated.',
       not_current_card: 'This is not the current card.',
       no_cards: NO_CARDS_MESSAGE,
-      config_not_found: MISSING_CONFIGURATION_MESSAGE,
-      stale_config: 'This configuration no longer produces any prompts — edit it.',
-      duplicate_deck: 'Choose one configuration per deck.',
-      nothing_to_rerun:
-        "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
-      nothing_to_practice: NOTHING_TO_PRACTICE_MESSAGE,
+      practice_has_active_run: 'Finish the active run first.',
       database_unavailable: 'Flashy is temporarily unavailable.',
     };
-    expect(Object.keys(sentences)).toHaveLength(13);
+    expect(Object.keys(sentences)).toHaveLength(9);
 
     for (const [code, sentence] of Object.entries(sentences)) {
       for (const status of [400, 404, 409, 422, 500, 503]) {
@@ -54,16 +45,14 @@ describe('failureSentence', () => {
     }
   });
 
-  it('reads nothing_to_practice as the sentence drawn for it', () => {
-    expect(failureSentence(detailError(400, 'nothing_to_practice'), NOT_FOUND)).toBe(
-      "These cards can't be practiced. A field they used has since been removed from their decks.",
+  it('reads no_cards as the one sentence for every run that would have no cards', () => {
+    expect(failureSentence(detailError(400, 'no_cards'), NOT_FOUND)).toBe(
+      "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows.",
     );
   });
 
   it('a known code wins over a 404', () => {
-    expect(failureSentence(detailError(404, 'config_not_found'), NOT_FOUND)).toBe(
-      MISSING_CONFIGURATION_MESSAGE,
-    );
+    expect(failureSentence(detailError(404, 'no_cards'), NOT_FOUND)).toBe(NO_CARDS_MESSAGE);
   });
 
   it("a 404 without a known code renders the caller's not-found sentence", () => {

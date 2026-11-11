@@ -10,7 +10,7 @@ describe('readHome', () => {
   it('returns what GET /api/home answers', async () => {
     const home: components['schemas']['HomeRead'] = {
       steps: { has_deck: true, has_card: false },
-      active_practices: [],
+      active_runs: [],
       recent_decks: [],
     };
     server.use(http.get(`${BASE}/api/home`, () => HttpResponse.json(home)));

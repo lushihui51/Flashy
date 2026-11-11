@@ -136,47 +136,6 @@ export interface paths {
         patch: operations["update_card_api_cards__card_id__patch"];
         trace?: never;
     };
-    "/api/deck_practice_configs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Deck Practice Configs
-         * @description Every config the user owns unless narrowed to one deck. Each row carries its
-         *     deck's name, since the creation page groups by deck.
-         */
-        get: operations["read_deck_practice_configs_api_deck_practice_configs_get"];
-        put?: never;
-        /** Create Deck Practice Config */
-        post: operations["create_deck_practice_config_api_deck_practice_configs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/deck_practice_configs/{config_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Deck Practice Config */
-        get: operations["read_deck_practice_config_api_deck_practice_configs__config_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete Deck Practice Config */
-        delete: operations["delete_deck_practice_config_api_deck_practice_configs__config_id__delete"];
-        options?: never;
-        head?: never;
-        /** Patch Deck Practice Config */
-        patch: operations["patch_deck_practice_config_api_deck_practice_configs__config_id__patch"];
-        trace?: never;
-    };
     "/api/deletion-impact": {
         parameters: {
             query?: never;
@@ -200,7 +159,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_runs": {
+    "/api/practices": {
         parameters: {
             query?: never;
             header?: never;
@@ -208,26 +167,24 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Practice Runs
-         * @description Newest first, each row carrying the decks it snapshotted. The filter is the same
-         *     relation, asked as a question: a session matches a deck if any of its practice_deck
-         *     rows points at it (`source_config_id` is attribution only, never a filter).
+         * Get Practices
+         * @description Most recently run first; a practice never run by when it was made.
          */
-        get: operations["read_practice_runs_api_practice_runs_get"];
+        get: operations["get_practices_api_practices_get"];
         put?: never;
         /**
-         * Create Practice Run
-         * @description Create *is* start: the session, its snapshots, and every practice_card are
-         *     written in one transaction. There is no draft session and no deferred generation.
+         * Post Practices
+         * @description 404 naming a deck that is missing or not the user's; 400 `practice_name_taken` for a
+         *     name the user's other practice has; a plain 400 for no deck or a deck picked twice.
          */
-        post: operations["create_practice_run_api_practice_runs_post"];
+        post: operations["post_practices_api_practices_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_runs/{practice_run_id}": {
+    "/api/practices/suggested-name": {
         parameters: {
             query?: never;
             header?: never;
@@ -235,39 +192,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read Practice Run
-         * @description The detail page needs the same deck chips the list already renders, so this
-         *     answers with PracticeRunSummary rather than the bare PracticeRunRead — API-
-         *     first beats a client-side join of the list endpoint.
+         * Get Suggested Practice Name
+         * @description The name a practice of these decks, in this order, takes when created with none.
+         *     404 naming a deck that is missing or not the user's.
          */
-        get: operations["read_practice_run_api_practice_runs__practice_run_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete Practice Run
-         * @description User delete is the only way a session leaves the list — there is no `abandoned`
-         *     status for one to fall out of view into.
-         */
-        delete: operations["delete_practice_run_api_practice_runs__practice_run_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/practice_runs/{practice_run_id}/state": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read Practice Run State
-         * @description One server-composed payload. 404 for an unknown or foreign session;
-         *     `current_card: null` once nothing is pending, at which point `session_status`
-         *     already reads "completed".
-         */
-        get: operations["read_practice_run_state_api_practice_runs__practice_run_id__state_get"];
+        get: operations["get_suggested_practice_name_api_practices_suggested_name_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -276,21 +205,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_runs/{practice_run_id}/breakdown": {
+    "/api/practices/{practice_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Read Practice Run Breakdown
-         * @description The completion dataset behind the retrospective view, including each card's
-         *     mastery/delta and per-field detail. 409 while
-         *     the session is still active — the bucket refinement only makes sense once nothing
-         *     is pending; 404 for an unknown or foreign session.
-         */
-        get: operations["read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get"];
+        /** Get Practice */
+        get: operations["get_practice_api_practices__practice_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -299,7 +222,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/practice_runs/{practice_run_id}/rerun": {
+    "/api/practices/{practice_id}/runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -309,21 +232,77 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rerun Run
-         * @description Creates a new run from the completed run's own frozen practice_deck snapshots,
-         *     named verbatim from the request body; the original run is untouched.
-         *     404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400
-         *     `nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400
-         *     `no_cards` if the surviving snapshots generate no practice card.
+         * Post Runs
+         * @description The practice's active run, or a new one when it has none. 404 for an unknown or
+         *     foreign practice; 400 `no_cards` when a new run would have no card.
          */
-        post: operations["rerun_run_api_practice_runs__practice_run_id__rerun_post"];
+        post: operations["post_runs_api_practices__practice_id__runs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_runs/{practice_run_id}/chosen_cards": {
+    "/api/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run State
+         * @description One server-composed payload. 404 for an unknown or foreign run; `current_card: null`
+         *     once nothing is pending, at which point `status` already reads "completed".
+         */
+        get: operations["get_run_state_api_runs__run_id__state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run Breakdown
+         * @description Everything the summary shows. 409 `run_active` while the run is active; 404 for an
+         *     unknown or foreign run.
+         */
+        get: operations["get_run_breakdown_api_runs__run_id__breakdown_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/rerun": {
         parameters: {
             query?: never;
             header?: never;
@@ -333,21 +312,18 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Start Chosen Cards
-         * @description Creates a new practice of exactly the chosen cards, from the completed practice's
-         *     own snapshots; the original is untouched. 404 for an unknown or foreign practice; 400
-         *     `run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a
-         *     chosen card still validates; 400 `no_cards` if the survivors generate no practice card;
-         *     400 with a string detail for an empty list or a card the practice did not hold.
+         * Post Run Rerun
+         * @description A new run of the whole practice of the completed run. 404 for an unknown or foreign
+         *     run; 400 `run_active`, `practice_has_active_run` or `no_cards`.
          */
-        post: operations["start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post"];
+        post: operations["post_run_rerun_api_runs__run_id__rerun_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/practice_cards/{practice_card_id}/rate": {
+    "/api/runs/{run_id}/chosen_cards": {
         parameters: {
             query?: never;
             header?: never;
@@ -356,8 +332,30 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rate Practice Card */
-        post: operations["rate_practice_card_api_practice_cards__practice_card_id__rate_post"];
+        /**
+         * Post Run Chosen Cards
+         * @description A new run of exactly the chosen cards of the completed run. 404 for an unknown or
+         *     foreign run; 400 `run_active`, `practice_has_active_run` or `no_cards`; a plain 400
+         *     for an empty list or a card the run did not hold.
+         */
+        post: operations["post_run_chosen_cards_api_runs__run_id__chosen_cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/run_cards/{run_card_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Run Card Rating */
+        post: operations["post_run_card_rating_api_run_cards__run_card_id__rate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -413,10 +411,10 @@ export interface components {
          */
         BreakdownAttempt: {
             /**
-             * Practice Card Id
+             * Run Card Id
              * Format: uuid
              */
-            practice_card_id: string;
+            run_card_id: string;
             /** Prompts */
             prompts: components["schemas"]["ResolvedFieldValue"][];
             /** Answers */
@@ -571,10 +569,10 @@ export interface components {
         /** CurrentRunCard */
         CurrentRunCard: {
             /**
-             * Practice Card Id
+             * Run Card Id
              * Format: uuid
              */
-            practice_card_id: string;
+            run_card_id: string;
             /**
              * Card Id
              * Format: uuid
@@ -646,124 +644,15 @@ export interface components {
             /** Position */
             position: number;
         };
-        /** DeckPracticeConfigCreate */
-        DeckPracticeConfigCreate: {
+        /** DeckNameRead */
+        DeckNameRead: {
             /**
              * Deck Id
              * Format: uuid
              */
             deck_id: string;
-            /** Name */
-            name: string;
-            /** Prompt Field Ids */
-            prompt_field_ids: string[];
-            /** Answer Field Ids */
-            answer_field_ids: string[];
-            /** Prompt Pool Ids */
-            prompt_pool_ids: string[];
-            /** Prompt Pool Counts */
-            prompt_pool_counts: number[];
-            /** Answer Pool Ids */
-            answer_pool_ids: string[];
-            /** Answer Pool Counts */
-            answer_pool_counts: number[];
-        };
-        /** DeckPracticeConfigRead */
-        DeckPracticeConfigRead: {
-            /**
-             * Deck Id
-             * Format: uuid
-             */
-            deck_id: string;
-            /** Name */
-            name: string;
-            /** Prompt Field Ids */
-            prompt_field_ids: string[];
-            /** Answer Field Ids */
-            answer_field_ids: string[];
-            /** Prompt Pool Ids */
-            prompt_pool_ids: string[];
-            /** Prompt Pool Counts */
-            prompt_pool_counts: number[];
-            /** Answer Pool Ids */
-            answer_pool_ids: string[];
-            /** Answer Pool Counts */
-            answer_pool_counts: number[];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Last Activity At
-             * Format: date-time
-             */
-            last_activity_at: string;
-        };
-        /**
-         * DeckPracticeConfigSummary
-         * @description A list row for the config picker and the config management surface: the config
-         *     plus the name of the deck it lives on.
-         */
-        DeckPracticeConfigSummary: {
-            /**
-             * Deck Id
-             * Format: uuid
-             */
-            deck_id: string;
-            /** Name */
-            name: string;
-            /** Prompt Field Ids */
-            prompt_field_ids: string[];
-            /** Answer Field Ids */
-            answer_field_ids: string[];
-            /** Prompt Pool Ids */
-            prompt_pool_ids: string[];
-            /** Prompt Pool Counts */
-            prompt_pool_counts: number[];
-            /** Answer Pool Ids */
-            answer_pool_ids: string[];
-            /** Answer Pool Counts */
-            answer_pool_counts: number[];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Last Activity At
-             * Format: date-time
-             */
-            last_activity_at: string;
             /** Deck Name */
             deck_name: string;
-        };
-        /** DeckPracticeConfigUpdate */
-        DeckPracticeConfigUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Prompt Field Ids */
-            prompt_field_ids?: string[] | null;
-            /** Answer Field Ids */
-            answer_field_ids?: string[] | null;
-            /** Prompt Pool Ids */
-            prompt_pool_ids?: string[] | null;
-            /** Prompt Pool Counts */
-            prompt_pool_counts?: number[] | null;
-            /** Answer Pool Ids */
-            answer_pool_ids?: string[] | null;
-            /** Answer Pool Counts */
-            answer_pool_counts?: number[] | null;
         };
         /**
          * DeckSummary
@@ -813,10 +702,10 @@ export interface components {
             cards_deleted: number;
             /** Cards Affected */
             cards_affected: number;
-            /** Configurations Deleted */
-            configurations_deleted: number;
             /** Runs Deleted */
             runs_deleted: number;
+            /** Practices Affected */
+            practices_affected: number;
         };
         /** FieldDefBatchCreate */
         FieldDefBatchCreate: {
@@ -927,37 +816,49 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** HomeActivePractice */
-        HomeActivePractice: {
+        /** HomeRead */
+        HomeRead: {
+            steps: components["schemas"]["HomeSteps"] | null;
+            /** Active Runs */
+            active_runs: components["schemas"]["HomeRun"][];
+            /** Recent Decks */
+            recent_decks: components["schemas"]["DeckSummary"][];
+        };
+        /** HomeRun */
+        HomeRun: {
             /**
              * Id
              * Format: uuid
              */
             id: string;
             /**
-             * User Id
+             * Practice Id
              * Format: uuid
              */
-            user_id: string;
-            /** Name */
-            name: string;
+            practice_id: string;
             status: components["schemas"]["RunStatus"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Index */
+            day_index: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /** Practice Name */
+            practice_name: string;
             /** Decks */
-            decks: components["schemas"]["PracticeRunDeckSummary"][];
+            decks: components["schemas"]["DeckNameRead"][];
             progress: components["schemas"]["RunProgress"];
-        };
-        /** HomeRead */
-        HomeRead: {
-            steps: components["schemas"]["HomeSteps"] | null;
-            /** Active Practices */
-            active_practices: components["schemas"]["HomeActivePractice"][];
-            /** Recent Decks */
-            recent_decks: components["schemas"]["DeckSummary"][];
         };
         /**
          * HomeSteps
@@ -970,172 +871,57 @@ export interface components {
             /** Has Card */
             has_card: boolean;
         };
-        /** PracticeCardRead */
-        PracticeCardRead: {
+        /** PracticeCreate */
+        PracticeCreate: {
+            /** Name */
+            name?: string | null;
+            /** Deck Ids */
+            deck_ids: string[];
+        };
+        /** PracticeDetail */
+        PracticeDetail: {
             /**
              * Id
              * Format: uuid
              */
             id: string;
-            /**
-             * Practice Run Id
-             * Format: uuid
-             */
-            practice_run_id: string;
-            /**
-             * Card Id
-             * Format: uuid
-             */
-            card_id: string;
-            /** Position */
-            position: number;
-            /** Prompts */
-            prompts: string[];
-            /** Answers */
-            answers: string[];
-            status: components["schemas"]["PracticeCardStatus"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-        };
-        /**
-         * PracticeCardStatus
-         * @enum {string}
-         */
-        PracticeCardStatus: "pending" | "passed" | "failed";
-        /**
-         * PracticeRunBreakdown
-         * @description The whole `GET .../breakdown` payload: every card and what the run did to it, so the
-         *     summary needs no second request. Only ever built for a completed session; the router
-         *     409s an active one before this is composed.
-         */
-        PracticeRunBreakdown: {
-            /** Total Cards */
-            total_cards: number;
-            /** Cards */
-            cards: components["schemas"]["BreakdownCard"][];
-        };
-        /**
-         * PracticeRunChosenCards
-         * @description Body of POST .../chosen_cards: the client-formatted name for the new run, stored
-         *     verbatim, and the cards to practice, each one a card of the completed practice.
-         */
-        PracticeRunChosenCards: {
             /** Name */
             name: string;
-            /** Card Ids */
-            card_ids: string[];
-        };
-        /** PracticeRunCreate */
-        PracticeRunCreate: {
-            /** Name */
-            name: string;
-            /** Deck Practice Config Ids */
-            deck_practice_config_ids: string[];
-        };
-        /**
-         * PracticeRunDeckSummary
-         * @description One deck a session touches, resolved through `practice_deck → deck`.
-         *
-         *     This chain is the only link between a session and a deck, and the only thing
-         *     the filter uses. `practice_deck.source_config_id` is read here for the label
-         *     only: `configuration_name` is the live configuration's name while
-         *     the link resolves, else the snapshot's stored `source_config_name`, else None. The
-         *     link is never read for filtering, generation, validation or rerun.
-         */
-        PracticeRunDeckSummary: {
-            /**
-             * Deck Id
-             * Format: uuid
-             */
-            deck_id: string;
-            /** Deck Name */
-            deck_name: string;
-            /** Configuration Name */
-            configuration_name: string | null;
-        };
-        /** PracticeRunRead */
-        PracticeRunRead: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            /** Name */
-            name: string;
-            status: components["schemas"]["RunStatus"];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-        };
-        /**
-         * PracticeRunRerun
-         * @description Body of POST .../rerun: the client-formatted name for the new run,
-         *     the same way PracticeRunCreate.name is — the server derives nothing.
-         */
-        PracticeRunRerun: {
-            /** Name */
-            name: string;
-        };
-        /**
-         * PracticeRunState
-         * @description The whole `GET .../state` payload — everything the run page needs to
-         *     render one screen, in one round trip. `current_card` is None once nothing is
-         *     pending, which is also exactly when `session_status` reads `completed`.
-         */
-        PracticeRunState: {
-            /** Session Name */
-            session_name: string;
-            session_status: components["schemas"]["RunStatus"];
-            progress: components["schemas"]["RunProgress"];
-            current_card: components["schemas"]["CurrentRunCard"] | null;
-        };
-        /**
-         * PracticeRunSummary
-         * @description A list row for the practice overview: the session plus the decks it snapshotted,
-         *     so the client can render and filter by deck without a second round trip or a
-         *     client-side join.
-         *
-         *     `decks` lists every snapshot of the run — a `practice_deck` never outlives its
-         *     deck: deleting a deck deletes its snapshots with it, and a run
-         *     left owning no snapshot at all is deleted alongside its last one. There is no
-         *     "deleted deck" state for a summary to represent.
-         */
-        PracticeRunSummary: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            /** Name */
-            name: string;
-            status: components["schemas"]["RunStatus"];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
             /** Decks */
-            decks: components["schemas"]["PracticeRunDeckSummary"][];
+            decks: components["schemas"]["DeckNameRead"][];
+            /** Active Run Id */
+            active_run_id: string | null;
+            /** Runs */
+            runs: components["schemas"]["RunRead"][];
+        };
+        /** PracticeSummary */
+        PracticeSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decks */
+            decks: components["schemas"]["DeckNameRead"][];
+            /** Active Run Id */
+            active_run_id: string | null;
         };
         /**
          * RatedFieldValue
          * @description A resolved answer field plus the rating it was given, joined from `review_log`
-         *     on `review_group_id == practice_card.id` and `field_def_id`.
+         *     on `review_group_id == run_card.id` and `field_def_id`.
          */
         RatedFieldValue: {
             /**
@@ -1160,17 +946,17 @@ export interface components {
         };
         /** RatingSubmissionResult */
         RatingSubmissionResult: {
-            rated_practice_card: components["schemas"]["PracticeCardRead"];
-            requeued_practice_card: components["schemas"]["PracticeCardRead"] | null;
+            rated_run_card: components["schemas"]["RunCardRead"];
+            requeued_run_card: components["schemas"]["RunCardRead"] | null;
         };
         /**
          * ResolvedFieldValue
-         * @description One prompt/answer field id from a practice_card's `prompts`/`answers` array,
+         * @description One prompt/answer field id from a run_card's `prompts`/`answers` array,
          *     joined against its field_def (name, type) and this card's current value — the
          *     server-side resolution every run payload uses instead of bare ids. `value` is `""`
          *     when no card_field_value row exists for this (card, field) pair; it is passed
-         *     through as-is even if blank, since a value can go blank *after* the practice_card
-         *     was generated (the blank filter governs generation-time candidacy, not later edits).
+         *     through as-is even if blank, since a value can go blank *after* the run_card was
+         *     generated (the blank filter governs generation-time candidacy, not later edits).
          */
         ResolvedFieldValue: {
             /**
@@ -1185,11 +971,63 @@ export interface components {
             value: string;
         };
         /**
+         * RunBreakdownRead
+         * @description The whole `GET /api/runs/{id}/breakdown` payload: every card and what the run did to
+         *     it, so the summary needs no second request. Only ever built for a completed run; the
+         *     router 409s an active one before this is composed.
+         */
+        RunBreakdownRead: {
+            /** Total Cards */
+            total_cards: number;
+            /** Cards */
+            cards: components["schemas"]["BreakdownCard"][];
+        };
+        /** RunCardRead */
+        RunCardRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Position */
+            position: number;
+            /** Prompts */
+            prompts: string[];
+            /** Answers */
+            answers: string[];
+            status: components["schemas"]["RunCardStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * RunCardStatus
+         * @enum {string}
+         */
+        RunCardStatus: "pending" | "passed" | "failed";
+        /** RunChosenCards */
+        RunChosenCards: {
+            /** Card Ids */
+            card_ids: string[];
+        };
+        /**
          * RunProgress
-         * @description The live-progress counts: `total_cards` is fixed at session start
-         *     (distinct card_ids that received a practice_card row then) and never changes, so
-         *     the other four counts — a partition of it by chain-fold bucket — only ever
-         *     redistribute, never grow the denominator mid-session.
+         * @description The live-progress counts: `total_cards` is fixed when the run is cut (distinct
+         *     card_ids that received a run_card row then) and never changes, so the other four
+         *     counts — a partition of it by chain-fold bucket — only ever redistribute, never grow
+         *     the denominator mid-run.
          */
         RunProgress: {
             /** Total Cards */
@@ -1203,14 +1041,74 @@ export interface components {
             /** Still Failed */
             still_failed: number;
         };
+        /** RunRead */
+        RunRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Practice Id
+             * Format: uuid
+             */
+            practice_id: string;
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Index */
+            day_index: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+        };
+        /**
+         * RunState
+         * @description The whole `GET /api/runs/{id}/state` payload — everything the run page needs to
+         *     render one screen, in one round trip. `current_card` is None once nothing is
+         *     pending, which is also exactly when `status` reads `completed`.
+         */
+        RunState: {
+            /**
+             * Practice Id
+             * Format: uuid
+             */
+            practice_id: string;
+            /** Practice Name */
+            practice_name: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Index */
+            day_index: number;
+            status: components["schemas"]["RunStatus"];
+            progress: components["schemas"]["RunProgress"];
+            current_card: components["schemas"]["CurrentRunCard"] | null;
+        };
         /**
          * RunStatus
-         * @description Two states, not three: nothing could distinguish an "abandoned" session from a
-         *     `completed` one without tracking why it ran out of pending cards, and no state is
-         *     kept for that. A session is either still practisable or it isn't.
+         * @description Nothing records why a run stopped being active: finished and stranded by a
+         *     deletion both read as completed.
          * @enum {string}
          */
         RunStatus: "active" | "completed";
+        /** SuggestedPracticeName */
+        SuggestedPracticeName: {
+            /** Name */
+            name: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1793,180 +1691,6 @@ export interface operations {
             };
         };
     };
-    read_deck_practice_configs_api_deck_practice_configs_get: {
-        parameters: {
-            query?: {
-                deck_id?: string | null;
-            };
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeckPracticeConfigSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_deck_practice_config_api_deck_practice_configs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeckPracticeConfigCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_deck_practice_config_api_deck_practice_configs__config_id__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                config_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_deck_practice_config_api_deck_practice_configs__config_id__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                config_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_deck_practice_config_api_deck_practice_configs__config_id__patch: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                config_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeckPracticeConfigUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeckPracticeConfigRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_deletion_impact_api_deletion_impact_get: {
         parameters: {
             query?: {
@@ -2003,10 +1727,78 @@ export interface operations {
             };
         };
     };
-    read_practice_runs_api_practice_runs_get: {
+    get_practices_api_practices_get: {
         parameters: {
-            query?: {
-                deck_id?: string | null;
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_practices_api_practices_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suggested_practice_name_api_practices_suggested_name_get: {
+        parameters: {
+            query: {
+                deck_ids: string[];
             };
             header?: {
                 authorization?: string | null;
@@ -2023,7 +1815,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeRunSummary"][];
+                    "application/json": components["schemas"]["SuggestedPracticeName"];
                 };
             };
             /** @description Validation Error */
@@ -2037,43 +1829,7 @@ export interface operations {
             };
         };
     };
-    create_practice_run_api_practice_runs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PracticeRunCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PracticeRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_practice_run_api_practice_runs__practice_run_id__get: {
+    get_practice_api_practices__practice_id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -2081,7 +1837,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_run_id: string;
+                practice_id: string;
             };
             cookie?: never;
         };
@@ -2093,7 +1849,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeRunSummary"];
+                    "application/json": components["schemas"]["PracticeDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2107,7 +1863,7 @@ export interface operations {
             };
         };
     };
-    delete_practice_run_api_practice_runs__practice_run_id__delete: {
+    post_runs_api_practices__practice_id__runs_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2115,39 +1871,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_practice_run_state_api_practice_runs__practice_run_id__state_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                practice_run_id: string;
+                practice_id: string;
             };
             cookie?: never;
         };
@@ -2159,7 +1883,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeRunState"];
+                    "application/json": components["schemas"]["RunRead"];
                 };
             };
             /** @description Validation Error */
@@ -2173,7 +1897,7 @@ export interface operations {
             };
         };
     };
-    read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get: {
+    get_run_api_runs__run_id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -2181,7 +1905,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_run_id: string;
+                run_id: string;
             };
             cookie?: never;
         };
@@ -2193,7 +1917,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeRunBreakdown"];
+                    "application/json": components["schemas"]["RunRead"];
                 };
             };
             /** @description Validation Error */
@@ -2207,7 +1931,7 @@ export interface operations {
             };
         };
     };
-    rerun_run_api_practice_runs__practice_run_id__rerun_post: {
+    get_run_state_api_runs__run_id__state_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2215,13 +1939,115 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_run_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_breakdown_api_runs__run_id__breakdown_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunBreakdownRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_run_rerun_api_runs__run_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_run_chosen_cards_api_runs__run_id__chosen_cards_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                run_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PracticeRunRerun"];
+                "application/json": components["schemas"]["RunChosenCards"];
             };
         };
         responses: {
@@ -2231,7 +2057,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PracticeRunRead"];
+                    "application/json": components["schemas"]["RunRead"];
                 };
             };
             /** @description Validation Error */
@@ -2245,7 +2071,7 @@ export interface operations {
             };
         };
     };
-    start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post: {
+    post_run_card_rating_api_run_cards__run_card_id__rate_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2253,45 +2079,7 @@ export interface operations {
                 "x-timezone"?: string | null;
             };
             path: {
-                practice_run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PracticeRunChosenCards"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PracticeRunRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rate_practice_card_api_practice_cards__practice_card_id__rate_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-timezone"?: string | null;
-            };
-            path: {
-                practice_card_id: string;
+                run_card_id: string;
             };
             cookie?: never;
         };

@@ -587,8 +587,8 @@ describe('DeckEditor — edit mode', () => {
           fields_deleted: 1,
           cards_deleted: 0,
           cards_affected: 1,
-          configurations_deleted: 2,
           runs_deleted: 1,
+          practices_affected: 0,
         }),
       ),
     );
@@ -647,11 +647,11 @@ describe('DeckEditor — edit mode', () => {
 
     // Destructive (a staged field) — the aggregate confirm shows before anything is
     // sent, worded from the changeset (1 field) plus the deletion-impact query (the
-    // 2 configurations and 1 practice the mock above reports for it).
+    // 1 active run the mock above reports for it).
     expect(await screen.findByText('Save changes?')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This removes 1 field from 1 card, deletes 2 deck configurations and deletes 1 active practice. This can't be undone.",
+        "This removes 1 field from 1 card and deletes 1 active run. This can't be undone.",
       ),
     ).toBeInTheDocument();
     expect(patchCallCount).toBe(0);
@@ -699,8 +699,8 @@ describe('DeckEditor — edit mode', () => {
           fields_deleted: 1,
           cards_deleted: 0,
           cards_affected: 1,
-          configurations_deleted: 1,
           runs_deleted: 0,
+          practices_affected: 0,
         }),
       ),
     );
@@ -715,12 +715,10 @@ describe('DeckEditor — edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Save changes?')).toBeInTheDocument();
-    // No active practices in this mock (runs_deleted: 0) — that clause is
-    // omitted entirely, not rendered as "0 practices".
+    // No active runs in this mock (runs_deleted: 0) — that clause is omitted entirely,
+    // not rendered as "0 active runs".
     expect(
-      screen.getByText(
-        "This removes 1 field from 1 card and deletes 1 deck configuration. This can't be undone.",
-      ),
+      screen.getByText("This removes 1 field from 1 card. This can't be undone."),
     ).toBeInTheDocument();
   });
 
@@ -775,8 +773,8 @@ describe('DeckEditor — edit mode', () => {
           fields_deleted: 2,
           cards_deleted: 1,
           cards_affected: 0,
-          configurations_deleted: 3,
           runs_deleted: 1,
+          practices_affected: 3,
         }),
       ),
     );
@@ -807,7 +805,7 @@ describe('DeckEditor — edit mode', () => {
     // the sentence names each type the impact query reported.
     expect(
       screen.getByText(
-        "This also deletes 1 deck, 1 card, 2 fields, 3 deck configurations and 1 practice. This can't be undone.",
+        "This also deletes 1 card, 2 fields and 1 run, and takes the deck out of 3 practices. This can't be undone.",
       ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -828,8 +826,8 @@ describe('DeckEditor — edit mode', () => {
           fields_deleted: 0,
           cards_deleted: 0,
           cards_affected: 0,
-          configurations_deleted: 0,
           runs_deleted: 0,
+          practices_affected: 0,
         }),
       ),
     );
@@ -869,8 +867,8 @@ describe('DeckEditor — edit mode', () => {
           fields_deleted: 0,
           cards_deleted: 0,
           cards_affected: 0,
-          configurations_deleted: 0,
           runs_deleted: 0,
+          practices_affected: 0,
         }),
       ),
     );

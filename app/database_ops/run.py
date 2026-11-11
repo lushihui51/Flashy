@@ -1,0 +1,236 @@
+import uuid
+from collections.abc import Collection
+
+from sqlalchemy import Date, cast, delete, exists, func, or_
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, col, select
+
+from app.models.app_user import AppUser
+from app.models.deck import Deck
+from app.models.practice import Practice
+from app.models.practice_payloads import DeckNameRead
+from app.models.review_log import ReviewLog
+from app.models.run import Run, RunRead, RunStatus
+from app.models.run_card import RunCard
+from app.models.run_configuration import RunConfiguration
+
+
+def db_try_stage_create_run(db: Session, practice_id: uuid.UUID) -> Run | None:
+    """Adds and flushes an active run of the practice, or returns None when the practice
+    already has an active run, owning its savepoint. No commit."""
+    run = Run(practice_id=practice_id)
+    try:
+        with db.begin_nested():
+            db.add(run)
+            db.flush()
+    except IntegrityError:
+        return None
+    return run
+
+
+def db_stage_create_run(db: Session, practice_id: uuid.UUID) -> Run:
+    """Adds and flushes an active run of the practice. No commit: the run, its copies and
+    its card rows are one transaction."""
+    run = Run(practice_id=practice_id)
+    db.add(run)
+    db.flush()
+    return run
+
+
+def db_read_run(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> Run | None:
+    return db.exec(
+        select(Run)
+        .join(Practice, Practice.id == Run.practice_id)
+        .where(Run.id == run_id, Practice.user_id == user_id)
+    ).first()
+
+
+def db_read_active_run(db: Session, practice_id: uuid.UUID) -> Run | None:
+    """Unscoped: the caller has already ownership-checked the practice."""
+    return db.exec(
+        select(Run).where(Run.practice_id == practice_id, Run.status == RunStatus.active)
+    ).first()
+
+
+def _run_days(practice_filter):
+    """Each run of the practices `practice_filter` admits, with its `day`, the date of its
+    `created_at` in its user's zone, and its `day_index`, its place from 0 among its
+    practice's runs of that day by `created_at` then id."""
+    day = cast(func.timezone(AppUser.timezone, Run.created_at), Date)
+    return (
+        select(
+            Run.id,
+            day.label("day"),
+            (
+                func.row_number().over(
+                    partition_by=(Run.practice_id, day), order_by=(Run.created_at, Run.id)
+                )
+                - 1
+            ).label("day_index"),
+        )
+        .join(Practice, Practice.id == Run.practice_id)
+        .join(AppUser, AppUser.id == Practice.user_id)
+        .where(practice_filter)
+        .subquery()
+    )
+
+
+def _run_read(run: Run, day, day_index: int) -> RunRead:
+    # model_validate over the ORM row rather than **model_dump(): `status` is stored in a
+    # plain String column, so dumping the table model hands back a bare str.
+    return RunRead.model_validate(run, update={"day": day, "day_index": day_index})
+
+
+def db_read_run_read(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunRead | None:
+    days = _run_days(
+        Practice.id == select(Run.practice_id).where(Run.id == run_id).scalar_subquery()
+    )
+    row = db.exec(
+        select(Run, days.c.day, days.c.day_index)
+        .join(days, days.c.id == Run.id)
+        .join(Practice, Practice.id == Run.practice_id)
+        .where(Run.id == run_id, Practice.user_id == user_id)
+    ).first()
+    return _run_read(*row) if row else None
+
+
+def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[RunRead]:
+    """The practice's runs, newest `last_activity_at` first, then id. Unscoped: the caller
+    has already ownership-checked the practice."""
+    days = _run_days(Practice.id == practice_id)
+    rows = db.exec(
+        select(Run, days.c.day, days.c.day_index)
+        .join(days, days.c.id == Run.id)
+        .order_by(col(Run.last_activity_at).desc(), col(Run.id))
+    ).all()
+    return [_run_read(*row) for row in rows]
+
+
+def db_read_active_run_reads(
+    db: Session, user_id: uuid.UUID, limit: int
+) -> list[tuple[RunRead, str]]:
+    """Up to `limit` of the user's active runs, newest `last_activity_at` first, then id,
+    each with its practice's name."""
+    days = _run_days(Practice.user_id == user_id)
+    rows = db.exec(
+        select(Run, days.c.day, days.c.day_index, Practice.name)
+        .join(days, days.c.id == Run.id)
+        .join(Practice, Practice.id == Run.practice_id)
+        .where(Run.status == RunStatus.active)
+        .order_by(col(Run.last_activity_at).desc(), col(Run.id))
+        .limit(limit)
+    ).all()
+    return [(_run_read(run, day, day_index), name) for run, day, day_index, name in rows]
+
+
+def db_read_run_decks(
+    db: Session, run_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, list[DeckNameRead]]:
+    """Each run's decks, most recently changed first, in one statement; a run with no
+    deck has no entry. Unscoped: the caller has already ownership-checked the runs."""
+    if not run_ids:
+        return {}
+    decks_by_run: dict[uuid.UUID, list[DeckNameRead]] = {}
+    for run_id, deck_id, deck_name in db.exec(
+        select(RunConfiguration.run_id, Deck.id, Deck.name)
+        .join(Deck, Deck.id == RunConfiguration.deck_id)
+        .where(col(RunConfiguration.run_id).in_(run_ids))
+        .order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
+    ).all():
+        decks_by_run.setdefault(run_id, []).append(
+            DeckNameRead(deck_id=deck_id, deck_name=deck_name)
+        )
+    return decks_by_run
+
+
+def db_read_recent_deck_ids(db: Session, user_id: uuid.UUID, limit: int) -> list[uuid.UUID]:
+    """Up to `limit` decks of the user's completed runs, each once, the deck whose run
+    holds the newest rating first. A completed run with no rating contributes nothing."""
+    return list(
+        db.exec(
+            select(RunConfiguration.deck_id)
+            .join(Run, Run.id == RunConfiguration.run_id)
+            .join(Practice, Practice.id == Run.practice_id)
+            .join(RunCard, RunCard.run_id == Run.id)
+            # A run_card's id is the review_group_id of the ratings given to it.
+            .join(ReviewLog, ReviewLog.review_group_id == RunCard.id)
+            .where(Practice.user_id == user_id, Run.status == RunStatus.completed)
+            .group_by(col(RunConfiguration.deck_id))
+            .order_by(func.max(ReviewLog.reviewed_at).desc(), col(RunConfiguration.deck_id))
+            .limit(limit)
+        ).all()
+    )
+
+
+def db_read_run_ids_with_all_decks_in(
+    db: Session, user_id: uuid.UUID, deck_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Runs of user_id with at least one run_configuration, none of whose
+    run_configurations points at a deck outside deck_ids: a run entirely contained in
+    this closure of decks, which the deletion closure deletes with them."""
+    if not deck_ids:
+        return set()
+    has_a_deck = exists().where(RunConfiguration.run_id == Run.id)
+    has_an_outside_deck = exists().where(
+        RunConfiguration.run_id == Run.id,
+        col(RunConfiguration.deck_id).not_in(deck_ids),
+    )
+    query = (
+        select(Run.id)
+        .join(Practice, Practice.id == Run.practice_id)
+        .where(Practice.user_id == user_id, has_a_deck, ~has_an_outside_deck)
+    )
+    return set(db.exec(query).all())
+
+
+def db_read_active_run_ids_naming_fields(
+    db: Session, user_id: uuid.UUID, field_ids: Collection[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Active runs of user_id with a run_configuration whose prompt/answer/pool field
+    arrays overlap field_ids, which the deletion closure deletes. Completed runs are
+    never touched by a field-only deletion: they still show their attempts, they just
+    don't need to be rateable any more."""
+    if not field_ids:
+        return set()
+    ids = list(field_ids)
+    query = (
+        select(Run.id)
+        .join(Practice, Practice.id == Run.practice_id)
+        .join(RunConfiguration, RunConfiguration.run_id == Run.id)
+        .where(
+            Practice.user_id == user_id,
+            Run.status == RunStatus.active,
+            or_(
+                col(RunConfiguration.prompt_field_ids).op("&&")(ids),
+                col(RunConfiguration.answer_field_ids).op("&&")(ids),
+                col(RunConfiguration.prompt_pool_ids).op("&&")(ids),
+                col(RunConfiguration.answer_pool_ids).op("&&")(ids),
+            ),
+        )
+    )
+    return set(db.exec(query).all())
+
+
+def db_stage_delete_runs(db: Session, ids: Collection[uuid.UUID]) -> None:
+    """Bulk delete by id, no commit — apply_deletion owns the transaction. Its
+    copies, card rows and counted cards cascade away with it; every review and mastery
+    value it produced stays."""
+    if not ids:
+        return
+    db.execute(delete(Run).where(col(Run.id).in_(ids)))
+
+
+def db_stage_update_run_status(db: Session, run: Run, status: RunStatus) -> Run:
+    """No commit: the caller's transaction holds the change."""
+    run.status = status
+    db.add(run)
+    db.flush()
+    return run
+
+
+def db_update_run_status(db: Session, run: Run, status: RunStatus) -> Run:
+    run.status = status
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run

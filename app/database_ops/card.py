@@ -73,7 +73,7 @@ def db_read_deck_id_by_card(
     db: Session, card_ids: Collection[uuid.UUID]
 ) -> dict[uuid.UUID, uuid.UUID]:
     """`{card.id: card.deck_id}` for the ids that still exist. Unscoped: the caller has
-    already ownership-checked the practice these cards came from."""
+    already ownership-checked the run these cards came from."""
     return dict(db.exec(select(Card.id, Card.deck_id).where(col(Card.id).in_(card_ids))).all())
 
 
@@ -102,7 +102,7 @@ def db_read_cards_with_values_for_deck(db: Session, deck_id: uuid.UUID) -> list[
 
 
 def db_read_cards_with_values(db: Session, card_ids: Collection[uuid.UUID]) -> list[Card]:
-    """Unscoped: the caller has already ownership-checked the practice these cards came
+    """Unscoped: the caller has already ownership-checked the run these cards came
     from. In no particular order."""
     return list(
         db.exec(

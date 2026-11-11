@@ -12,8 +12,7 @@ import NotFoundPage from 'src/pages/NotFoundPage';
 import PracticeOverviewPage from 'src/pages/PracticeOverviewPage';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
-import PracticeRunPage from 'src/pages/PracticeRunPage';
-import DeckConfigurationEditor from 'src/components/library/DeckConfigurationEditor';
+import RunPage from 'src/pages/RunPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
 import DeckEditor from 'src/components/library/DeckEditor';
 import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
@@ -28,19 +27,14 @@ export const appRoutes = createRoutesFromElements(
     <Route errorElement={<FailedPage />}>
       <Route path="/" element={<HomePage />} />
       <Route path="/library" element={<LibraryPage />} />
-      <Route path="/practice" element={<PracticeOverviewPage />} />
-      <Route path="/practice/new" element={<PracticeCreatePage />} />
-      <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
-      <Route path="/practice/:practiceSessionId/run" element={<PracticeRunPage />} />
+      <Route path="/practices" element={<PracticeOverviewPage />} />
+      <Route path="/practices/new" element={<PracticeCreatePage />} />
+      <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
+      <Route path="/runs/:runId" element={<RunPage />} />
       <Route path="/decks/:deckId" element={<DeckDetailPage />} />
       <Route path="/decks/new" element={<DeckEditor mode="create" />} />
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
       <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
-      <Route path="/deck-configurations/new" element={<DeckConfigurationEditor mode="create" />} />
-      <Route
-        path="/deck-configurations/:configId/edit"
-        element={<DeckConfigurationEditor mode="edit" />}
-      />
       <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>

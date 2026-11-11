@@ -1,4 +1,5 @@
 import os
+import uuid
 
 # Force the dev-auth bypass (app/dependencies.py) off for tests regardless of what a
 # developer has set in their local .env for `fastapi dev` — real OS env vars take
@@ -173,10 +174,9 @@ def existing_card(client, existing_deck, existing_field_defs):
 @pytest.fixture
 def two_deck_library(client):
     """Two decks of the requesting user, "Alpha" under key "a" and "Beta" under key
-    "b", each with fields "front" and "back", two cards and one deck configuration
-    ("Config A", "Config B") — for the tests of lists and filters over more than one
-    deck."""
-    library = {"decks": {}, "fields": {}, "configs": {}}
+    "b", each with fields "front" and "back" and two cards — for the tests of lists and
+    filters over more than one deck."""
+    library = {"decks": {}, "fields": {}}
 
     for key, deck_name in (("a", "Alpha"), ("b", "Beta")):
         deck_res = client.post(
@@ -202,23 +202,66 @@ def two_deck_library(client):
             )
             assert card_res.status_code == 201, card_res.text
 
-        config_res = client.post(
-            "/api/deck_practice_configs",
-            json={
-                "deck_id": deck["id"],
-                "name": f"Config {key.upper()}",
-                "prompt_field_ids": [fields["front"]],
-                "answer_field_ids": [fields["back"]],
-                "prompt_pool_ids": [],
-                "prompt_pool_counts": [],
-                "answer_pool_ids": [],
-                "answer_pool_counts": [],
-            },
-        )
-        assert config_res.status_code == 201, config_res.text
-
         library["decks"][key] = deck
         library["fields"][key] = fields
-        library["configs"][key] = config_res.json()
 
     return library
+
+
+def configuration(
+    prompt=(), answer=(), prompt_pool=(), prompt_counts=(), answer_pool=(), answer_counts=()
+) -> dict[str, list]:
+    """A configuration's six columns from field ids given as strings or uuids, for
+    make_practice."""
+
+    def ids(values):
+        return [uuid.UUID(str(value)) for value in values]
+
+    return {
+        "prompt_field_ids": ids(prompt),
+        "answer_field_ids": ids(answer),
+        "prompt_pool_ids": ids(prompt_pool),
+        "prompt_pool_counts": list(prompt_counts),
+        "answer_pool_ids": ids(answer_pool),
+        "answer_pool_counts": list(answer_counts),
+    }
+
+
+def create_practice(client, decks: dict, name: str | None = None) -> dict:
+    """Creates a practice of the client's user through `POST /api/practices` and returns
+    its body. `decks` maps each deck id, in the order picked, to the configuration the
+    practice asks it by, or to None for the one the create gave it; a configuration is
+    written straight to the test database, standing in for the board's save."""
+    from sqlmodel import select
+
+    from app.models.practice_configuration import PracticeConfiguration
+
+    res = client.post(
+        "/api/practices", json={"name": name, "deck_ids": [str(deck_id) for deck_id in decks]}
+    )
+    assert res.status_code == 201, res.text
+    practice = res.json()
+    with Session(engine) as session:
+        for deck_id, arrays in decks.items():
+            if arrays is None:
+                continue
+            row = session.exec(
+                select(PracticeConfiguration).where(
+                    PracticeConfiguration.practice_id == uuid.UUID(practice["id"]),
+                    PracticeConfiguration.deck_id == uuid.UUID(str(deck_id)),
+                )
+            ).one()
+            for column, value in arrays.items():
+                setattr(row, column, value)
+            session.add(row)
+        session.commit()
+    return practice
+
+
+def start_practice(client, decks: dict, name: str | None = None) -> dict:
+    """Creates a practice as create_practice does, starts its run through
+    `POST /api/practices/{id}/runs`, and returns the run's body."""
+    practice = create_practice(client, decks, name)
+    res = client.post(f"/api/practices/{practice['id']}/runs")
+    assert res.status_code == 200, res.text
+    return res.json()

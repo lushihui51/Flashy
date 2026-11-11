@@ -12,5 +12,5 @@ class DeletionImpactRead(AppModel):
     fields_deleted: int
     cards_deleted: int
     cards_affected: int
-    configurations_deleted: int
     runs_deleted: int
+    practices_affected: int

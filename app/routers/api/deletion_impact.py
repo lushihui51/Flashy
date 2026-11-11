@@ -45,6 +45,6 @@ def get_deletion_impact(
         fields_deleted=len(impact.field_ids),
         cards_deleted=len(impact.card_ids),
         cards_affected=impact.affected_card_count,
-        configurations_deleted=len(impact.configuration_ids),
         runs_deleted=len(impact.run_ids),
+        practices_affected=len(impact.practice_ids),
     )

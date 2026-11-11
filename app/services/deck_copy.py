@@ -19,8 +19,8 @@ def copy_deck(db: Session, user_id: uuid.UUID, source_deck_id: uuid.UUID) -> Dec
     source deck does not exist, and ValueError when user_id already has a deck of the
     source's name; either leaves nothing written.
 
-    Never copied: configurations, mastery_log, review_log, runs — a copy starts with
-    no history of its own.
+    Never copied: practices' configurations of the deck, mastery_log, review_log, runs —
+    a copy starts in no practice and with no history of its own.
     """
     source_deck = db_read_deck_for_copy(db, source_deck_id)
     if not source_deck:

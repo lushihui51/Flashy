@@ -3,7 +3,9 @@ shapes, so it lives here rather than in any entity module."""
 
 from app.models.base import AppModel
 from app.models.deck import DeckSummary
-from app.models.practice_run_payloads import PracticeRunSummary, RunProgress
+from app.models.practice_payloads import DeckNameRead
+from app.models.run import RunRead
+from app.models.run_payloads import RunProgress
 
 
 class HomeSteps(AppModel):
@@ -14,14 +16,17 @@ class HomeSteps(AppModel):
     has_card: bool
 
 
-class HomeActivePractice(PracticeRunSummary):
+class HomeRun(RunRead):
+    practice_name: str
+    # The decks the run asks, most recently changed first.
+    decks: list[DeckNameRead]
     progress: RunProgress
 
 
 class HomeRead(AppModel):
     # None once the user has made a practice.
     steps: HomeSteps | None
-    # Up to three, most recently created first.
-    active_practices: list[HomeActivePractice]
-    # Up to three, the deck of the most recently rated completed practice first, each once.
+    # Up to three, newest last_activity_at first.
+    active_runs: list[HomeRun]
+    # Up to three, the deck of the most recently rated completed run first, each once.
     recent_decks: list[DeckSummary]

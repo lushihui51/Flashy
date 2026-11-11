@@ -14,12 +14,6 @@ from app.models.deck_payloads import (
     FieldDefBatchOps,
     FieldDefBatchUpdate,
 )
-from app.models.deck_practice_config import (
-    DeckPracticeConfig,
-    DeckPracticeConfigCreate,
-    DeckPracticeConfigRead,
-    DeckPracticeConfigUpdate,
-)
 from app.models.field_def import (
     FieldDef,
     FieldDefCreate,
@@ -28,10 +22,13 @@ from app.models.field_def import (
     FieldType,
 )
 from app.models.mastery_log import MasteryLog
-from app.models.practice_card import PracticeCard, PracticeCardStatus
-from app.models.practice_deck import PracticeDeck
-from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice import Practice
+from app.models.practice_configuration import PracticeConfiguration
 from app.models.review_log import ReviewLog
+from app.models.run import Run, RunStatus
+from app.models.run_card import RunCard, RunCardStatus
+from app.models.run_configuration import RunConfiguration
+from app.models.run_counted_card import RunCountedCard
 
 __all__ = [
     "AppUser",
@@ -50,10 +47,6 @@ __all__ = [
     "DeckFieldDefRead",
     "DeckRead",
     "DeckSummary",
-    "DeckPracticeConfig",
-    "DeckPracticeConfigCreate",
-    "DeckPracticeConfigRead",
-    "DeckPracticeConfigUpdate",
     "FieldDef",
     "FieldDefBatchCreate",
     "FieldDefBatchOps",
@@ -63,10 +56,13 @@ __all__ = [
     "FieldDefUpdate",
     "FieldType",
     "MasteryLog",
-    "PracticeCard",
-    "PracticeCardStatus",
-    "PracticeDeck",
-    "PracticeRun",
-    "RunStatus",
+    "Practice",
+    "PracticeConfiguration",
     "ReviewLog",
+    "Run",
+    "RunCard",
+    "RunCardStatus",
+    "RunConfiguration",
+    "RunCountedCard",
+    "RunStatus",
 ]

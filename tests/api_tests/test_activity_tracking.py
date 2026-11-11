@@ -1,10 +1,11 @@
 """last_activity_at is the server-side recency sort key for every list of decks, cards
-and configurations; the frontend never re-sorts. It equals created_at on insert and is
-bumped, in the transaction of the write that caused it, by a row's own edits and by
-activity below it. A card write, a create, an edit or a delete, reaches the deck, and an
-edit of one card by id reaches the card. A configuration write reaches the
-configuration and the deck. A field create, rename, reorder or delete reaches the deck.
-A write over every card of a deck, a field created or deleted, moves no card."""
+and runs; the frontend never re-sorts. It equals created_at on insert and is bumped, in
+the transaction of the write that caused it, by a row's own edits and by activity below
+it. A card write, a create, an edit or a delete, reaches the deck, and an edit of one card
+by id reaches the card. A field create, rename, reorder or delete reaches the deck. A
+write over every card of a deck, a field created or deleted, moves no card. A run is
+touched when it is cut and on every rating in it; creating a practice or running it
+touches no deck or card."""
 
 import uuid
 from datetime import datetime
@@ -39,24 +40,21 @@ def _make_card(client, deck: dict, front: str = "Bonjour") -> dict:
     return response.json()
 
 
-def _config_payload(deck: dict, name: str = "Config") -> dict:
-    front_id, back_id = _field_ids(deck)
-    return {
-        "deck_id": deck["id"],
-        "name": name,
-        "prompt_field_ids": [front_id],
-        "answer_field_ids": [back_id],
-        "prompt_pool_ids": [],
-        "prompt_pool_counts": [],
-        "answer_pool_ids": [],
-        "answer_pool_counts": [],
-    }
+def _start_run(client, deck: dict) -> dict:
+    practice = client.post("/api/practices", json={"deck_ids": [deck["id"]]})
+    assert practice.status_code == 201, practice.text
+    run = client.post(f"/api/practices/{practice.json()['id']}/runs")
+    assert run.status_code == 200, run.text
+    return run.json()
 
 
-def _make_config(client, deck: dict, name: str = "Config") -> dict:
-    response = client.post("/api/deck_practice_configs", json=_config_payload(deck, name))
-    assert response.status_code == 201, response.text
-    return response.json()
+def _rate_current(client, run: dict) -> None:
+    card = client.get(f"/api/runs/{run['id']}/state").json()["current_card"]
+    response = client.post(
+        f"/api/run_cards/{card['run_card_id']}/rate",
+        json={"ratings": {a["field_def_id"]: 4 for a in card["answers"]}},
+    )
+    assert response.status_code == 200, response.text
 
 
 def _card_stamps(client, deck: dict) -> dict[str, datetime]:
@@ -76,12 +74,10 @@ class TestTimestampsOnInsert:
         data = response.json()
         assert _parse(data["created_at"]) == _parse(data["last_activity_at"])
 
-    def test_card_and_configuration_timestamps_equal_created_at_on_insert(self, client):
+    def test_card_timestamps_equal_created_at_on_insert(self, client):
         deck = _make_deck(client)
         card = _make_card(client, deck)
         assert _parse(card["created_at"]) == _parse(card["last_activity_at"])
-        config = _make_config(client, deck)
-        assert _parse(config["created_at"]) == _parse(config["last_activity_at"])
 
 
 class TestOwnColumnEdit:
@@ -249,41 +245,53 @@ class TestCardWritesTouchCard:
         assert _card_stamps(client, deck) == before
 
 
-class TestConfigurationWrites:
-    def test_configuration_patch_bumps_configuration_and_deck(self, client):
+class TestRunWrites:
+    def test_a_run_is_touched_when_it_is_cut(self, client):
         deck = _make_deck(client)
-        config = _make_config(client, deck)
+        _make_card(client, deck)
+
+        run = _start_run(client, deck)
+
+        assert _parse(run["last_activity_at"]) > _parse(run["created_at"])
+
+    def test_a_rating_touches_its_run_and_no_deck_or_card(self, client):
+        deck = _make_deck(client)
+        _make_card(client, deck, "A")
+        _make_card(client, deck, "B")
+        run = _start_run(client, deck)
+        before_deck = client.get(f"/api/decks/{deck['id']}").json()
+        before_cards = _card_stamps(client, deck)
+
+        _rate_current(client, run)
+
+        after = client.get(f"/api/runs/{run['id']}").json()
+        assert _parse(after["last_activity_at"]) > _parse(run["last_activity_at"])
+        after_deck = client.get(f"/api/decks/{deck['id']}").json()
+        assert after_deck["last_activity_at"] == before_deck["last_activity_at"]
+        assert _card_stamps(client, deck) == before_cards
+
+    def test_completing_a_run_on_read_does_not_touch_it(self, client):
+        deck = _make_deck(client)
+        _make_card(client, deck)
+        run = _start_run(client, deck)
+        _rate_current(client, run)
+        rated = client.get(f"/api/runs/{run['id']}").json()
+
+        state = client.get(f"/api/runs/{run['id']}/state").json()
+        assert state["status"] == "completed"
+
+        after = client.get(f"/api/runs/{run['id']}").json()
+        assert after["last_activity_at"] == rated["last_activity_at"]
+
+    def test_creating_a_practice_touches_no_deck(self, client):
+        deck = _make_deck(client)
         before_deck = client.get(f"/api/decks/{deck['id']}").json()
 
-        response = client.patch(
-            f"/api/deck_practice_configs/{config['id']}", json={"name": "Renamed"}
-        )
-        assert response.status_code == 200, response.text
-
-        after_config = client.get(f"/api/deck_practice_configs/{config['id']}").json()
-        after_deck = client.get(f"/api/decks/{deck['id']}").json()
-        assert _parse(after_config["last_activity_at"]) > _parse(config["last_activity_at"])
-        assert _parse(after_deck["last_activity_at"]) > _parse(before_deck["last_activity_at"])
-
-    def test_configuration_create_bumps_deck(self, client):
-        deck = _make_deck(client)
-        before_deck = client.get(f"/api/decks/{deck['id']}").json()
-
-        _make_config(client, deck)
+        response = client.post("/api/practices", json={"deck_ids": [deck["id"]]})
+        assert response.status_code == 201, response.text
 
         after_deck = client.get(f"/api/decks/{deck['id']}").json()
-        assert _parse(after_deck["last_activity_at"]) > _parse(before_deck["last_activity_at"])
-
-    def test_configuration_delete_bumps_deck(self, client):
-        deck = _make_deck(client)
-        config = _make_config(client, deck)
-        before_deck = client.get(f"/api/decks/{deck['id']}").json()
-
-        response = client.delete(f"/api/deck_practice_configs/{config['id']}")
-        assert response.status_code == 204, response.text
-
-        after_deck = client.get(f"/api/decks/{deck['id']}").json()
-        assert _parse(after_deck["last_activity_at"]) > _parse(before_deck["last_activity_at"])
+        assert after_deck["last_activity_at"] == before_deck["last_activity_at"]
 
 
 class TestRecencyOrdering:
@@ -313,31 +321,13 @@ class TestRecencyOrdering:
         ids = [c["id"] for c in client.get("/api/cards", params={"deck_id": deck["id"]}).json()]
         assert ids == [first["id"], third["id"], second["id"]]
 
-    def test_configurations_ordered_by_deck_recency_then_own(self, client):
-        first_deck = _make_deck(client)
-        first_a = _make_config(client, first_deck, "First A")
-        first_b = _make_config(client, first_deck, "First B")
-        second_deck = _make_deck(client)
-        second_a = _make_config(client, second_deck, "Second A")
-        second_b = _make_config(client, second_deck, "Second B")
-
-        response = client.patch(
-            f"/api/deck_practice_configs/{first_a['id']}", json={"name": "First A renamed"}
-        )
-        assert response.status_code == 200, response.text
-
-        ids = [c["id"] for c in client.get("/api/deck_practice_configs").json()]
-        assert ids == [first_a["id"], first_b["id"], second_b["id"], second_a["id"]]
-
-    def test_deck_configurations_ordered_by_last_activity_desc(self, client):
+    def test_a_practices_runs_ordered_by_last_activity_desc(self, client):
         deck = _make_deck(client)
-        first = _make_config(client, deck, "First")
-        second = _make_config(client, deck, "Second")
+        _make_card(client, deck)
+        first = _start_run(client, deck)
+        _rate_current(client, first)
+        client.get(f"/api/runs/{first['id']}/state")
+        second = client.post(f"/api/runs/{first['id']}/rerun").json()
 
-        response = client.patch(
-            f"/api/deck_practice_configs/{first['id']}", json={"name": "First renamed"}
-        )
-        assert response.status_code == 200, response.text
-
-        response = client.get("/api/deck_practice_configs", params={"deck_id": deck["id"]})
-        assert [c["id"] for c in response.json()] == [first["id"], second["id"]]
+        runs = client.get(f"/api/practices/{first['practice_id']}").json()["runs"]
+        assert [r["id"] for r in runs] == [second["id"], first["id"]]

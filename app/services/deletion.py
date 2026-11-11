@@ -1,6 +1,6 @@
 """Deleting a persistent entity (deck, field, or card) deletes every record that
 references its id and recomputes every value derived from what's gone, while an
-ephemeral practice run goes only when it can no longer function.
+ephemeral run goes only when it can no longer function.
 compute_deletion_impact plans the whole closure and apply_deletion executes exactly
 that plan — the only way any of these three types is ever deleted."""
 
@@ -22,23 +22,28 @@ from app.database_ops.deck import (
     db_stage_delete_decks,
     db_read_owned_deck_ids,
 )
-from app.database_ops.deck_practice_config import (
-    db_stage_delete_deck_practice_configs,
-    db_read_config_ids_for_decks,
-    db_read_config_ids_naming_fields,
-)
 from app.database_ops.field_def import (
     db_read_deck_id_by_field,
     db_read_field_defs,
+    db_read_field_defs_for_decks,
     db_read_field_ids_for_decks,
     db_read_owned_field_ids,
     db_stage_delete_field_defs,
 )
-from app.database_ops.practice_card import db_stage_scrub_practice_card_field_ids
-from app.database_ops.practice_run import (
-    db_stage_delete_practice_runs,
+from app.database_ops.practice_configuration import (
+    db_read_practice_configurations_for_decks,
+    db_read_practice_ids_for_decks,
+    db_stage_update_practice_configuration,
+)
+from app.database_ops.run import (
     db_read_active_run_ids_naming_fields,
     db_read_run_ids_with_all_decks_in,
+    db_stage_delete_runs,
+)
+from app.database_ops.run_card import db_stage_scrub_run_card_field_ids
+from app.database_ops.run_configuration import (
+    db_read_run_configurations_for_decks,
+    db_stage_update_run_configuration,
 )
 from app.database_ops.review_log import db_stage_scrub_shown_prompt_ids
 from app.mastery.strategy import MasteryStrategy
@@ -48,6 +53,12 @@ from app.models.field_def import FieldDef
 from app.refusals import Refusal
 from app.services.activity import touch
 from app.services.mastery import rebuild_deck_mastery
+from app.services.practice_configuration import (
+    arrays_of,
+    has_empty_side,
+    starting_configuration,
+    without_fields,
+)
 
 
 @dataclass(frozen=True)
@@ -59,8 +70,9 @@ class DeletionImpact:
     deck_ids: frozenset[uuid.UUID]
     field_ids: frozenset[uuid.UUID]
     card_ids: frozenset[uuid.UUID]
-    configuration_ids: frozenset[uuid.UUID]
     run_ids: frozenset[uuid.UUID]
+    # The practices that hold a deleted deck, which lose it and keep the rest.
+    practice_ids: frozenset[uuid.UUID]
     affected_card_count: int
     explicit_fields_by_deck: Mapping[uuid.UUID, frozenset[uuid.UUID]]
 
@@ -103,10 +115,6 @@ def compute_deletion_impact(
 
     cards = card_ids | set(db_read_card_ids_for_decks(db, decks))
 
-    configurations = db_read_config_ids_for_decks(db, decks) | db_read_config_ids_naming_fields(
-        db, explicit_fields
-    )
-
     runs = db_read_run_ids_with_all_decks_in(
         db, user_id, decks
     ) | db_read_active_run_ids_naming_fields(db, user_id, explicit_fields)
@@ -125,13 +133,35 @@ def compute_deletion_impact(
         deck_ids=frozenset(decks),
         field_ids=frozenset(fields),
         card_ids=frozenset(cards),
-        configuration_ids=frozenset(configurations),
         run_ids=frozenset(runs),
+        practice_ids=frozenset(db_read_practice_ids_for_decks(db, user_id, decks)),
         affected_card_count=affected_card_count,
         explicit_fields_by_deck={
             deck_id: frozenset(fids) for deck_id, fids in explicit_fields_by_deck.items()
         },
     )
+
+
+def _remove_fields_from_configurations(
+    db: Session, fields_by_deck: Mapping[uuid.UUID, frozenset[uuid.UUID]]
+) -> None:
+    """Removes each deck's deleted fields from every practice's configuration of the deck,
+    a configuration left with a side naming no field taking the deck's starting
+    configuration, and from every remaining run's copy of it, with no reset."""
+    decks = list(fields_by_deck)
+    live_by_deck: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    for field_def in db_read_field_defs_for_decks(db, decks):
+        if field_def.id not in fields_by_deck[field_def.deck_id]:
+            live_by_deck[field_def.deck_id].append(field_def.id)
+
+    for configuration in db_read_practice_configurations_for_decks(db, decks):
+        arrays = without_fields(arrays_of(configuration), fields_by_deck[configuration.deck_id])
+        if has_empty_side(arrays):
+            arrays = starting_configuration(live_by_deck[configuration.deck_id])
+        db_stage_update_practice_configuration(db, configuration, arrays)
+    for copy in db_read_run_configurations_for_decks(db, decks):
+        arrays = without_fields(arrays_of(copy), fields_by_deck[copy.deck_id])
+        db_stage_update_run_configuration(db, copy, arrays)
 
 
 def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpact) -> None:
@@ -140,11 +170,13 @@ def apply_deletion(db: Session, strategy: MasteryStrategy, impact: DeletionImpac
     two-field-floor validation: those are each caller's own job. An object loaded
     before this call is not updated for rows the FK cascades below remove; reload
     after, don't reuse what you read before."""
-    db_stage_delete_practice_runs(db, impact.run_ids)
-    db_stage_delete_deck_practice_configs(db, impact.configuration_ids)
+    db_stage_delete_runs(db, impact.run_ids)
+    if impact.explicit_fields_by_deck:
+        db.flush()
+        _remove_fields_from_configurations(db, impact.explicit_fields_by_deck)
     for deck_id, field_ids in impact.explicit_fields_by_deck.items():
         db_stage_scrub_shown_prompt_ids(db, deck_id, field_ids)
-        db_stage_scrub_practice_card_field_ids(db, deck_id, field_ids)
+        db_stage_scrub_run_card_field_ids(db, deck_id, field_ids)
     db_stage_delete_cards(db, impact.card_ids)
     db_stage_delete_field_defs(db, impact.field_ids)
     db_stage_delete_decks(db, impact.deck_ids)

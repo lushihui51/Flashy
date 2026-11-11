@@ -54,7 +54,7 @@ Judgement: The engineer judges on the live server at 390 wide, against the dev d
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -176,6 +176,7 @@ None.
 - `frontend/src/lib/practiceSelection.test.ts` (deleted)
 - `frontend/src/lib/runCopy.ts` (renamed from `frontend/src/lib/practiceCopy.ts`)
 - `frontend/src/lib/deckConfigurationBoard.ts`
+- `frontend/src/lib/deckConfigurationBoard.test.ts`
 - `frontend/src/lib/datetime.ts`
 - `frontend/src/lib/datetime.test.ts`
 - `frontend/src/lib/deletionSummary.ts`
@@ -382,7 +383,39 @@ The vocabulary, `docs/vocabulary.md`, each row's columns as given, every other c
 
 **Debrief**
 
-None.
+Evidence:
+
+- `uv run alembic heads` printed `2691a674095a (head)`.
+- Before the upgrade the dev database read R = 31, D = 32 and C = 691. The migration was first run on a `pg_dump` copy of the dev database, which printed `31|31|32|691|t|t`, matched the models' schema constraint for constraint and index for index, and left `uv run alembic check` with `No new upgrade operations detected.` Then `uv run alembic upgrade head` on the dev database, and the command printed `31|31|32|691|t|t`. All 32 `practice_configuration` rows pass `validate_configuration`; the two runs named "Cycle 032 T3 judgement" became "Cycle 032 T3 judgement" and "Cycle 032 T3 judgement (1)".
+- The pytest command printed `146 passed`. The whole backend suite printed `353 passed`.
+- With this task's new files added with `git add -N`, so `git grep` reads them, the `git grep` printed nothing, and `ls frontend/src/components/practice` printed `DeckChips.tsx`.
+- On the live server at 390 by 844, in headless Chromium: New practice with a typed name and Commands then Ports picked showed both decks beneath with their crosses and "2 selected", and Create landed on `/practices/<id>` headed by the name, reading "Start run". Start run opened `/runs/<id>` on a card, "Show answer" showing, its breadcrumb reading "All practices › <the name>" and the tab "<the name> · Flashy". Back on the practice's page, the button read "Continue run" and "Runs" listed one row, "2026-11-11" with "Active". Commands' page showed no tablist, no Practice button or link, and no sideways scroll. No page error was logged.
+
+Departures from guidance:
+
+- On your order, the route handler for `POST /api/practices/{id}/runs` is `post_runs`, not `post_practice_runs`, whose name the Done-when grep matched in the router and in the generated operationId.
+- On your go-ahead, `frontend/src/lib/deckConfigurationBoard.test.ts` joined Files, and lost only the tests of `defaultConfigurationName` and `hasAnyAssignment`.
+- `cut_run` takes a keyword-only `rng` after the written interface, and `start_run`, `rerun`, `start_chosen_cards` and `submit_rating` take an optional `rng`, so the tests that fix a seed keep doing so.
+- `card_is_askable` is called by the cut, for both the counted cards and the cards generated, and by the requeue, which writes no retry for a card no longer askable under its run's copy.
+- The cut takes a practice's configurations most recently changed deck first, the order `PracticeSummary.decks` reads; the file does not set it.
+- A count lowered to its pool's size is not deduplicated, in the migration and in the deletion closure alike, so `[2, 3]` over a pool left with two fields becomes `[2, 2]`.
+- A re-run and a run of chosen cards stage their run through `db_stage_create_run`, as Details say, inside `_stage_next_run` in `app/services/run.py`, which rolls back and refuses with `practice_has_active_run` when a concurrent start's run takes the one active place after the check; without it that race answered 500. `test_a_rerun_racing_a_start_is_refused_with_its_code` forces it.
+- On your order, only the reads and updates keyed by an id the user gives join `practice` and compare `practice.user_id` in the statement: `db_read_run`, `db_read_run_read`, `db_read_run_card`, `db_read_current_run_card`, `db_read_practice`, the summaries, Home's reads and the deletion closure's. The helpers keyed by an id their caller has already read that way, the run's card rows, copies, active run, list of runs, decks, mastery rows and bulk deletes among them, stay unscoped, as ADR 034 allows.
+- `db_read_last_run_configurations` lives in `app/database_ops/run_configuration.py`, the module of the rows it returns.
+- New practice counts and sends only the picked decks the user's decks hold, so a `deck` param naming no deck of theirs is dropped, and clearing Name drops the `name` param.
+- `RerunButton` lost its icon look, which no page draws any more, and its confirm.
+- All practices' rows show their decks' names as `DeckChips` writes them beneath the practice's name; its heading still reads "Practice" until T3.
+- New practice's search keeps the last picked deck's name until the user clears it, since `clearOnPick` is T2's; its test clears the search before each pick.
+- `docs/vocabulary.md`: of the rows set to "—" and "—", only "The copy of how the practice asks each deck that a run takes at start" keeps a code name, `run_configuration` and `RunConfiguration`; the other 25, "Narrowing practices by state", "New practice with a blank name" and "New practice with nothing chosen" among them, left the file, since no code names them any more. Rows whose only code names went now read "—" in Code: "A list its filters empty", "Confirming a practice's deletion", "What deleting a practice takes and leaves", "The form showing how a practice asks one of its decks" and "The deck's fields still loading". The two new Practice rows and the new Run row carry their code names; "Several decks named in one line" reads `DeckChips`, `DeckNameRead` and `deck_name`. Row "A named set of decks…" keeps its "—" in Code, as Details give it.
+- `docs/Flashy-ERD.drawio`'s `review_log` row that pointed at `practice_card` now reads `run_card_id`, and `practice` and `run_counted_card` are new tables beside the others.
+
+What to read:
+
+- `cut_run` and `start_run` in `app/services/run.py`, for the cut, the counted cards and the start's race through `db_try_stage_create_run`.
+- `_run_days` in `app/database_ops/run.py`, the one window function behind every run's `day` and `day_index`.
+- `create_practice` in `app/services/practice.py` with `db_read_last_run_configurations` in `app/database_ops/run_configuration.py`, for each deck's copied configuration.
+- `_remove_fields_from_configurations` in `app/services/deletion.py`.
+- The migration, `alembic/versions/2691a674095a_a_practice_above_its_runs.py`, steps 2, 3 and 6.
 
 ### T2 — New practice
 

@@ -45,7 +45,7 @@
 - Never report a touch-only interaction as checked; a browser check drives a mouse, and no device can reach the dev server.
 - Write no sentence a user reads in the backend; give every refusal a screen reaches a code, and choose its sentence from docs/vocabulary.md by that code, never by the error's message.
   - Reason: ADR 070
-- Keep harshest-wins consistent between submit_rating in app/services/practice_run.py and the strategy's prompt-side target in app/mastery/.
+- Keep harshest-wins consistent between submit_rating in app/services/run.py and the strategy's prompt-side target in app/mastery/.
   - Reason: ADR 116
 - Write a "" card_field_value row for every existing card in the same transaction as any path that adds a field to a deck.
   - Reason: ADR 057

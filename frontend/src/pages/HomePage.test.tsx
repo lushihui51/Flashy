@@ -8,25 +8,22 @@ import HomePage from 'src/pages/HomePage';
 import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
-type HomeActivePractice = components['schemas']['HomeActivePractice'];
+type HomeRun = components['schemas']['HomeRun'];
 type DeckSummary = components['schemas']['DeckSummary'];
 
 const BASE = 'http://localhost:8000';
 const MAIN_ACTION_CLASS = 'bg-(--color-main-action)';
 
-const practice = (id: string, name: string): HomeActivePractice => ({
+const activeRun = (id: string, practiceName: string): HomeRun => ({
   id,
-  user_id: 'u1',
-  name,
+  practice_id: `practice-of-${id}`,
+  practice_name: practiceName,
   status: 'active',
+  day: '2026-11-01',
+  day_index: 0,
   created_at: '2026-11-01T00:00:00Z',
-  decks: [
-    {
-      deck_id: `deck-of-${id}`,
-      deck_name: `Deck of ${name}`,
-      configuration_name: `Configuration of ${name}`,
-    },
-  ],
+  last_activity_at: '2026-11-01T00:00:00Z',
+  decks: [{ deck_id: `deck-of-${id}`, deck_name: `Deck of ${practiceName}` }],
   progress: { total_cards: 4, passed: 1, still_failed: 0, retry_pending: 0, unseen: 3 },
 });
 
@@ -43,7 +40,7 @@ const deck = (id: string, name: string, readiness: number | null): DeckSummary =
 function renderHome(home: Partial<HomeRead>) {
   server.use(
     http.get(`${BASE}/api/home`, () =>
-      HttpResponse.json({ steps: null, active_practices: [], recent_decks: [], ...home }),
+      HttpResponse.json({ steps: null, active_runs: [], recent_decks: [], ...home }),
     ),
   );
   return renderWithProviders(<HomePage />);
@@ -99,7 +96,7 @@ describe('HomePage', () => {
     it.each([
       { done: 0, label: 'New deck', href: '/decks/new' },
       { done: 1, label: 'New card', href: '/cards/new' },
-      { done: 2, label: 'New practice', href: '/practice/new' },
+      { done: 2, label: 'New practice', href: '/practices/new' },
     ])('with $done done links $label to $href, Cancel returning to Home', async ({ done, label, href }) => {
       renderHome({ steps: steps(done >= 1, done >= 2) });
 
@@ -110,47 +107,45 @@ describe('HomePage', () => {
   });
 
   describe('once a practice has been made', () => {
-    it('renders each active practice with its chips and bar, and Start practice on the first', async () => {
+    it("renders each active run under its practice's name, with its chips and bar, and Start practice on the first", async () => {
       renderHome({
-        active_practices: [
-          practice('p1', 'First practice'),
-          practice('p2', 'Second practice'),
-          practice('p3', 'Third practice'),
+        active_runs: [
+          activeRun('r1', 'First practice'),
+          activeRun('r2', 'Second practice'),
+          activeRun('r3', 'Third practice'),
         ],
       });
 
       const first = await screen.findByRole('link', { name: /First practice/ });
-      expect(first).toHaveAttribute('href', '/practice/p1');
+      expect(first).toHaveAttribute('href', '/practices/practice-of-r1');
       expect(screen.getByRole('link', { name: /Second practice/ })).toHaveAttribute(
         'href',
-        '/practice/p2',
+        '/practices/practice-of-r2',
       );
       expect(screen.getByRole('link', { name: /Third practice/ })).toHaveAttribute(
         'href',
-        '/practice/p3',
+        '/practices/practice-of-r3',
       );
       expect(screen.getAllByText('Active')).toHaveLength(3);
-      expect(
-        screen.getByText('Deck of First practice · Configuration of First practice'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Deck of First practice')).toBeInTheDocument();
       expect(
         screen.getAllByRole('img', { name: '1 passed, 0 failed, 0 retrying, 3 unseen' }),
       ).toHaveLength(3);
 
       const starts = screen.getAllByRole('link', { name: 'Start practice' });
       expect(starts).toHaveLength(1);
-      expect(starts[0]).toHaveAttribute('href', '/practice/p1/run');
+      expect(starts[0]).toHaveAttribute('href', '/runs/r1');
       expect(starts[0]).toHaveClass(MAIN_ACTION_CLASS);
     });
 
     it('renders no steps', async () => {
-      renderHome({ active_practices: [practice('p1', 'First practice')] });
+      renderHome({ active_runs: [activeRun('r1', 'First practice')] });
 
       await screen.findByRole('link', { name: 'Start practice' });
       expect(screen.queryByText('Your first practice')).not.toBeInTheDocument();
     });
 
-    it('renders the recent decks, the first yellow when no practice is active', async () => {
+    it('renders the recent decks, the first yellow when no run is active', async () => {
       renderHome({ recent_decks: [deck('d1', 'Ports', 0.5), deck('d2', 'Commands', null)] });
 
       expect(
@@ -165,15 +160,15 @@ describe('HomePage', () => {
       expect(screen.getByRole('img', { name: 'Mastery 50%' })).toBeInTheDocument();
 
       const practiceLinks = screen.getAllByRole('link', { name: 'Practice' });
-      expect(practiceLinks[0]).toHaveAttribute('href', '/practice?deck=d1');
-      expect(practiceLinks[1]).toHaveAttribute('href', '/practice?deck=d2');
+      expect(practiceLinks[0]).toHaveAttribute('href', '/practices');
+      expect(practiceLinks[1]).toHaveAttribute('href', '/practices');
       expect(practiceLinks[0]).toHaveClass(MAIN_ACTION_CLASS);
       expect(practiceLinks[1]).not.toHaveClass(MAIN_ACTION_CLASS);
     });
 
-    it('leaves every Practice white while a practice is active', async () => {
+    it('leaves every Practice white while a run is active', async () => {
       renderHome({
-        active_practices: [practice('p1', 'First practice')],
+        active_runs: [activeRun('r1', 'First practice')],
         recent_decks: [deck('d1', 'Ports', 0.5)],
       });
 
@@ -185,14 +180,14 @@ describe('HomePage', () => {
       renderHome({});
 
       const link = await screen.findByRole('link', { name: 'New practice' });
-      expect(link).toHaveAttribute('href', '/practice/new?cancelTo=%2F');
+      expect(link).toHaveAttribute('href', '/practices/new?cancelTo=%2F');
       expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
       expect(screen.queryByText('Recently practiced')).not.toBeInTheDocument();
     });
 
     it('says nothing of when anything happened or that anything is waiting', async () => {
       const { container } = renderHome({
-        active_practices: [practice('p1', 'First practice')],
+        active_runs: [activeRun('r1', 'First practice')],
         recent_decks: [deck('d1', 'Ports', 0.5)],
       });
 

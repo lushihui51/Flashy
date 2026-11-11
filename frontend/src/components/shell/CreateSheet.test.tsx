@@ -32,7 +32,7 @@ describe('CreateSheet', () => {
     renderSheet();
 
     expect(screen.getByRole('dialog', { name: 'New' })).toBeInTheDocument();
-    // Top to bottom, and no deck configuration: that one belongs to a deck, not here.
+    // Top to bottom.
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
       'New deck',
       'New card',
@@ -91,7 +91,7 @@ describe('CreateSheet', () => {
     expect(screen.queryByText('Create a deck first')).not.toBeInTheDocument();
   });
 
-  it('closes and navigates to where a practice is made, not the list of past ones', async () => {
+  it('closes and navigates to where a practice is made, not the list of practices', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderSheet({ onClose });
@@ -99,26 +99,26 @@ describe('CreateSheet', () => {
     await user.click(screen.getByRole('button', { name: 'New practice' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/new');
+    expect(screen.getByTestId('location')).toHaveTextContent('/practices/new');
   });
 
   it.each([
     { row: 'New deck', hasDecks: true, pathname: '/decks/new' },
     { row: 'New card', hasDecks: true, pathname: '/cards/new' },
     { row: 'New card', hasDecks: false, pathname: '/decks/new' },
-    { row: 'New practice', hasDecks: true, pathname: '/practice/new' },
+    { row: 'New practice', hasDecks: true, pathname: '/practices/new' },
   ])(
     '$row (hasDecks: $hasDecks) opens $pathname with the page beneath as cancelTo',
     async ({ row, hasDecks, pathname }) => {
       const user = userEvent.setup();
-      renderSheet({ hasDecks }, '/practice?deck=d1&status=active');
+      renderSheet({ hasDecks }, '/practices?deck=d1');
 
       await user.click(screen.getByRole('button', { name: new RegExp(`^${row}`) }));
 
       const location = screen.getByTestId('location');
       expect(location).toHaveTextContent(pathname);
       expect(new URLSearchParams(location.dataset.search).get('cancelTo')).toBe(
-        '/practice?deck=d1&status=active',
+        '/practices?deck=d1',
       );
     },
   );

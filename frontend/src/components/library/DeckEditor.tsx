@@ -270,19 +270,17 @@ type ImpactSummaryCounts = {
   fieldsDeleted: number;
   cardsDeleted: number;
   cardsAffected: number;
-  configurationsDeleted: number;
   runsDeleted: number;
 };
 
 /** The editor save confirm's one sentence, for a changeset that deletes fields and/or
  * cards — the same closure a direct field or card delete goes through, worded from
- * `fieldsDeleted`/`cardsDeleted` (the changeset itself) plus
- * `configurationsDeleted`/`runsDeleted` (the deletion-impact query). */
+ * `fieldsDeleted`/`cardsDeleted` (the changeset itself) plus `runsDeleted` (the
+ * deletion-impact query). */
 function impactSummaryText({
   fieldsDeleted,
   cardsDeleted,
   cardsAffected,
-  configurationsDeleted,
   runsDeleted,
 }: ImpactSummaryCounts): string {
   const clauses = [
@@ -294,10 +292,7 @@ function impactSummaryText({
         ]
       : []),
     ...(cardsDeleted > 0 ? [`deletes ${pluralize(cardsDeleted, 'card')}`] : []),
-    ...(configurationsDeleted > 0
-      ? [`deletes ${pluralize(configurationsDeleted, 'deck configuration')}`]
-      : []),
-    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active practice')}`] : []),
+    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active run')}`] : []),
   ];
   return `This ${joinClauses(clauses)}. This can't be undone.`;
 }
@@ -443,7 +438,7 @@ function DeckEditorBody({
 
   // The confirm's wording is a live count, not a guess — fetched fresh on every click
   // rather than kept around from mount, so it reflects whatever's changed underneath
-  // (a config saved, a card added) since the page loaded. An error renders through the
+  // (a card added, a run started) since the page loaded. An error renders through the
   // form's existing error state and never opens the dialog.
   const handleDeleteClick = async () => {
     setCheckingDeletionImpact(true);
@@ -462,7 +457,7 @@ function DeckEditorBody({
   // The confirm is destructive-changeset-only, and only in edit mode — create mode has
   // nothing on the server yet for a changeset to destroy. fields_deleted/cards_deleted
   // come straight off the changeset the editor itself built;
-  // configurations_deleted/runs_deleted come from the same deletion-impact query a
+  // runs_deleted comes from the same deletion-impact query a
   // direct field delete previews with, fetched only when the changeset deletes a
   // field. cards.delete is always empty here — buildDeckBatchEditPayload never sends
   // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
@@ -481,7 +476,6 @@ function DeckEditorBody({
             fieldsDeleted,
             cardsDeleted,
             cardsAffected,
-            configurationsDeleted: 0,
             runsDeleted: 0,
           });
           return;
@@ -494,7 +488,6 @@ function DeckEditorBody({
             fieldsDeleted,
             cardsDeleted,
             cardsAffected,
-            configurationsDeleted: impact.configurations_deleted,
             runsDeleted: impact.runs_deleted,
           });
         } catch (err) {

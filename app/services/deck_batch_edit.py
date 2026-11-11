@@ -158,10 +158,10 @@ def _stage_deck_batch_edit(
         if len(active_fields) < 2:
             raise Refusal("too_few_fields", "the deck would keep fewer than two active field_defs")
 
-        # No manual cleanup of configurations, active runs, review rows, or
-        # shown_prompt_ids references — apply_deletion is the only way a field_def
-        # is ever deleted, and it takes all of that with it and rebuilds the deck's
-        # mastery to what the live path would have written without the field.
+        # No manual cleanup of practices' configurations, runs' copies, active runs,
+        # review rows, or shown_prompt_ids references — apply_deletion is the only way a
+        # field_def is ever deleted, and it takes all of that with it and rebuilds the
+        # deck's mastery to what the live path would have written without the field.
         if ops.delete:
             apply_deletion(
                 db, strategy, compute_deletion_impact(db, user_id, field_ids=ops.delete)

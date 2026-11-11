@@ -6,15 +6,15 @@ from sqlmodel import select
 from app.models.card import Card
 from app.models.card_field_value import CardFieldValue
 from app.models.deck import Deck
-from app.models.deck_practice_config import DeckPracticeConfig
 from app.models.field_def import FieldDef
+from app.models.practice_configuration import PracticeConfiguration
 from app.services.deck_copy import copy_deck
 
 
 @pytest.fixture
 def source_setup(client, existing_deck):
     """existing_deck (owned by existing_user), three fields, two cards with values for
-    all three, and a config using one fixed field on each side plus a pool field."""
+    all three, and a practice of the deck."""
     front = client.post(
         f"/api/decks/{existing_deck['id']}/fields", json={"name": "front", "type": "text"}
     )
@@ -36,20 +36,8 @@ def source_setup(client, existing_deck):
     card2 = client.post("/api/cards", json={"deck_id": existing_deck["id"], "values": values2})
     assert card2.status_code == 201, card2.text
 
-    config = client.post(
-        "/api/deck_practice_configs",
-        json={
-            "deck_id": existing_deck["id"],
-            "name": "Source Config",
-            "prompt_field_ids": [front["id"]],
-            "answer_field_ids": [back["id"]],
-            "prompt_pool_ids": [extra["id"]],
-            "prompt_pool_counts": [1],
-            "answer_pool_ids": [],
-            "answer_pool_counts": [],
-        },
-    )
-    assert config.status_code == 201, config.text
+    practice = client.post("/api/practices", json={"deck_ids": [existing_deck["id"]]})
+    assert practice.status_code == 201, practice.text
 
     return {
         "deck": existing_deck,
@@ -57,7 +45,7 @@ def source_setup(client, existing_deck):
         "back": back,
         "extra": extra,
         "cards": [card1.json(), card2.json()],
-        "config": config.json(),
+        "practice": practice.json(),
     }
 
 
@@ -144,7 +132,9 @@ class TestCopyDeckContent:
 
         assert (
             db.exec(
-                select(DeckPracticeConfig).where(DeckPracticeConfig.deck_id == new_deck.id)
+                select(PracticeConfiguration).where(
+                    PracticeConfiguration.deck_id == new_deck.id
+                )
             ).all()
             == []
         )
