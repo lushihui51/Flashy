@@ -8,9 +8,9 @@ Canvas: https://claude.ai/artifact/6c1PcXHayxZvA6DPin7n1w
 
 Outcome: At any text size the browser is set to, nothing on any page scrolls sideways: what a row holds wraps onto further lines, a name in a list wraps to at most two lines and is shortened after that, a name or a heading breaks only between words and is never shortened on its own page, and an input too narrow to type in moves beneath its label and takes the full width.
 
-Scope: The cycle covers every list's row and every name in a list, every page's heading, the top bar, the row of places, the bars at the foot, the summary's counts and order, the deck form's field rows and every other input beside a label or a control, and a source scan holding names to two lines; on every screen the earlier cycles of this docket leave. It leaves out a page's layout at the default text size, which does not change; and how small anything may grow, which the browser's text size alone sets (PDR 050).
+Scope: The cycle covers every list's row and every name in a list, every page's heading, the top bar, the row of places, the bars at the foot, the summary's counts and order, the deck form's field rows and every other input beside a label or a control, and a source scan holding names to two lines; on every screen cycles 046 to 052 leave. It leaves out a page's layout at the default text size, which does not change but for a name too long for one line, which wraps to a second there too; and how small anything may grow, which the browser's text size alone sets (PDR 050).
 
-Judgement: The engineer judges on the live server at 390 wide with the page's root font size set to 24px through `document.documentElement.style.fontSize = '24px'`: All practices, a deck's page and Edit deck read as drawings 7-practice, 7-deck and 7-editdeck draw them; on Home, Your library, a deck's page, New deck, Edit deck, New card, Edit card, All practices, New practice, a practice's page, Edit practice, a deck's board, the run page and a completed run's page, `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`; a practice named "Judgement practice of every command before the CompTIA exam next month" reads on two lines ending "…" on All practices and whole on its own page; "Commands" in a deck's heading is never split; the top bar's "Log in", signed out, stays on screen; and at the default text size every one of these pages reads as it did before the cycle.
+Judgement: The engineer judges on the live server at 390 wide with the page's root font size set to 24px through `document.documentElement.style.fontSize = '24px'`: All practices, a deck's page and Edit deck read as drawings 7-practice, 7-deck and 7-editdeck draw them; on Home, Your library, a deck's page, New deck, Edit deck, New card, Edit card, All practices, New practice, a practice's page, Edit practice, a deck's board, the run page and a completed run's page, `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`; a practice named "Judgement practice of every command before the CompTIA exam next month" reads on two lines ending "…" on All practices and whole on its own page; "Commands" in a deck's heading is never split; the top bar's "Log in", signed out, stays on screen; and at the default text size every one of these pages reads as it did before the cycle, but for a name too long for one line, which now takes a second line before it is shortened.
 
 ## Records
 
@@ -37,6 +37,7 @@ None.
 
 - `frontend/src/components/ui/ListRow.tsx`
 - `frontend/src/components/ui/ListRow.test.tsx`
+- `frontend/src/components/library/DeckPicker.tsx`
 - `frontend/src/components/ui/PickerCombobox.tsx`
 - `frontend/src/components/ui/Breadcrumb.tsx`
 - `frontend/src/components/ui/FormBar.tsx`
@@ -70,20 +71,20 @@ PDR 050, drawings 7-practice and 7-deck:
 - A name on its own page, as a heading, must never be shortened, and must break only between words: a heading takes its line's full width, the buttons beside it wrapping beneath it, and a heading or a name carries no `break-all` and no `wrap-anywhere`. A single word wider than its whole line may break inside itself, through `overflow-wrap: break-word` (`break-words` or `wrap-break-word`), since nothing else keeps the page from scrolling sideways (PDR 050). A card's values other than its lead value are not names and keep wrapping as they do today; in `CardList`, through a container query on the card, they stand one per line, as drawing 7-deck draws them, where the card is narrower than `16rem`, and two to a line as today where it is wider, so the default text size keeps today's layout.
 - `ListRow`'s subtitle wraps to at most two lines and is shortened after that, as its title is.
 - Every row of the app, the top bar's items, the row of places, a page's heading beside its buttons, the bars at the foot, the summary's counts and its order, and every filter, must wrap what it holds onto further lines when it is wider than the screen, so no page scrolls sideways; nothing shrinks to fit (PDR 050).
-- The scan, `frontend/src/test/nameWrap.test.ts`, reads every `.tsx` file under `frontend/src/components` and `frontend/src/pages`, test files left out, and fails on any `truncate`, `text-ellipsis`, `line-clamp-1`, `break-all` or `overflow-x-auto` class, naming the file.
+- The scan, `frontend/src/test/nameWrap.test.ts`, reads every `.tsx` file under `frontend/src/components` and `frontend/src/pages`, test files left out, and fails on any `truncate`, `text-ellipsis`, `line-clamp-1`, `break-all` or `overflow-x-auto` class, matched as a whole word inside a string or template literal with comments left out, naming the file.
 - Tests: `ListRow.test.tsx` asserts the title's two-line clamp; the scan passes.
 
 **Out of scope**
 
 - An input too narrow to type in, on the deck form and elsewhere: T2.
-- A layout change at the default text size: never.
+- A layout change at the default text size beyond a long name's second line: never.
 - Text shrunk to fit a row: never, PDR 050.
 - A card's lead value breaking anywhere, as drawing 7-deck draws it: never; it is the card's name, which breaks only between words (PDR 050).
 
 **Done when**
 
 - `cd frontend && npx vitest run src/test/nameWrap.test.ts src/components/ui/ListRow.test.tsx` passes.
-- On the live server at 390 wide with a 24px root, All practices reads as drawing 7-practice and a deck's page as drawing 7-deck, and on each `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`.
+- On the live server at 390 wide with a 24px root, All practices reads as drawing 7-practice and a deck's page as drawing 7-deck, and on Home, Your library, a deck's page, All practices, a practice's page, a deck's board, the run page and a completed run's page `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`.
 
 **Debrief**
 
@@ -123,7 +124,7 @@ Drawing 7-editdeck:
 **Out of scope**
 
 - The "Primary" label, which drawing 7-editdeck leaves out, and the sentence about the first field, which it draws inside the first field's card: never moved or removed here; they stay where the deck form has them.
-- A layout change at the default text size: never.
+- A layout change at the default text size beyond a long name's second line: never.
 
 **Done when**
 
