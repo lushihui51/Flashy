@@ -240,9 +240,11 @@ function CardSheetContent({
 
 /** A completed run's summary: how many cards had each kind of change, the way to start a run
  * of the listed cards once a kind is chosen, the list narrowed to the kinds chosen and ordered
- * by mastery, gains or drops, one row per card, and the sheet of the card a row opens. The
- * chosen kinds, the order and the open card are the page's `kind`, `order` and `card` URL
- * params, so the page must render it under a router and keep those params. The sheet's "Edit
+ * by mastery, gains or drops, one row per card, and the sheet of the card a row opens. Only a
+ * kind some card had can be chosen, so the list never narrows to nothing; a `kind` param naming
+ * a kind no card had is ignored. The chosen kinds, the order and the open card are the page's
+ * `kind`, `order` and `card` URL params, so the page must render it under a router and keep
+ * those params. The sheet's "Edit
  * card" opens the card's form, which returns to the page's full address. A run started here
  * opens its own page. */
 export default function RunBreakdown({
@@ -262,8 +264,10 @@ export default function RunBreakdown({
   const orderRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
+  const countOf = (kind: ChangeKind) =>
+    breakdown.cards.filter((card) => card.change === kind).length;
   const requested = params.getAll('kind');
-  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind));
+  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind) && countOf(kind) > 0);
   const order = readOrder(params);
 
   const narrowed =
@@ -330,7 +334,20 @@ export default function RunBreakdown({
       <div ref={countsRef} role="group" className="flex gap-1.5 pb-0.5">
         {CHANGE_KINDS.map((kind) => {
           const pressed = chosen.includes(kind);
-          const count = breakdown.cards.filter((card) => card.change === kind).length;
+          const count = countOf(kind);
+          if (count === 0) {
+            return (
+              <span
+                key={kind}
+                role="img"
+                aria-label={`0 ${CHANGE_WORDS[kind]}`}
+                className="flex flex-1 flex-col items-center gap-1 outlined-ink rounded-field border-transparent! py-2 text-(--color-aside)"
+              >
+                <ChangeBadge kind={kind} />
+                <span className="text-base font-medium">0</span>
+              </span>
+            );
+          }
           return (
             <button
               key={kind}
@@ -349,14 +366,14 @@ export default function RunBreakdown({
         })}
       </div>
 
-      {chosen.length > 0 && cards.length > 0 && (
+      {chosen.length > 0 && (
         <button
           type="button"
           disabled={rerunThese.isPending}
           onClick={() => rerunThese.mutate()}
-          className="tappable -mt-1 h-action w-full shrink-0 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
+          className="tappable-sm h-12 w-full shrink-0 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink)"
         >
-          Practice these
+          Re-run these
         </button>
       )}
       {rerunThese.isError && (
@@ -388,7 +405,7 @@ export default function RunBreakdown({
         ))}
       </div>
 
-      {/* Drawn with no block when empty, so a list narrowed to nothing shows nothing, while a
+      {/* Drawn with no block when the run rated no card, so the list shows nothing, while a
           reveal still finds where the list starts. */}
       <ul
         ref={listRef}

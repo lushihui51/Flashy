@@ -162,7 +162,7 @@ PDR 040, PDR 041 and drawing 13:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -202,4 +202,13 @@ PDR 040, PDR 041 and drawing 6:
 
 **Debrief**
 
-None.
+- `cd frontend && npx vitest run src/components/run/RunBreakdown.test.tsx` printed "Test Files 1 passed (1)", "Tests 40 passed (40)". New or changed among them: "a count of zero is its badge and its 0 with no block, and no button"; "a tap on a count of zero changes nothing" (the list, the address and no "Re-run these"); "Tab passes over a count of zero"; "a kind of zero in the URL is ignored, so the list shows every card"; "a kind of zero in the URL beside a kind with cards narrows to that kind alone"; "opened from ?kind=down_a_lot&order=drops, the list is narrowed and ordered as the address says", on a summary holding two "down a lot" cards so the order shows; the five counts now four buttons and one image; and the `RunBreakdown Re-run these` group, renamed from "Practice these", now asserting the words alone with no sign and a white `tappable-sm` button, not yellow. The full `npx vitest run` printed "Test Files 73 passed (73)", "Tests 705 passed (705)"; `npm run lint` and `npm run build` were clean.
+- The cycle's judgement, on the live server at 390 by 844, headless Chromium driven by a mouse. No completed run in the dev data had a "down a lot" card, so I made runs of "Stale first 731006" through the API: three tries that ended on a Good read "up" and "no change" or "down" alone (runs `6efe7a4c…`, `c9c64877…`, `4bca25d5…`); the fourth, `d40e7f11…`, rated every card Again twice and was ended, and reads 2 "down" and 2 "down a lot", the other three kinds at 0.
+  - 6-fresh: the run's line on its practice's page opened `/runs/d40e7f11…` with no parameters, Mastery pressed, every card ordered by mastery ("bravo", "delta", "charlie", "alpha"), no "Re-run these". "0 up a lot", "0 up" and "0 no change" are `span`s with no border color and no background, in `--color-aside`, each badge in its own color (ink, ink, the grey ring), all five counts 65 tall; "2 down" and "2 down a lot" are white blocks. A click on "0 up a lot" left the address and the list unchanged, and Tab from Re-run reached "2 down", "2 down a lot", "Mastery", "Gains".
+  - 6-chosen: "2 down a lot" then Drops gave `?kind=down_a_lot&order=drops`, the list "charlie", "alpha", and "Re-run these" 358 by 48 from x 16, white, a 1.5px ink border with a 2px shadow, 14 under the counts and 14 above "Order by:".
+  - 6-again: a refresh, then a deck's line and browser back, each returned to `?kind=down_a_lot&order=drops` with "2 down a lot" and Drops pressed, the same two cards and "Re-run these".
+  - Re-run opened `/runs/4dd45a3a…`, a new run of "Stale first 731006", on its first card, "bravo", with End run beside its bar. Back on `d40e7f11…`, Re-run then "2 down" and "Re-run these" each showed "Finish the active run first." 8 below its button, the address unchanged.
+  - Drawing 14 on `4dd45a3a…` after one card rated through the API: the bar 265 wide from x 16, End run 81 by 36 from x 293, white, 16 from the right edge, both centred at y 187, no heading. The confirm read "End this run? | The cards you have not reached stay as they are. The run shows only the cards you did. | Cancel | End run"; on End run the page turned into the completed run's at the same address, `history.length` 3 before and after, listing "bravo" alone under "1 of 4 cards", with no End run. That run stays ended in the dev data, so "Stale first 731006" holds no active run.
+  - Drawing 13 on `d40e7f11…`: the row of places "All practices › Stale first 731006", the heading the run's mark and "2026-11-12 (3)", "Completed" and "4 of 4 cards", one deck line "Stale 731006", Re-run in rgb(255, 226, 52), no "Done". The deck line opened its board with `cancelTo` the run's address, "How this run asked it." above it, its fields disabled and Done its only button.
+- The zero count's 1.5px clear border comes from `outlined-ink` with `border-transparent!`, since a px literal outside `frontend/src/index.css` fails `src/test/pxLiterals.test.ts`; the `!` is what makes the color win over the utility's ink.
+- Read `RunBreakdown` in `frontend/src/components/run/RunBreakdown.tsx`: `chosen` now keeps only kinds with a card, so "Re-run these" shows whenever a kind is chosen, and the list's empty, blockless form is reached only by a run that rated no card.

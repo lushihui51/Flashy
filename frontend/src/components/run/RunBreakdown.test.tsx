@@ -179,7 +179,7 @@ describe('RunBreakdown', () => {
   it('the five counts speak their count and word in order, and show the number', () => {
     renderBreakdown();
 
-    const counts = within(screen.getByRole('group')).getAllByRole('button');
+    const counts = Array.from(screen.getByRole('group').children);
     expect(counts.map((count) => count.getAttribute('aria-label'))).toEqual([
       '0 up a lot',
       '2 up',
@@ -188,8 +188,10 @@ describe('RunBreakdown', () => {
       '1 down a lot',
     ]);
     expect(counts.map((count) => count.textContent)).toEqual(['0', '2', '1', '1', '1']);
-    expect(counts.every((count) => count.getAttribute('aria-pressed') === 'false')).toBe(true);
     expect(counts.every((count) => count.querySelector('svg'))).toBe(true);
+    const buttons = within(screen.getByRole('group')).getAllByRole('button');
+    expect(buttons).toHaveLength(4);
+    expect(buttons.every((count) => count.getAttribute('aria-pressed') === 'false')).toBe(true);
   });
 
   it('choosing two counts narrows to their cards, writes kind twice, and leaves the counts', async () => {
@@ -215,19 +217,65 @@ describe('RunBreakdown', () => {
     expect(screen.getByTestId('search')).toBeEmptyDOMElement();
   });
 
-  it('a count of zero stays pressable and narrows to an empty list with no sentence', async () => {
+  it('a count of zero is its badge and its 0 with no block, and no button', () => {
+    renderBreakdown();
+
+    const zero = screen.getByRole('img', { name: '0 up a lot' });
+    expect(zero.tagName.toLowerCase()).toBe('span');
+    expect(zero).not.toHaveClass('tappable-sm');
+    expect(zero).toHaveClass('border-transparent!', 'text-(--color-aside)');
+    expect(zero.querySelector('svg')).not.toBeNull();
+    expect(zero).toHaveTextContent('0');
+    expect(screen.queryByRole('button', { name: '0 up a lot' })).not.toBeInTheDocument();
+  });
+
+  it('a tap on a count of zero changes nothing', async () => {
+    const user = userEvent.setup();
+    renderBreakdown('/?order=drops');
+
+    await user.click(screen.getByRole('img', { name: '0 up a lot' }));
+
+    expect(rowNames()).toEqual(['Bonsoir', 'Adieu', 'Untitled card', 'Bonjour', 'Salut']);
+    expect(screen.getByTestId('search')).toHaveTextContent('?order=drops');
+    expect(screen.queryByRole('button', { name: 'Re-run these' })).not.toBeInTheDocument();
+  });
+
+  it('Tab passes over a count of zero', async () => {
     const user = userEvent.setup();
     renderBreakdown();
 
-    await user.click(screen.getByRole('button', { name: '0 up a lot' }));
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '2 up' }));
+  });
 
-    expect(screen.getByRole('button', { name: '0 up a lot' })).toHaveAttribute(
+  it('a kind of zero in the URL is ignored, so the list shows every card', () => {
+    renderBreakdown('/?kind=up_a_lot');
+
+    expect(rowNames()).toEqual(['Bonsoir', 'Untitled card', 'Adieu', 'Bonjour', 'Salut']);
+  });
+
+  it('a kind of zero in the URL beside a kind with cards narrows to that kind alone', () => {
+    renderBreakdown('/?kind=up_a_lot&kind=down');
+
+    expect(rowNames()).toEqual(['Adieu']);
+    expect(screen.getByRole('button', { name: '1 down' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('opened from ?kind=down_a_lot&order=drops, the list is narrowed and ordered as the address says', () => {
+    const twoDropped = breakdown();
+    twoDropped.cards.push(card('c6', 'Merci', 0.1, -0.5, 'down_a_lot'));
+    renderWithProviders(
+      <RunBreakdown breakdown={twoDropped} runId="run1" />,
+      ['/?kind=down_a_lot&order=drops'],
+    );
+
+    expect(rowNames()).toEqual(['Merci', 'Bonsoir']);
+    expect(screen.getByRole('button', { name: '2 down a lot' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    const list = screen.getByRole('list');
-    expect(list).toBeEmptyDOMElement();
-    expect(list.parentElement!.lastElementChild).toBe(list);
+    expect(screen.getByRole('radio', { name: 'Drops' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Re-run these' })).toBeInTheDocument();
   });
 
   it('a kind in the URL on first render already narrows', () => {
@@ -416,7 +464,7 @@ describe('RunBreakdown', () => {
   });
 });
 
-describe('RunBreakdown Practice these', () => {
+describe('RunBreakdown Re-run these', () => {
   const BASE = 'http://localhost:8000';
   const NEW_RUN = {
     id: 'run2',
@@ -427,7 +475,7 @@ describe('RunBreakdown Practice these', () => {
     created_at: '2026-11-03T18:00:00Z',
     last_activity_at: '2026-11-03T18:00:00Z',
   };
-  const rerunThese = () => screen.queryByRole('button', { name: 'Practice these' });
+  const rerunThese = () => screen.queryByRole('button', { name: 'Re-run these' });
 
   function refuseWith(status: number, detail: unknown) {
     server.use(
@@ -455,7 +503,10 @@ describe('RunBreakdown Practice these', () => {
     renderBreakdown('/?kind=down');
 
     const button = rerunThese()!;
-    expect(button).toHaveClass('w-full', 'bg-(--color-main-action)');
+    expect(button.textContent).toBe('Re-run these');
+    expect(button.querySelector('svg')).toBeNull();
+    expect(button).toHaveClass('w-full', 'tappable-sm', 'bg-(--color-surface)');
+    expect(button).not.toHaveClass('bg-(--color-main-action)');
     const counts = screen.getByRole('button', { name: '1 down' }).closest('[role="group"]')!;
     const order = screen.getByRole('radiogroup', { name: 'Order by' });
     expect(counts.compareDocumentPosition(button)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -511,7 +562,7 @@ describe('RunBreakdown Practice these', () => {
     expect(screen.getByTestId('search')).toHaveTextContent('?kind=down&order=drops');
   });
 
-  it('the sentence clears on the next tap of Practice these', async () => {
+  it('the sentence clears on the next tap of Re-run these', async () => {
     refuseWith(400, { code: 'no_cards', message: 'x' });
     const user = userEvent.setup();
     renderBreakdown('/?kind=down');

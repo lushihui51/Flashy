@@ -128,7 +128,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A run that would have no cards | "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." | A practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button | `no_cards`; `NO_CARDS_MESSAGE` |
 | Practice | Starting a next run while one is active | "Finish the active run first." | A completed run's page, under Re-run or Re-run these | `practice_has_active_run` |
 | Practice | A practice name already taken | "A practice with this name already exists." | New practice, under Name; Edit practice, under Name | `practice_name_taken` |
-| Practice | Practicing the cards the summary lists | "Practice these" | The summary, under the counts, once a count is chosen | `/api/runs/{run_id}/chosen_cards`; `RunChosenCards`; `startChosenCards`; `card_ids` |
+| Practice | Practicing the cards the summary lists | "Re-run these" | A completed run's page, under the counts, once a count is chosen | `/api/runs/{run_id}/chosen_cards`; `RunChosenCards`; `startChosenCards`; `card_ids` |
 | Practice | Deleting a practice | "Delete practice" | Edit practice | `deletePractice`; `DELETE /api/practices/{practice_id}` |
 | Practice | Confirming a practice's deletion | "Delete this practice?" | Edit practice | `confirmDeleteOpen` |
 | Practice | What deleting a practice takes and leaves | "Its runs will be gone. Its decks and your mastery stay as they are." | Edit practice | — |
