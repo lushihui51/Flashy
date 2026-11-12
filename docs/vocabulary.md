@@ -138,7 +138,6 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | The current card's two zones | "Prompt"; "Answer" | Run page; a card opened from the summary | `CurrentRunCard`; `prompts`; `answers`; `side` |
 | Run | An answer not yet shown | "Hidden"; "Show answer" | Run page | `hidden` |
 | Run | Moving to the next card | "Next card" | Run page | `current_card` |
-| Run | Leaving a finished practice | "Done", white while a count is chosen | Run page, under "Practice complete" | `/practices/:practiceId` |
 | Run | Rating an answer | "Rate"; "Rate <field>", spoken, until the answer is rated; "<field>: <rating>", spoken, once rated, as "Command purpose: Good"; "Again"; "Hard"; "Good"; "Easy"; the page dimmed while the list is open | Run page; summary | `rating`; `RATING_TIERS`; `RatingSubmission`; `/api/run_cards/{run_card_id}/rate`; `review_log`; `RatingChip`; `Scrim` |
 | Run | The user's place on the card, in the address | — | Run page | `card`; `shown`; `rating.<fieldId>` |
 | Run | One go at a card | "attempt" | A card opened from the summary, as one mark per attempt | `run_card`; `RunCard`; `attempt`; `BreakdownAttempt` |
@@ -149,8 +148,8 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Run | Rating a card already rated | "This card has already been rated." | Run page | `card_already_rated` |
 | Run | Rating a card that is no longer current | "This is not the current card." | Run page | `not_current_card` |
 | Mastery | How ready the user is to recall a card or field, from not ready to ready | a circle filled as far as the user is ready; "Mastery N%", spoken | Library; deck page; All practices; a practice's page; summary | `readiness`; `MasteryCircle`; `app/mastery/readiness.py`; `mastery_log` |
-| Summary | What a practice did to mastery, never named | "Practice complete" heading it on the run page | Run page; a practice's page | `RunBreakdownRead`; `/api/runs/{run_id}/breakdown`; `RunBreakdown`; `run_breakdown` |
-| Summary | How many of its practice's cards a run reached | "N of M cards"; "N cards practiced" | a completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details; run page, over its summary, as "N cards practiced" | `total_cards`; `RunListing`; `reached_cards`; `counted_cards`; `run_counted_card` |
+| Summary | What a run did to mastery, never named | The run's mark and its day heading it | A completed run's page | `RunBreakdownRead`; `/api/runs/{run_id}/breakdown`; `RunBreakdown`; `run_breakdown` |
+| Summary | How many of its practice's cards a run reached | "N of M cards" | A completed run's page, beside the Completed badge; a practice's page, under each run; Home, in a completed run's details | `reached_cards`; `counted_cards`; `RunListing`; `total_cards`; `run_counted_card` |
 | Summary | Ordering the cards | "Order by", spoken; "Order by:"; "Mastery"; "Gains"; "Drops" | A completed run's page | `OrderKey`; `order`; `mastery`; `gains`; `drops` |
 | Summary | A change in mastery, one of five kinds | a badge off the circle's top-right; "up a lot", "up", "no change", "down" or "down a lot", spoken after "Mastery N%" | A completed run's page | `ChangeKind`; `change`; `delta`; `classify_change`; `ChangeBadge`; `CHANGE_WORDS` |
 | Summary | How many cards had each kind of change | the number under its kind's badge, in a block when above zero; "N up a lot", "N up", "N no change", "N down" or "N down a lot", spoken | A completed run's page; Home, in a completed run's details | `kind` |

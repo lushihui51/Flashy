@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import RunPage from 'src/pages/RunPage';
 
 const BASE = 'http://localhost:8000';
@@ -88,6 +89,43 @@ function mockBreakdown(data: Record<string, unknown> = breakdownState()) {
   server.use(http.get(`${BASE}/api/runs/:id/breakdown`, () => HttpResponse.json(data)));
 }
 
+function runDetail(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'run1',
+    practice_id: 'practice1',
+    status: 'completed',
+    day: '2026-11-03',
+    day_index: 0,
+    created_at: '2026-11-03T18:00:00Z',
+    last_activity_at: '2026-11-03T18:05:00Z',
+    reached_cards: 2,
+    counted_cards: 3,
+    practice_name: 'Evening practice',
+    decks: [
+      { deck_id: 'deck1', deck_name: 'Commands' },
+      { deck_id: 'deck2', deck_name: 'Ports' },
+    ],
+    configurations: [],
+    ...overrides,
+  };
+}
+
+/** Answers the run's read with `data`, or with `status` and no run when `data` is null. */
+function mockRunDetail(data: Record<string, unknown> | null = runDetail(), status = 404) {
+  server.use(
+    http.get(`${BASE}/api/runs/:id`, () =>
+      data ? HttpResponse.json(data) : HttpResponse.json({ detail: 'x' }, { status }),
+    ),
+  );
+}
+
+/** The run completed, with its read and its summary answered. */
+function mockCompletedRun(stateOverrides: Record<string, unknown> = {}) {
+  mockRun(runState({ status: 'completed', current_card: null, ...stateOverrides }));
+  mockRunDetail();
+  mockBreakdown();
+}
+
 function twoAnswerRunState() {
   return runState({
     current_card: {
@@ -125,6 +163,7 @@ function renderRun(runId = 'run1', search = '') {
           </>
         }
       />
+      <Route path="/runs/:runId/decks/:deckId" element={<LocationProbe />} />
       <Route path="/practices/:practiceId" element={<LocationProbe />} />
       <Route path="/practices" element={<LocationProbe />} />
       <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
@@ -261,63 +300,87 @@ describe('RunPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/practices/practice9');
   });
 
-  it('shows the completion heading and a Done link once nothing is pending', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
-    const user = userEvent.setup();
+  it("heads a completed run's page with the run's mark and its day", async () => {
+    mockCompletedRun({ day_index: 2 });
     renderRun();
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
-    const done = screen.getByRole('link', { name: 'Done' });
-
-    await user.click(done);
-
-    expect(screen.getByTestId('location')).toHaveTextContent('/practices/practice1');
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Run 2026-11-03 (2)' });
+    expect(heading.querySelector('svg')).toHaveAttribute('aria-label', 'Run');
+    expect(screen.queryByText(/Practice complete/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/practiced/)).not.toBeInTheDocument();
   });
 
-  it('shows Re-run beside a yellow Done, in that order', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
+  it('shows Completed and N of M cards on one line under the heading', async () => {
+    mockCompletedRun();
+    renderRun();
+
+    const count = await screen.findByText('2 of 3 cards');
+    const line = count.parentElement!;
+    expect(line).toHaveTextContent(/^Completed2 of 3 cards$/);
+    expect(line.previousElementSibling).toBe(
+      screen.getByRole('heading', { level: 1, name: 'Run 2026-11-03' }),
+    );
+  });
+
+  it("gives a line per deck, in the run's order, opening how the run asked it with the page as cancelTo", async () => {
+    mockCompletedRun();
+    const user = userEvent.setup();
+    renderRun('run1', '?order=drops');
+
+    const commands = await screen.findByRole('link', { name: 'Deck Commands' });
+    const ports = screen.getByRole('link', { name: 'Deck Ports' });
+    expect(commands.compareDocumentPosition(ports)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(commands).toHaveAttribute(
+      'href',
+      `/runs/run1/decks/deck1?cancelTo=${encodeURIComponent('/runs/run1?order=drops')}`,
+    );
+    expect(ports).toHaveAttribute(
+      'href',
+      `/runs/run1/decks/deck2?cancelTo=${encodeURIComponent('/runs/run1?order=drops')}`,
+    );
+
+    await user.click(ports);
+
+    expect(probedAddress().pathname).toBe('/runs/run1/decks/deck2');
+    expect(probedAddress().search.get('cancelTo')).toBe('/runs/run1?order=drops');
+    expect(probedAddress().search.has('returnTo')).toBe(false);
+  });
+
+  it('shows Re-run in yellow, its words alone, under the deck lines and over the summary, with no Done', async () => {
+    mockCompletedRun();
     renderRun();
 
     const rerun = await screen.findByRole('button', { name: 'Re-run' });
-    const done = screen.getByRole('link', { name: 'Done' });
-    expect(rerun).toHaveTextContent('Re-run');
-    expect(done.nextElementSibling).toBe(rerun);
-    expect(done).toHaveClass('bg-(--color-main-action)', 'flex-1');
+    expect(rerun.textContent).toBe('Re-run');
+    expect(rerun).toHaveClass('bg-(--color-main-action)');
+    const lastDeck = await screen.findByRole('link', { name: 'Deck Ports' });
+    const summaryCard = await screen.findByRole('button', { name: /Bonjour/ });
+    expect(lastDeck.compareDocumentPosition(rerun)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(rerun.compareDocumentPosition(summaryCard)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByRole('link', { name: 'Done' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 
-  it('turns Done white with a kind in the URL', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
-    renderRun('run1', '?kind=down');
+  it('keeps Re-run yellow with a kind chosen in the URL', async () => {
+    mockCompletedRun();
+    renderRun('run1', '?kind=up');
 
-    const done = await screen.findByRole('link', { name: 'Done' });
-    expect(done).toHaveClass('bg-(--color-surface)');
-    expect(done).not.toHaveClass('bg-(--color-main-action)');
-  });
-
-  it('keeps Done yellow with a kind the summary does not know', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
-    renderRun('run1', '?kind=sideways');
-
-    expect(await screen.findByRole('link', { name: 'Done' })).toHaveClass(
+    expect(await screen.findByRole('button', { name: 'Re-run' })).toHaveClass(
       'bg-(--color-main-action)',
     );
   });
 
-  it('a re-run that fails says why under the row', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
+  it.each([
+    [400, 'practice_has_active_run', 'Finish the active run first.'],
+    [400, 'no_cards', NO_CARDS_MESSAGE],
+    [404, null, 'Run not found.'],
+  ])('a re-run refused with %i %s says why beneath Re-run', async (status, code, sentence) => {
+    mockCompletedRun();
     server.use(
       http.post(`${BASE}/api/runs/:id/rerun`, () =>
         HttpResponse.json(
-          { detail: { code: 'practice_has_active_run', message: 'developer text' } },
-          { status: 400 },
+          { detail: code ? { code, message: 'developer text' } : 'run run1 not found' },
+          { status },
         ),
       ),
     );
@@ -327,17 +390,14 @@ describe('RunPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Re-run' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Finish the active run first.');
+    expect(alert).toHaveTextContent(sentence);
     expect(alert).toHaveClass('text-(--color-wrong)');
-    expect(alert.previousElementSibling).toContainElement(
-      screen.getByRole('link', { name: 'Done' }),
-    );
+    expect(alert.previousElementSibling).toBe(screen.getByRole('button', { name: 'Re-run' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('a re-run starts at once, with no confirm, and lands on the new run', async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
+    mockCompletedRun();
     server.use(
       http.post(`${BASE}/api/runs/:id/rerun`, () =>
         HttpResponse.json(
@@ -363,13 +423,35 @@ describe('RunPage', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/runs/run2'));
   });
 
-  it('swaps to the summary once nothing is pending', async () => {
+  it("puts Run not found. in place of the count, the deck lines and Re-run when the run's read answers 404", async () => {
     mockRun(runState({ status: 'completed', current_card: null }));
+    mockRunDetail(null, 404);
     mockBreakdown();
     renderRun();
 
-    expect(await screen.findByText('1 card practiced')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
+    expect(await screen.findByText('Run not found.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Run 2026-11-03' })).toBeInTheDocument();
+    expect(screen.queryByText(/of 3 cards/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Deck / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Re-run' })).not.toBeInTheDocument();
+  });
+
+  it("says it could not load the run in their place when the run's read fails otherwise", async () => {
+    mockRun(runState({ status: 'completed', current_card: null }));
+    mockRunDetail(null, 500);
+    mockBreakdown();
+    renderRun();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this run.');
+    expect(screen.queryByText('Run not found.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Re-run' })).not.toBeInTheDocument();
+  });
+
+  it('swaps to the summary once nothing is pending', async () => {
+    mockCompletedRun();
+    renderRun();
+
+    expect(await screen.findByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
   });
 
   it('shows "not found" for an unknown or foreign run, without crashing', async () => {
@@ -814,6 +896,7 @@ describe('RunPage End run', () => {
         });
       }),
     );
+    mockRunDetail();
     mockBreakdown();
     return ends;
   }
@@ -869,7 +952,7 @@ describe('RunPage End run', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'End run' }));
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
+      await screen.findByRole('heading', { level: 1, name: 'Run 2026-11-03' }),
     ).toBeInTheDocument();
     expect(ends).toEqual(['run1']);
     expect(screen.queryByRole('button', { name: 'End run' })).not.toBeInTheDocument();
@@ -901,12 +984,11 @@ describe('RunPage End run', () => {
   });
 
   it("a completed run's page shows neither End run nor the progress bar", async () => {
-    mockRun(runState({ status: 'completed', current_card: null }));
-    mockBreakdown();
+    mockCompletedRun();
     renderRun();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
+      await screen.findByRole('heading', { level: 1, name: 'Run 2026-11-03' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'End run' })).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /unseen/ })).not.toBeInTheDocument();

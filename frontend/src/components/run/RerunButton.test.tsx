@@ -36,12 +36,13 @@ function renderButton(onError: (sentence: string) => void = () => {}) {
 afterEach(() => server.resetHandlers());
 
 describe('RerunButton', () => {
-  it('is spoken and drawn as Re-run, a white button', () => {
+  it('is spoken and drawn as Re-run alone, a yellow button as wide as its container', () => {
     renderButton();
 
     const button = screen.getByRole('button', { name: 'Re-run' });
-    expect(button).toHaveTextContent('Re-run');
-    expect(button).toHaveClass('bg-(--color-surface)', 'h-action');
+    expect(button.textContent).toBe('Re-run');
+    expect(button.children).toHaveLength(0);
+    expect(button).toHaveClass('bg-(--color-main-action)', 'h-action', 'w-full');
   });
 
   it('starts the run at once, with no confirm, and opens the new run', async () => {

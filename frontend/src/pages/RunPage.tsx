@@ -1,21 +1,25 @@
 import { useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { ChevronRight, Pencil } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { endRun, rateRunCard, readRunBreakdown, readRunState } from 'src/api/run';
+import { endRun, rateRunCard, readRun, readRunBreakdown, readRunState } from 'src/api/run';
 import FieldValue from 'src/components/run/FieldValue';
 import RatingChip from 'src/components/run/RatingChip';
 import RerunButton from 'src/components/run/RerunButton';
 import RunProgressBar from 'src/components/run/RunProgressBar';
 import RunBreakdown from 'src/components/run/RunBreakdown';
+import RunStatusBadge from 'src/components/run/RunStatusBadge';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import DeckMark from 'src/components/ui/DeckMark';
 import PracticeMark from 'src/components/ui/PracticeMark';
+import RunMark from 'src/components/ui/RunMark';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
-import { CHANGE_KINDS } from 'src/lib/changeKinds';
+import { formatRunDay } from 'src/lib/datetime';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { pluralize } from 'src/lib/pluralize';
 import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
@@ -50,7 +54,7 @@ function ratingParam(params: URLSearchParams, fieldDefId: string): number | unde
 
 /** The run surface: the current card as a static two-zone reveal with rating, live
  * progress, and a retry marker. Once `current_card` is null, nothing is pending and this
- * page shows the run's summary. */
+ * page is the completed run's page. */
 export default function RunPage() {
   const { runId } = useParams<{ runId: string }>();
 
@@ -160,7 +164,7 @@ function ProgressLine({ runId, progress }: { runId: string; progress: RunProgres
 
 function RunBody({ runId, state }: { runId: string; state: RunState }) {
   if (!state.current_card) {
-    return <RunCompletion runId={runId} practiceId={state.practice_id} />;
+    return <CompletedRun runId={runId} day={formatRunDay(state.day, state.day_index)} />;
   }
 
   // Keyed by run_card_id so a new card, which arrives by a query invalidation and not a
@@ -170,46 +174,81 @@ function RunBody({ runId, state }: { runId: string; state: RunState }) {
   );
 }
 
-function RunCompletion({ runId, practiceId }: { runId: string; practiceId: string }) {
-  const { params } = useViewParams();
+/** The completed run's page below its row of places: the run's mark and `day` as its heading,
+ * its badge and count, a line per deck it asked, Re-run, then its summary. */
+function CompletedRun({ runId, day }: { runId: string; day: string }) {
+  const location = useLocation();
   const [rerunError, setRerunError] = useState('');
+  const runQuery = useQuery({
+    queryKey: ['run_detail', runId],
+    queryFn: () => readRun(runId),
+  });
   const breakdownQuery = useQuery({
     queryKey: ['run_breakdown', runId],
     queryFn: () => readRunBreakdown(runId),
   });
-
-  const totalCards = breakdownQuery.data?.total_cards;
-  const requestedKinds = params.getAll('kind');
-  const countChosen = CHANGE_KINDS.some((kind) => requestedKinds.includes(kind));
+  const run = runQuery.data;
 
   return (
     <div className="mt-3.5 flex flex-col gap-3.5">
       <div>
         <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          Practice complete
+          <span className="whitespace-nowrap">
+            <RunMark /> {day}
+          </span>
         </h1>
-        {totalCards !== undefined && (
-          <p className="mt-1.5 text-body font-medium text-(--color-aside)">
-            {totalCards} card{totalCards === 1 ? '' : 's'} practiced
+        {run && (
+          <p className="mt-2 flex items-center gap-2.5">
+            <RunStatusBadge status={run.status} />
+            <span className="text-body font-medium text-(--color-aside)">
+              {run.reached_cards} of {pluralize(run.counted_cards, 'card')}
+            </span>
           </p>
         )}
       </div>
 
-      <div className="flex gap-2.5">
-        <Link
-          to={`/practices/${practiceId}`}
-          className={`tappable flex h-action flex-1 items-center justify-center rounded-2xl px-6 text-action font-semibold text-(--color-ink) ${
-            countChosen ? 'bg-(--color-surface)' : 'bg-(--color-main-action)'
-          }`}
-        >
-          Done
-        </Link>
-        <RerunButton runId={runId} onError={setRerunError} />
-      </div>
-      {rerunError && (
-        <p role="alert" className="text-sm text-(--color-wrong)">
-          {rerunError}
-        </p>
+      {runQuery.isError ? (
+        isNotFound(runQuery.error) ? (
+          <p className="text-(--color-aside)">Run not found.</p>
+        ) : (
+          <p role="alert" className="text-sm text-(--color-wrong)">
+            Could not load this run.
+          </p>
+        )
+      ) : (
+        <>
+          {run && (
+            <ul className="tappable flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+              {run.decks.map((deck) => (
+                <li key={deck.deck_id}>
+                  <Link
+                    to={{
+                      pathname: `/runs/${runId}/decks/${deck.deck_id}`,
+                      search: returnAddressParams(location, 'cancelTo').toString(),
+                    }}
+                    className="flex min-h-11 items-center justify-between gap-3 py-3 pr-3 pl-4"
+                  >
+                    <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
+                      <DeckMark /> {deck.deck_name}
+                    </span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="size-icon shrink-0 text-(--color-aside)"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-col gap-2">
+            <RerunButton runId={runId} onError={setRerunError} />
+            {rerunError && (
+              <p role="alert" className="text-sm text-(--color-wrong)">
+                {rerunError}
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       {breakdownQuery.isError && (

@@ -11,8 +11,8 @@ type RerunButtonProps = {
   onError: (sentence: string) => void;
 };
 
-/** The summary's white "Re-run": starts a new run of the completed run's whole practice at
- * once, then opens the new run's page. */
+/** A completed run's yellow "Re-run", its page's main action, as wide as its container: starts
+ * a new run of the run's whole practice at once, then opens the new run's page. */
 export default function RerunButton({ runId, onError }: RerunButtonProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -37,7 +37,7 @@ export default function RerunButton({ runId, onError }: RerunButtonProps) {
         onError('');
         rerunMutation.mutate();
       }}
-      className="tappable h-action shrink-0 rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+      className="tappable h-action w-full rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink)"
     >
       Re-run
     </button>

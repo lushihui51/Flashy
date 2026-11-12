@@ -106,7 +106,7 @@ PDR 038 and drawing 14, under ADR 111 and ADR 117:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -150,7 +150,13 @@ PDR 040, PDR 041 and drawing 13:
 
 **Debrief**
 
-None.
+- `cd frontend && npx vitest run src/pages/RunPage.test.tsx src/components/run/RerunButton.test.tsx` printed "Test Files 2 passed (2)", "Tests 52 passed (52)". The completed run's tests in `RunPage.test.tsx` cover: the heading "Run 2026-11-03 (2)", the run's mark leading it, with no "Practice complete" and no "practiced"; "Completed" and "2 of 3 cards" on one line directly under the heading; a line per deck in the run's order, "Deck Commands" then "Deck Ports", each opening `/runs/run1/decks/<deck>` with `cancelTo` the page's own address, its search included, and no `returnTo`; Re-run reading "Re-run" alone in yellow, after the last deck line and before the summary, with no "Done" as a link or a button; Re-run staying yellow with `?kind=up`; Re-run refused with `practice_has_active_run`, `no_cards` and a 404 showing "Finish the active run first.", the no-cards sentence and "Run not found." directly beneath it, with no confirm; Re-run opening the new run at once; the run's read answering 404 putting "Run not found." where the count, the deck lines and Re-run stood, the heading kept; and any other failure putting "Could not load this run." there. `RerunButton.test.tsx` covers its words alone, yellow and as wide as its container. The full `npx vitest run` printed "Test Files 73 passed (73)", "Tests 700 passed (700)"; `npm run lint` and `npm run build` were clean.
+- On the live server at 390 by 844, headless Chromium on the dev data's completed "Cycle 049 T4 check" run, the one T1 ended: the row of places read "All practices › Cycle 049 T4 check 2026-11-11T22:05:18.648Z" with the practice's mark; the heading, 30px, the run's mark and "2026-11-12"; under it "Completed" and "2 of 20 cards" on one line; one deck line, "Ports" with its mark and a chevron, 44 tall; "Re-run" 358 by 52 in rgb(255, 226, 52); then the summary's counts and its two cards; no "Done" and no "Practice complete". The deck line opened `/runs/<run>/decks/<deck>?cancelTo=%2Fruns%2F<run>`, the board under the deck's name and the practice, "How this run asked it." above it, its four fields disabled and Done alone, and Done landed back on `/runs/<run>`. No completed run of a practice with two decks is in the dev data, so the order of several deck lines is shown by the test alone. Re-run was not pressed on the live server, so no run was added to the dev data.
+- Departure: the heading's day comes from the run's state under `['run', runId]`, which the page already holds, rather than from `RunDetail`; the heading therefore stands while the run's read loads and when it fails, and only the count line, the deck lines and Re-run give way to its sentence.
+- Departure: Re-run shows before the run's read answers, since it needs nothing the read carries; it leaves only when that read fails.
+- Departure from drawing 13: "N of M cards" is in `--color-aside`, the color the page's earlier count line used, rather than the drawing's #3a4553, which no color token in `frontend/src/index.css` holds and that file is outside Files.
+- Departure, by the engineer's order: the row "How many of its practice's cards a run reached" keeps `run_counted_card` in its Code cell beyond the columns Details gives, since `counted_cards` is counted from that table and no other row names it.
+- Read `CompletedRun` in `frontend/src/pages/RunPage.tsx`: the whole completed run's page, which replaced the earlier completion view.
 
 ### T3 — The summary's counts and Re-run these
 
