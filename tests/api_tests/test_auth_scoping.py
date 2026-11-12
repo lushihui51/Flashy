@@ -119,6 +119,7 @@ class TestForeignResourcesAreNotFound:
         assert client.get(f"/api/runs/{run_id}/state").status_code == 404
         assert client.get(f"/api/runs/{run_id}/breakdown").status_code == 404
         assert client.post(f"/api/runs/{run_id}/rerun").status_code == 404
+        assert client.post(f"/api/runs/{run_id}/end").status_code == 404
         assert (
             client.post(
                 f"/api/runs/{run_id}/chosen_cards", json={"card_ids": [card_id]}
@@ -156,6 +157,15 @@ class TestOwnerStillHasAccess:
         assert client.get(f"/api/practices/{owned['practice']['id']}").status_code == 200
         assert client.get(f"/api/runs/{owned['run']['id']}").status_code == 200
         assert client.get(f"/api/runs/{owned['run']['id']}/state").status_code == 200
+
+    def test_another_users_end_leaves_the_run_active(
+        self, client, existing_user, other_user, act_as, owned
+    ):
+        act_as(other_user)
+        assert client.post(f"/api/runs/{owned['run']['id']}/end").status_code == 404
+        act_as(existing_user)
+
+        assert client.get(f"/api/runs/{owned['run']['id']}").json()["status"] == "active"
 
 
 def test_unauthenticated_request_is_rejected(client):

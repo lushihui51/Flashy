@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import or_, text, update
+from sqlalchemy import delete, or_, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, func, select
 
@@ -138,6 +138,15 @@ def db_read_pending_run_cards(
             )
             .order_by(RunCard.position)
         ).all()
+    )
+
+
+def db_stage_delete_pending_run_cards(db: Session, run_id: uuid.UUID) -> None:
+    """Deletes every pending row of the run, leaving every rated one. No commit."""
+    db.execute(
+        delete(RunCard).where(
+            RunCard.run_id == run_id, RunCard.status == RunCardStatus.pending
+        )
     )
 
 

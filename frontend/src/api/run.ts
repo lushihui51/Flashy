@@ -16,6 +16,12 @@ export const readRunBreakdown = async (runId: string) =>
     await client.GET('/api/runs/{run_id}/breakdown', { params: { path: { run_id: runId } } }),
   );
 
+/** Completes the active run as it stands, the cards it has not reached leaving it. */
+export const endRun = async (runId: string) =>
+  unwrap(
+    await client.POST('/api/runs/{run_id}/end', { params: { path: { run_id: runId } } }),
+  );
+
 /** A new run of the completed run's whole practice. */
 export const rerunRun = async (runId: string) =>
   unwrap(

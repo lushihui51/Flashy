@@ -73,6 +73,8 @@ const RUN: components['schemas']['RunDetail'] = {
   day_index: 0,
   created_at: '2026-11-03T18:00:00Z',
   last_activity_at: '2026-11-03T18:00:00Z',
+  reached_cards: 1,
+  counted_cards: 1,
   practice_name: 'Commands + Ports',
   decks: [{ deck_id: 'd1', deck_name: 'Ports' }],
   // Unlike the practice's: TCP or UDP on the prompt side.

@@ -9,8 +9,8 @@ from enum import Enum
 from app.mastery.readiness import ChangeKind
 from app.models.base import AppModel
 from app.models.field_def import FieldType
-from app.models.practice_payloads import ConfigurationArrays, DeckNameRead
-from app.models.run import RunRead, RunStatus
+from app.models.practice_payloads import ConfigurationArrays, DeckNameRead, RunListing
+from app.models.run import RunStatus
 from app.models.run_card import RunCardRead
 
 
@@ -34,7 +34,7 @@ class RunConfigurationRead(ConfigurationArrays):
     deck_id: uuid.UUID
 
 
-class RunDetail(RunRead):
+class RunDetail(RunListing):
     practice_name: str
     # Every deck the run asked, most recently changed deck first.
     decks: list[DeckNameRead]

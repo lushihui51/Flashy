@@ -25,6 +25,7 @@ from app.database_ops.run import (
     db_read_active_run,
     db_read_run,
     db_read_run_decks,
+    db_read_run_listing,
     db_read_run_read,
     db_stage_create_run,
     db_stage_update_run_status,
@@ -39,6 +40,7 @@ from app.database_ops.run_card import (
     db_read_run_card,
     db_read_run_cards_for_run,
     db_stage_create_run_card,
+    db_stage_delete_pending_run_cards,
     db_stage_renumber_pending_run_cards,
     db_stage_update_run_card_status,
     db_try_stage_create_run_card,
@@ -248,7 +250,7 @@ def read_run_detail(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunDe
     """The user's run with its practice's name, every deck it asked, a deck of a run of
     chosen cards holding none of them included, and how it asked each, as cut; None when
     the run is missing or not the user's."""
-    run = db_read_run_read(db, run_id, user_id)
+    run = db_read_run_listing(db, run_id, user_id)
     if run is None:
         return None
     practice = db_read_practice(db, run.practice_id, user_id)
@@ -262,6 +264,20 @@ def read_run_detail(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunDe
             for configuration in db_read_run_configurations(db, run_id)
         ],
     )
+
+
+def end_run(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> RunRead:
+    """Completes the user's run as it stands, in one transaction: every card it has not
+    reached leaves it, every rated card and its ratings stay, and the run is touched.
+    Raises LookupError for an unknown or foreign run."""
+    run = db_read_run(db, run_id, user_id)
+    if run is None:
+        raise LookupError(f"run {run_id} not found")
+    db_stage_delete_pending_run_cards(db, run.id)
+    db_stage_update_run_status(db, run, RunStatus.completed)
+    touch(db, run)
+    db.commit()
+    return _read_run(db, run.id, user_id)
 
 
 def _next_run_practice(db: Session, user_id: uuid.UUID, run_id: uuid.UUID) -> tuple[Run, Practice]:

@@ -16,6 +16,7 @@ from app.models.run_payloads import (
 )
 from app.refusals import Refusal
 from app.services.run import (
+    end_run,
     read_run_breakdown,
     read_run_detail,
     read_run_state,
@@ -57,6 +58,16 @@ def get_run_breakdown(db: SessionDep, current_user: CurrentUserDep, run_id: uuid
     if not breakdown:
         raise HTTPException(status_code=404, detail="Run not found")
     return breakdown
+
+
+@router.post("/runs/{run_id}/end", response_model=RunRead, status_code=200)
+def post_run_end(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
+    """Ends the run as it stands: its unreached cards leave it and it is completed. 404 for
+    an unknown or foreign run."""
+    try:
+        return end_run(db, current_user.id, run_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/runs/{run_id}/rerun", response_model=RunRead, status_code=201)

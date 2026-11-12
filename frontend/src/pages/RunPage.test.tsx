@@ -788,3 +788,127 @@ describe('RunPage progress bar and retry badge (MD-3)', () => {
     expect(screen.queryByText('Retry')).not.toBeInTheDocument();
   });
 });
+
+describe('RunPage End run', () => {
+  /** The run active until the end POST arrives, completed from then on; returns the POSTs. */
+  function mockEndableRun() {
+    const ends: string[] = [];
+    let ended = false;
+    server.use(
+      http.get(`${BASE}/api/runs/:id/state`, () =>
+        HttpResponse.json(
+          ended ? runState({ status: 'completed', current_card: null }) : runState(),
+        ),
+      ),
+      http.post(`${BASE}/api/runs/:id/end`, ({ params }) => {
+        ends.push(params.id as string);
+        ended = true;
+        return HttpResponse.json({
+          id: params.id,
+          practice_id: 'practice1',
+          status: 'completed',
+          day: '2026-11-03',
+          day_index: 0,
+          created_at: '2026-11-03T18:00:00Z',
+          last_activity_at: '2026-11-03T18:05:00Z',
+        });
+      }),
+    );
+    mockBreakdown();
+    return ends;
+  }
+
+  it('stands at the right end of the progress bar\'s line, as a white button', async () => {
+    mockRun();
+    renderRun();
+
+    const endRun = await screen.findByRole('button', { name: 'End run' });
+    const bar = screen.getByRole('img', { name: '0 passed, 0 failed, 0 retrying, 1 unseen' });
+    expect(endRun.previousElementSibling).toContainElement(bar);
+    expect(endRun.nextElementSibling).toBeNull();
+    expect(endRun).toHaveClass('bg-(--color-surface)');
+  });
+
+  it('asks first, sending nothing until the user says yes', async () => {
+    const ends = mockEndableRun();
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'End this run?' });
+    expect(dialog).toHaveTextContent(
+      'The cards you have not reached stay as they are. The run shows only the cards you did.',
+    );
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'End run' })).toBeInTheDocument();
+    expect(ends).toEqual([]);
+  });
+
+  it('Cancel closes the confirm and changes nothing', async () => {
+    const ends = mockEndableRun();
+    const user = userEvent.setup();
+    renderRun('run1', '?card=pc1&shown=1');
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(ends).toEqual([]);
+    expect(screen.getByText('Bonjour')).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    expect(probedAddress().search.get('shown')).toBe('1');
+  });
+
+  it("yes ends the run once and turns the page into the completed run's, at the same address", async () => {
+    const ends = mockEndableRun();
+    const user = userEvent.setup();
+    renderRun('run1', '?card=pc1&shown=1');
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'End run' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
+    ).toBeInTheDocument();
+    expect(ends).toEqual(['run1']);
+    expect(screen.queryByRole('button', { name: 'End run' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /unseen/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(probedAddress().search.has('card')).toBe(false));
+    expect(probedAddress().pathname).toBe('/runs/run1');
+    expect(probedAddress().search.has('shown')).toBe(false);
+  });
+
+  it('a failed end says why beside End run, and the card stays', async () => {
+    mockRun();
+    server.use(
+      http.post(`${BASE}/api/runs/:id/end`, () =>
+        HttpResponse.json({ detail: 'run run1 not found' }, { status: 404 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderRun();
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'End run' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Run not found.');
+    expect(alert.previousElementSibling).toContainElement(
+      screen.getByRole('button', { name: 'End run' }),
+    );
+    expect(screen.getByText('Bonjour')).toBeInTheDocument();
+  });
+
+  it("a completed run's page shows neither End run nor the progress bar", async () => {
+    mockRun(runState({ status: 'completed', current_card: null }));
+    mockBreakdown();
+    renderRun();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Practice complete' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'End run' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /unseen/ })).not.toBeInTheDocument();
+  });
+});

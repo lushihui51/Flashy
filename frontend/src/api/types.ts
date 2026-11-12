@@ -338,6 +338,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Run End
+         * @description Ends the run as it stands: its unreached cards leave it and it is completed. 404 for
+         *     an unknown or foreign run.
+         */
+        post: operations["post_run_end_api_runs__run_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/rerun": {
         parameters: {
             query?: never;
@@ -1164,6 +1185,10 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Reached Cards */
+            reached_cards: number;
+            /** Counted Cards */
+            counted_cards: number;
             /** Practice Name */
             practice_name: string;
             /** Decks */
@@ -2282,6 +2307,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunBreakdownRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_run_end_api_runs__run_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "x-timezone"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRead"];
                 };
             };
             /** @description Validation Error */

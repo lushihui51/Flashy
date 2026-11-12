@@ -2645,6 +2645,87 @@ class TestCountedCards:
         assert _counted_card_ids(db, run["id"]) == set(deck_cards[1:])
 
 
+def _end(client, run_id):
+    return client.post(f"/api/runs/{run_id}/end")
+
+
+def _rate_current(client, run_id, rating):
+    """Rates the run's current card `rating` on every answer field; returns its run card's
+    id."""
+    card = client.get(f"/api/runs/{run_id}/state").json()["current_card"]
+    res = client.post(
+        f"/api/run_cards/{card['run_card_id']}/rate",
+        json={"ratings": {a["field_def_id"]: rating for a in card["answers"]}},
+    )
+    assert res.status_code == 200, res.text
+    return uuid.UUID(card["run_card_id"])
+
+
+def _review_ids(db, run_card_ids):
+    return set(
+        db.exec(
+            select(ReviewLog.id).where(col(ReviewLog.review_group_id).in_(run_card_ids))
+        ).all()
+    )
+
+
+class TestEndRun:
+    """POST /api/runs/{id}/end: the run completed as it stands, its unreached cards gone."""
+
+    def test_ending_deletes_the_pending_rows_and_keeps_every_rated_one_and_every_review(
+        self, client, db, deck_cards, deck_configuration
+    ):
+        run = _start(client, [deck_configuration])
+        # A pass, then an Again whose retry waits pending beside the unreached third card.
+        rated = {_rate_current(client, run["id"], 4), _rate_current(client, run["id"], 1)}
+        reviews = _review_ids(db, rated)
+        assert reviews
+
+        res = _end(client, run["id"])
+
+        assert res.status_code == 200, res.text
+        assert res.json()["id"] == run["id"]
+        assert res.json()["status"] == "completed"
+        rows = db.exec(select(RunCard).where(RunCard.run_id == uuid.UUID(run["id"]))).all()
+        assert {r.id for r in rows} == rated
+        assert RunCardStatus.pending not in {r.status for r in rows}
+        assert _review_ids(db, rated) == reviews
+        state = client.get(f"/api/runs/{run['id']}/state").json()
+        assert state["status"] == "completed"
+        assert state["current_card"] is None
+
+    def test_the_runs_count_reads_the_cards_reached(
+        self, client, deck_cards, deck_configuration
+    ):
+        run = _start(client, [deck_configuration])
+        _rate_current(client, run["id"], 4)
+        _rate_current(client, run["id"], 1)
+
+        assert _end(client, run["id"]).status_code == 200
+
+        detail = client.get(f"/api/runs/{run['id']}").json()
+        assert (detail["reached_cards"], detail["counted_cards"]) == (2, 3)
+        [listed] = client.get(f"/api/practices/{run['practice_id']}").json()["runs"]
+        assert (listed["reached_cards"], listed["counted_cards"]) == (2, 3)
+
+    def test_a_run_of_chosen_cards_ends_alike(self, client, db, deck_cards, deck_configuration):
+        run = _start(client, [deck_configuration])
+        _finish_run(client, run["id"])
+        chosen = _chosen(client, run["id"], deck_cards[:2])
+        assert chosen.status_code == 201, chosen.text
+
+        res = _end(client, chosen.json()["id"])
+
+        assert res.status_code == 200, res.text
+        assert res.json()["status"] == "completed"
+        assert _run_card_ids(db, chosen.json()["id"]) == set()
+        detail = client.get(f"/api/runs/{chosen.json()['id']}").json()
+        assert (detail["reached_cards"], detail["counted_cards"]) == (0, 2)
+
+    def test_404_for_unknown_run(self, client):
+        assert _end(client, uuid.uuid4()).status_code == 404
+
+
 class TestRunDay:
     """A run's day is the date of its start in the user's zone, numbered within its
     practice's runs of that day, worked out on read."""

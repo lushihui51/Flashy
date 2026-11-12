@@ -2185,6 +2185,82 @@
         }
       }
     },
+    "/api/runs/{run_id}/end": {
+      "post": {
+        "tags": [
+          "Run"
+        ],
+        "summary": "Post Run End",
+        "description": "Ends the run as it stands: its unreached cards leave it and it is completed. 404 for\nan unknown or foreign run.",
+        "operationId": "post_run_end_api_runs__run_id__end_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/rerun": {
       "post": {
         "tags": [
@@ -4115,6 +4191,14 @@
             "format": "date-time",
             "title": "Last Activity At"
           },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          },
           "practice_name": {
             "type": "string",
             "title": "Practice Name"
@@ -4143,6 +4227,8 @@
           "day_index",
           "created_at",
           "last_activity_at",
+          "reached_cards",
+          "counted_cards",
           "practice_name",
           "decks",
           "configurations"

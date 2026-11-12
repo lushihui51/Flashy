@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { rateRunCard, readRunBreakdown, readRunState } from 'src/api/run';
+import { endRun, rateRunCard, readRunBreakdown, readRunState } from 'src/api/run';
 import FieldValue from 'src/components/run/FieldValue';
 import RatingChip from 'src/components/run/RatingChip';
 import RerunButton from 'src/components/run/RerunButton';
 import RunProgressBar from 'src/components/run/RunProgressBar';
 import RunBreakdown from 'src/components/run/RunBreakdown';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import PracticeMark from 'src/components/ui/PracticeMark';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
@@ -20,6 +21,7 @@ import { useViewParams } from 'src/lib/viewParams';
 
 type RunState = components['schemas']['RunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
+type RunProgress = components['schemas']['RunProgress'];
 
 const ZONE_CLASS = 'tappable rounded-block bg-(--color-surface) px-4.5 landscape:flex-1';
 const ZONE_HEADING_CLASS =
@@ -93,13 +95,66 @@ export default function RunPage() {
 
       {runQuery.data && (
         <>
-          <div className="mt-4">
-            <RunProgressBar progress={runQuery.data.progress} />
-          </div>
+          {runQuery.data.current_card && (
+            <ProgressLine runId={runId!} progress={runQuery.data.progress} />
+          )}
           <RunBody runId={runId!} state={runQuery.data} />
         </>
       )}
     </div>
+  );
+}
+
+function ProgressLine({ runId, progress }: { runId: string; progress: RunProgress }) {
+  const { params, setParams } = useViewParams();
+  const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const endMutation = useMutation({
+    mutationFn: () => endRun(runId),
+    onSuccess: async () => {
+      // The completed run replaces the card in place; then the place on the card goes, as
+      // after the last card's rating.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['run', runId] }),
+        queryClient.invalidateQueries({ queryKey: ['run_detail', runId] }),
+      ]);
+      setParams(withoutCardPlace(params));
+    },
+  });
+
+  return (
+    <>
+      <div className="mt-4 flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <RunProgressBar progress={progress} />
+        </div>
+        <button
+          type="button"
+          disabled={endMutation.isPending}
+          onClick={() => setConfirmOpen(true)}
+          className="tappable-sm h-9 shrink-0 rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
+        >
+          End run
+        </button>
+      </div>
+      {endMutation.isError && (
+        <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+          {failureSentence(endMutation.error, 'Run not found.')}
+        </p>
+      )}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="End this run?"
+        description="The cards you have not reached stay as they are. The run shows only the cards you did."
+        confirmLabel="End run"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          endMutation.mutate();
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </>
   );
 }
 

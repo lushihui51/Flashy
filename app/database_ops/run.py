@@ -95,28 +95,25 @@ def db_read_run_read(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunR
     return _run_read(*row) if row else None
 
 
-def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[RunListing]:
-    """The practice's runs, newest `last_activity_at` first, then id, each with its counts
-    of cards reached and counted. Unscoped: the caller has already ownership-checked the
-    practice."""
-    days = _run_days(Practice.id == practice_id)
-    practice_runs = select(Run.id).where(Run.practice_id == practice_id)
+def _run_listings(practice_filter, run_filter):
+    """Each run `run_filter` admits among the practices `practice_filter` admits, with its
+    day, its day index and its counts of cards reached and counted, as RunListing's
+    columns."""
+    days = _run_days(practice_filter)
+    runs = select(Run.id).where(run_filter)
     reached = (
         select(RunCard.run_id, func.count(distinct(RunCard.card_id)).label("n"))
-        .where(
-            col(RunCard.run_id).in_(practice_runs),
-            RunCard.status != RunCardStatus.pending,
-        )
+        .where(col(RunCard.run_id).in_(runs), RunCard.status != RunCardStatus.pending)
         .group_by(RunCard.run_id)
         .subquery()
     )
     counted = (
         select(RunCountedCard.run_id, func.count().label("n"))
-        .where(col(RunCountedCard.run_id).in_(practice_runs))
+        .where(col(RunCountedCard.run_id).in_(runs))
         .group_by(RunCountedCard.run_id)
         .subquery()
     )
-    rows = db.exec(
+    return (
         select(
             Run,
             days.c.day,
@@ -127,20 +124,44 @@ def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[
         .join(days, days.c.id == Run.id)
         .outerjoin(reached, reached.c.run_id == Run.id)
         .outerjoin(counted, counted.c.run_id == Run.id)
-        .order_by(col(Run.last_activity_at).desc(), col(Run.id))
-    ).all()
-    return [
-        RunListing.model_validate(
-            run,
-            update={
-                "day": day,
-                "day_index": day_index,
-                "reached_cards": reached_cards,
-                "counted_cards": counted_cards,
-            },
+        .where(run_filter)
+    )
+
+
+def _run_listing(
+    run: Run, day, day_index: int, reached_cards: int, counted_cards: int
+) -> RunListing:
+    return RunListing.model_validate(
+        run,
+        update={
+            "day": day,
+            "day_index": day_index,
+            "reached_cards": reached_cards,
+            "counted_cards": counted_cards,
+        },
+    )
+
+
+def db_read_run_listing(db: Session, run_id: uuid.UUID, user_id: uuid.UUID) -> RunListing | None:
+    row = db.exec(
+        _run_listings(
+            Practice.id == select(Run.practice_id).where(Run.id == run_id).scalar_subquery(),
+            Run.id == run_id,
+        ).join(Practice, Practice.id == Run.practice_id).where(Practice.user_id == user_id)
+    ).first()
+    return _run_listing(*row) if row else None
+
+
+def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[RunListing]:
+    """The practice's runs, newest `last_activity_at` first, then id, each with its counts
+    of cards reached and counted. Unscoped: the caller has already ownership-checked the
+    practice."""
+    rows = db.exec(
+        _run_listings(Practice.id == practice_id, Run.practice_id == practice_id).order_by(
+            col(Run.last_activity_at).desc(), col(Run.id)
         )
-        for run, day, day_index, reached_cards, counted_cards in rows
-    ]
+    ).all()
+    return [_run_listing(*row) for row in rows]
 
 
 def db_read_active_run_reads(

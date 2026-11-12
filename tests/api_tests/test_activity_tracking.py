@@ -4,7 +4,7 @@ the transaction of the write that caused it, by a row's own edits and by activit
 it. A card write, a create, an edit or a delete, reaches the deck, and an edit of one card
 by id reaches the card. A field create, rename, reorder or delete reaches the deck. A
 write over every card of a deck, a field created or deleted, moves no card. A run is
-touched when it is cut and on every rating in it; creating a practice or running it
+touched when it is cut, on every rating in it and when it is ended; creating a practice or running it
 touches no deck or card, and saving how a practice asks a deck touches nothing."""
 
 import uuid
@@ -263,6 +263,23 @@ class TestRunWrites:
         before_cards = _card_stamps(client, deck)
 
         _rate_current(client, run)
+
+        after = client.get(f"/api/runs/{run['id']}").json()
+        assert _parse(after["last_activity_at"]) > _parse(run["last_activity_at"])
+        after_deck = client.get(f"/api/decks/{deck['id']}").json()
+        assert after_deck["last_activity_at"] == before_deck["last_activity_at"]
+        assert _card_stamps(client, deck) == before_cards
+
+    def test_ending_a_run_touches_it_and_no_deck_or_card(self, client):
+        deck = _make_deck(client)
+        _make_card(client, deck, "A")
+        _make_card(client, deck, "B")
+        run = _start_run(client, deck)
+        before_deck = client.get(f"/api/decks/{deck['id']}").json()
+        before_cards = _card_stamps(client, deck)
+
+        response = client.post(f"/api/runs/{run['id']}/end")
+        assert response.status_code == 200, response.text
 
         after = client.get(f"/api/runs/{run['id']}").json()
         assert _parse(after["last_activity_at"]) > _parse(run["last_activity_at"])

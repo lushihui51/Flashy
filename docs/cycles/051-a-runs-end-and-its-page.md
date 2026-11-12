@@ -38,7 +38,7 @@ Judgement: The engineer judges on the live server at 390 wide: on a run with car
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -93,7 +93,14 @@ PDR 038 and drawing 14, under ADR 111 and ADR 117:
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_runs.py tests/api_tests/test_activity_tracking.py tests/api_tests/test_auth_scoping.py -q` printed "114 passed". Among them: `TestEndRun::test_ending_deletes_the_pending_rows_and_keeps_every_rated_one_and_every_review` (a pass, then an Again whose retry waits pending beside the unreached third card; after the end only the two rated rows remain and their `review_log` ids are unchanged), `TestEndRun::test_the_runs_count_reads_the_cards_reached` (2 of 3 on `GET /api/runs/{id}` and on the practice's page), `TestEndRun::test_a_run_of_chosen_cards_ends_alike`, `TestEndRun::test_404_for_unknown_run`, `TestRunWrites::test_ending_a_run_touches_it_and_no_deck_or_card`, `test_run_endpoints` now posting `/end` as the other user for a 404, and `TestOwnerStillHasAccess::test_another_users_end_leaves_the_run_active`. The full `pytest`, run with no other connection on the test database, printed "385 passed".
+- `cd frontend && npx vitest run src/pages/RunPage.test.tsx src/test/run.test.ts` printed "Test Files 2 passed (2)", "Tests 54 passed (54)". The new `RunPage End run` group covers: End run at the right end of the bar's line, white; the confirm's title, sentence, Cancel and "End run", with nothing sent; Cancel closing it with nothing sent and the card and its place unchanged; yes sending the end once and turning the page into the completed run's at the same path with the card's place gone; a 404 showing "Run not found." under the line; and a completed run's page showing neither End run nor the bar. `run.test.ts` covers `endRun`'s request and its 404.
+- On the live server at 390 by 844, headless Chromium on the dev data's "Cycle 049 T4 check" run, 20 cards: after rating two cards Good through the page, the bar read "2 passed, 0 failed, 0 retrying, 18 unseen", 265 wide from x 16, End run 81 by 36 from x 293, 12 from the bar and 16 from the right edge, both centred at y 209, the card below it as before; the confirm read "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did." with Cancel and End run; on End run the page showed "Practice complete", "2 cards practiced" and the two rated cards "139" and "445" alone, with no bar and no End run, at the same address with `history.length` 2 before and after; `GET /api/runs/{id}` then read completed, 2 of 20. That run stays ended in the dev data.
+- Departure: the service is `end_run(db, user_id, run_id)` rather than `end_run(db, run)`. A router may not import `app/database_ops/`, so it has no `Run` to hand over; the signature matches `rerun` and `start_chosen_cards` beside it.
+- Departure: on success End run also takes the card's place (`card`, `shown`, each `rating.`) out of the address, by a replace as Next card does, so the completed run's page starts from a clean address. It adds no history entry.
+- Departure: a failed end's sentence stands on its own line directly under the bar's line rather than on it, since the line has no room for a sentence at 390 wide.
+- Departure: `RunDetail`'s counts come from a new `db_read_run_listing` in `app/database_ops/run.py`, which shares one statement builder, `_run_listings`, with `db_read_run_reads_for_practice`, so a run's N of M is counted one way on its page and in its practice's list.
+- Read `end_run` in `app/services/run.py`: on a run already completed it deletes nothing, touches the run again and answers it completed. That is what backlog B33 leaves open; no test fixes it.
 
 ### T2 — The completed run's page
 

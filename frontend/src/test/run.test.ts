@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from 'src/test/server';
 import {
+  endRun,
   rateRunCard,
   readRun,
   readRunBreakdown,
@@ -26,6 +27,8 @@ const RUN: components['schemas']['RunRead'] = {
 
 const RUN_DETAIL: components['schemas']['RunDetail'] = {
   ...RUN,
+  reached_cards: 2,
+  counted_cards: 3,
   practice_name: 'Commands + Ports',
   decks: [
     { deck_id: 'deck_2', deck_name: 'Ports' },
@@ -137,6 +140,35 @@ describe('readRunBreakdown', () => {
     const error = await readRunBreakdown('run_7').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiDetailError);
     expect((error as ApiDetailError).detail.code).toBe('run_active');
+  });
+});
+
+describe('endRun', () => {
+  it('posts with no body to the run and returns it completed', async () => {
+    const ended = { ...RUN, status: 'completed' as const };
+    let requested: unknown;
+    let body: string | undefined;
+    server.use(
+      http.post(`${BASE}/api/runs/:run_id/end`, async ({ params, request }) => {
+        requested = params.run_id;
+        body = await request.text();
+        return HttpResponse.json(ended);
+      }),
+    );
+
+    await expect(endRun('run_8')).resolves.toEqual(ended);
+    expect(requested).toBe('run_8');
+    expect(body).toBe('');
+  });
+
+  it('throws for an unknown or foreign run', async () => {
+    server.use(
+      http.post(`${BASE}/api/runs/:run_id/end`, () =>
+        HttpResponse.json({ detail: 'Run not found' }, { status: 404 }),
+      ),
+    );
+
+    await expect(endRun('run_8')).rejects.toThrow('Run not found');
   });
 });
 
