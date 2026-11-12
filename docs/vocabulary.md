@@ -41,9 +41,10 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Deck page; a practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
 | Places | Several decks named in one line | each deck's name with its mark, joined by " · ", as "Commands · Ports" | A run's row on Home; All practices' rows | `DeckLine`; `DeckNameRead`; `deck_name` |
 | Home | The steps to a first practice | "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
-| Home | The practices the user can go on with | its name, "Active" and its decks, over its progress; "Start practice" on the most recent | Home | `active_runs`; `HomeRun` |
-| Home | The decks of the most recently completed practices | "Recently practiced"; "Practice" on each deck | Home | `recent_decks` |
-| Home | Going to New practice from Home | "New practice" | Home, last | `/practices/new` |
+| Home | The active runs the user can continue | "Active" over up to three runs, each its mark and day in a block, its practice's name, its decks and its progress, with a play button | Home | `active_runs`; `ACTIVE_RUN_LIMIT`; `HomeRun` |
+| Home | The most recently completed runs | "Recently completed" over up to three runs, each its mark and day in a block, its practice's name and its decks, with a play button | Home | `recent_runs`; `RECENT_RUN_LIMIT`; `HomeRun` |
+| Home | Going to All practices from Home | "All practices" | Home, in the bar at the foot, once the user has made a practice | `FormBar`; `/practices` |
+| Home | A run's play button | a triangle inside a circle; "Practice <name>", spoken, naming the run's practice, as "Practice Commands + Ports" | Home, on each run's row | `HomeRunRow` |
 | Library | The library's toolbar label | "N decks"; "Decks" while the list loads | Library | `readDecks`; `/api/decks` |
 | Library | Deleting a deck that takes other things with it, each count present only above zero | "This also deletes N cards, N fields and N runs, and takes the deck out of N practices. This can't be undone." | Edit deck | `deletionSummaryText`; `DeletionImpactRead`; `practices_affected`; `/api/deletion-impact` |
 | Deck | A deck | "deck" | Library; deck page; forms; New practice; a practice's page; a deck's board; Home | `deck`; `Deck`; `DeckSummary`; `DeckDetail`; `/api/decks`; `deckId` |

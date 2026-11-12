@@ -32,7 +32,7 @@ Judgement: The engineer judges on the live server at 390 wide, signed in as a us
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -60,6 +60,7 @@ None.
 - `frontend/src/components/ui/FormBar.tsx`
 - `frontend/src/components/run/HomeRunRow.test.tsx` (new)
 - `docs/vocabulary.md`
+- `app/routers/api/home.py`
 
 **Details**
 
@@ -125,7 +126,14 @@ export default function HomeRunRow(props: {
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_home.py tests/api_tests/test_auth_scoping.py -q`: 22 passed. `TestRecentRuns` covers one completed run per practice, none of a practice with an active run, newest first and at most three; `test_the_statement_count_is_equal_for_one_run_of_each_and_for_five` holds the statement counts equal for one active and one completed run and for five of each, with three of each returned. The full `uv run pytest -q`: 384 passed.
+- `cd frontend && npx vitest run src/pages/HomePage.test.tsx src/components/run/HomeRunRow.test.tsx src/test/home.test.ts`: 3 files, 26 tests passed. The whole frontend: 74 files, 716 tests passed; `npm run lint` and `npm run build` clean.
+- Live server, headless Chromium at 390 by 844, signed out with `DEV_AUTH_USER_ID`: Home reads "Home", "Active" over three rows, "Recently completed" over three rows, each row a block holding the run's mark and day, the practice's name in semibold with no mark, its decks with their marks, and a bar on the active rows alone; the first active run's play button is yellow, the five others white; no "New practice" on the page and no sideways scroll. The bar holds "All practices" at y 763 to 844 before and after a scroll of 85, the last row ending at 745.5 above it, and opens `/practices`. The first active run's play button opened `/runs/70383ab0-…`, that run's id. The first completed run's play button sent one POST to `/api/practices/f9cf7cf1-…/runs` and opened `/runs/4382ab5d-…`, a new active run of that practice with 4 unseen, on its first card. The recently completed runs Home returned matched the same selection recomputed in SQL against the dev database. No page error.
+- Departure: the block's words are in muted grey, `--color-aside`; the drawing draws them in #3a4553, which is none of the app's eight colors, and muted grey is the color of what names something.
+- Departure: "All practices" is a link drawn as the drawing's white button, as it only goes somewhere; an active run's play button is a button whose `onPlay` navigates, as `HomeRunRow`'s interface gives one `onPlay` for both kinds.
+- Departure: `app/routers/api/home.py` joined Files with the engineer's approval, so `get_home` lost the mastery strategy it no longer reads; `npm run gen:api` left `types.ts` unchanged by it.
+- Departure: `db_read_active_run_reads` became `db_read_active_run_listings` beside a new `db_read_recent_run_listings`, both through `_home_run_listings`, and `db_read_recent_deck_ids` went with Home's recent decks; the statement-count test counts `run_card` statements in place of `mastery_log`, which Home no longer reads.
+- Read `db_read_recent_run_listings` in `app/database_ops/run.py`: it holds the selection PDR 048 gives Recently completed, the latest run of each practice by `last_activity_at` then id, less any practice with an active run. Read `startMutation` and `playError` in `frontend/src/pages/HomePage.tsx`: the row a refused start's sentence stands beneath is the one whose run is the mutation's variable.
 
 ### T2 — A run's details on Home
 

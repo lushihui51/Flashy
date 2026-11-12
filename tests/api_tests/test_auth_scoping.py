@@ -144,7 +144,7 @@ class TestForeignResourcesAreNotFound:
                 "has_card": False,
             },
             "active_runs": [],
-            "recent_decks": [],
+            "recent_runs": [],
         }
 
 

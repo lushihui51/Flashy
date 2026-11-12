@@ -11,7 +11,7 @@ describe('readHome', () => {
     const home: components['schemas']['HomeRead'] = {
       steps: { has_deck: true, has_card: false },
       active_runs: [],
-      recent_decks: [],
+      recent_runs: [],
     };
     server.use(http.get(`${BASE}/api/home`, () => HttpResponse.json(home)));
 

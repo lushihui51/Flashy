@@ -93,7 +93,7 @@ class TestSteps:
         assert _home(client, db, existing_user) == {
             "steps": NO_STEPS_DONE,
             "active_runs": [],
-            "recent_decks": [],
+            "recent_runs": [],
         }
 
     def test_each_thing_made_flips_its_flag(self, client, db, existing_user):
@@ -137,7 +137,7 @@ class TestSteps:
         assert client.delete(f"/api/decks/{deck['id']}").status_code == 204
 
         home = _home(client, db, existing_user)
-        assert home == {"steps": None, "active_runs": [], "recent_decks": []}
+        assert home == {"steps": None, "active_runs": [], "recent_runs": []}
         assert existing_user.first_practice_at == stamped
 
 
@@ -172,64 +172,56 @@ class TestActiveRuns:
         assert _home(client, db, existing_user)["active_runs"] == []
 
 
-class TestRecentDecks:
-    def test_a_completed_runs_deck_is_listed_as_a_deck_row(self, client, db, existing_user):
+class TestRecentRuns:
+    def test_a_completed_run_is_listed_with_its_practice_decks_and_counts(
+        self, client, db, existing_user
+    ):
         deck, practice = _practisable_deck(client, "Cells", cards=2)
-        _complete_run_of(client, practice)
+        run = _complete_run_of(client, practice)
 
-        [row] = _home(client, db, existing_user)["recent_decks"]
+        [row] = _home(client, db, existing_user)["recent_runs"]
 
-        assert row["id"] == deck["id"]
-        assert row["name"] == "Cells"
-        assert row["card_count"] == 2
-        assert row["field_names"] == ["front", "back"]
-        assert row["readiness"] is not None
+        assert row["id"] == run["id"]
+        assert row["status"] == "completed"
+        assert row["practice_id"] == practice["id"]
+        assert row["practice_name"] == practice["name"]
+        assert (row["day"], row["day_index"]) == (run["day"], 0)
+        assert row["decks"] == [{"deck_id": deck["id"], "deck_name": "Cells"}]
+        assert (row["reached_cards"], row["counted_cards"]) == (2, 2)
+        assert row["progress"] is None
 
-    def test_a_completed_run_with_no_rating_is_absent(self, client, db, existing_user):
+    def test_only_the_latest_run_of_a_practice_is_listed(self, client, db, existing_user):
         _, practice = _practisable_deck(client, "Deck")
-        run = _start(client, practice)
-        row = db.exec(select(Run).where(Run.id == uuid.UUID(run["id"]))).one()
-        row.status = RunStatus.completed
-        db.add(row)
-        db.commit()
+        _complete_run_of(client, practice)
+        latest = _complete_run_of(client, practice)
+
+        recent = _home(client, db, existing_user)["recent_runs"]
+
+        assert [row["id"] for row in recent] == [latest["id"]]
+
+    def test_a_practice_with_an_active_run_has_no_completed_run_listed(
+        self, client, db, existing_user
+    ):
+        _, practice = _practisable_deck(client, "Deck", cards=2)
+        _complete_run_of(client, practice)
+        active = _start(client, practice)
 
         home = _home(client, db, existing_user)
 
-        assert home["active_runs"] == []
-        assert home["recent_decks"] == []
+        assert home["recent_runs"] == []
+        assert [row["id"] for row in home["active_runs"]] == [active["id"]]
 
-    def test_a_deck_of_an_active_run_is_absent(self, client, db, existing_user):
-        _, practice = _practisable_deck(client, "Deck", cards=2)
-        run = _start(client, practice)
-        _rate_current(client, run["id"])
-
-        assert _home(client, db, existing_user)["recent_decks"] == []
-
-    def test_a_deck_in_two_completed_runs_is_listed_once_by_its_newest_rating(
+    def test_the_newest_comes_first_and_the_fourth_practice_is_absent(
         self, client, db, existing_user
     ):
-        first, first_practice = _practisable_deck(client, "First")
-        second, second_practice = _practisable_deck(client, "Second")
-        _complete_run_of(client, first_practice)
-        _complete_run_of(client, second_practice)
-        _complete_run_of(client, first_practice)
+        practices = [_practisable_deck(client, f"Deck {i}")[1] for i in range(4)]
+        runs = [_complete_run_of(client, practice) for practice in practices]
+        # Running the first practice again makes its new run the newest.
+        again = _complete_run_of(client, practices[0])
 
-        recent = _home(client, db, existing_user)["recent_decks"]
+        recent = _home(client, db, existing_user)["recent_runs"]
 
-        assert [row["id"] for row in recent] == [first["id"], second["id"]]
-
-    def test_the_newest_rating_comes_first_and_the_fourth_deck_is_absent(
-        self, client, db, existing_user
-    ):
-        decks = []
-        for i in range(4):
-            deck, practice = _practisable_deck(client, f"Deck {i}")
-            _complete_run_of(client, practice)
-            decks.append(deck)
-
-        recent = _home(client, db, existing_user)["recent_decks"]
-
-        assert [row["id"] for row in recent] == [decks[3]["id"], decks[2]["id"], decks[1]["id"]]
+        assert [row["id"] for row in recent] == [again["id"], runs[3]["id"], runs[2]["id"]]
 
 
 def test_another_users_runs_and_decks_are_absent(
@@ -244,17 +236,17 @@ def test_another_users_runs_and_decks_are_absent(
     assert _home(client, db, other_user) == {
         "steps": NO_STEPS_DONE,
         "active_runs": [],
-        "recent_decks": [],
+        "recent_runs": [],
     }
 
 
 @pytest.fixture
 def home_statement_counters(statement_counter):
     # The empty name matches every statement, so a per-row read of any table shows too.
-    return [statement_counter(name) for name in ("run", "deck", "mastery_log", "")]
+    return [statement_counter(name) for name in ("run", "deck", "run_card", "")]
 
 
-def test_the_statement_count_is_equal_for_one_run_and_for_five(
+def test_the_statement_count_is_equal_for_one_run_of_each_and_for_five(
     client, db, existing_user, home_statement_counters
 ):
     def counts():
@@ -265,22 +257,25 @@ def test_the_statement_count_is_equal_for_one_run_and_for_five(
         assert res.status_code == 200, res.text
         return res.json(), [counter.count for counter in home_statement_counters]
 
+    def add_active_and_completed_runs(name):
+        """One practice left with an active run and another with only completed runs."""
+        deck, active_practice = _practisable_deck(client, name, cards=2)
+        _complete_run_of(client, active_practice)
+        _start(client, active_practice)
+        completed_practice = _practice(client, deck)
+        _complete_run_of(client, completed_practice)
+        _complete_run_of(client, completed_practice)
 
-    def add_deck_with_runs(name):
-        _, practice = _practisable_deck(client, name, cards=2)
-        _complete_run_of(client, practice)
-        _start(client, practice)
-
-    add_deck_with_runs("Deck 0")
+    add_active_and_completed_runs("Deck 0")
     home, for_one = counts()
     assert len(home["active_runs"]) == 1
-    assert len(home["recent_decks"]) == 1
+    assert len(home["recent_runs"]) == 1
 
     for i in range(1, 5):
-        add_deck_with_runs(f"Deck {i}")
+        add_active_and_completed_runs(f"Deck {i}")
     home, for_five = counts()
     assert len(home["active_runs"]) == 3
-    assert len(home["recent_decks"]) == 3
+    assert len(home["recent_runs"]) == 3
 
     assert for_one == for_five
     assert all(count > 0 for count in for_one)

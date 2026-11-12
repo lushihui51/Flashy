@@ -1,15 +1,15 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import Date, cast, delete, distinct, exists, func, or_
+from sqlalchemy import Date, and_, cast, delete, distinct, exists, func, or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
 from app.models.app_user import AppUser
 from app.models.deck import Deck
 from app.models.practice import Practice
 from app.models.practice_payloads import DeckNameRead, RunListing
-from app.models.review_log import ReviewLog
 from app.models.run import Run, RunRead, RunStatus
 from app.models.run_card import RunCard, RunCardStatus
 from app.models.run_configuration import RunConfiguration
@@ -164,21 +164,69 @@ def db_read_run_reads_for_practice(db: Session, practice_id: uuid.UUID) -> list[
     return [_run_listing(*row) for row in rows]
 
 
-def db_read_active_run_reads(
-    db: Session, user_id: uuid.UUID, limit: int
-) -> list[tuple[RunRead, str]]:
-    """Up to `limit` of the user's active runs, newest `last_activity_at` first, then id,
-    each with its practice's name."""
-    days = _run_days(Practice.user_id == user_id)
+def _home_run_listings(
+    db: Session, user_id: uuid.UUID, run_filter, limit: int
+) -> list[tuple[RunListing, str]]:
+    """Up to `limit` of the user's runs `run_filter` admits, newest `last_activity_at`
+    first, then id, each with its counts and its practice's name, in one statement."""
+    users_practices = select(Practice.id).where(Practice.user_id == user_id)
     rows = db.exec(
-        select(Run, days.c.day, days.c.day_index, Practice.name)
-        .join(days, days.c.id == Run.id)
+        _run_listings(
+            Practice.user_id == user_id,
+            and_(col(Run.practice_id).in_(users_practices), run_filter),
+        )
         .join(Practice, Practice.id == Run.practice_id)
-        .where(Run.status == RunStatus.active)
+        .add_columns(Practice.name)
         .order_by(col(Run.last_activity_at).desc(), col(Run.id))
         .limit(limit)
     ).all()
-    return [(_run_read(run, day, day_index), name) for run, day, day_index, name in rows]
+    return [(_run_listing(*row[:-1]), row[-1]) for row in rows]
+
+
+def db_read_active_run_listings(
+    db: Session, user_id: uuid.UUID, limit: int
+) -> list[tuple[RunListing, str]]:
+    """Up to `limit` of the user's active runs, newest `last_activity_at` first, then id,
+    each with its counts and its practice's name."""
+    return _home_run_listings(db, user_id, Run.status == RunStatus.active, limit)
+
+
+def db_read_recent_run_listings(
+    db: Session, user_id: uuid.UUID, limit: int
+) -> list[tuple[RunListing, str]]:
+    """Up to `limit` completed runs of the user, the latest of each practice by
+    `last_activity_at`, none of a practice that has an active run, newest first, then id,
+    each with its counts and its practice's name."""
+    users_practices = select(Practice.id).where(Practice.user_id == user_id)
+    # Aliased so that neither subquery correlates to the outer statement's run.
+    ranked_run = aliased(Run)
+    active_run = aliased(Run)
+    ranked = (
+        select(
+            ranked_run.id,
+            func.row_number()
+            .over(
+                partition_by=ranked_run.practice_id,
+                order_by=(col(ranked_run.last_activity_at).desc(), col(ranked_run.id)),
+            )
+            .label("rank"),
+        )
+        .where(
+            ranked_run.status == RunStatus.completed,
+            col(ranked_run.practice_id).in_(users_practices),
+        )
+        .subquery()
+    )
+    latest_of_its_practice = col(Run.id).in_(select(ranked.c.id).where(ranked.c.rank == 1))
+    practice_has_no_active_run = col(Run.practice_id).not_in(
+        select(active_run.practice_id).where(
+            active_run.status == RunStatus.active,
+            col(active_run.practice_id).in_(users_practices),
+        )
+    )
+    return _home_run_listings(
+        db, user_id, and_(latest_of_its_practice, practice_has_no_active_run), limit
+    )
 
 
 def db_read_run_decks(
@@ -199,25 +247,6 @@ def db_read_run_decks(
             DeckNameRead(deck_id=deck_id, deck_name=deck_name)
         )
     return decks_by_run
-
-
-def db_read_recent_deck_ids(db: Session, user_id: uuid.UUID, limit: int) -> list[uuid.UUID]:
-    """Up to `limit` decks of the user's completed runs, each once, the deck whose run
-    holds the newest rating first. A completed run with no rating contributes nothing."""
-    return list(
-        db.exec(
-            select(RunConfiguration.deck_id)
-            .join(Run, Run.id == RunConfiguration.run_id)
-            .join(Practice, Practice.id == Run.practice_id)
-            .join(RunCard, RunCard.run_id == Run.id)
-            # A run_card's id is the review_group_id of the ratings given to it.
-            .join(ReviewLog, ReviewLog.review_group_id == RunCard.id)
-            .where(Practice.user_id == user_id, Run.status == RunStatus.completed)
-            .group_by(col(RunConfiguration.deck_id))
-            .order_by(func.max(ReviewLog.reviewed_at).desc(), col(RunConfiguration.deck_id))
-            .limit(limit)
-        ).all()
-    )
 
 
 def db_read_run_ids_with_all_decks_in(

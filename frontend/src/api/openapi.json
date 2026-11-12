@@ -3539,19 +3539,19 @@
             "type": "array",
             "title": "Active Runs"
           },
-          "recent_decks": {
+          "recent_runs": {
             "items": {
-              "$ref": "#/components/schemas/DeckSummary"
+              "$ref": "#/components/schemas/HomeRun"
             },
             "type": "array",
-            "title": "Recent Decks"
+            "title": "Recent Runs"
           }
         },
         "type": "object",
         "required": [
           "steps",
           "active_runs",
-          "recent_decks"
+          "recent_runs"
         ],
         "title": "HomeRead"
       },
@@ -3589,6 +3589,14 @@
             "format": "date-time",
             "title": "Last Activity At"
           },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          },
           "practice_name": {
             "type": "string",
             "title": "Practice Name"
@@ -3601,7 +3609,14 @@
             "title": "Decks"
           },
           "progress": {
-            "$ref": "#/components/schemas/RunProgress"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3613,6 +3628,8 @@
           "day_index",
           "created_at",
           "last_activity_at",
+          "reached_cards",
+          "counted_cards",
           "practice_name",
           "decks",
           "progress"

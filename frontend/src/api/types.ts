@@ -897,8 +897,8 @@ export interface components {
             steps: components["schemas"]["HomeSteps"] | null;
             /** Active Runs */
             active_runs: components["schemas"]["HomeRun"][];
-            /** Recent Decks */
-            recent_decks: components["schemas"]["DeckSummary"][];
+            /** Recent Runs */
+            recent_runs: components["schemas"]["HomeRun"][];
         };
         /** HomeRun */
         HomeRun: {
@@ -930,11 +930,15 @@ export interface components {
              * Format: date-time
              */
             last_activity_at: string;
+            /** Reached Cards */
+            reached_cards: number;
+            /** Counted Cards */
+            counted_cards: number;
             /** Practice Name */
             practice_name: string;
             /** Decks */
             decks: components["schemas"]["DeckNameRead"][];
-            progress: components["schemas"]["RunProgress"];
+            progress: components["schemas"]["RunProgress"] | null;
         };
         /**
          * HomeSteps

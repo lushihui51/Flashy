@@ -32,21 +32,16 @@ def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
     return db.get(Deck, deck_id)
 
 
-def db_read_deck_listings(
-    db: Session,
-    user_id: uuid.UUID,
-    deck_ids: Collection[uuid.UUID] | None = None,
-) -> list[DeckListing]:
-    """The user's decks, among deck_ids when those are given, most recently active
-    first, each with its card_count and field_names (position order, active fields
-    only) — via two grouped queries regardless of how many decks there are, never one
-    query per deck."""
+def db_read_deck_listings(db: Session, user_id: uuid.UUID) -> list[DeckListing]:
+    """The user's decks, most recently active first, each with its card_count and
+    field_names (position order, active fields only) — via two grouped queries regardless
+    of how many decks there are, never one query per deck."""
     # Recency order, server-side — the frontend never sorts this list.
-    query = select(Deck).where(Deck.user_id == user_id)
-    if deck_ids is not None:
-        query = query.where(col(Deck.id).in_(deck_ids))
-    query = query.order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
-    decks = db.exec(query).all()
+    decks = db.exec(
+        select(Deck)
+        .where(Deck.user_id == user_id)
+        .order_by(col(Deck.last_activity_at).desc(), col(Deck.id))
+    ).all()
     if not decks:
         return []
     listed_ids = [deck.id for deck in decks]
