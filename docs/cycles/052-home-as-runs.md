@@ -139,7 +139,7 @@ export default function HomeRunRow(props: {
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -201,4 +201,9 @@ export function countChanges(cards: { change: ChangeKind }[]): Record<ChangeKind
 
 **Debrief**
 
-None.
+- `cd frontend && npx vitest run src/components/run/HomeRunRow.test.tsx src/lib/changeKinds.test.ts src/components/run/RunBreakdown.test.tsx`: 3 files, 53 tests passed. `src/pages/HomePage.test.tsx`: 23 passed, its new "a run's details" group covering rows opening on their own and standing in the address as `?open=r1&open=r2`, opening from the address with an id Home does not show ignored, a completed run's counts read from its breakdown only once open, and "Could not load this run." when the read fails. The whole frontend: 75 files, 728 tests passed; `npm run lint` and `npm run build` clean.
+- The cycle's judgement, on the live server in headless Chromium at 390 by 844, signed out with `DEV_AUTH_USER_ID`: Home reads "Home", "Active" over three rows in `last_activity_at` order newest first, "Recently completed" over three, one per practice; the first active run's play button is yellow and the five others white; no "New practice" on the page and no sideways scroll. A tap on the first active row's name set its `aria-expanded` true and the address to `?open=<its id>`, and opened its details as drawing 2-active draws them: its deck on a line, "0 passed", "0 failed", "0 retrying", "4 unseen", each beside a 10 by 10 square of rgb(23,33,43), rgb(229,72,77), rgb(92,102,114) and rgb(213,218,226), the bar's four colors, on the ground color, then "Hide". A second row opened beside it with two `open` params and two "Hide"; "Hide" closed the first alone, and the address went back to `/` once both were closed. A completed row's tap opened drawing 2-done's details: "Ports", "2 of 20 cards", then five badges with their numbers, spoken "0 up a lot", "0 up", "2 no change", "0 down", "0 down a lot", from one `GET /api/runs/{id}/breakdown`; the row stayed open across a reload. With the breakdown answering 500, the details read "Ports", "2 of 20 cards", "Could not load this run.", "Hide". After a scroll of 261 the bar holding "All practices" stood at y 763 to 844, and opened `/practices`. The first active run's play button opened `/runs/4382ab5d-…`, its id, sending no request to the API; the first completed run's sent one POST to `/api/practices/151d0f77-…/runs` and opened `/runs/a56571fa-…`, a new active run of that practice with 20 unseen, on its first card. No page error.
+- Departure: the four constants in `runProgressColors.ts` are background classes, `bg-(--color-ink)` and the like, rather than bare CSS colors, so `RunProgressBar` keeps the classes `src/pages/RunPage.test.tsx`, outside Files, asserts on its segments.
+- Departure: a refused start's sentence stands directly under the row's line and above its open details, as it belongs to the play button.
+- Departure: the formatter rewrapped `CHANGE_KINDS` in `frontend/src/lib/changeKinds.ts` onto several lines; its value is unchanged.
+- Read `toggle` and `breakdown` in `frontend/src/pages/HomePage.tsx`: the open rows are the `open` params, and a breakdown is read for each open row among the recently completed runs alone, an id Home does not show reading nothing.

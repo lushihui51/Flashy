@@ -1,18 +1,21 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import { Check, Plus } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { readHome } from 'src/api/home';
 import { startRun } from 'src/api/practice';
+import { readRunBreakdown } from 'src/api/run';
 import type { components } from 'src/api/types';
 import HomeRunRow from 'src/components/run/HomeRunRow';
 import FormBar from 'src/components/ui/FormBar';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { returnAddressParams } from 'src/lib/returnTo';
+import { useViewParams } from 'src/lib/viewParams';
 
 type HomeSteps = components['schemas']['HomeSteps'];
 type StepFlag = Extract<keyof HomeSteps, 'has_deck' | 'has_card'>;
 type HomeRun = components['schemas']['HomeRun'];
+type ChangeCards = components['schemas']['RunBreakdownRead']['cards'];
 
 // In the order the things nest. The last has no flag: while the steps show, the user has made
 // no practice.
@@ -94,9 +97,22 @@ type RunSectionProps = {
   onPlay: (run: HomeRun) => void;
   /** The sentence beneath a run's row after its play button failed, or null. */
   playError: (run: HomeRun) => string | null;
+  isOpen: (run: HomeRun) => boolean;
+  onToggle: (run: HomeRun) => void;
+  /** A completed run's breakdown for its details' counts; undefined for an active run. */
+  breakdown: (run: HomeRun) => ChangeCards | 'loading' | 'error' | undefined;
 };
 
-function RunSection({ heading, runs, firstIsMain, onPlay, playError }: RunSectionProps) {
+function RunSection({
+  heading,
+  runs,
+  firstIsMain,
+  onPlay,
+  playError,
+  isOpen,
+  onToggle,
+  breakdown,
+}: RunSectionProps) {
   return (
     <>
       <h2 className="mt-4 text-action font-semibold text-(--color-ink)">{heading}</h2>
@@ -108,6 +124,9 @@ function RunSection({ heading, runs, firstIsMain, onPlay, playError }: RunSectio
               isMain={firstIsMain && index === 0}
               onPlay={() => onPlay(run)}
               playError={playError(run)}
+              open={isOpen(run)}
+              onToggle={() => onToggle(run)}
+              breakdown={breakdown(run)}
             />
           </li>
         ))}
@@ -117,14 +136,28 @@ function RunSection({ heading, runs, firstIsMain, onPlay, playError }: RunSectio
 }
 
 /** What the user can do next: the steps to a first practice until they have made one, then
- * their active runs and their recently completed runs, each a play button from a card, over a
- * bar leading to All practices. */
+ * their active runs and their recently completed runs, each a play button from a card and its
+ * details a tap on its row away, over a bar leading to All practices. */
 export default function HomePage() {
   usePageTitle('Home');
   const navigate = useNavigate();
   // Nothing invalidates this key: a thing made on any other page shows through the refetch on
   // Home's next mount (ADR 088).
   const homeQuery = useQuery({ queryKey: ['home'], queryFn: readHome });
+  const { params, setParams } = useViewParams();
+  // The runs whose details are open, one `open` param each, so they survive a refresh and
+  // going back (PDR 017).
+  const openIds = params.getAll('open');
+  const openCompleted = (homeQuery.data?.recent_runs ?? []).filter((run) =>
+    openIds.includes(run.id),
+  );
+  // Under the summary's key, so a completed run's page and its details here share one read.
+  const breakdownQueries = useQueries({
+    queries: openCompleted.map((run) => ({
+      queryKey: ['run_breakdown', run.id],
+      queryFn: () => readRunBreakdown(run.id),
+    })),
+  });
   // A completed run's play button starts its practice again; its variable is the row tapped,
   // so a refusal shows beneath that row alone.
   const startMutation = useMutation({
@@ -149,10 +182,30 @@ export default function HomePage() {
     if (run.status === 'active') navigate(`/runs/${run.id}`);
     else startMutation.mutate(run);
   };
+  const toggle = (run: HomeRun) => {
+    const next = new URLSearchParams(params);
+    next.delete('open');
+    const kept = openIds.filter((id) => id !== run.id);
+    for (const id of openIds.includes(run.id) ? kept : [...kept, run.id]) next.append('open', id);
+    setParams(next);
+  };
+  const breakdown = (run: HomeRun) => {
+    const query = breakdownQueries[openCompleted.findIndex((open) => open.id === run.id)];
+    if (!query) return undefined;
+    if (query.isError) return 'error';
+    return query.data ? query.data.cards : 'loading';
+  };
   const playError = (run: HomeRun) =>
     startMutation.isError && startMutation.variables.id === run.id
       ? failureSentence(startMutation.error, 'Practice not found.')
       : null;
+  const runProps = {
+    onPlay: play,
+    playError,
+    isOpen: (run: HomeRun) => openIds.includes(run.id),
+    onToggle: toggle,
+    breakdown,
+  };
 
   return (
     <div className="p-4">
@@ -164,21 +217,14 @@ export default function HomePage() {
       ) : (
         <>
           {activeRuns.length > 0 && (
-            <RunSection
-              heading="Active"
-              runs={activeRuns}
-              firstIsMain
-              onPlay={play}
-              playError={playError}
-            />
+            <RunSection heading="Active" runs={activeRuns} firstIsMain {...runProps} />
           )}
           {recentRuns.length > 0 && (
             <RunSection
               heading="Recently completed"
               runs={recentRuns}
               firstIsMain={activeRuns.length === 0}
-              onPlay={play}
-              playError={playError}
+              {...runProps}
             />
           )}
           <FormBar>

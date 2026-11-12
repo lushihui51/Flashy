@@ -12,7 +12,7 @@ import MasteryCircle from 'src/components/ui/MasteryCircle';
 import PromptMark from 'src/components/ui/PromptMark';
 import RatingMark from 'src/components/ui/RatingMark';
 import type { components } from 'src/api/types';
-import { CHANGE_KINDS, CHANGE_WORDS, type ChangeKind } from 'src/lib/changeKinds';
+import { CHANGE_KINDS, CHANGE_WORDS, countChanges, type ChangeKind } from 'src/lib/changeKinds';
 import { failureSentence } from 'src/lib/failureSentence';
 import { fieldLabel } from 'src/lib/fieldLabel';
 import { returnAddressParams } from 'src/lib/returnTo';
@@ -264,10 +264,9 @@ export default function RunBreakdown({
   const orderRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const countOf = (kind: ChangeKind) =>
-    breakdown.cards.filter((card) => card.change === kind).length;
+  const counts = countChanges(breakdown.cards);
   const requested = params.getAll('kind');
-  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind) && countOf(kind) > 0);
+  const chosen = CHANGE_KINDS.filter((kind) => requested.includes(kind) && counts[kind] > 0);
   const order = readOrder(params);
 
   const narrowed =
@@ -334,7 +333,7 @@ export default function RunBreakdown({
       <div ref={countsRef} role="group" className="flex gap-1.5 pb-0.5">
         {CHANGE_KINDS.map((kind) => {
           const pressed = chosen.includes(kind);
-          const count = countOf(kind);
+          const count = counts[kind];
           if (count === 0) {
             return (
               <span

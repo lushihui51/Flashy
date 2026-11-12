@@ -11,6 +11,7 @@ import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
 type HomeRun = components['schemas']['HomeRun'];
+type ChangeKind = components['schemas']['ChangeKind'];
 
 const BASE = 'http://localhost:8000';
 const MAIN_ACTION_CLASS = 'bg-(--color-main-action)';
@@ -40,7 +41,12 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderHome(home: Partial<HomeRead>) {
+function SearchProbe() {
+  const location = useLocation();
+  return <span data-testid="search">{location.search}</span>;
+}
+
+function renderHome(home: Partial<HomeRead>, address = '/') {
   server.use(
     http.get(`${BASE}/api/home`, () =>
       HttpResponse.json({ steps: null, active_runs: [], recent_runs: [], ...home }),
@@ -48,11 +54,30 @@ function renderHome(home: Partial<HomeRead>) {
   );
   return renderWithProviders(
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route
+        path="/"
+        element={
+          <>
+            <HomePage />
+            <SearchProbe />
+          </>
+        }
+      />
       <Route path="*" element={<LocationProbe />} />
     </Routes>,
+    [address],
   );
 }
+
+const breakdownCard = (id: string, change: ChangeKind) => ({
+  card_id: id,
+  primary_field: { field_def_id: `front-${id}`, name: 'Front', type: 'text', value: id },
+  readiness: 0.5,
+  delta: 0,
+  change,
+  fields: [],
+  attempts: [],
+});
 
 describe('HomePage', () => {
   it('titles the browser tab and heads the page', async () => {
@@ -130,7 +155,7 @@ describe('HomePage', () => {
         within(active)
           .getAllByRole('button')
           .map((button) => button.getAttribute('aria-label')),
-      ).toEqual(['Practice First', 'Practice Second']);
+      ).toEqual(['First', 'Practice First', 'Second', 'Practice Second']);
       expect(
         within(active).getAllByRole('img', { name: '1 passed, 0 failed, 0 retrying, 3 unseen' }),
       ).toHaveLength(2);
@@ -255,6 +280,88 @@ describe('HomePage', () => {
 
       expect(await screen.findByRole('link', { name: 'All practices' })).toBeInTheDocument();
       expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    });
+
+    describe("a run's details", () => {
+      it('open beneath a row tapped anywhere but its play button, each row on its own, and stand in the address', async () => {
+        renderHome({ active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')] });
+
+        const first = await screen.findByRole('button', { name: 'First' });
+        const second = screen.getByRole('button', { name: 'Second' });
+        await userEvent.click(first);
+        await userEvent.click(second);
+
+        expect(first).toHaveAttribute('aria-expanded', 'true');
+        expect(second).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('search')).toHaveTextContent('?open=r1&open=r2');
+        const firstItem = within(screen.getByRole('list', { name: 'Active' })).getAllByRole(
+          'listitem',
+        )[0]!;
+        expect(firstItem).toHaveTextContent('1 passed0 failed0 retrying3 unseen');
+
+        await userEvent.click(within(firstItem).getByRole('button', { name: 'Hide' }));
+        expect(first).toHaveAttribute('aria-expanded', 'false');
+        expect(second).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('search')).toHaveTextContent('?open=r2');
+      });
+
+      it('open from the address, a run Home does not show being ignored', async () => {
+        renderHome(
+          { active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')] },
+          '/?open=r2&open=gone',
+        );
+
+        expect(await screen.findByRole('button', { name: 'Second' })).toHaveAttribute(
+          'aria-expanded',
+          'true',
+        );
+        expect(screen.getByRole('button', { name: 'First' })).toHaveAttribute(
+          'aria-expanded',
+          'false',
+        );
+        expect(screen.getAllByRole('button', { name: 'Hide' })).toHaveLength(1);
+      });
+
+      it('of a completed run count its kinds of change from its breakdown, read only once it is open', async () => {
+        const read: string[] = [];
+        server.use(
+          http.get(`${BASE}/api/runs/:runId/breakdown`, ({ params }) => {
+            read.push(params.runId as string);
+            return HttpResponse.json({
+              total_cards: 4,
+              cards: [
+                breakdownCard('c1', 'up'),
+                breakdownCard('c2', 'up'),
+                breakdownCard('c3', 'down_a_lot'),
+                breakdownCard('c4', 'no_change'),
+              ],
+            });
+          }),
+        );
+        renderHome({ recent_runs: [completedRun('r3', 'Third'), completedRun('r4', 'Fourth')] });
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Fourth' }));
+
+        expect(screen.getByText('1 of 4 cards')).toBeInTheDocument();
+        expect(await screen.findByRole('img', { name: '2 up' })).toHaveTextContent('2');
+        expect(screen.getByRole('img', { name: '0 up a lot' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '1 no change' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '0 down' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '1 down a lot' })).toBeInTheDocument();
+        expect(read).toEqual(['r4']);
+      });
+
+      it('of a completed run say "Could not load this run." when its breakdown fails', async () => {
+        server.use(
+          http.get(`${BASE}/api/runs/:runId/breakdown`, () =>
+            HttpResponse.json({}, { status: 500 }),
+          ),
+        );
+        renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/?open=r3');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this run.');
+        expect(screen.getByText('1 of 4 cards')).toBeInTheDocument();
+      });
     });
 
     it('says nothing of when anything happened or that anything is waiting', async () => {

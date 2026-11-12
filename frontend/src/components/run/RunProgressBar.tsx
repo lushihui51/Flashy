@@ -1,4 +1,10 @@
 import type { components } from 'src/api/types';
+import {
+  FAILED_COLOR,
+  PASSED_COLOR,
+  RETRYING_COLOR,
+  UNSEEN_COLOR,
+} from 'src/components/run/runProgressColors';
 
 type RunProgress = components['schemas']['RunProgress'];
 
@@ -13,10 +19,10 @@ type RunProgressBarProps = {
  * right. Numeric counts are screen-reader-only (`aria-label`) — the bar itself carries
  * no visible text. */
 const SEGMENTS = [
-  { key: 'passed', label: 'passed', colorClass: 'bg-(--color-ink)' },
-  { key: 'still_failed', label: 'failed', colorClass: 'bg-(--color-wrong)' },
-  { key: 'retry_pending', label: 'retrying', colorClass: 'bg-(--color-aside)' },
-  { key: 'unseen', label: 'unseen', colorClass: 'bg-(--color-line)' },
+  { key: 'passed', label: 'passed', color: PASSED_COLOR },
+  { key: 'still_failed', label: 'failed', color: FAILED_COLOR },
+  { key: 'retry_pending', label: 'retrying', color: RETRYING_COLOR },
+  { key: 'unseen', label: 'unseen', color: UNSEEN_COLOR },
 ] as const;
 
 export default function RunProgressBar({ progress }: RunProgressBarProps) {
@@ -31,7 +37,7 @@ export default function RunProgressBar({ progress }: RunProgressBarProps) {
         SEGMENTS.filter((segment) => progress[segment.key] > 0).map((segment) => (
           <div
             key={segment.key}
-            className={`rounded-sm ${segment.colorClass}`}
+            className={`rounded-sm ${segment.color}`}
             style={{ width: `${(progress[segment.key] / total) * 100}%` }}
           />
         ))}
