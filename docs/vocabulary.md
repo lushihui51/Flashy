@@ -20,7 +20,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Finishing a form that changes a thing | "Save" | Edit deck; Edit card; Edit practice; a deck's board, opened from a practice's page while no run is active; the save confirm | `mode="edit"` |
 | App | Feedback after a save | "Saved ✓" | Edit deck | `savedFlash` |
 | App | Backing out | "Cancel" | Every form and confirm | `cancelLabel` |
-| App | Leaving when nothing is unsaved | "Done" | Edit deck | `showDone` |
+| App | Leaving when nothing is unsaved | "Done" | Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page | `showDone`; `DeckBoardPage` |
 | App | Reversing a staged change | "Undo" | Edit deck | `DeckEditor` |
 | App | Accepting a warning | "Continue" | New card | `confirmLabel` |
 | App | Throwing away unsaved work | "Discard" | Every discard confirm | `ConfirmDialog` |
@@ -93,15 +93,16 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Card | Leaving a card to make a deck | "Create a new deck?" | New card | `confirmCreateDeckOpen`; `goToCreateDeck` |
 | Card | Why making a deck clears the card | "This will clear the card you were filling in." | New card | `confirmCreateDeckOpen` |
 | Card | Confirming a card's deletion | "Delete card?" | Edit card | `confirmDeleteOpen` |
-| Configuration | How a practice asks one of its decks, never named | the deck's board | A practice's page, through each deck's line; a completed run's page, through each deck's line; a deck's board | `practice_configuration`; `PracticeConfiguration` |
-| Configuration | The form showing how a practice asks one of its decks | the deck's name with its mark, and beneath it the practice's name with its mark | Its heading | — |
+| Configuration | How a practice asks one of its decks, never named | the deck's board | A practice's page, through each deck's line; a completed run's page, through each deck's line; a deck's board | `practice_configuration`; `PracticeConfiguration`; `PracticeConfigurationRead`; `ConfigurationArrays`; `PUT /api/practices/{id}/configurations/{deck_id}`; `savePracticeConfiguration`; `deckBoard.ts`; `BoardArrays` |
+| Configuration | The form showing how a practice asks one of its decks | the deck's name with its mark, and beneath it the practice's name with its mark | Its heading | `/practices/:practiceId/decks/:deckId`; `/runs/:runId/decks/:deckId`; `DeckBoardPage` |
+| Configuration | Why a deck's board cannot be changed | "A run is active."; "How this run asked it." | A deck's board, one line above the greyed board, the first opened from a practice's page and the second from a completed run's page | `DeckBoardPage`; `readOnly` |
 | Configuration | The two halves of a card | "Prompt side"; "Answer side" | A deck's board | `prompt_*`; `answer_*` |
 | Configuration | Fields every card shows | "Always shown"; "Prompt · always shown"; "Answer · always shown" | The board; the move sheet | `prompt_fields`; `answer_fields`; `prompt_field_ids`; `answer_field_ids`; `SLOT_LABELS` |
 | Configuration | Fields drawn at random | "Random draw"; "Prompt · random draw"; "Answer · random draw" | The board; the move sheet | `prompt_pool`; `answer_pool`; `prompt_pool_ids`; `answer_pool_ids`; `SLOT_LABELS` |
 | Configuration | How many random fields each card shows | "How many random prompt fields each card shows" and "How many random answer fields each card shows", spoken; "Each card shows [1] [2] … of these" | The board | `prompt_pool_counts`; `answer_pool_counts` |
 | Configuration | A field left out | "Not used" | The board; the move sheet | `unassigned` |
 | Configuration | Moving a field on the board | "Move "[<field>]" to…" | The board | `BottomSheet`; `BoardSlot` |
-| Configuration | The deck's fields still loading | "Loading fields…" | A deck's board | — |
+| Configuration | The deck's fields still loading | "Loading fields…" | A deck's board | `DeckBoardPage` |
 | Configuration | The prompt side with no field | "The prompt side needs at least one field — always shown or random draw." | A deck's board, at the top of the side | `boardProblem` |
 | Configuration | The answer side with no field | "The answer side needs at least one field — always shown or random draw." | A deck's board, at the top of the side | `boardProblem` |
 | Configuration | A prompt draw count that does not fit its area | "Check how many random prompt fields each card shows." | A deck's board, at the side's "Each card shows" row | `boardProblem` |
@@ -122,7 +123,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A run that has finished | "completed"; "Completed" as badge; "Recently completed" as Home's section | A practice's page, under "Runs"; a completed run's page; Home | `completed` |
 | Practice | Starting a practice's run, or continuing its active one | "Start run" while no run is active; "Continue run" while one is | A practice's page, as its main action | `startRun`; `/api/practices/{practice_id}/runs`; `active_run_id` |
 | Practice | Ending a run before its last card | "End run"; "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did." | The run page | — |
-| Practice | The copy of how the practice asks each deck that a run takes at start | — | — | `run_configuration`; `RunConfiguration` |
+| Practice | The copy of how the practice asks each deck that a run takes at start | — | — | `run_configuration`; `RunConfiguration`; `RunConfigurationRead` |
 | Practice | Running a practice again | "Re-run" | A completed run's page, as its main action | `/api/runs/{run_id}/rerun`; `rerunRun`; `RerunButton` |
 | Practice | A run that would have no cards | "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." | A practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button | `no_cards`; `NO_CARDS_MESSAGE` |
 | Practice | Starting a next run while one is active | "Finish the active run first." | A completed run's page, under Re-run or Re-run these | `practice_has_active_run` |

@@ -128,7 +128,7 @@ class RunDetail(RunRead):
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -187,4 +187,10 @@ Drawing 16, under PDR 051, ADR 124 and ADR 127:
 
 **Debrief**
 
-None.
+- Done when, the vitest line: `Test Files 4 passed (4)`, `Tests 51 passed (51)`. New tests: `DeckBoardPage.test.tsx` (17: the heading, title and bar; the practice's configuration drawn; a move then Cancel sends no request; Save sends one `PUT` with the board's arrays and leaves for `returnTo`, else the practice's page; a tap on Save while not ready says the problem at its part and a move clears it; a failed Save's "Deck not found." in the bar; with an active run a tap on a field opens no move sheet and the bar holds Done alone; the run's board reads its run's configuration and Done leaves for the run's page; "Loading fields…" alone until every read answers; each of the four sentences, "Practice not found." over "Deck not found."); `FieldAssignmentBoard.test.tsx` (5: read only, a chip opens no sheet, a count calls no `onToggleCount`, every chip and count carries the greyed classes and a chosen count `bg-(--color-line)`; not read only, a chip opens the sheet); `PracticeDetailsPage.test.tsx`'s "opens each deck's board from its line, coming back here either way", replacing the test that each line opens nothing.
+- Done when, the judgement, on the live server at 390 by 844 through headless Chromium, on the practice "Cycle 049 T4 check 2026-11-11T22:05:18.648Z" and its deck Ports: the deck's line opened `/practices/<id>/decks/<deck>?cancelTo=…&returnTo=…` headed "Ports" with the deck mark over the practice's mark and name, no row of places, the bar Cancel and Save, the tab "Ports · Flashy", nothing wider than the screen; moving [Protocol Function] to Not used and tapping Cancel landed on the practice's page with the configuration unchanged and the board, reopened, as it was; the same move and Save landed there with [Protocol Function] gone from `answer_field_ids`, and the run Start run then made, `15214137-dd48-458f-95ae-a06da8bff756`, carries that configuration as its copy; with that run active, the line opened the board with "A run is active." above it, each chip in `--color-aside` words, a `--color-line` border and no shadow, a tap on [Port Number] opening no sheet, and Done alone, which landed on the practice's page; `/runs/c4ea3fe6-cda6-494d-9ddc-7301578a3230/decks/<Three fields>`, a completed run, showed "How this run asked it.", the board as the run's copy has it ([Term] prompt, [Meaning] answer), greyed, a tap opening no sheet, and Done alone. Neither configuration held a random draw, so the greyed counts were seen only in `FieldAssignmentBoard.test.tsx`. No page error.
+- The dev database keeps what the judgement wrote: that practice's configuration of Ports without [Protocol Function], and its active run `15214137-…`.
+- AGENTS.md's checks: `npx vitest run` 687 passed, `npm run lint` clean, `npm run build` clean.
+- No departure from guidance. Choices the file left open: a greyed chip is a disabled button and a greyed count a disabled checkbox, so each is still read out and its state still spoken; Done fills the bar as drawing 16-read draws it; the practice's name beneath the heading is `text-body` in `--color-aside` and the line above the board `text-sm`, as drawing 16 sizes them.
+- Read `DeckBoardPage`'s `owner`: one object built from the practice's read or the run's, so the sentences, the heading and the bar have one path for both addresses.
+

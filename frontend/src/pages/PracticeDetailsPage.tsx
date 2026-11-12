@@ -1,5 +1,5 @@
-import { Pencil } from 'lucide-react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, Pencil } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { readPractice, startRun } from 'src/api/practice';
 import { isNotFound } from 'src/api/unwrap';
@@ -13,8 +13,8 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { returnAddressParams } from 'src/lib/returnTo';
 
 /** One practice's own page: its mark, name and circle; "Start run" with no active run and
- * "Continue run" with one, beside the pencil to Edit practice; a line per deck; and every run
- * it has had under "Runs". */
+ * "Continue run" with one, beside the pencil to Edit practice; a line per deck, each opening the
+ * deck's board; and every run it has had under "Runs". */
 export default function PracticeDetailsPage() {
   const { practiceId } = useParams<{ practiceId: string }>();
   const navigate = useNavigate();
@@ -106,11 +106,19 @@ export default function PracticeDetailsPage() {
 
       <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
         {practice.decks.map((deck) => (
-          <li
-            key={deck.deck_id}
-            className="min-h-11 truncate py-3 pr-3 pl-4 text-body leading-5 font-semibold text-(--color-ink)"
-          >
-            <DeckMark /> {deck.deck_name}
+          <li key={deck.deck_id}>
+            <Link
+              to={{
+                pathname: `/practices/${practice.id}/decks/${deck.deck_id}`,
+                search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+              }}
+              className="flex min-h-11 items-center justify-between gap-3 py-3 pr-3 pl-4"
+            >
+              <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
+                <DeckMark /> {deck.deck_name}
+              </span>
+              <ChevronRight aria-hidden="true" className="size-icon shrink-0 text-(--color-aside)" />
+            </Link>
           </li>
         ))}
       </ul>

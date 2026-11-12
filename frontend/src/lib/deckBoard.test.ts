@@ -10,7 +10,7 @@ import {
   pruneCounts,
   SLOT_LABELS,
   toggleCount,
-} from 'src/lib/deckConfigurationBoard';
+} from 'src/lib/deckBoard';
 
 const fieldDefs = [
   { id: 'f3', name: 'Reading', type: 'text' as const, position: 2 },

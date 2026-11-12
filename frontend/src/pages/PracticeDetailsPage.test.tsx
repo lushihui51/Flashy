@@ -85,7 +85,7 @@ describe('PracticeDetailsPage', () => {
     expect(screen.queryByRole('img', { name: /^Mastery/ })).not.toBeInTheDocument();
   });
 
-  it('writes each deck on a line of its own, its mark and name, opening nothing', async () => {
+  it('writes each deck on a line of its own, its mark and name', async () => {
     renderPractice();
 
     const commands = (await screen.findByText('Commands')).closest('li')!;
@@ -93,8 +93,22 @@ describe('PracticeDetailsPage', () => {
     expect(commands.parentElement).toBe(ports.parentElement);
     expect(within(commands).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
     expect(within(ports).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
-    expect(within(commands.parentElement!).queryByRole('link')).not.toBeInTheDocument();
-    expect(within(commands.parentElement!).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it("opens each deck's board from its line, coming back here either way", async () => {
+    renderPractice();
+
+    const here = encodeURIComponent('/practices/p1');
+    const commands = within((await screen.findByText('Commands')).closest('li')!).getByRole('link');
+    const ports = within(screen.getByText('Ports').closest('li')!).getByRole('link');
+    expect(commands).toHaveAttribute(
+      'href',
+      `/practices/p1/decks/d1?cancelTo=${here}&returnTo=${here}`,
+    );
+    expect(ports).toHaveAttribute(
+      'href',
+      `/practices/p1/decks/d2?cancelTo=${here}&returnTo=${here}`,
+    );
   });
 
   it('opens Edit practice from the pencil, coming back here either way', async () => {

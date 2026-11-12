@@ -14,6 +14,7 @@ import PracticeCreatePage from 'src/pages/PracticeCreatePage';
 import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import PracticeEditPage from 'src/pages/PracticeEditPage';
 import RunPage from 'src/pages/RunPage';
+import DeckBoardPage from 'src/pages/DeckBoardPage';
 import DeckDetailPage from 'src/pages/DeckDetailPage';
 import DeckEditor from 'src/components/library/DeckEditor';
 import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
@@ -32,7 +33,9 @@ export const appRoutes = createRoutesFromElements(
       <Route path="/practices/new" element={<PracticeCreatePage />} />
       <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
       <Route path="/practices/:practiceId/edit" element={<PracticeEditPage />} />
+      <Route path="/practices/:practiceId/decks/:deckId" element={<DeckBoardPage />} />
       <Route path="/runs/:runId" element={<RunPage />} />
+      <Route path="/runs/:runId/decks/:deckId" element={<DeckBoardPage />} />
       <Route path="/decks/:deckId" element={<DeckDetailPage />} />
       <Route path="/decks/new" element={<DeckEditor mode="create" />} />
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />

@@ -71,7 +71,7 @@ export function emptyBoard(fieldDefs: DeckFieldDef[]): BoardState {
  */
 export function boardFromConfig(
   fieldDefs: DeckFieldDef[],
-  config: ConfigPayloadArrays,
+  config: BoardArrays,
 ): BoardState {
   const board = emptyBoard(fieldDefs);
   const live = new Set(board.order);
@@ -123,19 +123,12 @@ export function toggleCount(state: BoardState, slot: PoolSlot, count: number): B
   return { ...state, counts: { ...state.counts, [slot]: next } };
 }
 
-/** A configuration's six columns: four arrays of field ids and the counts each random
- * draw picks from. */
-export type ConfigPayloadArrays = {
-  prompt_field_ids: string[];
-  answer_field_ids: string[];
-  prompt_pool_ids: string[];
-  prompt_pool_counts: number[];
-  answer_pool_ids: string[];
-  answer_pool_counts: number[];
-};
+/** How a practice or a run asks one deck, as the API reads and saves it: four arrays of
+ * field ids and the counts each random draw picks from. */
+export type BoardArrays = components['schemas']['ConfigurationArrays'];
 
 /** Uuids only — names are display strings and never travel. */
-export function boardToPayload(state: BoardState): ConfigPayloadArrays {
+export function boardToPayload(state: BoardState): BoardArrays {
   return {
     prompt_field_ids: fieldsIn(state, 'prompt_fields'),
     answer_field_ids: fieldsIn(state, 'answer_fields'),

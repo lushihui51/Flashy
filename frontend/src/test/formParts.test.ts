@@ -8,6 +8,7 @@ const SRC = fileURLToPath(new URL('..', import.meta.url));
 const FORMS = [
   'components/library/CardStandaloneForm.tsx',
   'components/library/DeckEditor.tsx',
+  'pages/DeckBoardPage.tsx',
   'pages/PracticeCreatePage.tsx',
   'pages/PracticeEditPage.tsx',
 ];
