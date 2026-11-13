@@ -1,21 +1,21 @@
 # 053 — Rows at any text size
 
-Waits for: 046, 047, 048, 049, 050, 051 and 052, every screen they leave, its rows, names and inputs, and these files this cycle shares with them: `ListRow`, `PickerCombobox`, `Breadcrumb`, `FormBar`, `TopBar`, `AuthSlot`, `CardList`, `FieldAssignmentBoard`, `DeckLine`, `RunRow`, `HomeRunRow`, `RunBreakdown`, `RatingChip`, `DeckEditor`, `CardFieldsForm`, `CardStandaloneForm`, `LibraryPage`, `DeckDetailPage`, `HomePage`, `PracticeOverviewPage`, `PracticeDetailsPage`, `PracticeCreatePage`, `PracticeEditPage`, `RunPage` and `DeckBoardPage`.
-
 Canvas: https://claude.ai/artifact/6c1PcXHayxZvA6DPin7n1w
 
 ## Goal
 
-Outcome: At any text size the browser is set to, nothing on any page scrolls sideways: what a row holds wraps onto further lines, a name in a list wraps to at most two lines and is shortened after that, a name or a heading breaks only between words and is never shortened on its own page, and an input too narrow to type in moves beneath its label and takes the full width.
+Outcome: At any text size the browser is set to, nothing on any page scrolls sideways: what a row holds wraps onto further lines, a name in a list wraps to at most two lines and is shortened after that, a name or a heading breaks only between words, but for a single word wider than its whole line, and is never shortened on its own page, and an input too narrow to type in moves beneath its label and takes the full width.
 
-Scope: The cycle covers every list's row and every name in a list, every page's heading, the top bar, the row of places, the bars at the foot, the summary's counts and order, the deck form's field rows and every other input beside a label or a control, and a source scan holding names to two lines; on every screen cycles 046 to 052 leave. It leaves out a page's layout at the default text size, which does not change but for a name too long for one line, which wraps to a second there too; and how small anything may grow, which the browser's text size alone sets (PDR 050).
+Scope: The cycle covers every list's row and every name in a list, every page's heading, the top bar, the row of places, the bars at the foot, the summary's counts and order, the deck form's field rows, and a source scan failing on the classes `truncate`, `text-ellipsis`, `line-clamp-1`, `break-all` and `overflow-x-auto`; on every screen cycles 046 to 052 leave. It leaves out a page's layout at the default text size, which does not change but for a name too long for one line, which wraps to a second there too; and how large anything may grow, which the browser's text size alone sets (PDR 050).
 
-Judgement: The engineer judges on the live server at 390 wide with the page's root font size set to 24px through `document.documentElement.style.fontSize = '24px'`: All practices, a deck's page and Edit deck read as drawings 7-practice, 7-deck and 7-editdeck draw them; on Home, Your library, a deck's page, New deck, Edit deck, New card, Edit card, All practices, New practice, a practice's page, Edit practice, a deck's board, the run page and a completed run's page, `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`; a practice named "Judgement practice of every command before the CompTIA exam next month" reads on two lines ending "…" on All practices and whole on its own page; "Commands" in a deck's heading is never split; the top bar's "Log in", signed out, stays on screen; and at the default text size every one of these pages reads as it did before the cycle, but for a name too long for one line, which now takes a second line before it is shortened.
+Judgement: The engineer judges on the live server at 390 wide with the page's root font size set to 24px through `document.documentElement.style.fontSize = '24px'`, with the decks "Commands" and "Ports" and the three practices drawing 7-practice draws over them, among them "Judgement practice of every command before the CompTIA exam next month" over "Commands" alone, each deck holding a card, and "Commands" holding at least the five fields and the card "format" drawing 7-deck draws, one of its values left empty; a run of "Commands + Ports" ended through "End run" and another started after it; each deck, field, card, practice and run is made through the app where the dev database lacks it, added to what the dev database holds, and the counts and the circles' fills read as the app's own: All practices, a deck's page and Edit deck read as drawings 7-practice, 7-deck and 7-editdeck draw them, but for what T1's and T2's Out of scope set aside; on Home, Your library, a deck's page, New deck, Edit deck, New card, Edit card, All practices, New practice, a practice's page, Edit practice, a deck's board reached from a practice's page and from a run, the run page of an active run of "Commands + Ports" and a completed run's page, `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`; that practice's name reads on two lines ending "…" on All practices and whole on its own page; "Commands" in a deck's heading is never split; the top bar's "Log in", signed out, stays on screen; and at the default text size every one of these pages reads as it did at the commit before T1's on the cycle's branch, but for a name too long for one line, which now takes a second line before it is shortened.
 
 ## Records
 
 - PDR 050: The browser's text size followed by everything, wrapping and never scrolling sideways
 - PDR 049: A drawn mark of its kind beside every name
+- ADR 101: Every length in a component measured, derived, or a fixed design size in rem
+- ADR 127: A measured header height and one component for every bar at the foot
 
 ## Tasks
 
@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide with the page's ro
 
 **Status**
 
-- [ ] [BLOCKED]
+- [ ]
 
 **Goal**
 
@@ -80,33 +80,58 @@ None.
 PDR 050, drawings 7-practice and 7-deck:
 
 - Guidance: run the scan below before changing anything, to list the files it fails on.
-- A name in a list, a deck's, a card's (its lead value in `CardList` on a deck's page and its title on the summary; a value `FieldValue` shows on the run page or a card's sheet is a value, not a name), a practice's, a run's practice's on Home, a picked deck's on New practice, a field's on the board, and a line of decks as `DeckLine` writes it, must wrap onto a second line and be shortened with "…" after two, through `line-clamp-2`, as drawing 7-practice draws "Judgement practice of every command before the CompTIA exam next month". A mark stays on the line of the name's first word.
-- A name on its own page, as a heading, must never be shortened, and must break only between words: a heading takes its line's full width, the buttons beside it wrapping beneath it, and a heading or a name carries no `break-all` and no `wrap-anywhere`. A single word wider than its whole line may break inside itself, through `overflow-wrap: break-word` (`break-words` or `wrap-break-word`), since nothing else keeps the page from scrolling sideways (PDR 050). A card's values other than its lead value are not names and keep wrapping as they do today; in `CardList`, through a container query on the card, they stand one per line, as drawing 7-deck draws them, where the card is narrower than `16rem`, and two to a line as today where it is wider, so the default text size keeps today's layout.
+- A name in a list, a deck's, a card's (its lead value in `CardList` on a deck's page and its title on the summary; a value `FieldValue` shows on the run page or a card's sheet is a value, not a name), a practice's, a run's practice's on Home, a picked deck's on New practice, a deck's in a picker's open list, a field's on the board, and a line of decks as `DeckLine` writes it, must wrap onto a second line and be shortened with "…" after two, through `line-clamp-2`, as drawing 7-practice draws "Judgement practice of every command before the CompTIA exam next month". A deck in `DeckLine` no longer holds its whole name in one `whitespace-nowrap` span: it is written through `MarkedName`, so a long deck name breaks between its words; a one-word name reads as drawing 7-practice draws it. Each deck's line in `HomeRunRow`'s details is written through `MarkedName` too, and wraps to at most two lines as a name in a list does.
+- Every name, and every run's day as `formatRunDay` writes it, with its mark inline before it, wherever it stands, in a list, as a heading or beneath one, must be written through `MarkedName`, so the mark always starts the line of the name's first word (PDR 049). It must hold the mark, a space and the name's first character in one `whitespace-nowrap` span, then the rest of the name, and render no element around the two, so the clamp or the heading around it holds both. A mark drawn as a row's leading item, as `DeckPicker`'s `renderLeading` draws it, is not inline and stays as it is. A day as "2026-11-03 (2)" then breaks only at its space, since Unicode's line breaking keeps a hyphen with the digit after it, so the completed run's heading in `RunPage` never runs past the screen.
+- A fixed height that holds one line of a name or a day must become a minimum height, so a second line shows: `TopBar`'s `h-14.5`, `FieldAssignmentBoard`'s `chipButton` at `h-tab`, and `HomeRunRow`'s day block at `h-6`, which drops its `whitespace-nowrap`.
+
+```tsx
+// frontend/src/components/ui/MarkedName.tsx
+type MarkedNameProps = {
+  /** The kind's mark: `<DeckMark />`, `<PracticeMark />` or `<RunMark />`. */
+  mark: ReactNode;
+  /** The name, or the run's day, whole. */
+  name: string;
+};
+
+export default function MarkedName({ mark, name }: MarkedNameProps): ReactNode;
+```
+
+- Guidance: the headings of `DeckDetailPage`, `PracticeDetailsPage` and `DeckBoardPage`, and the practice's name beneath `DeckBoardPage`'s heading, split the name this way inline today, through `Array.from` of the name; `MarkedName` takes that split over. A no-break space after the mark instead of the span still breaks in Chromium.
+- Guidance: a name split into two text nodes is no longer found by `getByText` of the whole name, as `DeckRow.test.tsx` finds "Algebra"; such a test finds the row or the heading by its accessible name instead, as `DeckDetailPage.test.tsx` finds the heading "Deck Vocab Deck".
+- A name on its own page, as a heading, must never be shortened, and must break only between words: the circle and the buttons beside a heading wrap beneath it once its mark and its longest word no longer fit beside them, the heading then taking its line's full width, as drawing 7-deck draws a deck's page at a 24px root, and at the default text size they stay beside it as today, and a heading or a name carries no `break-all` and no `wrap-anywhere`. A single word wider than its whole line may break inside itself, through `overflow-wrap: break-word` (`break-words` or `wrap-break-word`), since nothing else keeps the page from scrolling sideways (PDR 050). A card's values other than its lead value are not names and keep wrapping as they do today; in `CardList`, through a container query on the card, they stand one per line, as drawing 7-deck draws them, where the card is narrower than `16rem`, and two to a line as today where it is wider, so the default text size keeps today's layout.
 - `ListRow`'s subtitle wraps to at most two lines and is shortened after that, as its title is.
-- Every row of the app, the top bar's items, the row of places, a page's heading beside its buttons, the bars at the foot, the summary's counts and its order, and every filter, must wrap what it holds onto further lines when it is wider than the screen, so no page scrolls sideways; nothing shrinks to fit (PDR 050).
+- What is not a name wraps whole onto further lines, with no clamp: a picker's action row, as `PickerCombobox`'s `clearLabel` and `createLabel` write it, and a picked deck's counts on New practice.
+- The summary's marks key, `MarksKey` in `RunBreakdown`, must stay within the card's sheet at any text size. Guidance: its fixed `w-60` beside `left-3` runs past the sheet at a 24px root; a maximum width of the sheet's room less its offsets holds it.
+- Every row of the app, the top bar's items, the row of places, a page's heading beside its buttons, the bars at the foot, the summary's counts and its order, and every filter, must wrap what it holds onto further lines when it is wider than the screen, so no page scrolls sideways; nothing shrinks to fit (PDR 050). The top bar must wrap "+" and "Log in" together onto a second line, at the right, as drawings 7-practice and 7-deck draw it at a 24px root.
+- Guidance: drawing 7-deck's heading row does this with the heading at `flex: 1 1 0%` and `max-width: 100%` in a row that wraps, and no `min-width`, so the heading's longest word holds the circle and the buttons beneath it; the headings of `DeckDetailPage` and `PracticeDetailsPage` drop their `min-w-0` for it.
+- The run page's row of places keeps the practice's mark as `BreadcrumbPlace`'s `icon`, a leading item beside the name as `DeckPicker`'s mark is, aligned to the name's first line; a long practice name there wraps between its words beside it.
+- The four counts of an active run's details, `ProgressCounts` in `HomeRunRow`, keep their two columns, each count wrapping within its column.
+- The summary's five counts, in `RunBreakdown`, and the five change counts in `HomeRunRow`'s details must wrap onto further lines when they do not fit, each block at least as wide as what it holds and the blocks of a line sharing its width, as they share one line today.
+- The rating chip's open list, in `RatingChip`, must stay within the screen at any text size, its four options wrapping onto further lines.
+- The picker's open list, on All practices' deck filter and New practice's decks, must stay within the screen at any text size. Guidance: `PickerCombobox`'s `Popover.Content` is fixed at `w-65`, 390px at a 24px root; a `max-w-(--radix-popover-content-available-width)` beside it caps it at the room Radix measures.
+- Guidance: `AppShell` measures the header into `--app-header-height`, so nothing beneath it needs a new offset.
 - The scan, `frontend/src/test/nameWrap.test.ts`, reads every `.tsx` file under `frontend/src/components` and `frontend/src/pages`, test files left out, and fails on any `truncate`, `text-ellipsis`, `line-clamp-1`, `break-all` or `overflow-x-auto` class, matched as a whole word inside a string or template literal with comments left out, naming the file.
 - Tests: `ListRow.test.tsx` asserts the title's two-line clamp; the scan passes.
 
 **Out of scope**
 
-- An input too narrow to type in, on the deck form and elsewhere: T2.
+- An input too narrow to type in, on the deck form: T2.
 - A layout change at the default text size beyond a long name's second line: never.
 - Text shrunk to fit a row: never, PDR 050.
-- A card's lead value breaking anywhere, as drawing 7-deck draws it: never; it is the card's name, which breaks only between words (PDR 050).
+- A gutter or a button held to a px size at a large text size: never, PDR 050.
+- A size drawings 7-practice and 7-deck give in px that differs from the app's rem size at a 24px root, as the practice row's title at 22px, the rows' circles at 30px and 34px, the lead value at 36px and the card's side padding at 22px: never; the app's size stands, and the drawings are read for what wraps, what is clamped and what stands where.
+- A card's other values breaking anywhere, as drawing 7-deck draws them: never; they keep `break-words` as today.
+- A card's circle at the top of its lead row, as drawing 7-deck draws it: never; it stays centred on the row as today.
 
 **Done when**
 
 - `cd frontend && npx vitest run src/test/nameWrap.test.ts src/components/ui/ListRow.test.tsx` passes.
-- On the live server at 390 wide with a 24px root, All practices reads as drawing 7-practice and a deck's page as drawing 7-deck, and on Home, Your library, a deck's page, All practices, a practice's page, a deck's board, the run page and a completed run's page `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`.
+- On the live server at 390 wide with a 24px root, with the decks and practices the cycle's Judgement gives, All practices reads as drawing 7-practice and a deck's page as drawing 7-deck, and on Home, Your library, a deck's page, All practices, a practice's page, a deck's board, the run page and a completed run's page `document.documentElement.scrollWidth` equals `document.documentElement.clientWidth`.
+- On the live server at 390 wide with a 24px root, with a card's sheet open from a completed run's summary and its marks key open, the key's right edge lies within the sheet's.
 
 **Debrief**
 
-- Attempted: the build within Files and Details; files the engineer approved during the build were added to Files: `MarkedName.tsx` (new), `DeckRow.tsx`, `DeckRow.test.tsx`, and the tests in `HomePage`, `PracticeDetailsPage`, `PracticeOverviewPage`, `RunPage`, `DeckLine`, `Breadcrumb`, `HomeRunRow`, `CardStandaloneForm`, `DeckPicker` and `LibraryPage`. With them, at 390 wide with a 24px root, `document.documentElement.scrollWidth` equalled `clientWidth` on all fourteen pages of the judgement, the scan and the full vitest suite passed, and lint and build were clean.
-- Found: drawings 7-practice and 7-deck are drawn with 16px side gutters and 52px icon buttons at the largest text, while the app's gutters (`p-4`, `px-4`) and buttons (`h-11`) are in rem and measure 24px and 66px at a 24px root; fixing them in px is barred by `pxLiterals.test.ts` and by PDR 050.
-- Found: at those sizes the top bar's menu, logo, "+" and "Log in" take about 420px of a 390px screen, so "+" and "Log in" wrap onto a second line, where the two drawings draw one.
-- Found: on a deck's page the mark and "Commands" at `text-page` with the circle need about 368px of a 342px line, so the circle can stand beside the heading only by splitting "Commands", which the judgement forbids; built, the circle and the pencil wrap together beneath the heading, where drawing 7-deck draws the circle beside it.
-- Found: holding a mark to its name's first word needs the mark and the name's first letter in one `whitespace-nowrap` span. A no-break space after the mark still breaks in Chromium. A space inside the span holds on screen in Chromium and Firefox but jsdom names it "DeckCommands". So every marked name in a list needs `MarkedName`, and the tests above that find a name by one text node change with it.
-- Alternatives 7-practice-A and 7-deck-A on the cycle's canvas draw the pages as built; the engineer agreed to them, and changing a drawing is the planner's, so the file cannot settle it.
+None.
 
 ### T2 — Inputs that move beneath their label
 
@@ -126,22 +151,21 @@ An input too narrow to type in moves beneath its label and takes the full width,
 
 - `frontend/src/components/library/DeckEditor.tsx`
 - `frontend/src/components/library/DeckEditor.test.tsx`
-- `frontend/src/components/library/CardFieldsForm.tsx`
-- `frontend/src/pages/PracticeCreatePage.tsx`
-- `frontend/src/pages/PracticeEditPage.tsx`
-- `frontend/src/components/ui/PickerCombobox.tsx`
 
 **Details**
 
 Drawing 7-editdeck:
 
-- At the default text size the deck form must read as it does today, each field one row of its name input, its type and its three buttons. Where the field's row is narrower than `16rem`, through a container query on the row, as at a 24px root on a 390-wide screen and not at the default size, each field must read as drawing 7-editdeck draws it, in a card of its own: "Field name" as a visible label above its input at the full width, then "Field type" with its type and the three buttons on a line beneath, wrapping. The input keeps its accessible name "Field name" in both layouts. Guidance: a CSS container query on the field's row, sized in `rem` or `ch`, switches the layout with no script.
-- Every other input beside a label or a control, the card form's values, New practice's and Edit practice's Name and the pickers' search, must keep the full width of its row at any text size.
-- Tests: `DeckEditor.test.tsx` asserts each field's name input keeps the accessible name "Field name" and that the label element for the narrow layout is in the DOM; jsdom applies no container query, so the two layouts are checked live.
+- At the default text size the deck form must read as it does today, each field one row of its name input, its type and its three buttons. Where the list of fields is narrower than `16rem`, through a container query on `FieldsSection`'s `section`, as at a 24px root on a 390-wide screen and not at the default size, each field must read as drawing 7-editdeck draws it, in a card of its own with the page's ground between the cards, the list's own block and its divider lines gone, each card outlined in the line color with no shadow, as `outlined-line` draws it, rounded by `rounded-block`, `0.75rem` apart, padded `0.75rem` by `0.8125rem` and its parts `0.5rem` apart, the rem sizes nearest the drawing at a 24px root: "Primary" on the first field alone, then "Field name" as a visible label above its input at the full width, then "Field type" as a visible label above its type, the type growing to fill its line beside the three buttons, which wrap beneath it when they do not fit, then the field's sentence, "Name is required." or "Duplicate name", at the card's foot. Both labels are label elements standing apart from their controls, each tied to its input or type by `htmlFor` and an id made from the field's `key`, since a label wrapping its control would hide the control with it; they are shown in the narrow layout alone and not displayed at the default text size, through the same container query. A field marked for removal takes the same layout, its struck-through input under "Field name" and its cross where Remove stands. The input keeps its accessible name "Field name", and the type its accessible name "Field type", in both layouts. Guidance: a CSS container query on the `section`, sized in `rem` or `ch`, switches the layout with no script.
+- Tests: `DeckEditor.test.tsx` asserts each field's name input keeps the accessible name "Field name" and the type the accessible name "Field type", and that the label elements "Field name" and "Field type" for the narrow layout are in the DOM; jsdom applies no container query, so the two layouts are checked live.
 
 **Out of scope**
 
-- The "Primary" label, which drawing 7-editdeck leaves out, and the sentence about the first field, which it draws inside the first field's card: never moved or removed here; they stay where the deck form has them.
+- Removing the "Primary" label, which drawing 7-editdeck leaves out: never; it stands as the Details place it.
+- Moving the sentence about the first field into the first field's card, as drawing 7-editdeck draws it: never; it stays above the list.
+- A size drawing 7-editdeck gives in px that differs from the deck form's rem size at a 24px root: never; the app's size stands.
+- "Fields" in ink at a heavier weight, as drawing 7-editdeck draws it: never; it keeps the deck form's look.
+- The Move up, Move down and Remove buttons with an ink outline and a shadow, and the type with a chevron on a white ground, as drawing 7-editdeck draws them: never; they keep the deck form's look.
 - A layout change at the default text size beyond a long name's second line: never.
 
 **Done when**
