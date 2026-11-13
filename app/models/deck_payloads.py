@@ -72,14 +72,12 @@ class DeckBatchEdit(AppModel):
     everything, including an already-changed `name`."""
 
     name: str | None = None
-    subject_id: uuid.UUID | None = None
     field_defs: FieldDefBatchOps | None = None
     cards: CardBatchOps | None = None
 
 
 class DeckCreate(AppModel):
     name: str
-    subject_id: uuid.UUID
     field_defs: list[FieldDefCreate]
 
 
@@ -93,7 +91,6 @@ class DeckFieldDefRead(AppModel):
 class DeckDetail(AppModel):
     id: uuid.UUID
     name: str
-    subject_id: uuid.UUID
     created_at: datetime
     last_activity_at: datetime
     # 0 to 1, over the deck's cards; None with no card.

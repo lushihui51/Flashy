@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import Scrim from 'src/components/ui/Scrim';
@@ -9,7 +9,7 @@ export type PickerItem = { id: string; name: string };
 /** Choosing a value to *keep* (a form field) versus choosing one to *narrow by* (a
  * filter) differ in exactly one place: the extra row the list always carries. Picking
  * one of these decides which row that is, and makes the other variant's props a type
- * error — a filter can't accidentally offer "New subject…", and a form field can't
+ * error — a filter can't accidentally offer "New deck…", and a form field can't
  * offer a clear row that would leave it empty. */
 type PurposeProps =
   | {
@@ -23,7 +23,7 @@ type PurposeProps =
     }
   | {
       purpose: 'filter';
-      /** The always-present, always-**first** row, e.g. "All subjects" — the way back to
+      /** The always-present, always-**first** row, e.g. "All decks" — the way back to
        * no filter at all. First, not last, because it is where the eye starts when the
        * question is "which of these am I narrowing to?". */
       clearLabel: string;
@@ -40,14 +40,18 @@ export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   placeholder: string;
   /** Static chip, no combobox — edit mode only (a card can't move between decks). */
   locked?: boolean;
+  /** Drawn before the item's name on its row in the list, on the name's first line, and
+   * spoken as a word of its own before the name. */
   renderLeading?: (item: T) => ReactNode;
   /** Drawn under the item's name on its row in the list, and nowhere else. */
   renderBeneath?: (item: T) => ReactNode;
   disabled?: boolean;
-  /** So a caller opening an overlay from the create row (DeckEditor) can pass this
-   * straight through as FullScreenDialog's triggerRef, returning focus to the actual
-   * input on close rather than to nothing in particular. */
-  inputRef?: RefObject<HTMLInputElement | null>;
+  /** The search input's accessible name. */
+  inputLabel?: string;
+  /** The list's accessible name. */
+  listLabel?: string;
+  /** True: after a pick the input clears and shows no chosen item, for picking several. */
+  clearOnPick?: boolean;
 };
 
 /** The one combobox in the app, under `DeckPicker` for a list of decks: open-on-focus-or-click,
@@ -73,28 +77,32 @@ export default function PickerCombobox<T extends PickerItem>({
   renderLeading,
   renderBeneath,
   disabled,
-  inputRef,
+  inputLabel,
+  listLabel,
+  clearOnPick = false,
 }: PickerComboboxProps<T>) {
   const listboxId = useId();
   const controlRef = useRef<HTMLDivElement>(null);
 
-  const [query, setQuery] = useState(selected?.name ?? '');
+  // A picker for several shows no chosen item, whatever its caller holds.
+  const chosen = clearOnPick ? null : selected;
+  const [query, setQuery] = useState(chosen?.name ?? '');
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   // Adjusted during render, not in an effect — see React's docs on "adjusting state
-  // when a prop changes." Fires when `selected` changes for any reason: the user
-  // picked something, or a caller (e.g. the create-overlay's onSuccess) updated it.
-  const [syncedName, setSyncedName] = useState(selected?.name);
-  if (!open && selected?.name !== syncedName) {
-    setSyncedName(selected?.name);
-    setQuery(selected?.name ?? '');
+  // when a prop changes." Fires when the chosen item changes for any reason: the user
+  // picked something, or a caller (e.g. the create-overlay's onSuccess) updated `selected`.
+  const [syncedName, setSyncedName] = useState(chosen?.name);
+  if (!open && chosen?.name !== syncedName) {
+    setSyncedName(chosen?.name);
+    setQuery(chosen?.name ?? '');
   }
 
   const trimmed = query.trim();
   // Reopening (click/focus) shows the full capped list, not last time's filtered-down
   // result — the query text still reads as the selected item's name until the user
   // actually types something different, at which point real filtering kicks in.
-  const hasEditedSinceSelection = query !== (selected?.name ?? '');
+  const hasEditedSinceSelection = query !== (chosen?.name ?? '');
   const matches = hasEditedSinceSelection
     ? items.filter((i) => i.name.toLowerCase().includes(trimmed.toLowerCase()))
     : items;
@@ -110,7 +118,7 @@ export default function PickerCombobox<T extends PickerItem>({
 
   const selectItem = (item: T) => {
     onSelect(item);
-    setQuery(item.name);
+    setQuery(clearOnPick ? '' : item.name);
     setOpen(false);
   };
 
@@ -160,7 +168,10 @@ export default function PickerCombobox<T extends PickerItem>({
     );
   }
 
-  const clearChosen = filtering && selected === null;
+  const clearChosen = filtering && chosen === null;
+  // A closed control shows its chevron when it reads as a search over the list, as a filter's
+  // and a picker for several do, rather than as the value it holds.
+  const chevronWhenClosed = filtering || clearOnPick;
   const actionRow = (
     <li
       role="option"
@@ -169,8 +180,10 @@ export default function PickerCombobox<T extends PickerItem>({
       onMouseDown={() => chooseIndex(actionIndex)}
       className={rowClassName(highlighted === actionIndex)}
     >
-      <ChosenMark chosen={clearChosen} />
-      <span className="min-w-0 truncate">{filtering ? clearLabel : createLabel}</span>
+      <span className={ROW_CONTENT_CLASS}>
+        <ChosenMark chosen={clearChosen} />
+        <span className="min-w-0 flex-1">{filtering ? clearLabel : createLabel}</span>
+      </span>
     </li>
   );
 
@@ -179,12 +192,12 @@ export default function PickerCombobox<T extends PickerItem>({
       <Popover.Anchor asChild>
         <div ref={controlRef} className="relative">
           <input
-            ref={inputRef}
             type="text"
             role="combobox"
             aria-expanded={open}
             aria-controls={listboxId}
             aria-autocomplete="list"
+            aria-label={inputLabel}
             value={query}
             disabled={disabled}
             onChange={(e) => {
@@ -201,12 +214,14 @@ export default function PickerCombobox<T extends PickerItem>({
             placeholder={placeholder}
             className={`h-field w-full rounded-field bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
               open ? 'outlined-ink' : 'outlined-line'
-            } ${filtering || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
+            } ${chevronWhenClosed || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
           />
           {open ? (
             <ChevronUp aria-hidden="true" className={chevronClassName(filtering)} />
           ) : (
-            filtering && <ChevronDown aria-hidden="true" className={chevronClassName(filtering)} />
+            chevronWhenClosed && (
+              <ChevronDown aria-hidden="true" className={chevronClassName(filtering)} />
+            )
           )}
         </div>
       </Popover.Anchor>
@@ -230,7 +245,7 @@ export default function PickerCombobox<T extends PickerItem>({
             }}
             // A press anywhere in the panel leaves focus in the input, so the user keeps typing.
             onMouseDown={(e) => e.preventDefault()}
-            className="tappable z-60 flex max-h-(--radix-popover-content-available-height) w-65 flex-col rounded-[1.125rem] bg-(--color-surface) p-1.5"
+            className="tappable z-60 flex max-h-(--radix-popover-content-available-height) w-65 max-w-(--radix-popover-content-available-width) flex-col rounded-[1.125rem] bg-(--color-surface) p-1.5"
           >
             <Popover.Arrow asChild>
               {/* Radix turns this element to whichever side the panel took, 180° when it opens
@@ -241,7 +256,12 @@ export default function PickerCombobox<T extends PickerItem>({
             </Popover.Arrow>
             {/* Scrolls inside the panel, since the page beneath is locked and a list on a short
                 screen would otherwise leave its last rows out of reach. */}
-            <ul id={listboxId} role="listbox" className="min-h-0 overflow-y-auto">
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-label={listLabel}
+              className="min-h-0 overflow-y-auto"
+            >
               {/* The action row: first when it clears a filter, last when it creates. Same
                   markup either way, so both are one keyboard cycle and one click path. */}
               {filtering && actionRow}
@@ -257,19 +277,27 @@ export default function PickerCombobox<T extends PickerItem>({
                   onMouseDown={() => chooseIndex(index + firstItemIndex)}
                   className={rowClassName(index + firstItemIndex === highlighted)}
                 >
-                  <ChosenMark chosen={selected?.id === item.id} />
-                  {renderLeading?.(item)}
-                  {renderBeneath ? (
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <span className="block truncate">{item.name}</span>
-                      {/* Wraps rather than clips: it is what tells two decks of one name apart. */}
-                      <span className="mt-0.25 block text-label leading-tight font-normal wrap-break-word text-(--color-aside)">
-                        {renderBeneath(item)}
+                  <span className={`${ROW_CONTENT_CLASS} ${renderBeneath ? 'leading-tight' : ''}`}>
+                    <ChosenMark chosen={chosen?.id === item.id} />
+                    {renderLeading && (
+                      <>
+                        <span className={FIRST_LINE_CLASS}>{renderLeading(item)}</span>
+                        {/* Keeps the leading item and the name two words in the row's spoken
+                            name; on screen the row's gap spaces them. */}{' '}
+                      </>
+                    )}
+                    {renderBeneath ? (
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 break-words">{item.name}</span>
+                        {/* Wraps rather than clips: it is what tells two decks of one name apart. */}
+                        <span className="mt-0.25 block text-label leading-tight font-normal wrap-break-word text-(--color-aside)">
+                          {renderBeneath(item)}
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    <span className="min-w-0 truncate">{item.name}</span>
-                  )}
+                    ) : (
+                      <span className="line-clamp-2 min-w-0 flex-1 break-words">{item.name}</span>
+                    )}
+                  </span>
                 </li>
               ))}
               {hasMore && (
@@ -289,11 +317,19 @@ export default function PickerCombobox<T extends PickerItem>({
   );
 }
 
+// The row centres its contents as one group, so a row of one line stands in the middle of the
+// row's least height.
 function rowClassName(highlighted: boolean) {
-  return `flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-base font-semibold text-(--color-ink) ${
+  return `flex min-h-11 w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-base font-semibold text-(--color-ink) ${
     highlighted ? 'bg-(--color-ground)' : ''
   }`;
 }
+
+// A row's contents, top-aligned, so its words wrap onto further lines beneath their first.
+const ROW_CONTENT_CLASS = 'flex min-w-0 flex-1 items-start gap-2.5';
+
+// One line high, so a mark it holds stays on the first line of the words beside it.
+const FIRST_LINE_CLASS = 'flex h-[1lh] shrink-0 items-center';
 
 function chevronClassName(filtering: boolean) {
   return `pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-(--color-ink) ${
@@ -302,11 +338,11 @@ function chevronClassName(filtering: boolean) {
 }
 
 /** A row's opening mark: a check when `chosen`, otherwise a blank of its width, so every
- * row's words line up. */
+ * row's words line up. It stands on the first line of the words beside it. */
 function ChosenMark({ chosen }: { chosen: boolean }) {
-  return chosen ? (
-    <Check aria-hidden="true" strokeWidth={2.4} className="size-icon shrink-0" />
-  ) : (
-    <span aria-hidden="true" className="size-icon shrink-0" />
+  return (
+    <span aria-hidden="true" className={`${FIRST_LINE_CLASS} w-icon`}>
+      {chosen && <Check aria-hidden="true" strokeWidth={2.4} className="size-icon" />}
+    </span>
   );
 }

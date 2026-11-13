@@ -14,11 +14,11 @@ function LocationProbe() {
 }
 
 describe('SideDrawer', () => {
-  it('renders exactly Home, Your library and Practice in order when open', () => {
+  it('renders exactly Home, Your library and All practices in order when open', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
     const items = screen.getAllByRole('link');
-    expect(items.map((item) => item.textContent)).toEqual(['Home', 'Your library', 'Practice']);
+    expect(items.map((item) => item.textContent)).toEqual(['Home', 'Your library', 'All practices']);
   });
 
   it('renders nothing when closed', () => {

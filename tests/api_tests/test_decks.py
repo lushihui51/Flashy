@@ -13,14 +13,13 @@ from app.services.mastery import apply_rating
 
 
 class TestDeckSummaryQueryBounds:
-    def test_query_count_does_not_scale_with_deck_count(self, db, existing_user, existing_subject):
+    def test_query_count_does_not_scale_with_deck_count(self, db, existing_user):
         """db_read_deck_listings must use grouped aggregate queries, never one
         query per deck — proven directly by counting statements, not just by
         eyeballing the implementation."""
-        subject_id = uuid.UUID(existing_subject["id"])
         user_id = existing_user.id  # read before commit expires the ORM object below
         for i in range(5):
-            deck = Deck(subject_id=subject_id, name=f"Deck {i}")
+            deck = Deck(user_id=user_id, name=f"Deck {i}")
             db.add(deck)
             db.flush()
             db.add(FieldDef(deck_id=deck.id, name="Front", type=FieldType.text, position=0))
@@ -61,17 +60,15 @@ class TestDeckReadiness:
         assert response.status_code == 200
         return response.json(), statements
 
-    def test_list_runs_a_fixed_number_of_statements(
-        self, client, db, existing_user, existing_subject
-    ):
-        subject_id = uuid.UUID(existing_subject["id"])
+    def test_list_runs_a_fixed_number_of_statements(self, client, db, existing_user):
+        user_id = existing_user.id
         for i in range(5):
-            deck = Deck(subject_id=subject_id, name=f"Deck {i}")
+            deck = Deck(user_id=user_id, name=f"Deck {i}")
             db.add(deck)
             db.flush()
             db.add(FieldDef(deck_id=deck.id, name="Front", type=FieldType.text, position=0))
             db.add(Card(deck_id=deck.id))
-        empty = Deck(subject_id=subject_id, name="No cards")
+        empty = Deck(user_id=user_id, name="No cards")
         db.add(empty)
         db.commit()
         empty_id = str(empty.id)
@@ -86,10 +83,8 @@ class TestDeckReadiness:
         # decks + grouped card-count + grouped field-names + the one fold over every deck.
         assert len(statements) <= 4, statements
 
-    def test_detail_runs_a_fixed_number_of_statements(
-        self, client, db, existing_user, existing_subject
-    ):
-        deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Five cards")
+    def test_detail_runs_a_fixed_number_of_statements(self, client, db, existing_user):
+        deck = Deck(user_id=existing_user.id, name="Five cards")
         db.add(deck)
         db.flush()
         fields = [
@@ -138,19 +133,18 @@ class TestDeckCRUD:
         assert data["id"] == existing_deck["id"]
         assert data["name"] == "Test Deck"
 
-    def test_read_decks_by_subject(self, client, existing_subject, existing_deck):
-        response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
+    def test_read_decks(self, client, existing_deck):
+        response = client.get("/api/decks")
         assert response.status_code == 200
         assert [d["id"] for d in response.json()] == [existing_deck["id"]]
 
-    def test_read_decks_includes_card_count_and_field_names(self, client, existing_subject):
+    def test_read_decks_includes_card_count_and_field_names(self, client):
         """DeckSummary: card_count and field_names, position order, active fields
         only, computed without one query per deck."""
         deck = client.post(
             "/api/decks",
             json={
                 "name": "Vocab",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "Front", "type": "text"},
                     {"name": "Back", "type": "text"},
@@ -174,27 +168,14 @@ class TestDeckCRUD:
         front_id = fields["Front"]
         client.delete(f"/api/fields/{front_id}")  # deleted — must not appear below
 
-        response = client.get("/api/decks", params={"subject_id": existing_subject["id"]})
+        response = client.get("/api/decks")
         assert response.status_code == 200
         [summary] = response.json()
-        assert summary["subject_name"] == "Test Subject"
         assert summary["card_count"] == 2
         assert summary["field_names"] == ["Back", "Notes"]
 
-    def test_read_decks_tells_same_named_decks_apart_by_subject_name(
-        self, client, multi_subject_library
-    ):
-        lib = multi_subject_library
-
-        rows = client.get("/api/decks").json()
-
-        assert {row["id"]: (row["name"], row["subject_name"]) for row in rows} == {
-            lib["decks"]["a"]["id"]: ("Shared Deck Name", "Alpha"),
-            lib["decks"]["b"]["id"]: ("Shared Deck Name", "Beta"),
-        }
-
     def test_read_decks_empty_deck_has_zero_card_count(self, client, existing_deck):
-        response = client.get("/api/decks", params={"subject_id": existing_deck["subject_id"]})
+        response = client.get("/api/decks")
         assert response.status_code == 200
         [summary] = response.json()
         assert summary["card_count"] == 0
@@ -223,10 +204,9 @@ class TestDeckCreateAtomic:
     cards come afterward via POST /api/cards or the batch-edit endpoint (see
     test_cards.py and test_deck_batch_edit.py)."""
 
-    def _payload(self, subject_id, **overrides):
+    def _payload(self, **overrides):
         payload = {
             "name": "Vocab Deck",
-            "subject_id": subject_id,
             "field_defs": [
                 {"name": "Front", "type": "text"},
                 {"name": "Back", "type": "text"},
@@ -235,13 +215,12 @@ class TestDeckCreateAtomic:
         payload.update(overrides)
         return payload
 
-    def test_happy_path(self, client, existing_subject):
-        response = client.post("/api/decks", json=self._payload(existing_subject["id"]))
+    def test_happy_path(self, client):
+        response = client.post("/api/decks", json=self._payload())
         assert response.status_code == 201, response.text
         data = response.json()
 
         assert data["name"] == "Vocab Deck"
-        assert data["subject_id"] == existing_subject["id"]
 
         field_defs = sorted(data["field_defs"], key=lambda fd: fd["position"])
         assert [fd["position"] for fd in field_defs] == [0, 1]
@@ -254,43 +233,35 @@ class TestDeckCreateAtomic:
         got = get_response.json()
         assert got["id"] == data["id"]
         assert got["name"] == data["name"]
-        assert got["subject_id"] == data["subject_id"]
         assert {fd["id"]: fd for fd in got["field_defs"]} == {
             fd["id"]: fd for fd in data["field_defs"]
         }
         assert got["cards"] == []
 
-    def test_subject_not_found(self, client):
-        response = client.post("/api/decks", json=self._payload(str(uuid.uuid4())))
-        assert response.status_code == 422
-        assert "subject" in response.json()["detail"].lower()
-
-    def test_fewer_than_two_fields_rejected(self, client, existing_subject):
+    def test_fewer_than_two_fields_rejected(self, client):
         response = client.post(
             "/api/decks",
-            json=self._payload(existing_subject["id"], field_defs=[]),
+            json=self._payload(field_defs=[]),
         )
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "too_few_fields"
 
-    def test_one_field_rejected(self, client, existing_subject):
+    def test_one_field_rejected(self, client):
         """A deck needs at least one prompt field and one answer field, so a
         single-field deck is rejected too."""
         response = client.post(
             "/api/decks",
             json=self._payload(
-                existing_subject["id"],
                 field_defs=[{"name": "Front", "type": "text"}],
             ),
         )
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "too_few_fields"
 
-    def test_duplicate_field_names_rejected(self, client, existing_subject):
+    def test_duplicate_field_names_rejected(self, client):
         response = client.post(
             "/api/decks",
             json=self._payload(
-                existing_subject["id"],
                 field_defs=[
                     {"name": "Front", "type": "text"},
                     {"name": "front", "type": "text"},
@@ -300,19 +271,29 @@ class TestDeckCreateAtomic:
         assert response.status_code == 422
         assert "duplicate" in response.json()["detail"].lower()
 
-    def test_duplicate_deck_name_in_subject_rejected_and_rolled_back(
-        self, client, existing_subject
-    ):
+    def test_name_another_of_the_users_decks_has_is_refused_and_rolled_back(self, client):
         """The one create failure that comes from the database rather than from the
-        validation above: the per-subject deck name constraint. It raises at the staged
+        validation above: the per-user deck name constraint. It raises at the staged
         create's flush and create_deck_atomic's handler turns it into a 422, so the
         rollback must leave only the first deck behind."""
-        first = client.post("/api/decks", json=self._payload(existing_subject["id"]))
+        first = client.post("/api/decks", json=self._payload())
         assert first.status_code == 201, first.text
 
-        second = client.post("/api/decks", json=self._payload(existing_subject["id"]))
+        second = client.post("/api/decks", json=self._payload())
         assert second.status_code == 422, second.text
         assert second.json()["detail"]["code"] == "deck_name_taken"
 
-        decks = client.get("/api/decks", params={"subject_id": existing_subject["id"]}).json()
+        decks = client.get("/api/decks").json()
         assert [d["name"] for d in decks] == ["Vocab Deck"]
+
+    def test_name_another_users_deck_has_is_allowed(self, client, act_as, other_user, existing_user):
+        first = client.post("/api/decks", json=self._payload())
+        assert first.status_code == 201, first.text
+
+        act_as(other_user)
+        second = client.post("/api/decks", json=self._payload())
+        assert second.status_code == 201, second.text
+        assert [d["id"] for d in client.get("/api/decks").json()] == [second.json()["id"]]
+
+        act_as(existing_user)
+        assert [d["id"] for d in client.get("/api/decks").json()] == [first.json()["id"]]

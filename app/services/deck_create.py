@@ -5,11 +5,9 @@ from sqlmodel import Session
 
 from app.database_ops.deck import db_stage_create_deck
 from app.database_ops.field_def import db_stage_create_field_def
-from app.database_ops.subject import db_read_subject
 from app.models.deck import Deck
 from app.models.field_def import FieldDefCreate
 from app.refusals import Refusal
-from app.services.activity import touch
 
 
 class DeckCreateValidationError(ValueError):
@@ -21,20 +19,15 @@ def create_deck_atomic(
     db: Session,
     user_id: uuid.UUID,
     name: str,
-    subject_id: uuid.UUID,
     field_defs: list[FieldDefCreate],
 ) -> Deck:
-    """Builds a deck and its field_defs in one transaction. Every validation rule runs
+    """Builds a deck of user_id and its field_defs in one transaction. Every validation rule runs
     before any row is added, so a failure anywhere leaves nothing persisted; there's no
     partial write to roll back. A deck is born with a schema and no content — cards are
     added afterward via POST /api/cards or the batch-edit endpoint."""
     name = name.strip()
     if not name:
         raise DeckCreateValidationError("name must not be empty")
-
-    subject = db_read_subject(db, subject_id, user_id)
-    if subject is None:
-        raise DeckCreateValidationError(f"subject_id {subject_id} not found")
 
     if len(field_defs) < 2:
         raise Refusal("too_few_fields", "field_defs has fewer than two entries")
@@ -54,21 +47,15 @@ def create_deck_atomic(
         trimmed_names.append(field_name)
 
     try:
-        deck = db_stage_create_deck(db, subject_id, name)
+        deck = db_stage_create_deck(db, user_id, name)
     except IntegrityError:
         db.rollback()
         raise Refusal(
-            "deck_name_taken", f"deck (subject_id, name) {name!r} already exists"
+            "deck_name_taken", f"deck (user_id, name) {name!r} already exists"
         ) from None
 
     for position, (field_def, field_name) in enumerate(zip(field_defs, trimmed_names)):
         db_stage_create_field_def(db, deck.id, field_name, field_def.type, position)
-    db.flush()
-
-    # The deck's own last_activity_at is set at insert (server_default=now(),
-    # same as created_at) — only the subject needs an explicit touch.
-    touch(db, subject)
-
     db.commit()
     db.refresh(deck)
     return deck

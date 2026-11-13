@@ -13,8 +13,8 @@ describe.each<ReturnAddressKey>(['cancelTo', 'returnTo'])('internalReturnTo read
   });
 
   it('accepts a full internal path with its own query string', () => {
-    expect(internalReturnTo(paramsWith(key, '/practice/new?subject=s1'), key)).toBe(
-      '/practice/new?subject=s1',
+    expect(internalReturnTo(paramsWith(key, '/practices/new?deck=d1'), key)).toBe(
+      '/practices/new?deck=d1',
     );
   });
 
@@ -50,11 +50,11 @@ describe('internalReturnTo keeps the two addresses apart', () => {
 });
 
 describe('returnAddressParams', () => {
-  const location = { pathname: '/deck-configurations/new', search: '?returnTo=%2Fpractice%2Fnew' };
+  const location = { pathname: '/decks/new', search: '?returnTo=%2Fpractices%2Fnew' };
 
   it('sets only the keys named, each to the full location', () => {
     const params = returnAddressParams(location, 'cancelTo');
-    expect(params.get('cancelTo')).toBe('/deck-configurations/new?returnTo=%2Fpractice%2Fnew');
+    expect(params.get('cancelTo')).toBe('/decks/new?returnTo=%2Fpractices%2Fnew');
     expect(params.has('returnTo')).toBe(false);
   });
 

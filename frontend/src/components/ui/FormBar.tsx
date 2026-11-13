@@ -5,14 +5,14 @@ type FormBarProps = {
   sentence?: string | null;
   /** One line directly above the buttons, New practice's "N selected". */
   count?: string | null;
-  /** The buttons, in reading order: Cancel or Done first, Create or Save last. */
+  /** The buttons, in reading order: on a form, Cancel or Done first, Create or Save last. */
   children: ReactNode;
 };
 
-/** A form's bar, fixed to the foot of the screen while the page scrolls. Render it where the
- * form's content ends, as the last child of the form's container: it holds its own height open
- * there, so the last field can scroll clear of it. A form opened over another form renders a
- * bar of its own. */
+/** Any bar at the foot of the screen, a form's or Home's, fixed there while the page scrolls.
+ * Render it where the page's content ends, as the last child of the page's container: it holds
+ * its own height open there, so the last field or row can scroll clear of it. A form opened over
+ * another form renders a bar of its own. */
 export default function FormBar({ sentence, count, children }: FormBarProps): ReactNode {
   const spacerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -36,7 +36,7 @@ export default function FormBar({ sentence, count, children }: FormBarProps): Re
     <>
       <div ref={spacerRef} aria-hidden className="shrink-0" />
       {/* z-10: above the page's content and beneath the drawer's and the sheets' scrims. The
-          mark tells a reveal to keep clear of the bar; it is on every bar so that no form can
+          mark tells a reveal to keep clear of the bar; it is on every bar so that no page can
           leave it off. */}
       <div
         ref={barRef}
@@ -50,7 +50,7 @@ export default function FormBar({ sentence, count, children }: FormBarProps): Re
           </p>
         )}
         {count && <p className="text-center text-label text-(--color-aside)">{count}</p>}
-        <div className="flex items-center gap-2.5">{children}</div>
+        <div className="flex flex-wrap items-center gap-2.5">{children}</div>
       </div>
     </>
   );

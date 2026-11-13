@@ -1,9 +1,8 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { createDeck, deleteDeck, readDeck, updateDeck } from 'src/api/deck';
-import { readSubject, readSubjects } from 'src/api/subject';
 import { readDeletionImpact } from 'src/api/deletion_impact';
 import {
   deckEditorReducer,
@@ -19,12 +18,9 @@ import { SUPPORTED_FIELD_TYPES } from 'src/lib/fieldTypes';
 import { pluralize } from 'src/lib/pluralize';
 import { joinClauses } from 'src/lib/joinClauses';
 import { deletionSummaryText } from 'src/lib/deletionSummary';
-import PickerCombobox from 'src/components/ui/PickerCombobox';
-import FullScreenDialog from 'src/components/ui/FullScreenDialog';
-import SubjectIcon from 'src/components/library/SubjectIcon';
-import { SubjectFormBody } from 'src/components/library/SubjectForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import { internalReturnTo } from 'src/lib/returnTo';
+import { useLeaveForm } from 'src/lib/leaveForm';
 import type { components } from 'src/api/types';
 import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -35,20 +31,73 @@ import FormPart from 'src/components/ui/FormPart';
 import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckDetail = components['schemas']['DeckDetail'];
-type SubjectRead = components['schemas']['SubjectRead'];
 
-/** Only what the subject combobox displays — satisfied by SubjectSummary (the list
- * from readSubjects), SubjectRead (what createSubject returns), or the `{id, name,
- * icon}` a contextual entry point hands over in router state. Deliberately narrower
- * than any of them so none needs reshaping to pass through. */
-type SubjectItem = { id: string; name: string; icon?: string | null };
-
-// Centres a control's h-9 box on the field name input beside it, in a row aligned to its bottom.
+// Centres a button's h-9 box on the h-field input or type beside it, in a row aligned to its bottom.
 const FIELD_ICON_MARGIN = 'my-1.25';
-const FIELD_ICON_BUTTON =
-  `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
+const FIELD_ICON_BUTTON = `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
 const FIELD_TYPE_SELECT =
   'h-field shrink-0 appearance-none rounded-field outlined-line bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
+// Shown only where the list of fields is too narrow for a field's one row, as at a large text
+// size on a phone.
+const FIELD_LABEL = 'hidden text-label text-(--color-aside) @max-[16rem]:block';
+// Each field its own card where the list of fields is too narrow for a field's one row.
+const FIELD_CARD =
+  '@max-[16rem]:rounded-block @max-[16rem]:outlined-line @max-[16rem]:bg-(--color-surface) @max-[16rem]:px-3.25 @max-[16rem]:py-3';
+
+type FieldRowProps = {
+  field: EditorField;
+  /** Whether "Primary" stands above the field's name. */
+  primary: boolean;
+  /** The field's name input, given the id its label points at. */
+  nameInput: (id: string) => ReactNode;
+  /** The Move up, Move down and Remove buttons, or what stands in their place. */
+  buttons: ReactNode;
+};
+
+/** One field of the deck form: its name input, its type and its buttons on one row, or, where
+ * the `@container` around the list is narrower than 16rem, stacked with the name and the type
+ * each under a visible label at the full width. */
+function FieldRow({ field, primary, nameInput, buttons }: FieldRowProps) {
+  const nameId = `field-${field.key}-name`;
+  const typeId = `field-${field.key}-type`;
+
+  // Each wrapper below is `contents` on the one row, so the row's flex items are the input, the
+  // type and the buttons alone.
+  return (
+    <div className="flex items-end gap-1 py-3 @max-[16rem]:flex-col @max-[16rem]:items-stretch @max-[16rem]:gap-2 @max-[16rem]:py-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 @max-[16rem]:flex-none">
+        {primary && <span className="text-label text-(--color-aside)">Primary</span>}
+        <div className="contents @max-[16rem]:flex @max-[16rem]:flex-col @max-[16rem]:gap-1.5">
+          <label htmlFor={nameId} className={FIELD_LABEL}>
+            Field name
+          </label>
+          {nameInput(nameId)}
+        </div>
+      </div>
+      <div className="contents @max-[16rem]:flex @max-[16rem]:flex-wrap @max-[16rem]:items-end @max-[16rem]:gap-x-1 @max-[16rem]:gap-y-2">
+        <div className="contents @max-[16rem]:flex @max-[16rem]:flex-auto @max-[16rem]:flex-col @max-[16rem]:gap-1.5">
+          <label htmlFor={typeId} className={FIELD_LABEL}>
+            Field type
+          </label>
+          <select
+            id={typeId}
+            aria-label="Field type"
+            value={field.type}
+            disabled
+            className={FIELD_TYPE_SELECT}
+          >
+            {SUPPORTED_FIELD_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t === 'text' ? 'Text' : t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="contents @max-[16rem]:flex @max-[16rem]:gap-1">{buttons}</div>
+      </div>
+    </div>
+  );
+}
 
 type FieldsSectionProps = {
   fields: EditorField[];
@@ -79,58 +128,55 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   const primaryIndex = fields.findIndex((f) => !f.pendingRemoval);
 
   return (
-    <section className="mt-6">
+    <section className="mt-6 @container">
       <h2 className="text-sm font-medium text-(--color-aside)">Fields</h2>
       <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3 @max-[16rem]:gap-3 @max-[16rem]:divide-y-0 @max-[16rem]:border-0 @max-[16rem]:bg-transparent @max-[16rem]:px-0 @max-[16rem]:shadow-none">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
-              <li key={field.key}>
-                <div className="flex items-end gap-1 py-3">
-                  <div className="min-w-0 flex-1">
+              <li key={field.key} className={FIELD_CARD}>
+                <FieldRow
+                  field={field}
+                  primary={false}
+                  nameInput={(id) => (
                     <input
+                      id={id}
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       disabled
                       className="h-field w-full rounded-field outlined-line bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
                     />
-                  </div>
-                  <select
-                    aria-label="Field type"
-                    value={field.type}
-                    disabled
-                    className={FIELD_TYPE_SELECT}
-                  >
-                    {SUPPORTED_FIELD_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t === 'text' ? 'Text' : t}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} up`}
-                    disabled
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowUp aria-hidden="true" className="size-icon" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} down`}
-                    disabled
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowDown aria-hidden="true" className="size-icon" />
-                  </button>
-                  <span className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}>
-                    <X aria-hidden="true" className="size-icon" />
-                  </span>
-                </div>
+                  )}
+                  buttons={
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} up`}
+                        disabled
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowUp aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} down`}
+                        disabled
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowDown aria-hidden="true" className="size-icon" />
+                      </button>
+                      <span
+                        className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}
+                      >
+                        <X aria-hidden="true" className="size-icon" />
+                      </span>
+                    </>
+                  }
+                />
               </li>
             );
           }
@@ -148,63 +194,58 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
             trimmed === '' ? 'Name is required.' : isDuplicate ? 'Duplicate name' : null;
 
           return (
-            <li key={field.key}>
-              <FormPart sentence={error} look="wrong" className="[&>[data-reveal-sentence]]:pb-3">
-                <div className="flex items-end gap-1 py-3">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
+            <li key={field.key} className={FIELD_CARD}>
+              <FormPart
+                sentence={error}
+                look="wrong"
+                className="[&>[data-reveal-sentence]]:pb-3 @max-[16rem]:flex @max-[16rem]:flex-col @max-[16rem]:gap-2 @max-[16rem]:[&>[data-reveal-sentence]]:pb-0"
+              >
+                <FieldRow
+                  field={field}
+                  primary={index === primaryIndex}
+                  nameInput={(id) => (
                     <input
+                      id={id}
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       onChange={(e) => onRename(field.key, e.target.value)}
                       className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
                     />
-                  </div>
-  
-                  <select
-                    aria-label="Field type"
-                    value={field.type}
-                    disabled
-                    className={FIELD_TYPE_SELECT}
-                  >
-                    {SUPPORTED_FIELD_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t === 'text' ? 'Text' : t}
-                      </option>
-                    ))}
-                  </select>
-  
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} up`}
-                    disabled={index === 0}
-                    onClick={() => onMove(field.key, index - 1)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowUp aria-hidden="true" className="size-icon" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} down`}
-                    disabled={index === fields.length - 1}
-                    onClick={() => onMove(field.key, index + 1)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowDown aria-hidden="true" className="size-icon" />
-                  </button>
-  
-                  <button
-                    type="button"
-                    aria-label={`Remove ${field.name || 'field'}`}
-                    title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
-                    disabled={activeCount <= 2}
-                    onClick={() => onRemove(field.key)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <X aria-hidden="true" className="size-icon" />
-                  </button>
-                </div>
+                  )}
+                  buttons={
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} up`}
+                        disabled={index === 0}
+                        onClick={() => onMove(field.key, index - 1)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowUp aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} down`}
+                        disabled={index === fields.length - 1}
+                        onClick={() => onMove(field.key, index + 1)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowDown aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${field.name || 'field'}`}
+                        title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
+                        disabled={activeCount <= 2}
+                        onClick={() => onRemove(field.key)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <X aria-hidden="true" className="size-icon" />
+                      </button>
+                    </>
+                  }
+                />
               </FormPart>
             </li>
           );
@@ -222,22 +263,16 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   );
 }
 
-type CreateLocationState = {
-  subject?: { id: string; name: string; icon: string };
-} | null;
-
 type DeckEditorProps = {
   mode: 'create' | 'edit';
 };
 
 /** Full-screen route page. Mode is derived from the route (`/decks/new` vs.
- * `/decks/:deckId/edit`, App.tsx), same pattern as `SubjectForm`/`CardStandaloneForm`.
- * Edit mode loads the existing `DeckDetail` — and its subject, since the subject
- * combobox needs the full `{id, name, icon}` object, not just an id — before mounting
- * the body, gated the same way `CardStandaloneForm` gates on its deck. */
+ * `/decks/:deckId/edit`, App.tsx), same pattern as `CardStandaloneForm`.
+ * Edit mode loads the existing `DeckDetail` before mounting the body, gated the same
+ * way `CardStandaloneForm` gates on its deck. */
 export default function DeckEditor({ mode }: DeckEditorProps) {
   const { deckId } = useParams<{ deckId: string }>();
-  const location = useLocation();
   const { params } = useViewParams();
 
   const deckQuery = useQuery({
@@ -245,15 +280,7 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
     queryFn: () => readDeck(deckId!),
     enabled: mode === 'edit' && !!deckId,
   });
-  const subjectId = deckQuery.data?.subject_id;
-  const subjectQuery = useQuery({
-    queryKey: ['subject', subjectId],
-    queryFn: () => readSubject(subjectId!),
-    enabled: mode === 'edit' && !!subjectId,
-  });
-  usePageTitle(
-    mode === 'create' ? 'New deck' : deckQuery.data && subjectQuery.data ? 'Edit deck' : undefined,
-  );
+  usePageTitle(mode === 'create' ? 'New deck' : deckQuery.data ? 'Edit deck' : undefined);
 
   if (mode === 'edit') {
     if (deckQuery.isError) {
@@ -269,18 +296,14 @@ export default function DeckEditor({ mode }: DeckEditorProps) {
         </div>
       );
     }
-    if (!deckQuery.data || !subjectQuery.data) return null;
+    if (!deckQuery.data) return null;
   }
-
-  const createLocationState = mode === 'create' ? (location.state as CreateLocationState) : null;
 
   return (
     <DeckEditorBody
       mode={mode}
       deckId={deckId}
       deck={mode === 'edit' ? deckQuery.data : undefined}
-      subject={mode === 'edit' ? subjectQuery.data : undefined}
-      contextualSubject={createLocationState?.subject ?? null}
       cancelTo={internalReturnTo(params, 'cancelTo')}
       returnTo={internalReturnTo(params, 'returnTo')}
     />
@@ -291,8 +314,6 @@ type DeckEditorBodyProps = {
   mode: 'create' | 'edit';
   deckId: string | undefined;
   deck: DeckDetail | undefined;
-  subject: SubjectRead | undefined;
-  contextualSubject: { id: string; name: string; icon: string } | null;
   cancelTo: string | null;
   returnTo: string | null;
 };
@@ -301,19 +322,17 @@ type ImpactSummaryCounts = {
   fieldsDeleted: number;
   cardsDeleted: number;
   cardsAffected: number;
-  configurationsDeleted: number;
   runsDeleted: number;
 };
 
 /** The editor save confirm's one sentence, for a changeset that deletes fields and/or
  * cards — the same closure a direct field or card delete goes through, worded from
- * `fieldsDeleted`/`cardsDeleted` (the changeset itself) plus
- * `configurationsDeleted`/`runsDeleted` (the deletion-impact query). */
+ * `fieldsDeleted`/`cardsDeleted` (the changeset itself) plus `runsDeleted` (the
+ * deletion-impact query). */
 function impactSummaryText({
   fieldsDeleted,
   cardsDeleted,
   cardsAffected,
-  configurationsDeleted,
   runsDeleted,
 }: ImpactSummaryCounts): string {
   const clauses = [
@@ -325,39 +344,24 @@ function impactSummaryText({
         ]
       : []),
     ...(cardsDeleted > 0 ? [`deletes ${pluralize(cardsDeleted, 'card')}`] : []),
-    ...(configurationsDeleted > 0
-      ? [`deletes ${pluralize(configurationsDeleted, 'deck configuration')}`]
-      : []),
-    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active practice')}`] : []),
+    ...(runsDeleted > 0 ? [`deletes ${pluralize(runsDeleted, 'active run')}`] : []),
   ];
   return `This ${joinClauses(clauses)}. This can't be undone.`;
 }
 
-function DeckEditorBody({
-  mode,
-  deckId,
-  deck,
-  subject,
-  contextualSubject,
-  cancelTo,
-  returnTo,
-}: DeckEditorBodyProps) {
-  const navigate = useNavigate();
+function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBodyProps) {
+  const leaveForm = useLeaveForm();
   const queryClient = useQueryClient();
   const { revealFirstSentence } = useViewParams();
   const rootRef = useRef<HTMLDivElement>(null);
-  const subjectsQuery = useQuery({ queryKey: ['subjects'], queryFn: readSubjects });
 
-  // Computed once, at mount — the same rule as the subject combobox's own initial
-  // selection below. `original` doubles as the baseline the edit-mode diff compares
+  // Computed once, at mount. `original` doubles as the baseline the edit-mode diff compares
   // against: deckDetailToEditorState mints a fresh client `key` per field, and calling
   // it twice would mint two different sets of keys for the same rows, breaking every
   // id-based comparison in buildDeckBatchEditPayload. It is rebased after every
   // successful edit-mode save, and the global Undo reverts to it directly.
   const [original, setOriginal] = useState<DeckEditorState>(() =>
-    mode === 'edit' && deck
-      ? deckDetailToEditorState(deck)
-      : initialDeckEditorState(contextualSubject?.id ?? null),
+    mode === 'edit' && deck ? deckDetailToEditorState(deck) : initialDeckEditorState(),
   );
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
@@ -373,7 +377,6 @@ function DeckEditorBody({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [subjectError, setSubjectError] = useState<string | null>(null);
   // A transient "Saved ✓" on the Save control after an edit-mode save.
   const [savedFlash, setSavedFlash] = useState(false);
   useEffect(() => {
@@ -390,8 +393,8 @@ function DeckEditorBody({
   const canUndo = state.dirty && !saving;
 
   const leaveByCancel = () =>
-    navigate(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
-  const leaveByDone = () => navigate(returnTo ?? `/decks/${deckId}`);
+    void leaveForm(cancelTo ?? (mode === 'edit' ? `/decks/${deckId}` : '/library'));
+  const leaveByDone = () => void leaveForm(returnTo ?? `/decks/${deckId}`);
 
   const handleCancel = () => {
     if (state.dirty) {
@@ -411,16 +414,12 @@ function DeckEditorBody({
 
   const handleSaveCreate = async () => {
     const created = await createDeck(buildDeckCreatePayload(state));
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      queryClient.invalidateQueries({ queryKey: ['decks', state.subjectId] }),
-      queryClient.invalidateQueries({ queryKey: ['subjects'] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: ['decks'] });
     if (returnTo) {
-      navigate(returnTo, { state: { deckId: created.id } });
+      await leaveForm(returnTo, { deckId: created.id });
       return;
     }
-    navigate(`/decks/${created.id}`);
+    await leaveForm(`/decks/${created.id}`);
   };
 
   const handleSaveEdit = async () => {
@@ -436,11 +435,6 @@ function DeckEditorBody({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['deck', deckId] }),
       queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      queryClient.invalidateQueries({ queryKey: ['decks', original.subjectId] }),
-      ...(state.subjectId !== original.subjectId
-        ? [queryClient.invalidateQueries({ queryKey: ['decks', state.subjectId] })]
-        : []),
-      queryClient.invalidateQueries({ queryKey: ['subjects'] }),
     ]);
     setSavedFlash(true);
   };
@@ -466,27 +460,19 @@ function DeckEditorBody({
     }
   };
 
-  // Ignores whatever's staged/unsaved in the editor, same as
-  // SubjectForm/CardStandaloneForm's own deletes — deleting the whole deck makes any
-  // pending edit moot. Navigates to the deck's own parent (its subject), the same "one
-  // level up" pattern as a card's delete going to its deck.
+  // Ignores whatever's staged/unsaved in the editor, same as CardStandaloneForm's own
+  // delete — deleting the whole deck makes any pending edit moot. Lands on Your library,
+  // the place a deck sits in.
   const handleDeleteDeck = async () => {
     setDeleting(true);
     setSaveError(null);
     try {
       await deleteDeck(deckId!);
-      // Deliberately not invalidating ['deck', deckId] — that query is still
-      // mounted on this very page until navigate() below unmounts it, and
-      // invalidating it would trigger an immediate refetch of a deck that no
-      // longer exists (a 404) before navigation ever runs. Same reason
-      // SubjectForm/CardStandaloneForm's own deletes never invalidate the entity
-      // they just deleted, only the list/parent queries that reference it.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['decks'] }),
-        queryClient.invalidateQueries({ queryKey: ['decks', original.subjectId] }),
-        queryClient.invalidateQueries({ queryKey: ['subjects'] }),
-      ]);
-      navigate(`/subjects/${original.subjectId}`);
+      await queryClient.invalidateQueries({ queryKey: ['decks'] });
+      await leaveForm('/library');
+      // Only once the form is gone: it watches the deck's query until it unmounts, and
+      // dropping the query sooner refetches a deck that no longer exists.
+      queryClient.removeQueries({ queryKey: ['deck', deckId] });
     } catch (err) {
       setSaveError(failureSentence(err, 'Deck not found.'));
       setDeleting(false);
@@ -496,7 +482,7 @@ function DeckEditorBody({
 
   // The confirm's wording is a live count, not a guess — fetched fresh on every click
   // rather than kept around from mount, so it reflects whatever's changed underneath
-  // (a config saved, a card added) since the page loaded. An error renders through the
+  // (a card added, a run started) since the page loaded. An error renders through the
   // form's existing error state and never opens the dialog.
   const handleDeleteClick = async () => {
     setCheckingDeletionImpact(true);
@@ -515,7 +501,7 @@ function DeckEditorBody({
   // The confirm is destructive-changeset-only, and only in edit mode — create mode has
   // nothing on the server yet for a changeset to destroy. fields_deleted/cards_deleted
   // come straight off the changeset the editor itself built;
-  // configurations_deleted/runs_deleted come from the same deletion-impact query a
+  // runs_deleted comes from the same deletion-impact query a
   // direct field delete previews with, fetched only when the changeset deletes a
   // field. cards.delete is always empty here — buildDeckBatchEditPayload never sends
   // card ops, see deckEditorDiff.ts — but the sentence has a clause for deleted cards,
@@ -534,7 +520,6 @@ function DeckEditorBody({
             fieldsDeleted,
             cardsDeleted,
             cardsAffected,
-            configurationsDeleted: 0,
             runsDeleted: 0,
           });
           return;
@@ -547,7 +532,6 @@ function DeckEditorBody({
             fieldsDeleted,
             cardsDeleted,
             cardsAffected,
-            configurationsDeleted: impact.configurations_deleted,
             runsDeleted: impact.runs_deleted,
           });
         } catch (err) {
@@ -563,29 +547,9 @@ function DeckEditorBody({
 
   const sayWhatIsMissing = () => {
     if (state.name.trim() === '') setNameError('Name is required.');
-    if (state.subjectId === null) setSubjectError('Choose a subject to create a deck.');
   };
 
   const handleRemoveField = (key: string) => dispatch({ type: 'REMOVE_FIELD', key });
-
-  const subjectDefaultValue: SubjectItem | null =
-    mode === 'edit' && subject
-      ? { id: subject.id, name: subject.name, icon: subject.icon }
-      : contextualSubject;
-
-  // The subject combobox is wired here rather than behind a picker component of its own:
-  // the fetch has to live in a page-level component (shared components take their data as
-  // props), and once it does, the wrapper is only holding this selection and the create
-  // overlay — both of which belong to the one screen that uses them.
-  //
-  // `selectedSubject` is owned here, not read straight off `subjectDefaultValue`:
-  // PickerCombobox compares its displayed text against the selected item's name to decide
-  // whether reopening shows the full list or a filtered one, so a selection that never
-  // advanced past the initial default would leave that comparison pointing at the wrong
-  // name.
-  const [selectedSubject, setSelectedSubject] = useState<SubjectItem | null>(subjectDefaultValue);
-  const [subjectOverlayOpen, setSubjectOverlayOpen] = useState(false);
-  const subjectInputRef = useRef<HTMLInputElement>(null);
 
   // "Done" once the editor has nothing unsaved to lose, "Cancel" while it does — create
   // mode never has a "clean, already saved" state to return to, so it always reads
@@ -612,22 +576,6 @@ function DeckEditorBody({
               className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
             />
           </label>
-        </FormPart>
-        <FormPart sentence={subjectError} look="wrong" className="flex flex-col gap-1.5">
-          <PickerCombobox<SubjectItem>
-            items={subjectsQuery.data ?? []}
-            selected={selectedSubject}
-            onSelect={(item) => {
-              setSelectedSubject(item);
-              setSubjectError(null);
-              dispatch({ type: 'SET_SUBJECT', subjectId: item.id });
-            }}
-            onSelectCreate={() => setSubjectOverlayOpen(true)}
-            createLabel="New subject…"
-            placeholder="Subject"
-            renderLeading={(item) => <SubjectIcon icon={item.icon} className="h-4 w-4" />}
-            inputRef={subjectInputRef}
-          />
         </FormPart>
       </div>
 
@@ -680,30 +628,6 @@ function DeckEditorBody({
           {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
         </SubmitButton>
       </FormBar>
-
-      {/* Creating a subject from the combobox's create row happens *over* this editor
-          rather than navigating away — unlike "New deck…" in the card form, there is
-          nothing heavy to nest here and everything typed so far would otherwise be lost. */}
-      <FullScreenDialog
-        open={subjectOverlayOpen}
-        onClose={() => setSubjectOverlayOpen(false)}
-        ariaLabel="New subject"
-        triggerRef={subjectInputRef}
-      >
-        <SubjectFormBody
-          mode="create"
-          subjectId={undefined}
-          original={undefined}
-          onSuccess={(subject) => {
-            void queryClient.invalidateQueries({ queryKey: ['subjects'] });
-            setSelectedSubject(subject);
-            setSubjectError(null);
-            dispatch({ type: 'SET_SUBJECT', subjectId: subject.id });
-            setSubjectOverlayOpen(false);
-          }}
-          onCancel={() => setSubjectOverlayOpen(false)}
-        />
-      </FullScreenDialog>
 
       <ConfirmDialog
         open={confirmCancelOpen}

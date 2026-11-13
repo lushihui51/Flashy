@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithRouter } from 'src/test/testUtils';
 import DeckRow from 'src/components/library/DeckRow';
 
 const deck = {
   id: 'd1',
-  subject_id: 's1',
-  subject_name: 'Math',
   name: 'Algebra',
   created_at: '',
   last_activity_at: '',
@@ -20,24 +18,20 @@ describe('DeckRow', () => {
   it('shows the name over its counts', () => {
     renderWithRouter(<DeckRow deck={deck} />);
 
-    expect(screen.getByText('Algebra')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Deck Algebra/ })).toBeInTheDocument();
     expect(screen.getByText('6 cards · 2 fields')).toBeInTheDocument();
   });
 
-  it("opens its second line with the subject's name when given", () => {
-    renderWithRouter(<DeckRow deck={deck} subjectName="Math" />);
-
-    expect(screen.getByText('Math · 6 cards · 2 fields')).toBeInTheDocument();
-  });
-
   it('counts one card and one field in the singular', () => {
-    renderWithRouter(<DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />);
+    renderWithRouter(
+      <DeckRow deck={{ ...deck, card_count: 1, readiness: 0.5, field_names: ['Front'] }} />,
+    );
 
     expect(screen.getByText('1 card · 1 field')).toBeInTheDocument();
   });
 
   it("never shows a field's name", () => {
-    renderWithRouter(<DeckRow deck={deck} subjectName="Math" />);
+    renderWithRouter(<DeckRow deck={deck} />);
 
     expect(screen.queryByText(/Front/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Back/)).not.toBeInTheDocument();
@@ -59,5 +53,18 @@ describe('DeckRow', () => {
     renderWithRouter(<DeckRow deck={deck} />);
 
     expect(screen.getByRole('link', { name: /Algebra/ })).toHaveAttribute('href', '/decks/d1');
+  });
+
+  it("shows the deck's mark before the deck's name", () => {
+    renderWithRouter(<DeckRow deck={deck} />);
+
+    const row = screen.getByRole('link', { name: /^Deck Algebra/ });
+    const mark = within(row).getByRole('img', { name: 'Deck' });
+    // The mark is held to the name's first letter, inside the title's clamp.
+    expect(mark.parentElement).toHaveClass('whitespace-nowrap');
+    expect(mark.parentElement).toHaveTextContent(/^A$/);
+    const title = mark.parentElement!.parentElement!;
+    expect(title).toHaveTextContent(/^Algebra$/);
+    expect(title).toHaveClass('line-clamp-2');
   });
 });

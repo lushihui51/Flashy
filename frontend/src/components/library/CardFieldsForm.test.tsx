@@ -19,8 +19,8 @@ describe('CardFieldsForm', () => {
 
     const inputs = screen.getAllByRole('textbox');
     expect(inputs).toHaveLength(2);
-    expect(screen.getByRole('textbox', { name: 'Front' })).toHaveValue('Hola');
-    expect(screen.getByRole('textbox', { name: 'Back' })).toHaveValue('Hello');
+    expect(screen.getByRole('textbox', { name: '[Front]' })).toHaveValue('Hola');
+    expect(screen.getByRole('textbox', { name: '[Back]' })).toHaveValue('Hello');
   });
 
   it('calls onChange with the field key and new value as the user types', async () => {
@@ -34,7 +34,7 @@ describe('CardFieldsForm', () => {
       />,
     );
 
-    await user.type(screen.getByRole('textbox', { name: 'Front' }), 'x');
+    await user.type(screen.getByRole('textbox', { name: '[Front]' }), 'x');
     expect(onChange).toHaveBeenLastCalledWith('f1', 'x');
   });
 
@@ -47,7 +47,7 @@ describe('CardFieldsForm', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox', { name: /Diagram/ });
+    const input = screen.getByRole('textbox', { name: /^\[Diagram\]/ });
     expect(input).toHaveValue('https://example.com/pic.png');
     expect(input).toHaveAttribute('readonly');
     expect(screen.getByText('Unsupported field type')).toBeInTheDocument();

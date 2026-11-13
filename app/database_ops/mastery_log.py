@@ -22,7 +22,7 @@ from app.models.card import Card
 from app.models.deck import Deck
 from app.models.field_def import FieldDef
 from app.models.mastery_log import MasteryLog
-from app.models.subject import Subject
+from app.models.practice_configuration import PracticeConfiguration
 
 # This module fetches and writes state; it never computes it. Every value
 # written below is already-computed Python data handed in by a MasteryStrategy — no
@@ -72,7 +72,7 @@ def db_stage_append_mastery_log(
     states: dict[uuid.UUID, FieldMasteryState],
     reviewed_at: datetime,
     review_group_id: uuid.UUID,
-    practice_run_id: uuid.UUID | None,
+    run_id: uuid.UUID | None,
 ) -> None:
     """Writes computed values only. No `SET x = <expression>` — the incoming states are
     already the strategy's output; this just appends them. Plain bulk INSERT — the
@@ -87,7 +87,7 @@ def db_stage_append_mastery_log(
             "id": uuid.uuid4(),
             "card_id": card_id,
             "field_def_id": field_def_id,
-            "practice_run_id": practice_run_id,
+            "run_id": run_id,
             "review_group_id": review_group_id,
             "prompt_mastery": state.prompt_mastery,
             "answer_mastery": state.answer_mastery,
@@ -161,12 +161,19 @@ def db_fetch_mastery_read_rows(
 
 
 def _fetch_collection_mastery_read_rows(
-    db: Session, owner_id: InstrumentedAttribute[uuid.UUID], owner_ids: list[uuid.UUID]
+    db: Session,
+    owner_id: InstrumentedAttribute[uuid.UUID],
+    owner_deck_id: InstrumentedAttribute[uuid.UUID],
+    owner_ids: list[uuid.UUID],
 ) -> list[Row]:
+    """One row per (owner, card, field of the card's deck), the owner being whatever row
+    `owner_id` and `owner_deck_id` are columns of, joined to each card through its deck."""
     if not owner_ids:
         return []
     owned_card_ids = (
-        select(Card.id).join(Deck, Deck.id == Card.deck_id).where(col(owner_id).in_(owner_ids))
+        select(Card.id)
+        .join(owner_deck_id.class_, owner_deck_id == Card.deck_id)
+        .where(col(owner_id).in_(owner_ids))
     )
     latest_mastery = _latest_mastery_subquery(col(MasteryLog.card_id).in_(owned_card_ids))
     query = (
@@ -180,7 +187,7 @@ def _fetch_collection_mastery_read_rows(
             latest_mastery.c.answer_review_count,
         )
         .select_from(Card)
-        .join(Deck, Deck.id == Card.deck_id)
+        .join(owner_deck_id.class_, owner_deck_id == Card.deck_id)
         .join(FieldDef, FieldDef.deck_id == Card.deck_id)
         .outerjoin(
             latest_mastery,
@@ -196,18 +203,22 @@ def db_fetch_deck_mastery_read_rows(db: Session, deck_ids: list[uuid.UUID]) -> l
     """Raw material for deck_readiness: one row per (card, field of its deck) over these
     decks, `owner_id` being the deck's id and the mastery columns NULL when never
     reviewed. A deck with no card has no row. One statement whatever the count."""
-    return _fetch_collection_mastery_read_rows(db, Deck.id, deck_ids)
+    return _fetch_collection_mastery_read_rows(db, Deck.id, Deck.id, deck_ids)
 
 
-def db_fetch_subject_mastery_read_rows(db: Session, subject_ids: list[uuid.UUID]) -> list[Row]:
-    """Raw material for subject_readiness: one row per (card, field of its deck) over
-    these subjects' decks, `owner_id` being the subject's id and the mastery columns NULL
-    when never reviewed. A subject whose decks hold no card has no row. One statement
+def db_fetch_practice_mastery_read_rows(
+    db: Session, practice_ids: list[uuid.UUID]
+) -> list[Row]:
+    """Raw material for practice_readiness: one row per (card, field of its deck) over every
+    deck of these practices, `owner_id` being the practice's id and the mastery columns NULL
+    when never reviewed. A practice whose decks hold no card has no row. One statement
     whatever the count."""
-    return _fetch_collection_mastery_read_rows(db, Deck.subject_id, subject_ids)
+    return _fetch_collection_mastery_read_rows(
+        db, PracticeConfiguration.practice_id, PracticeConfiguration.deck_id, practice_ids
+    )
 
 
-def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> list[MasteryLog]:
+def db_fetch_run_mastery_log_rows(db: Session, run_id: uuid.UUID) -> list[MasteryLog]:
     """Every mastery_log row attributed to this run — one statement (`ix_mastery_log_run`),
     used by the breakdown's delta computation to find each (card, field) pair this
     run itself touched and, among those, its own first and last row. `reviewed_at`
@@ -216,7 +227,7 @@ def db_fetch_run_mastery_log_rows(db: Session, practice_run_id: uuid.UUID) -> li
     return list(
         db.exec(
             select(MasteryLog)
-            .where(MasteryLog.practice_run_id == practice_run_id)
+            .where(MasteryLog.run_id == run_id)
             .order_by(MasteryLog.reviewed_at)
         ).all()
     )
@@ -280,15 +291,14 @@ def db_fetch_mastery_before_bound(
 
 def db_stage_clear_mastery(db: Session, user_id: uuid.UUID | None = None) -> None:
     """Delete-scoped clear for rebuild_mastery. user_id=None clears every row; otherwise
-    only rows for cards owned (via deck -> subject) by that user."""
+    only rows for cards owned (via their deck) by that user."""
     if user_id is None:
         db.execute(delete(MasteryLog))
         return
     owned_card_ids = (
         select(Card.id)
         .join(Deck, Deck.id == Card.deck_id)
-        .join(Subject, Subject.id == Deck.subject_id)
-        .where(Subject.user_id == user_id)
+        .where(Deck.user_id == user_id)
     )
     db.execute(delete(MasteryLog).where(col(MasteryLog.card_id).in_(owned_card_ids)))
 

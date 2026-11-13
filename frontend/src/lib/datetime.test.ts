@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, userTimeZone } from 'src/lib/datetime.ts';
+import { formatRunDay, userTimeZone } from 'src/lib/datetime.ts';
 
 describe('userTimeZone', () => {
   it('resolves an IANA zone key', () => {
@@ -7,36 +7,18 @@ describe('userTimeZone', () => {
   });
 });
 
-describe('formatDate', () => {
-  it('formats the instant, not the string it was written as', () => {
-    // The API emits UTC, but an equivalent offset spelling of the same moment must
-    // render identically — a formatter that read the literal text would differ.
-    expect(formatDate('2026-08-24T16:00:00Z')).toBe(formatDate('2026-08-24T09:00:00-07:00'));
+describe('formatRunDay', () => {
+  it('writes the first run of a day as the day alone', () => {
+    expect(formatRunDay('2026-11-03', 0)).toBe('2026-11-03');
   });
 
-  it('accepts a Date as well as an ISO string', () => {
-    expect(formatDate(new Date('2026-08-24T16:00:00Z'))).toBe(formatDate('2026-08-24T16:00:00Z'));
+  it("adds the run's place in parentheses for a later run of the day", () => {
+    expect(formatRunDay('2026-11-03', 1)).toBe('2026-11-03 (1)');
+    expect(formatRunDay('2026-11-03', 12)).toBe('2026-11-03 (12)');
   });
 
-  it('distinguishes instants a day apart', () => {
-    expect(formatDate('2026-08-24T16:00:00Z')).not.toBe(formatDate('2026-08-25T16:00:00Z'));
-  });
-
-  it('rejects an unparseable instant rather than rendering "Invalid Date"', () => {
-    expect(() => formatDate('not-a-date')).toThrow(TypeError);
-  });
-});
-
-describe('formatDateTime', () => {
-  it('includes a time component that formatDate omits', () => {
-    const instant = '2026-08-24T16:00:00Z';
-    expect(formatDateTime(instant)).not.toBe(formatDate(instant));
-    expect(formatDateTime(instant).startsWith(formatDate(instant))).toBe(true);
-  });
-
-  it('separates two instants within the same local day', () => {
-    expect(formatDateTime('2026-08-24T16:00:00Z')).not.toBe(
-      formatDateTime('2026-08-24T16:30:00Z'),
-    );
+  it('writes the day as sent, never moving it by a zone', () => {
+    // A day read as a Date is midnight UTC, the previous day west of UTC.
+    expect(formatRunDay('2026-01-01', 0)).toBe('2026-01-01');
   });
 });

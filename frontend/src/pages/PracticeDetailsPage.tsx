@@ -1,54 +1,49 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, Pencil } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
-import {
-  deletePracticeRun,
-  readPracticeRun,
-  readPracticeRunBreakdown,
-} from 'src/api/practice_run';
-import PracticeStatusBadge from 'src/components/practice/PracticeStatusBadge';
-import RerunButton from 'src/components/practice/RerunButton';
-import RunBreakdown from 'src/components/practice/RunBreakdown';
-import SessionDeckChips from 'src/components/practice/SessionDeckChips';
-import Breadcrumb from 'src/components/ui/Breadcrumb';
-import ConfirmDialog from 'src/components/ui/ConfirmDialog';
+import { readPractice, startRun } from 'src/api/practice';
 import { isNotFound } from 'src/api/unwrap';
-import { formatDateTime } from 'src/lib/datetime';
+import RunRow from 'src/components/run/RunRow';
+import Breadcrumb from 'src/components/ui/Breadcrumb';
+import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
+import MasteryCircle from 'src/components/ui/MasteryCircle';
+import PracticeMark from 'src/components/ui/PracticeMark';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
-import type { components } from 'src/api/types';
+import { returnAddressParams } from 'src/lib/returnTo';
 
-type PracticeRunSummary = components['schemas']['PracticeRunSummary'];
-
-const HEADER_ACTION_CLASS =
-  'tappable flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-surface) text-(--color-ink)';
-
-/**
- * One practice's own page: name, status, when it was created, which decks it covers,
- * and — while it's still active — the way into it. Delete and, once completed, Re-run
- * are the entity actions and so live in the header; create is start, so there is
- * nothing to edit beyond that.
- *
- * The body is a separate component, gated on the session actually being loaded — same
- * reason DeckConfigurationEditor gates its body on the config: everything below needs
- * real data, and splitting it out keeps this component's own hook count fixed instead
- * of some of them running only once the query resolves.
- */
+/** One practice's own page: its mark, name and circle; "Start run" with no active run and
+ * "Continue run" with one, beside the pencil to Edit practice; a line per deck, each opening the
+ * deck's board; and every run it has had under "Runs". */
 export default function PracticeDetailsPage() {
-  const { practiceSessionId } = useParams<{ practiceSessionId: string }>();
+  const { practiceId } = useParams<{ practiceId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
 
-  const sessionQuery = useQuery({
-    queryKey: ['practice_run_summary', practiceSessionId],
-    queryFn: () => readPracticeRun(practiceSessionId!),
-    enabled: !!practiceSessionId,
+  const practiceQuery = useQuery({
+    queryKey: ['practice', practiceId],
+    queryFn: () => readPractice(practiceId!),
+    enabled: !!practiceId,
   });
-  usePageTitle(sessionQuery.data?.name);
+  usePageTitle(practiceQuery.data?.name);
 
-  if (sessionQuery.isError) {
+  const startMutation = useMutation({
+    mutationFn: () => startRun(practiceId!),
+    onSuccess: async (run) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['practice', practiceId] }),
+        queryClient.invalidateQueries({ queryKey: ['practices'] }),
+      ]);
+      navigate(`/runs/${run.id}`);
+    },
+  });
+
+  if (practiceQuery.isError) {
     return (
       <div className="p-4">
-        {isNotFound(sessionQuery.error) ? (
+        {isNotFound(practiceQuery.error) ? (
           <p className="text-(--color-aside)">Practice not found.</p>
         ) : (
           <p role="alert" className="text-sm text-(--color-wrong)">
@@ -58,126 +53,84 @@ export default function PracticeDetailsPage() {
       </div>
     );
   }
-  if (!sessionQuery.data) return null;
-
-  return <PracticeDetailsPageBody session={sessionQuery.data} />;
-}
-
-function PracticeDetailsPageBody({ session }: { session: PracticeRunSummary }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [rerunError, setRerunError] = useState('');
-
-  // Only a completed session has a breakdown to show — the router itself 409s a
-  // breakdown request for an active one, so this stays disabled until then.
-  const breakdownQuery = useQuery({
-    queryKey: ['practice_run_breakdown', session.id],
-    queryFn: () => readPracticeRunBreakdown(session.id),
-    enabled: session.status === 'completed',
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => deletePracticeRun(session.id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['practice_runs'] });
-      navigate('/practice');
-    },
-    onError: (error: Error) => setDeleteError(failureSentence(error, 'Practice not found.')),
-  });
+  const practice = practiceQuery.data;
+  if (!practice) return null;
 
   return (
     <div className="p-4">
-      <Breadcrumb places={[{ label: 'Practice', to: '/practice' }]} />
+      <Breadcrumb places={[{ label: 'All practices', to: '/practices' }]} />
 
-      <div className="mt-3.5 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <h1 className="min-w-0 text-page leading-[1.05] font-bold tracking-[-0.02em] break-words text-(--color-ink)">
-            {session.name}
-          </h1>
-          <PracticeStatusBadge status={session.status} />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {session.status === 'completed' && (
-            <RerunButton session={session} look="icon" onError={setRerunError} />
-          )}
-          <button
-            type="button"
-            aria-label={`Delete ${session.name}`}
-            onClick={() => setConfirmDeleteOpen(true)}
-            className={HEADER_ACTION_CLASS}
-          >
-            <Trash2 aria-hidden="true" className="size-icon" />
-          </button>
-        </div>
+      {/* The heading is never narrower than its mark and longest word, so the circle wraps
+          beneath it once that word no longer fits beside it. */}
+      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="max-w-full flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          <MarkedName mark={<PracticeMark />} name={practice.name} />
+        </h1>
+        {practice.readiness !== null && (
+          <MasteryCircle readiness={practice.readiness} size="heading" className="mr-2.5" />
+        )}
       </div>
 
-      {/* The re-run's confirm closes on failure (unlike delete's, which stays
-          open), so its error renders here instead — same alert styling as the delete
-          error, next to the header actions that triggered it. */}
-      {rerunError && (
-        <p role="alert" className="mt-1 text-sm text-(--color-wrong)">
-          {rerunError}
+      <div className="mt-3.5 flex gap-2.5">
+        <button
+          type="button"
+          disabled={startMutation.isPending}
+          onClick={() => startMutation.mutate()}
+          className="tappable h-action min-w-0 flex-1 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
+        >
+          {practice.active_run_id ? 'Continue run' : 'Start run'}
+        </button>
+        <button
+          type="button"
+          aria-label={`Edit ${practice.name}`}
+          onClick={() =>
+            navigate({
+              pathname: `/practices/${practice.id}/edit`,
+              search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+            })
+          }
+          className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
+        >
+          <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
+        </button>
+      </div>
+      {startMutation.isError && (
+        <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
+          {failureSentence(startMutation.error, 'Practice not found.')}
         </p>
       )}
 
-      <p className="mt-1 text-body text-(--color-aside)">{formatDateTime(session.created_at)}</p>
+      <ul className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+        {practice.decks.map((deck) => (
+          <li key={deck.deck_id}>
+            <Link
+              to={{
+                pathname: `/practices/${practice.id}/decks/${deck.deck_id}`,
+                search: returnAddressParams(location, 'cancelTo', 'returnTo').toString(),
+              }}
+              className="flex min-h-11 items-center justify-between gap-3 py-3 pr-3 pl-4"
+            >
+              <span className="line-clamp-2 min-w-0 text-body leading-5 font-semibold break-words text-(--color-ink)">
+                <MarkedName mark={<DeckMark />} name={deck.deck_name} />
+              </span>
+              <ChevronRight aria-hidden="true" className="size-icon shrink-0 text-(--color-aside)" />
+            </Link>
+          </li>
+        ))}
+      </ul>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-2">
-        <SessionDeckChips decks={session.decks} variant="full" />
-      </div>
-
-      {session.status === 'active' ? (
-        <button
-          type="button"
-          onClick={() => navigate(`/practice/${session.id}/run`)}
-          className="tappable mt-6 h-action w-full rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
-        >
-          Start practice
-        </button>
+      <h2 className="mt-5 text-action font-semibold text-(--color-ink)">Runs</h2>
+      {practice.runs.length > 0 ? (
+        <ul className="tappable mt-2.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)">
+          {practice.runs.map((run) => (
+            <li key={run.id}>
+              <RunRow run={run} />
+            </li>
+          ))}
+        </ul>
       ) : (
-        <div className="mt-6">
-          {breakdownQuery.isError && (
-            <p role="alert" className="text-sm text-(--color-wrong)">
-              {failureSentence(breakdownQuery.error, 'Practice not found.')}
-            </p>
-          )}
-          {breakdownQuery.data && (
-            <>
-              <p className="mb-3.5 text-body font-medium text-(--color-aside)">
-                {breakdownQuery.data.total_cards} card
-                {breakdownQuery.data.total_cards === 1 ? '' : 's'} practiced
-              </p>
-              <RunBreakdown breakdown={breakdownQuery.data} practiceSessionId={session.id} />
-            </>
-          )}
-        </div>
+        <p className="mt-2.5 text-body text-(--color-aside)">No runs yet.</p>
       )}
-
-      <ConfirmDialog
-        open={confirmDeleteOpen}
-        title="Delete this practice?"
-        // Same copy the overview uses — deliberately says nothing about decks or
-        // configs: deleting a session takes its own cards and snapshots and nothing
-        // else, and reviews already logged stay on record.
-        description="Its progress will be gone. The decks it practiced are not affected."
-        confirmLabel="Delete"
-        onConfirm={() => {
-          setDeleteError(null);
-          deleteMutation.mutate();
-        }}
-        onCancel={() => {
-          setConfirmDeleteOpen(false);
-          setDeleteError(null);
-        }}
-      >
-        {deleteError && (
-          <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
-            {deleteError}
-          </p>
-        )}
-      </ConfirmDialog>
     </div>
   );
 }

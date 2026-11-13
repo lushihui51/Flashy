@@ -9,7 +9,6 @@ const BASE = 'http://localhost:8000';
 describe('createDeck', () => {
   it('sends the payload and returns the created deck', async () => {
     const payload: components['schemas']['DeckCreate'] = {
-      subject_id: '00000000-0000-0000-0000-000000000301',
       name: 'Biology Deck',
       field_defs: [{ name: 'Term', type: 'text' }],
     };
@@ -48,7 +47,6 @@ describe('createDeck', () => {
 
     await expect(
       createDeck({
-        subject_id: '',
         name: '',
         field_defs: [],
       }),
@@ -62,8 +60,7 @@ describe('readDeck', () => {
       http.get(`${BASE}/api/decks/:deck_id`, ({ params }) =>
         HttpResponse.json({
           id: params.deck_id,
-          subject_id: '00000000-0000-0000-0000-000000000301',
-          name: 'Chemistry Deck',
+              name: 'Chemistry Deck',
           readiness: null,
         }),
       ),
@@ -71,7 +68,6 @@ describe('readDeck', () => {
 
     await expect(readDeck('deck_42')).resolves.toEqual({
       id: 'deck_42',
-      subject_id: '00000000-0000-0000-0000-000000000301',
       name: 'Chemistry Deck',
       readiness: null,
     });
@@ -100,8 +96,7 @@ describe('updateDeck', () => {
         sentBody = await request.json();
         return HttpResponse.json({
           id: params.deck_id,
-          subject_id: '00000000-0000-0000-0000-000000000301',
-          name: 'Updated Deck',
+              name: 'Updated Deck',
           readiness: null,
         });
       }),
@@ -111,7 +106,6 @@ describe('updateDeck', () => {
     expect(sentBody).toEqual(payload);
     expect(updated).toEqual({
       id: 'deck_7',
-      subject_id: '00000000-0000-0000-0000-000000000301',
       name: 'Updated Deck',
       readiness: null,
     });

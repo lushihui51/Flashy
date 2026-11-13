@@ -14,6 +14,7 @@ import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
+import { useLeaveForm } from 'src/lib/leaveForm';
 import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
@@ -24,7 +25,7 @@ type CardStandaloneFormProps = {
 type LocationState = { deckId?: string } | null;
 
 /** Standalone card create/edit — its own routes (`/cards/new`, `/cards/:cardId/edit`),
- * real API calls, real navigation, a routed page like SubjectForm. */
+ * real API calls, real navigation, a routed page like DeckEditor. */
 export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
   const { cardId } = useParams<{ cardId: string }>();
   const location = useLocation();
@@ -63,6 +64,9 @@ export default function CardStandaloneForm({ mode }: CardStandaloneFormProps) {
 
   return (
     <CardStandaloneFormBody
+      // A new deck's id arrives after this form has mounted again on the step back from New
+      // deck, so the body starts over on every arrival rather than reading it once.
+      key={location.key}
       mode={mode}
       cardId={cardId}
       original={mode === 'edit' ? cardQuery.data : undefined}
@@ -91,6 +95,7 @@ function CardStandaloneFormBody({
   returnTo,
 }: CardStandaloneFormBodyProps) {
   const navigate = useNavigate();
+  const leaveForm = useLeaveForm();
   const location = useLocation();
   const queryClient = useQueryClient();
   const formId = useId();
@@ -117,11 +122,10 @@ function CardStandaloneFormBody({
   // Derived from `deckId` rather than kept as its own state: reverting `deckId` after a
   // cancelled "Change deck?" confirm then redisplays the previous deck by itself, with no
   // remount needed to tell the combobox its selection moved back. Falls back to the
-  // single-deck fetch for the initial preselection, which lands before the list does. That
-  // read carries no subject's name; a chosen deck shows only its own name, so none is missed.
+  // single-deck fetch for the initial preselection, which lands before the list does.
   const selectedDeck =
     decksQuery.data?.find((deck) => deck.id === deckId) ??
-    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name, subject_name: '' } : null);
+    (deckQuery.data ? { id: deckQuery.data.id, name: deckQuery.data.name } : null);
 
   // A card can't move between decks once it exists, so editing one shows its deck as a
   // fixed value. A contextual "New card" and the deck-editor round-trip both just
@@ -140,7 +144,8 @@ function CardStandaloneFormBody({
       : !!original && Object.entries(values).some(([k, v]) => v !== (original.values[k] ?? ''));
 
 
-  const leaveByCancel = () => navigate(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
+  const leaveByCancel = () =>
+    void leaveForm(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
 
   const handleCancel = () => {
     if (dirty) {
@@ -176,11 +181,10 @@ function CardStandaloneFormBody({
     goToCreateDeck();
   };
 
-  const invalidateAfterWrite = async (writtenDeckId: string, subjectId: string | undefined) => {
+  const invalidateAfterWrite = async (writtenDeckId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['deck', writtenDeckId] }),
       queryClient.invalidateQueries({ queryKey: ['decks'] }),
-      ...(subjectId ? [queryClient.invalidateQueries({ queryKey: ['decks', subjectId] })] : []),
     ]);
   };
 
@@ -201,8 +205,8 @@ function CardStandaloneFormBody({
           await updateCard(cardId!, { values: changed });
         }
       }
-      await invalidateAfterWrite(deckId, deckQuery.data.subject_id);
-      navigate(returnTo ?? `/decks/${deckId}`);
+      await invalidateAfterWrite(deckId);
+      await leaveForm(returnTo ?? `/decks/${deckId}`);
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
@@ -214,8 +218,11 @@ function CardStandaloneFormBody({
     setSubmitting(true);
     try {
       await deleteCard(cardId!);
-      await invalidateAfterWrite(deckId, deckQuery.data?.subject_id);
-      navigate(`/decks/${deckId}`);
+      await invalidateAfterWrite(deckId);
+      await leaveForm(`/decks/${deckId}`);
+      // Only once the form is gone: it watches the card's query until it unmounts, and
+      // dropping the query sooner refetches a card that no longer exists.
+      queryClient.removeQueries({ queryKey: ['card', cardId] });
     } catch (err) {
       setFormError(failureSentence(err, 'Card not found.'));
       setSubmitting(false);
@@ -238,7 +245,7 @@ function CardStandaloneFormBody({
         {deckLocked ? (
           <div className="flex items-baseline gap-2.5">
             <span className="text-label text-(--color-aside)">Deck</span>
-            <span className="text-body font-semibold text-(--color-ink)">
+            <span className="min-w-0 text-body font-semibold break-words text-(--color-ink)">
               {selectedDeck?.name ?? ''}
             </span>
           </div>

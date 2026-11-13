@@ -14,7 +14,6 @@ from app.database_ops.field_def import (
     db_read_field_defs,
     db_stage_create_field_def,
 )
-from app.database_ops.subject import db_read_subject
 from app.mastery.strategy import MasteryStrategy
 from app.models.card import Card
 from app.models.deck import Deck
@@ -53,7 +52,7 @@ def apply_deck_batch_edit(
     update → field delete → reorder → card delete → card update → card create, then a
     single commit. Any validation failure raises before that commit, so nothing
     partial — not even an already-renamed deck — ever reaches the database. A name the
-    deck's subject or the deck's active fields already hold raises a `deck_name_taken`
+    user's other decks or the deck's active fields already hold raises a `deck_name_taken`
     or `field_name_taken` Refusal; any other refused input raises
     DeckBatchEditValidationError."""
     try:
@@ -64,9 +63,9 @@ def apply_deck_batch_edit(
         # A taken name surfaces at whichever flush first writes it, an autoflush ahead
         # of a read included, so the whole staging sits inside this handler.
         constraint = getattr(getattr(e.orig, "diag", None), "constraint_name", None)
-        if constraint == "uq_deck_subject_id":
+        if constraint == "uq_deck_user_id":
             raise Refusal(
-                "deck_name_taken", "deck (subject_id, name) already exists"
+                "deck_name_taken", "deck (user_id, name) already exists"
             ) from e
         if constraint == "uq_field_def_deck_id_name":
             raise Refusal(
@@ -83,10 +82,9 @@ def _stage_deck_batch_edit(
     db: Session, user_id: uuid.UUID, deck: Deck, payload: DeckBatchEdit, strategy: MasteryStrategy
 ) -> None:
     touch_deck = False
-    touch_subject_ids: set[uuid.UUID] = set()
     updated_cards: list[Card] = []
 
-    # --- own columns: name, subject_id ---
+    # --- own column: name ---
     if payload.name is not None:
         name = payload.name.strip()
         if not name:
@@ -94,16 +92,6 @@ def _stage_deck_batch_edit(
         if name != deck.name:
             deck.name = name
             touch_deck = True
-
-    if payload.subject_id is not None and payload.subject_id != deck.subject_id:
-        subject = db_read_subject(db, payload.subject_id, user_id)
-        if subject is None:
-            raise DeckBatchEditValidationError(f"subject_id {payload.subject_id} not found")
-        old_subject_id = deck.subject_id
-        deck.subject_id = payload.subject_id
-        touch_deck = True
-        touch_subject_ids.add(old_subject_id)
-        touch_subject_ids.add(payload.subject_id)
 
     # Snapshot before any card is created/deleted below — this is exactly the set that
     # owes a backfilled row to any field created in this same request; a card
@@ -170,10 +158,10 @@ def _stage_deck_batch_edit(
         if len(active_fields) < 2:
             raise Refusal("too_few_fields", "the deck would keep fewer than two active field_defs")
 
-        # No manual cleanup of configurations, active runs, review rows, or
-        # shown_prompt_ids references — apply_deletion is the only way a field_def
-        # is ever deleted, and it takes all of that with it and rebuilds the deck's
-        # mastery to what the live path would have written without the field.
+        # No manual cleanup of practices' configurations, runs' copies, active runs,
+        # review rows, or shown_prompt_ids references — apply_deletion is the only way a
+        # field_def is ever deleted, and it takes all of that with it and rebuilds the
+        # deck's mastery to what the live path would have written without the field.
         if ops.delete:
             apply_deletion(
                 db, strategy, compute_deletion_impact(db, user_id, field_ids=ops.delete)
@@ -273,11 +261,7 @@ def _stage_deck_batch_edit(
             )
 
     # A card updated by id is the user's change to that card; a field operation that
-    # rewrites every card's values is not, so no card is touched for it (ADR 096).
+    # rewrites every card's values is not, so no card is touched for it (ADR 117).
     touch(db, *updated_cards)
     if touch_deck:
         touch(db, deck)
-        touch_subject_ids.add(deck.subject_id)
-    if touch_subject_ids:
-        subjects = [db_read_subject(db, sid, user_id) for sid in touch_subject_ids]
-        touch(db, *(s for s in subjects if s is not None))

@@ -127,14 +127,7 @@ def act_as(client):
 
 
 @pytest.fixture
-def existing_subject(client):
-    response = client.post("/api/subjects", json={"name": "Test Subject"})
-    assert response.status_code == 201, response.text
-    return response.json()
-
-
-@pytest.fixture
-def existing_deck(db, existing_subject):
+def existing_deck(db, existing_user):
     """Inserted directly, not via POST /api/decks — that endpoint creates the deck's
     field_defs atomically and requires at least two, since a deck always has at least
     two active fields, but most tests that depend on this fixture only care about
@@ -144,13 +137,12 @@ def existing_deck(db, existing_subject):
     idea as existing_user bypassing Clerk."""
     from app.models.deck import Deck
 
-    deck = Deck(subject_id=uuid.UUID(existing_subject["id"]), name="Test Deck")
+    deck = Deck(user_id=existing_user.id, name="Test Deck")
     db.add(deck)
     db.commit()
     db.refresh(deck)
     return {
         "id": str(deck.id),
-        "subject_id": str(deck.subject_id),
         "name": deck.name,
         "created_at": deck.created_at.isoformat(),
     }
@@ -180,25 +172,17 @@ def existing_card(client, existing_deck, existing_field_defs):
 
 
 @pytest.fixture
-def multi_subject_library(client):
-    """Two subjects, each owning a deck with the *same name* and one deck configuration.
+def two_deck_library(client):
+    """Two decks of the requesting user, "Alpha" under key "a" and "Beta" under key
+    "b", each with fields "front" and "back" and two cards — for the tests of lists and
+    filters over more than one deck."""
+    library = {"decks": {}, "fields": {}}
 
-    Two decks can share a name across subjects (uniqueness is per `(subject_id, name)`),
-    which is exactly why the practice filters key on deck **id** with the subject
-    alongside for disambiguation. Every list/filter test needs that collision to be real
-    rather than assumed, so it lives here."""
-    library = {"subjects": {}, "decks": {}, "fields": {}, "configs": {}}
-
-    for key, subject_name in (("a", "Alpha"), ("b", "Beta")):
-        subject_res = client.post("/api/subjects", json={"name": subject_name})
-        assert subject_res.status_code == 201, subject_res.text
-        subject = subject_res.json()
-
+    for key, deck_name in (("a", "Alpha"), ("b", "Beta")):
         deck_res = client.post(
             "/api/decks",
             json={
-                "name": "Shared Deck Name",
-                "subject_id": subject["id"],
+                "name": deck_name,
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},
@@ -218,24 +202,66 @@ def multi_subject_library(client):
             )
             assert card_res.status_code == 201, card_res.text
 
-        config_res = client.post(
-            "/api/deck_practice_configs",
-            json={
-                "deck_id": deck["id"],
-                "name": f"Config {key.upper()}",
-                "prompt_field_ids": [fields["front"]],
-                "answer_field_ids": [fields["back"]],
-                "prompt_pool_ids": [],
-                "prompt_pool_counts": [],
-                "answer_pool_ids": [],
-                "answer_pool_counts": [],
-            },
-        )
-        assert config_res.status_code == 201, config_res.text
-
-        library["subjects"][key] = subject
         library["decks"][key] = deck
         library["fields"][key] = fields
-        library["configs"][key] = config_res.json()
 
     return library
+
+
+def configuration(
+    prompt=(), answer=(), prompt_pool=(), prompt_counts=(), answer_pool=(), answer_counts=()
+) -> dict[str, list]:
+    """A configuration's six columns from field ids given as strings or uuids, for
+    make_practice."""
+
+    def ids(values):
+        return [uuid.UUID(str(value)) for value in values]
+
+    return {
+        "prompt_field_ids": ids(prompt),
+        "answer_field_ids": ids(answer),
+        "prompt_pool_ids": ids(prompt_pool),
+        "prompt_pool_counts": list(prompt_counts),
+        "answer_pool_ids": ids(answer_pool),
+        "answer_pool_counts": list(answer_counts),
+    }
+
+
+def create_practice(client, decks: dict, name: str | None = None) -> dict:
+    """Creates a practice of the client's user through `POST /api/practices` and returns
+    its body. `decks` maps each deck id, in the order picked, to the configuration the
+    practice asks it by, or to None for the one the create gave it; a configuration is
+    written straight to the test database, standing in for the board's save."""
+    from sqlmodel import select
+
+    from app.models.practice_configuration import PracticeConfiguration
+
+    res = client.post(
+        "/api/practices", json={"name": name, "deck_ids": [str(deck_id) for deck_id in decks]}
+    )
+    assert res.status_code == 201, res.text
+    practice = res.json()
+    with Session(engine) as session:
+        for deck_id, arrays in decks.items():
+            if arrays is None:
+                continue
+            row = session.exec(
+                select(PracticeConfiguration).where(
+                    PracticeConfiguration.practice_id == uuid.UUID(practice["id"]),
+                    PracticeConfiguration.deck_id == uuid.UUID(str(deck_id)),
+                )
+            ).one()
+            for column, value in arrays.items():
+                setattr(row, column, value)
+            session.add(row)
+        session.commit()
+    return practice
+
+
+def start_practice(client, decks: dict, name: str | None = None) -> dict:
+    """Creates a practice as create_practice does, starts its run through
+    `POST /api/practices/{id}/runs`, and returns the run's body."""
+    practice = create_practice(client, decks, name)
+    res = client.post(f"/api/practices/{practice['id']}/runs")
+    assert res.status_code == 200, res.text
+    return res.json()

@@ -23,7 +23,7 @@ export default function TopBar({
   createButtonRef,
 }: TopBarProps) {
   return (
-    <div className="flex h-14.5 w-full items-center gap-2 bg-(--color-ground) px-4">
+    <div className="flex min-h-14.5 w-full flex-wrap items-center gap-2 bg-(--color-ground) px-4 py-1.75">
       <button
         ref={menuButtonRef}
         type="button"
@@ -43,9 +43,9 @@ export default function TopBar({
 
       <Logo />
 
-      <div className="flex-1" />
-
-      <div className="flex shrink-0 items-center gap-1.5">
+      {/* Kept at the right by its margin, on the bar's line and on a line of its own once "+"
+          and the account's button no longer fit beside the logo. */}
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
         <button
           ref={createButtonRef}
           type="button"

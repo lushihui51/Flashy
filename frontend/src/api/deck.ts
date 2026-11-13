@@ -8,12 +8,7 @@ export const createDeck = async (payload: components['schemas']['DeckCreate']) =
 export const readDeck = async (deckId: string) =>
   unwrap(await client.GET('/api/decks/{deck_id}', { params: { path: { deck_id: deckId } } }));
 
-export const readDecks = async (subjectId?: string) =>
-  unwrap(
-    await client.GET('/api/decks', {
-      params: { query: subjectId ? { subject_id: subjectId } : {} },
-    }),
-  );
+export const readDecks = async () => unwrap(await client.GET('/api/decks'));
 
 export const updateDeck = async (deckId: string, payload: components['schemas']['DeckBatchEdit']) =>
   unwrap(

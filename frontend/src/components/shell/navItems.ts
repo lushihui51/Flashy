@@ -7,7 +7,7 @@ export type NavItem = {
   end?: boolean;
 };
 
-export const PRACTICE_NAV: NavItem = { label: 'Practice', to: '/practice', icon: Zap };
+export const PRACTICE_NAV: NavItem = { label: 'All practices', to: '/practices', icon: Zap };
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Home', to: '/', icon: Home, end: true },

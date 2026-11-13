@@ -20,22 +20,20 @@ _IdListQuery = Annotated[list[uuid.UUID], Query()]
 def get_deletion_impact(
     db: SessionDep,
     current_user: CurrentUserDep,
-    subject_ids: _IdListQuery = [],  # noqa: B006 — FastAPI query params, not shared state
-    deck_ids: _IdListQuery = [],  # noqa: B006
+    deck_ids: _IdListQuery = [],  # noqa: B006 — FastAPI query params, not shared state
     field_ids: _IdListQuery = [],  # noqa: B006
     card_ids: _IdListQuery = [],  # noqa: B006
 ):
     """The advisory preview behind every delete confirm: the same closure a deletion
     transaction computes for itself, reported as counts. 404 for the first id that's
-    foreign or doesn't exist; 422 when all four lists are empty — there's nothing to
+    foreign or doesn't exist; 422 when all three lists are empty — there's nothing to
     preview."""
-    if not (subject_ids or deck_ids or field_ids or card_ids):
+    if not (deck_ids or field_ids or card_ids):
         raise HTTPException(status_code=422, detail="at least one id is required")
     try:
         impact = compute_deletion_impact(
             db,
             current_user.id,
-            subject_ids=subject_ids,
             deck_ids=deck_ids,
             field_ids=field_ids,
             card_ids=card_ids,
@@ -43,11 +41,10 @@ def get_deletion_impact(
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return DeletionImpactRead(
-        subjects_deleted=len(impact.subject_ids),
         decks_deleted=len(impact.deck_ids),
         fields_deleted=len(impact.field_ids),
         cards_deleted=len(impact.card_ids),
         cards_affected=impact.affected_card_count,
-        configurations_deleted=len(impact.configuration_ids),
         runs_deleted=len(impact.run_ids),
+        practices_affected=len(impact.practice_ids),
     )

@@ -1,58 +1,22 @@
-import { useRef, useState } from 'react';
-import { Pencil, Play } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { readDeck } from 'src/api/deck';
-import { readSubject } from 'src/api/subject';
-import { deleteDeckPracticeConfig, readDeckPracticeConfigs } from 'src/api/deck_practice_config';
-import SubjectIcon from 'src/components/library/SubjectIcon';
 import CardList from 'src/components/library/CardList';
-import DeckConfigurationRow from 'src/components/library/DeckConfigurationRow';
-import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
+import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
-import Tabs from 'src/components/ui/Tabs';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
-import { failureSentence } from 'src/lib/failureSentence';
-import { useViewParams } from 'src/lib/viewParams';
-import type { components } from 'src/api/types';
+import { returnAddressParams } from 'src/lib/returnTo';
 import { isNotFound } from 'src/api/unwrap';
-
-type DeckPracticeConfigSummary = components['schemas']['DeckPracticeConfigSummary'];
-
-const TABS = ['cards', 'configurations'] as const;
-type Tab = (typeof TABS)[number];
-
-const TAB_ITEMS: { value: Tab; label: string }[] = [
-  { value: 'cards', label: 'Cards' },
-  { value: 'configurations', label: 'Configurations' },
-];
-
-function isTab(value: string | null): value is Tab {
-  return value !== null && (TABS as readonly string[]).includes(value);
-}
 
 export default function DeckDetailPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // In the URL rather than component state: the configuration builder navigates away and
-  // back, and landing on the deck's *cards* after saving one would lose the thread.
-  const { params, changeView } = useViewParams();
-  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'cards';
-
-  const tabsRef = useRef<HTMLDivElement>(null);
-  // The open tab's list, its empty sentence or its failure sentence: whichever shows, so a
-  // reveal after a tab change finds where the list starts, and nothing until one does.
-  const cardsRef = useRef<HTMLDivElement>(null);
-  const configurationsRef = useRef<HTMLUListElement>(null);
-  const emptyRef = useRef<HTMLDivElement>(null);
-  const failureRef = useRef<HTMLParagraphElement>(null);
-
-  const [pendingDelete, setPendingDelete] = useState<DeckPracticeConfigSummary | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const location = useLocation();
 
   const deckQuery = useQuery({
     queryKey: ['deck', deckId],
@@ -61,30 +25,6 @@ export default function DeckDetailPage() {
   });
   const deck = deckQuery.data;
   usePageTitle(deck?.name);
-
-  const subjectQuery = useQuery({
-    queryKey: ['subject', deck?.subject_id],
-    queryFn: () => readSubject(deck!.subject_id),
-    enabled: !!deck,
-  });
-
-  // Scoped to this deck, because a configuration belongs to exactly one: this is the
-  // whole list there is to show here.
-  const configurationsQuery = useQuery({
-    queryKey: ['deck_practice_configs', null, deckId],
-    queryFn: () => readDeckPracticeConfigs({ deckId: deckId! }),
-    enabled: !!deckId,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteDeckPracticeConfig(id),
-    onSuccess: async () => {
-      setPendingDelete(null);
-      setDeleteError(null);
-      await queryClient.invalidateQueries({ queryKey: ['deck_practice_configs'] });
-    },
-    onError: (error) => setDeleteError(failureSentence(error, 'Deck configuration not found.')),
-  });
 
   if (deckQuery.isError) {
     return (
@@ -103,171 +43,57 @@ export default function DeckDetailPage() {
   if (!deck) return null;
 
   const fieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
-  const subject = subjectQuery.data;
-  const configurations = configurationsQuery.data ?? [];
 
-  const setTab = (next: Tab) => {
-    const nextParams = new URLSearchParams(params);
-    if (next === 'cards') nextParams.delete('tab');
-    else nextParams.set('tab', next);
-    changeView(nextParams, {
-      // The whole tablist rather than the pressed tab, whose pressed look sits lower than the
-      // others by the press travel: at the band's top it would leave them under the header.
-      control: () => tabsRef.current?.querySelector('[role="tablist"]') ?? null,
-      listStart: () =>
-        cardsRef.current?.querySelector('ul') ??
-        configurationsRef.current ??
-        emptyRef.current ??
-        failureRef.current,
-    });
-  };
+  const cancelToHere = returnAddressParams(location, 'cancelTo').toString();
 
-  // Both carry the deck in router state — the same deck-context wiring the card form
-  // and the configuration builder already read on arrival.
-  const addCard = () => navigate('/cards/new', { state: { deckId: deck.id } });
-  const addConfiguration = () =>
-    navigate('/deck-configurations/new', { state: { deckId: deck.id } });
+  // Carries the deck in router state, the deck-context wiring the card form reads on arrival.
+  const addCard = () =>
+    navigate({ pathname: '/cards/new', search: cancelToHere }, { state: { deckId: deck.id } });
 
   return (
     <div className="p-4">
-      <Breadcrumb
-        places={[
-          { label: 'Your library', to: '/library' },
-          ...(subject
-            ? [
-                {
-                  label: subject.name,
-                  to: `/subjects/${subject.id}`,
-                  icon: <SubjectIcon icon={subject.icon} className="size-icon-sm" />,
-                },
-              ]
-            : []),
-        ]}
-      />
+      <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
-      <div className="mt-3.5 flex items-center gap-3">
-        <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          {deck.name}
+      {/* The heading is never narrower than its mark and longest word, so the circle and the
+          button wrap beneath it once that word no longer fits beside them. */}
+      <div className="mt-3.5 flex flex-wrap items-center gap-3">
+        <h1 className="max-w-full flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          <MarkedName mark={<DeckMark />} name={deck.name} />
         </h1>
         {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="heading" />}
-      </div>
-
-      <div className="mt-3.5 flex items-center gap-2.5">
-        <button
-          type="button"
-          // Both params, not just the deck: two decks in different subjects can share a
-          // name, so the subject is what makes the filtered list unambiguous on arrival.
-          onClick={() => navigate(`/practice?subject=${deck.subject_id}&deck=${deck.id}`)}
-          className="tappable flex h-action flex-1 items-center justify-center gap-2 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
-        >
-          <Play aria-hidden="true" fill="currentColor" className="size-icon-sm" />
-          Practice
-        </button>
         <button
           type="button"
           aria-label="Edit deck"
-          onClick={() => navigate(`/decks/${deck.id}/edit`)}
+          onClick={() => navigate({ pathname: `/decks/${deck.id}/edit`, search: cancelToHere })}
           className="tappable flex size-action shrink-0 items-center justify-center rounded-2xl bg-(--color-surface)"
         >
           <Pencil aria-hidden="true" className="size-icon text-(--color-ink)" />
         </button>
       </div>
 
-      {/* This deck's two contents, in the same tab grammar the library uses for subjects
-          and decks — a configuration belongs to this deck exactly as its cards do. */}
-      <div ref={tabsRef} className="mt-3.5">
-        <Tabs ariaLabel="Deck contents" items={TAB_ITEMS} value={tab} onChange={setTab} />
-      </div>
-
-      {tab === 'cards' ? (
-        <div className="mt-3.5">
-          {/* Inside the tab, and labeled: a control whose meaning depends on which tab
-              is open has no business sitting in the page header. */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-body font-medium text-(--color-aside)">
-              {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
-            </h2>
-            <AddButton label="Add card" onClick={addCard} />
-          </div>
-          {fieldDefs.length > 0 && deck.cards.length > 0 && (
-            <div ref={cardsRef} className="mt-3.5">
-              <CardList
-                deckName={deck.name}
-                fieldDefs={fieldDefs}
-                cards={deck.cards}
-                cardHref={(cardId) => `/cards/${cardId}/edit`}
-              />
-            </div>
-          )}
-          {deck.cards.length === 0 && (
-            <div ref={emptyRef} className="py-8">
-              <p className="text-body text-(--color-aside)">No cards in this deck yet.</p>
-            </div>
-          )}
+      <div className="mt-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <h2 className="text-body font-medium text-(--color-aside)">
+            {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
+          </h2>
+          <AddButton label="Add card" onClick={addCard} />
         </div>
-      ) : (
-        <section aria-label="Configurations" className="mt-3.5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-body font-medium text-(--color-aside)">
-              {configurationsQuery.data
-                ? pluralize(configurations.length, 'configuration')
-                : 'Configurations'}
-            </h2>
-            <AddButton label="Add configuration" onClick={addConfiguration} />
+        {fieldDefs.length > 0 && deck.cards.length > 0 && (
+          <div className="mt-3.5">
+            <CardList
+              deckName={deck.name}
+              fieldDefs={fieldDefs}
+              cards={deck.cards}
+              cardHref={(cardId) => `/cards/${cardId}/edit?${cancelToHere}`}
+            />
           </div>
-
-          {configurationsQuery.isError && (
-            <p ref={failureRef} role="alert" className="mt-2 text-sm text-(--color-wrong)">
-              Could not load configurations.
-            </p>
-          )}
-
-          {configurationsQuery.data && configurations.length === 0 && (
-            <div ref={emptyRef} className="py-8">
-              <p className="text-body text-(--color-aside)">No configurations yet.</p>
-            </div>
-          )}
-          {configurations.length > 0 && (
-            <ul
-              ref={configurationsRef}
-              className="tappable mt-3.5 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)"
-            >
-              {configurations.map((configuration) => (
-                <li key={configuration.id}>
-                  <DeckConfigurationRow
-                    configuration={configuration}
-                    onDelete={() => setPendingDelete(configuration)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete this configuration?"
-        // A practice copied what it needed the moment it started, so nothing that has
-        // already run is affected.
-        description="Practices that already used it are unaffected."
-        confirmLabel="Delete"
-        onConfirm={() => {
-          setDeleteError(null);
-          if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
-        }}
-        onCancel={() => {
-          setPendingDelete(null);
-          setDeleteError(null);
-        }}
-      >
-        {/* In the dialog, since the scrim covers the page while it stays open. */}
-        {deleteError && (
-          <p role="alert" className="mt-2 text-sm text-(--color-wrong)">
-            {deleteError}
-          </p>
         )}
-      </ConfirmDialog>
+        {deck.cards.length === 0 && (
+          <div className="py-8">
+            <p className="text-body text-(--color-aside)">No cards in this deck yet.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

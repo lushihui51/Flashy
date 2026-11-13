@@ -5,9 +5,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B1. How does a picture or audio value show on a card during a practice and in a practice's summary?
   - Reason: a field's only type is "Text", so the question waits for pictures and audio to exist; `FieldValue` in `frontend/src/components/practice/FieldValue.tsx` renders a picture or audio value as a small chip that opens the value over the page, so a zone's size stays predictable whatever the card holds
   - Owner: /product-decide
-- B2. Do a summary's order and chosen counts survive a refresh, browser back, and a shared address, as a page's open tab and filters do?
-  - Reason: PDR 017 keeps the open tab and filters across browser back and PDR 024 gives the summary three orders and counts the user can choose; neither says whether the chosen order or counts are kept. ADR 097 names the chosen counts and the order among the writes that change what a list shows, so the summary keeps them in its address, where they survive a refresh, browser back and a shared address, with no product record saying that is wanted.
-  - Owner: /product-decide
 - B3. Does the app have a dark appearance, and what are its colours?
   - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
   - Owner: /product-decide
@@ -20,20 +17,14 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B9. Can the user create many cards at once by pasting rows of text?
   - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
   - Owner: /product-decide
-- B10. Does an unsaved deck form survive leaving the page or closing the browser?
-  - Reason: `DeckEditor` keeps its draft in `useReducer` state and loses it on leaving, while New practice's draft lives in its address.
-  - Owner: /product-decide
 - B11. Which kinds of value can a field hold besides text, and how does the user enter each on a card?
   - Reason: `FieldType` in `app/models/field_def.py` has `text`, `image` and `audio`; `SUPPORTED_FIELD_TYPES` in `frontend/src/lib/fieldTypes.ts` allows `text` alone, and `CardFieldsForm` in `frontend/src/components/library/CardFieldsForm.tsx` has no widget for the other two.
   - Owner: /product-decide
-- B12. Can the user rename a practice after making it?
-  - Reason: A practice's name is typed on New practice or defaults to the date and time, and `app/routers/api/practice_run.py` has no route that changes it.
-  - Owner: /product-decide
 - B13. Does the app work out from a card's ratings when it should next be reviewed, and tell the user what is due and when?
-  - Reason: A scheduler, FSRS, is wanted later; today the user starts every practice themselves (PDR 027).
+  - Reason: A scheduler, FSRS, is wanted later; today the user starts every run themselves (PDR 037).
   - Owner: /product-decide
 - B14. Can the user work a deck toward a date, such as a test, with the app pacing practices to reach it?
-  - Reason: Wanted later; today the user starts every practice themselves (PDR 027).
+  - Reason: Wanted later; today the user starts every run themselves (PDR 037).
   - Owner: /product-decide
 - B15. Can the user share a deck with another user, and does the other user get a copy of their own or a view of the original?
   - Reason: Wanted later; today a deck reaches no other user (PDR 012).
@@ -42,32 +33,32 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 072); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 072); and a startup check that the database is at alembic head (ADR 045).
   - Owner: /code-decide
 - B18. In what order does a practice show its cards, across its decks and within one, and where does a card come back after it is rated Again?
-  - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in `start_practice_run`'s docstring in `app/services/practice_run.py`, while the retry's placement is ADR 037 and ADR 058.
+  - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in the docstring of the run service's function that starts a run, while the retry's placement is ADR 037 and ADR 058.
   - Owner: /product-decide
-- B19. Does the app show the user how their mastery has changed over time, for a card, a deck, a subject or a configuration, beyond the summary of one practice?
-  - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the practice that caused it (ADR 042), and which configuration each practice ran (ADR 040, ADR 068). Today one practice's summary (PDR 024) is the only change the user sees.
-  - Owner: /product-decide
-- B24. When the browser's text size makes a row's contents wider than the screen, the top bar's items, a row of tabs, a page's heading beside its buttons, a field's row on Edit deck, the Practice page's two filters or a list row's title beside what stands next to it, does the row wrap, scroll sideways on its own, or shrink what it holds, and how small may what it holds become?
-  - Reason: PDR 030 has everything grow with the browser's text size; at a 24px root on a 390-wide screen the top bar's "Log in", the Practice page's "Completed" tab and a deck's "Add configuration" run past the edge, and the whole page scrolls sideways; a deck's heading breaks inside its word, "Commands" taking five lines, Edit deck's field name inputs narrow to about one character, the Practice page's two filters cut their own words to "All subj" and "All deck", and a row's title truncates to a few characters, "Sep 28, …" on the Practice page, where several rows then look alike, and "CompTI…" on Your library.
+- B19. Does the app show the user how their mastery has changed over time, for a card, a deck or a practice, beyond the summary of one run?
+  - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the run that caused it (ADR 042), and how each run asked each deck (ADR 107). Today one run's summary (PDR 041) is the only change the user sees.
   - Owner: /product-decide
 - B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
   - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
   - Owner: /product-decide
 - B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
-  - Reason: a fading circle can feel like being told you're behind, which PDR 027 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 027's "nothing due".
+  - Reason: a fading circle can feel like being told you're behind, which PDR 037 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 037's "nothing due".
   - Owner: /product-decide
-- B28. What does the summary say when the chosen counts list no card, and does "Practice these" show then?
-  - Reason: a count of zero can be chosen and narrows the list to nothing; PDR 026 offers a practice only of the cards the list shows, so "Practice these" does not show then, and no record gives words for a list narrowed to nothing or for a tap with nothing to practice, which would also need a refusal code (ADR 070).
+- B33. When the user ends a run that is already completed, from a page that still shows it active, is the end refused with a sentence, or does the page turn into the completed run's page with nothing said?
+  - Reason: PDR 038 lets the user end an active run and says nothing of ending one already completed; a second tab, or a run page that has not caught up, sends `POST /api/runs/{id}/end` for a completed run. A refusal needs a code and a sentence (ADR 070); answering with the run unchanged needs neither, and the user sees the completed run's page.
   - Owner: /product-decide
-- B29. On Home, what does tapping an active practice's row do, and does the most recent one still need "Start practice" beside it?
-  - Reason: tapping a row on Home reached the practice with or without "Start practice", so the button reads as useless. PDR 016 makes starting the most recent active practice Home's main action and does not say what a row does. `ActivePractices` in `frontend/src/pages/HomePage.tsx` links a row to the practice's own page, which has a "Start practice" of its own, and links Home's "Start practice" to the run page, so only the most recent practice is one tap from the run page.
+- B34. May a single word wider than its whole line break inside itself, so that nothing on the page scrolls sideways, while PDR 050 has a name or a heading break only between words?
+  - Reason: PDR 050 asks both that a name or a heading break only between words and that nothing on a page scroll sideways, and a word wider than its line can keep only one of the two; `overflow-wrap: break-word` breaks such a word inside itself, and no record says it should.
   - Owner: /product-decide
-- B30. Does Home's "Recently practiced" list the user's most recently completed practices rather than their decks, and what does tapping a row or its action do?
-  - Reason: the user reading "Recently practiced" expects practices and finds decks. PDR 016 shows the decks of the most recently completed practices and weighs no alternative that shows the practices themselves. A row's "Practice" opens the Practice page filtered to the deck and starts nothing (`RecentDecks` in `frontend/src/pages/HomePage.tsx`), and a deck also in an active practice shows in both of Home's lists.
+- B35. Do the practice's vocabulary row and the run's rows give their code names, `practice`, `Practice` and `/practices` for a practice and `RunStatus` and `status` for a run's state?
+  - Reason: the row "A named set of decks the user keeps and runs as many times as they like" reads "—" in Code, though the `practice` table and the `Practice` model name its concept; no row's Code names `RunStatus` or `RunRead.status`, and "A run that can still be continued" and "A run that has finished" give only `active` and `completed`.
+  - Owner: /code-decide
+- B36. Does a run's row on Home name its practice with no practice mark, while PDR 049 gives every practice's name its mark?
+  - Reason: `HomeRunRow` in `frontend/src/components/run/HomeRunRow.tsx` writes the practice's name with no `PracticeMark`, and PDR 049 gives the mark wherever a practice's name appears; giving the row the mark, or excepting it, amends PDR 049.
   - Owner: /product-decide
-- B31. Does a form opened from Home or from the top bar's New back out to the page that opened it, rather than to the list its thing belongs to?
-  - Reason: Cancel on New practice opened from Home lands on the Practice page, not on Home. PDR 017 has a form back out to what opened it, and ADR 103 sends a create form with no `cancelTo` to its list and lets any opener pass one; no record says why these do not. The "New practice" link and `STEPS` in `frontend/src/pages/HomePage.tsx` and `CreateSheet` in `frontend/src/components/shell/CreateSheet.tsx` pass no return address, and `cancel` in `frontend/src/pages/PracticeCreatePage.tsx` goes to the Practice page without reading `cancelTo`, unlike every other form.
-  - Owner: /product-decide
-- B32. How does a form leave so that, once the user has left it by Cancel, Create or Save, the "<" on the page they land on goes back past the form, as PDR 017 means, without Cancel relying on the browser's history, which ADR 103 rejected?
-  - Reason: on the run page, opening "Edit card" and tapping Cancel returns to the run page, and its "<" then opens Edit card rather than the page the user reached the run page from. PDR 017 has the "<" do what the browser's back does and return to the page the user came from, which for a user who has backed out of a form is not the form; PDR 019 returns the user from the form and does not mention the "<". Replacing the form's history entry on leaving would leave the run page twice in a row, so the "<" would seem to do nothing. `CardStandaloneForm` in `frontend/src/components/library/CardStandaloneForm.tsx` leaves by a new history entry and `Breadcrumb` in `frontend/src/components/ui/Breadcrumb.tsx` steps back one, so the form stays one step behind; the form has no "<" and its Cancel comes forward again, so the "<" alone never gets past it. `SubjectForm`, `DeckEditor` and `DeckConfigurationEditor` leave the same way.
+- B37. Is a rule or a piece of a screen that several places write alike kept in one shared place, and which of today's repeats move there?
+  - Reason: no record says when a repeat earns one home. Two stand today. The rule for a name in a list, two lines then "…" with a word wider than its line broken inside itself, is written as the classes `line-clamp-2` and `break-words` at 14 places in 11 files under `frontend/src/components` and `frontend/src/pages`, so a new list must remember both halves. A heading never narrower than its mark and longest word, whose circle and buttons wrap beneath it, is written three times, in `DeckDetailPage` in `frontend/src/pages/DeckDetailPage.tsx`, `PracticeDetailsPage` in `frontend/src/pages/PracticeDetailsPage.tsx` and `CardSheetContent` in `frontend/src/components/run/RunBreakdown.tsx`, where a `min-w-0` added to any copy brings back the break inside a word; eleven pages also repeat the heading's text classes.
+  - Owner: /code-decide
+- B38. Which test cases guard nothing a change could break, and are they removed?
+  - Reason: no record says what a test case must guard to be kept. The frontend holds 732 cases in 76 files and the backend 384. Some assert a class name, as "rows with and without a subtitle share the same min-height class" in `frontend/src/components/ui/ListRow.test.tsx` and the `h-10` of "Add deck" in `frontend/src/pages/LibraryPage.test.tsx`, which restates the source, since jsdom does no layout (ADR 017); "keys by whatever the caller passes as key" in `ListRow.test.tsx` renders a list and asserts its links' addresses, which the cases beside it already assert. Which kinds of case go, and whether anything replaces one that goes, is undecided.
   - Owner: /code-decide

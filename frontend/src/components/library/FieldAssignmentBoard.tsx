@@ -9,7 +9,8 @@ import {
   type BoardSlot,
   type BoardState,
   type PoolSlot,
-} from 'src/lib/deckConfigurationBoard';
+} from 'src/lib/deckBoard';
+import { fieldLabel } from 'src/lib/fieldLabel';
 import type { components } from 'src/api/types';
 
 type DeckFieldDef = components['schemas']['DeckFieldDefRead'];
@@ -22,6 +23,9 @@ type FieldAssignmentBoardProps = {
   onToggleCount: (slot: PoolSlot, count: number) => void;
   /** The one problem to say on the board, drawn in that part's place; null says nothing. */
   problem: BoardProblem | null;
+  /** True for a board that shows what cannot be changed: every chip and count is greyed, a tap
+   * on a chip opens no move sheet, and a tap on a count calls no `onToggleCount`. */
+  readOnly: boolean;
 };
 
 /** The sheet's five possible destinations, in this fixed order. A field's own current
@@ -56,8 +60,9 @@ export default function FieldAssignmentBoard({
   onMove,
   onToggleCount,
   problem,
+  readOnly,
 }: FieldAssignmentBoardProps) {
-  const nameById = new Map(fieldDefs.map((field) => [field.id, field.name]));
+  const labelById = new Map(fieldDefs.map((field) => [field.id, fieldLabel(field.name)]));
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   // One shared trigger ref, reassigned to whichever chip was tapped most recently, so
   // BottomSheet's onCloseAutoFocus returns focus to that exact chip.
@@ -71,14 +76,15 @@ export default function FieldAssignmentBoard({
     <button
       key={fieldId}
       type="button"
-      aria-haspopup="dialog"
+      aria-haspopup={readOnly ? undefined : 'dialog'}
+      disabled={readOnly}
       onClick={(event) => {
         triggerRef.current = event.currentTarget;
         setActiveFieldId(fieldId);
       }}
-      className="tappable-sm h-tab max-w-full truncate rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
+      className={`min-h-tab max-w-full rounded-xl bg-(--color-surface) px-3 py-1 text-left text-sm font-semibold ${readOnly ? 'outlined-line text-(--color-aside)' : 'tappable-sm text-(--color-ink)'}`}
     >
-      {nameById.get(fieldId) ?? fieldId}
+      <span className="line-clamp-2 break-words">{labelById.get(fieldId) ?? fieldId}</span>
     </button>
   );
 
@@ -105,14 +111,20 @@ export default function FieldAssignmentBoard({
           <span>Each card shows</span>
           {Array.from({ length: size }, (_, i) => i + 1).map((count) => {
             const chosen = state.counts[slot].includes(count);
+            // Greyed, a chosen count keeps its fill in the separating colour, so which counts
+            // the board asks by still shows.
+            const look = readOnly
+              ? `outlined-line text-(--color-aside) ${chosen ? 'bg-(--color-line)' : 'bg-(--color-surface)'}`
+              : `tappable-sm cursor-pointer ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`;
             return (
               <label
                 key={count}
-                className={`tappable-sm relative flex h-7.5 w-8 cursor-pointer items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${chosen ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)' : 'bg-(--color-surface) text-(--color-ink)'}`}
+                className={`relative flex h-7.5 w-8 items-center justify-center rounded-full text-sm font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-(--color-ink) ${look}`}
               >
                 <input
                   type="checkbox"
                   checked={chosen}
+                  disabled={readOnly}
                   onChange={() => onToggleCount(slot, count)}
                   className="sr-only"
                 />
@@ -162,7 +174,7 @@ export default function FieldAssignmentBoard({
   };
 
   const activeSlot = activeFieldId ? state.slots[activeFieldId] : null;
-  const activeName = activeFieldId ? (nameById.get(activeFieldId) ?? activeFieldId) : '';
+  const activeLabel = activeFieldId ? (labelById.get(activeFieldId) ?? activeFieldId) : '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -183,8 +195,8 @@ export default function FieldAssignmentBoard({
         triggerRef={triggerRef}
         ariaLabelledBy={titleId}
       >
-        <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
-          Move "{activeName}" to…
+        <h2 id={titleId} className="text-base font-semibold break-words text-(--color-ink)">
+          Move "{activeLabel}" to…
         </h2>
         <ul className="mt-3 flex flex-col gap-3">
           {DESTINATIONS.filter((destination) => destination !== activeSlot).map((destination) => (

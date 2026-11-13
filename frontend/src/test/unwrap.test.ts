@@ -24,41 +24,25 @@ describe('unwrap', () => {
     expect(unwrap({ data: { id: '1' }, response: res(200) })).toEqual({ id: '1' });
   });
 
-  it('throws ApiDetailError exposing detail.code and detail.config_id for a structured error', () => {
+  it('throws ApiDetailError exposing detail.code for a structured error', () => {
     const error = {
-      detail: {
-        code: 'stale_config',
-        message: 'field ids not live on this deck: [...]',
-        config_id: '00000000-0000-0000-0000-000000000401',
-      },
+      detail: { code: 'practice_has_active_run', message: "the run's practice has an active run" },
     };
 
     let thrown: unknown;
     try {
-      unwrap({ error, response: res(409) });
+      unwrap({ error, response: res(400) });
     } catch (e) {
       thrown = e;
     }
 
     expect(thrown).toBeInstanceOf(ApiDetailError);
     const apiError = thrown as ApiDetailError;
-    expect(apiError.detail.code).toBe('stale_config');
-    expect(apiError.detail.config_id).toBe('00000000-0000-0000-0000-000000000401');
-    expect(apiError.message).toBe('field ids not live on this deck: [...]');
-  });
-
-  it('throws ApiDetailError with detail.config_id undefined when the response omits it', () => {
-    const error = { detail: { code: 'duplicate_deck', message: 'Deck already has a config' } };
-
-    let thrown: unknown;
-    try {
-      unwrap({ error, response: res(409) });
-    } catch (e) {
-      thrown = e;
-    }
-
-    expect(thrown).toBeInstanceOf(ApiDetailError);
-    expect((thrown as ApiDetailError).detail.config_id).toBeUndefined();
+    expect(apiError.detail).toEqual({
+      code: 'practice_has_active_run',
+      message: "the run's practice has an active run",
+    });
+    expect(apiError.message).toBe("the run's practice has an active run");
   });
 
   it('throws a plain Error, not ApiDetailError, for a string detail', () => {
@@ -111,7 +95,7 @@ describe('unwrapVoid', () => {
   });
 
   it('throws ApiDetailError for a structured error', () => {
-    const error = { detail: { code: 'config_not_found', message: 'Config not found' } };
+    const error = { detail: { code: 'no_cards', message: 'the run has no card' } };
 
     let thrown: unknown;
     try {
@@ -121,7 +105,7 @@ describe('unwrapVoid', () => {
     }
 
     expect(thrown).toBeInstanceOf(ApiDetailError);
-    expect((thrown as ApiDetailError).detail.code).toBe('config_not_found');
+    expect((thrown as ApiDetailError).detail.code).toBe('no_cards');
   });
 
   it('throws a plain Error for an unstructured error', () => {
@@ -145,7 +129,7 @@ describe('ApiError status', () => {
 
     const structured = thrownBy(() =>
       unwrapVoid({
-        error: { detail: { code: 'duplicate_deck', message: 'Deck already has a config' } },
+        error: { detail: { code: 'run_active', message: 'the run is still active' } },
         response: res(409),
       }),
     );
@@ -154,7 +138,7 @@ describe('ApiError status', () => {
 
   it('makes ApiDetailError an instanceof ApiError', () => {
     const thrown = thrownBy(() =>
-      unwrap({ error: { detail: { code: 'stale_config', message: 'stale' } }, response: res(409) }),
+      unwrap({ error: { detail: { code: 'run_active', message: 'active' } }, response: res(409) }),
     );
     expect(thrown).toBeInstanceOf(ApiDetailError);
     expect(thrown).toBeInstanceOf(ApiError);

@@ -1,432 +1,197 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
+import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
+import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
-import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
-import { NO_CARDS_MESSAGE } from 'src/lib/practiceCopy';
 
 const BASE = 'http://localhost:8000';
 
-function session(overrides: Record<string, unknown> = {}) {
+const run = (id: string, status: 'active' | 'completed', day: string, dayIndex: number) => ({
+  id,
+  practice_id: 'p1',
+  status,
+  day,
+  day_index: dayIndex,
+  created_at: '2026-11-03T18:00:00Z',
+  last_activity_at: '2026-11-03T18:00:00Z',
+  reached_cards: status === 'active' ? 3 : 74,
+  counted_cards: 74,
+});
+
+function detail(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'ps1',
-    user_id: 'u1',
-    name: 'Alpha run',
-    status: 'active',
-    created_at: '2026-08-24T12:00:00Z',
+    id: 'p1',
+    name: 'Commands + Ports',
+    created_at: '2026-11-01T00:00:00Z',
     decks: [
-      {
-        deck_id: 'd1',
-        deck_name: 'Shared Deck Name',
-        subject_id: 's1',
-        subject_name: 'Alpha',
-        configuration_name: 'Config A',
-      },
+      { deck_id: 'd1', deck_name: 'Commands' },
+      { deck_id: 'd2', deck_name: 'Ports' },
     ],
+    active_run_id: null,
+    readiness: null,
+    runs: [],
     ...overrides,
   };
-}
-
-function mockSession(data: Record<string, unknown> | null = session()) {
-  server.use(
-    http.get(`${BASE}/api/practice_runs/:id`, () =>
-      data ? HttpResponse.json(data) : HttpResponse.json({ detail: 'not found' }, { status: 404 }),
-    ),
-  );
-}
-
-function breakdown(overrides: Record<string, unknown> = {}) {
-  return {
-    total_cards: 1,
-    cards: [
-      {
-        card_id: 'card1',
-        primary_field: { field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' },
-        attempts: [
-          {
-            practice_card_id: 'pc1',
-            prompts: [{ field_def_id: 'front', name: 'Front', type: 'text', value: 'Bonjour' }],
-            answers: [
-              { field_def_id: 'back', name: 'Back', type: 'text', value: 'Hello', rating: 4 },
-            ],
-          },
-        ],
-        readiness: 0.65,
-        delta: 0.15,
-        change: 'up',
-        fields: [
-          {
-            field_def_id: 'front',
-            name: 'Front',
-            type: 'text',
-            side: 'prompt',
-            readiness: 0.6,
-            delta: 0.1,
-            change: 'up',
-          },
-          {
-            field_def_id: 'back',
-            name: 'Back',
-            type: 'text',
-            side: 'answer',
-            readiness: 0.7,
-            delta: 0.2,
-            change: 'up',
-          },
-        ],
-      },
-    ],
-    ...overrides,
-  };
-}
-
-function mockBreakdown(data: Record<string, unknown> = breakdown()) {
-  server.use(http.get(`${BASE}/api/practice_runs/:id/breakdown`, () => HttpResponse.json(data)));
 }
 
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderDetails(id = 'ps1') {
+function renderPractice(data: Record<string, unknown> | null = detail()) {
+  server.use(
+    http.get(`${BASE}/api/practices/:id`, () =>
+      data
+        ? HttpResponse.json(data)
+        : HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
+    ),
+  );
   return renderWithProviders(
     <Routes>
-      <Route path="/practice/:practiceSessionId" element={<PracticeDetailsPage />} />
-      <Route path="/practice/:practiceSessionId/run" element={<LocationProbe />} />
-      <Route path="/practice" element={<LocationProbe />} />
+      <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
+      <Route path="*" element={<LocationProbe />} />
     </Routes>,
-    [`/practice/${id}`],
+    ['/practices/p1'],
   );
 }
 
-let consoleError: ReturnType<typeof vi.spyOn>;
-beforeEach(() => {
-  consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-});
-afterEach(() => {
-  consoleError.mockRestore();
-  server.resetHandlers();
-});
+afterEach(() => server.resetHandlers());
 
 describe('PracticeDetailsPage', () => {
-  it('shows a breadcrumb to Practice, and it navigates there', async () => {
-    mockSession();
-    const user = userEvent.setup();
-    renderDetails();
+  it("shows the practice's mark and name, its circle, and All practices above it", async () => {
+    renderPractice(detail({ readiness: 0.46 }));
 
-    const row = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(row).getAllByRole('link')).toHaveLength(1);
-    await user.click(within(row).getByRole('link', { name: 'Practice' }));
-
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice');
-  });
-
-  it('renders the name, status, created date and deck chips', async () => {
-    mockSession();
-    renderDetails();
-
-    expect(await screen.findByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
-    // Date only, not the clock time — formatDateTime renders in whatever zone the
-    // machine running this test happens to sit in, so a fixed instant can land on a
-    // different hour, though never a different calendar day for this one.
-    expect(screen.getByText(/Aug 24, 2026/)).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Shared Deck Name · Config A')).toBeInTheDocument();
-  });
-
-  it('lists every deck with no cap', async () => {
-    const deck = (n: number) => ({
-      deck_id: `d${n}`,
-      deck_name: `Deck ${n}`,
-      subject_id: 's1',
-      subject_name: 'Alpha',
-      configuration_name: `Config ${n}`,
-    });
-    mockSession(session({ decks: [deck(1), deck(2), deck(3)] }));
-    renderDetails();
-
-    await screen.findByRole('heading', { name: 'Alpha run' });
-    expect(screen.getByText('Alpha · Deck 1 · Config 1')).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Deck 2 · Config 2')).toBeInTheDocument();
-    expect(screen.getByText('Alpha · Deck 3 · Config 3')).toBeInTheDocument();
-    expect(screen.queryByText('+1')).not.toBeInTheDocument();
-  });
-
-  it('a deck with no configuration name shows subject and deck', async () => {
-    mockSession(
-      session({
-        decks: [
-          {
-            deck_id: 'd1',
-            deck_name: 'Shared Deck Name',
-            subject_id: 's1',
-            subject_name: 'Alpha',
-            configuration_name: null,
-          },
-        ],
-      }),
+    const heading = await screen.findByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Commands + Ports');
+    expect(within(heading).getByRole('img', { name: 'Practice' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Mastery 46%' })).toBeInTheDocument();
+    const row = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(row).getByRole('link', { name: 'All practices' })).toHaveAttribute(
+      'href',
+      '/practices',
     );
-    renderDetails();
-
-    expect(await screen.findByText('Alpha · Shared Deck Name')).toBeInTheDocument();
   });
 
-  it('an active session shows Start practice, and it navigates to the run stub', async () => {
-    mockSession(session({ status: 'active' }));
+  it('shows no circle while its decks hold no card', async () => {
+    renderPractice();
+
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('img', { name: /^Mastery/ })).not.toBeInTheDocument();
+  });
+
+  it('writes each deck on a line of its own, its mark and name', async () => {
+    renderPractice();
+
+    const commands = (await screen.findByRole('link', { name: 'Deck Commands' })).closest('li')!;
+    const ports = screen.getByRole('link', { name: 'Deck Ports' }).closest('li')!;
+    expect(commands.parentElement).toBe(ports.parentElement);
+    expect(within(commands).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
+    expect(within(ports).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
+  });
+
+  it("opens each deck's board from its line, coming back here either way", async () => {
+    renderPractice();
+
+    const here = encodeURIComponent('/practices/p1');
+    const commands = await screen.findByRole('link', { name: 'Deck Commands' });
+    const ports = screen.getByRole('link', { name: 'Deck Ports' });
+    expect(commands).toHaveAttribute(
+      'href',
+      `/practices/p1/decks/d1?cancelTo=${here}&returnTo=${here}`,
+    );
+    expect(ports).toHaveAttribute(
+      'href',
+      `/practices/p1/decks/d2?cancelTo=${here}&returnTo=${here}`,
+    );
+  });
+
+  it('opens Edit practice from the pencil, coming back here either way', async () => {
     const user = userEvent.setup();
-    renderDetails();
+    renderPractice();
 
-    const start = await screen.findByRole('button', { name: 'Start practice' });
-    await user.click(start);
+    await user.click(await screen.findByRole('button', { name: 'Edit Commands + Ports' }));
 
-    expect(screen.getByTestId('location')).toHaveTextContent('/practice/ps1/run');
+    const here = encodeURIComponent('/practices/p1');
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `/practices/p1/edit?cancelTo=${here}&returnTo=${here}`,
+    );
   });
 
-  it('a completed session hides Start practice and shows its breakdown instead', async () => {
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    renderDetails();
-
-    await screen.findByRole('heading', { name: 'Alpha run' });
-    expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Start practice' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('A summary of this practice is coming later.'),
-    ).not.toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Bonjour/ })).toBeInTheDocument();
-    expect(screen.getByText('1 card practiced')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Mastery 65%, up' })).toBeInTheDocument();
-  });
-
-  it('deleting confirms first, calls the API, and navigates to the practice list', async () => {
-    let deletedId: string | null = null;
-    mockSession();
+  it('reads Start run with no active run, and opens the run it starts', async () => {
+    let posted: unknown;
     server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, ({ params }) => {
-        deletedId = params.id as string;
-        return new HttpResponse(null, { status: 204 });
+      http.post(`${BASE}/api/practices/:id/runs`, ({ params }) => {
+        posted = params.id;
+        return HttpResponse.json(run('r1', 'active', '2026-11-03', 0));
       }),
     );
     const user = userEvent.setup();
-    renderDetails();
+    renderPractice();
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await user.click(await screen.findByRole('button', { name: 'Start run' }));
 
-    await waitFor(() => expect(deletedId).toBe('ps1'));
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/practice'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/runs/r1'));
+    expect(posted).toBe('p1');
   });
 
-  it('cancelling the delete confirm leaves the session alone', async () => {
-    let deleteCalls = 0;
-    mockSession();
-    server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, () => {
-        deleteCalls += 1;
-        return new HttpResponse(null, { status: 204 });
+  it('reads Continue run while a run is active', async () => {
+    renderPractice(detail({ active_run_id: 'r1', runs: [run('r1', 'active', '2026-11-03', 0)] }));
+
+    expect(await screen.findByRole('button', { name: 'Continue run' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start run' })).not.toBeInTheDocument();
+  });
+
+  it('lists each run as its mark and day, its badge and its count, each opening the run', async () => {
+    renderPractice(
+      detail({
+        active_run_id: 'r2',
+        runs: [run('r2', 'active', '2026-11-03', 1), run('r1', 'completed', '2026-11-03', 0)],
       }),
     );
-    const user = userEvent.setup();
-    renderDetails();
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-
-    expect(deleteCalls).toBe(0);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Runs' })).toBeInTheDocument();
+    const links = screen.getAllByRole('link').filter((link) => link.getAttribute('href')?.startsWith('/runs/'));
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/runs/r2', '/runs/r1']);
+    expect(links[0]).toHaveTextContent('2026-11-03 (1)Active3 of 74 cards');
+    expect(links[1]).toHaveTextContent('2026-11-03Completed74 of 74 cards');
+    for (const link of links) {
+      expect(within(link).getByRole('img', { name: 'Run' })).toBeInTheDocument();
+    }
   });
 
-  it('a failed delete shows the error inside the dialog, which stays open', async () => {
-    mockSession();
+  it('says No runs yet. under Runs with none', async () => {
+    renderPractice();
+
+    const runs = await screen.findByRole('heading', { level: 2, name: 'Runs' });
+    expect(runs.nextElementSibling).toHaveTextContent('No runs yet.');
+  });
+
+  it('a refused start reads its sentence beside the button', async () => {
     server.use(
-      http.delete(`${BASE}/api/practice_runs/:id`, () =>
-        HttpResponse.json({ detail: 'Something went wrong' }, { status: 500 }),
+      http.post(`${BASE}/api/practices/:id/runs`, () =>
+        HttpResponse.json({ detail: { code: 'no_cards', message: 'x' } }, { status: 400 }),
       ),
     );
     const user = userEvent.setup();
-    renderDetails();
+    renderPractice();
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    const button = await screen.findByRole('button', { name: 'Start run' });
+    await user.click(button);
 
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Flashy is having trouble right now. Try again in a moment.',
-    );
-    // Still open — nothing navigated away.
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(NO_CARDS_MESSAGE);
+    expect(button.parentElement!.nextElementSibling).toBe(alert);
   });
 
-  it('a missing or foreign session renders "not found" instead of crashing, with no breadcrumb', async () => {
-    mockSession(null);
-    renderDetails('nope');
+  it('says Practice not found. for an unknown or foreign practice', async () => {
+    renderPractice(null);
 
     expect(await screen.findByText('Practice not found.')).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
-  });
-
-  it('a load failure other than 404 says it could not load, not that it was not found', async () => {
-    server.use(
-      http.get(`${BASE}/api/practice_runs/:id`, () =>
-        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
-      ),
-    );
-    renderDetails('ps1');
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this practice.');
-    expect(screen.queryByText('Practice not found.')).not.toBeInTheDocument();
-  });
-});
-
-describe('PracticeDetailsPage re-run (T9)', () => {
-  it('hides the Re-run button on an active session', async () => {
-    mockSession(session({ status: 'active' }));
-    renderDetails();
-
-    await screen.findByRole('heading', { name: 'Alpha run' });
-    expect(screen.queryByRole('button', { name: 'Re-run Alpha run' })).not.toBeInTheDocument();
-  });
-
-  it('shows the Re-run button on a completed session', async () => {
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    renderDetails();
-
-    expect(await screen.findByRole('button', { name: 'Re-run Alpha run' })).toBeInTheDocument();
-  });
-
-  it('confirming re-run posts the generated name to the old session and navigates to the new one', async () => {
-    let rerunRequestedId: string | null = null;
-    const rerunRequestedBodies: { name?: string }[] = [];
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    server.use(
-      http.post(`${BASE}/api/practice_runs/:id/rerun`, async ({ params, request }) => {
-        rerunRequestedId = params.id as string;
-        const body = (await request.json()) as { name?: string };
-        rerunRequestedBodies.push(body);
-        return HttpResponse.json(
-          {
-            id: 'ps2',
-            user_id: 'u1',
-            name: body.name,
-            status: 'active',
-            created_at: '2026-08-28T00:00:00Z',
-          },
-          { status: 201 },
-        );
-      }),
-      http.get(`${BASE}/api/practice_runs/ps2`, () =>
-        HttpResponse.json(session({ id: 'ps2', name: 'Alpha run (new)', status: 'active' })),
-      ),
-    );
-    const user = userEvent.setup();
-    renderDetails();
-
-    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Re-run this practice?');
-    expect(dialog).toHaveTextContent(
-      'A new practice with the same decks is created. This practice and its reviews stay on record.',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
-
-    await waitFor(() => expect(rerunRequestedId).toBe('ps1'));
-    // The client formats the new run's name itself, the same way the creation page
-    // pre-fills its own name field — never left blank or server-derived.
-    expect(rerunRequestedBodies[0]?.name).toBeTruthy();
-    // Navigated to the new session's own detail route — its distinct name proves it.
-    expect(await screen.findByRole('heading', { name: 'Alpha run (new)' })).toBeInTheDocument();
-  });
-
-  it('cancelling the re-run confirm leaves the session alone', async () => {
-    let rerunCalls = 0;
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    server.use(
-      http.post(`${BASE}/api/practice_runs/:id/rerun`, () => {
-        rerunCalls += 1;
-        return HttpResponse.json({}, { status: 201 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderDetails();
-
-    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-
-    expect(rerunCalls).toBe(0);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
-  });
-
-  it('a nothing_to_rerun failure closes the dialog, shows its sentence, and leaves the old session on screen', async () => {
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    server.use(
-      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
-        HttpResponse.json(
-          {
-            detail: {
-              code: 'nothing_to_rerun',
-              message: 'no deck from this session still has a live, valid snapshot to rerun',
-            },
-          },
-          { status: 400 },
-        ),
-      ),
-    );
-    const user = userEvent.setup();
-    renderDetails();
-
-    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      "This practice can't be re-run. A field it practiced has since been removed from each of its decks.",
-    );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    // Still on ps1 — nothing navigated away, the original session is unchanged.
-    expect(screen.getByRole('heading', { name: 'Alpha run' })).toBeInTheDocument();
-    expect(screen.getByText('Completed')).toBeInTheDocument();
-  });
-
-  it('a no_cards rerun failure closes the dialog and shows the no-cards sentence', async () => {
-    mockSession(session({ status: 'completed' }));
-    mockBreakdown();
-    server.use(
-      http.post(`${BASE}/api/practice_runs/:id/rerun`, () =>
-        HttpResponse.json(
-          {
-            detail: {
-              code: 'no_cards',
-              message: 'generation produced no practice cards across the surviving decks',
-            },
-          },
-          { status: 400 },
-        ),
-      ),
-    );
-    const user = userEvent.setup();
-    renderDetails();
-
-    await user.click(await screen.findByRole('button', { name: 'Re-run Alpha run' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Re-run' }));
-
-    // The frontend's sentence in full, not the backend's message.
-    expect((await screen.findByRole('alert')).textContent).toBe(NO_CARDS_MESSAGE);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

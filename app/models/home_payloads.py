@@ -2,28 +2,31 @@
 shapes, so it lives here rather than in any entity module."""
 
 from app.models.base import AppModel
-from app.models.deck import DeckSummary
-from app.models.practice_run_payloads import PracticeRunSummary, RunProgress
+from app.models.practice_payloads import DeckNameRead, RunListing
+from app.models.run_payloads import RunProgress
 
 
 class HomeSteps(AppModel):
-    """Whether each of the first four things exists; the fifth, a practice, never does
-    while the steps show."""
+    """Whether the user has a deck and a card, the first two steps; the third, a
+    practice, never exists while the steps show."""
 
-    has_subject: bool
     has_deck: bool
     has_card: bool
-    has_configuration: bool
 
 
-class HomeActivePractice(PracticeRunSummary):
-    progress: RunProgress
+class HomeRun(RunListing):
+    practice_name: str
+    # The decks the run asks, most recently changed first.
+    decks: list[DeckNameRead]
+    # The live counts of an active run; None for a completed one.
+    progress: RunProgress | None
 
 
 class HomeRead(AppModel):
     # None once the user has made a practice.
     steps: HomeSteps | None
-    # Up to three, most recently created first.
-    active_practices: list[HomeActivePractice]
-    # Up to three, the deck of the most recently rated completed practice first, each once.
-    recent_decks: list[DeckSummary]
+    # Up to three, newest last_activity_at first.
+    active_runs: list[HomeRun]
+    # Up to three completed runs, the latest of each practice by last_activity_at, none of a
+    # practice that has an active run, newest first.
+    recent_runs: list[HomeRun]

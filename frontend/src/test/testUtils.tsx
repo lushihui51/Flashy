@@ -11,7 +11,7 @@ export function renderWithRouter(ui: ReactElement, initialEntries: InitialEntry[
  * retries off so a mocked error response fails the test immediately instead of
  * retrying into the default timeout. An entry may be `{ pathname, state }` instead of
  * a bare string when the route under test reads `useLocation().state` (e.g.
- * DeckEditor's contextual-subject entry point). */
+ * CardStandaloneForm's `deckId`, handed back by New deck). */
 export function renderWithProviders(ui: ReactElement, initialEntries: InitialEntry[] = ['/']) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

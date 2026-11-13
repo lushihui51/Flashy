@@ -19,43 +19,17 @@ function LocationProbe() {
   );
 }
 
-const subjects = [
-  {
-    id: 's1',
-    name: 'Math',
-    icon: 'brain',
-    description: 'Numbers',
-    user_id: 'u1',
-    created_at: '',
-    deck_count: 2,
-    readiness: 0.5 as number | null,
-  },
-  {
-    id: 's2',
-    name: 'Bio',
-    icon: 'dna',
-    description: '',
-    user_id: 'u1',
-    created_at: '',
-    deck_count: 1,
-    readiness: 0.5,
-  },
-];
 const decks = [
   {
     id: 'd1',
-    subject_id: 's1',
-    subject_name: 'Math',
     name: 'Algebra',
     created_at: '',
     card_count: 3,
-    readiness: 0.5,
+    readiness: 0.5 as number | null,
     field_names: ['Term', 'Definition'],
   },
   {
     id: 'd2',
-    subject_id: 's2',
-    subject_name: 'Bio',
     name: 'Cells',
     created_at: '',
     card_count: 0,
@@ -64,14 +38,8 @@ const decks = [
   },
 ];
 
-function mockLibrary({
-  subjectsData = subjects,
-  decksData = decks,
-}: { subjectsData?: typeof subjects; decksData?: typeof decks } = {}) {
-  server.use(
-    http.get(`${BASE}/api/subjects`, () => HttpResponse.json(subjectsData)),
-    http.get(`${BASE}/api/decks`, () => HttpResponse.json(decksData)),
-  );
+function mockDecks(decksData: typeof decks = decks) {
+  server.use(http.get(`${BASE}/api/decks`, () => HttpResponse.json(decksData)));
 }
 
 afterEach(() => {
@@ -79,175 +47,76 @@ afterEach(() => {
 });
 
 describe('LibraryPage', () => {
-  it('renders the Subjects tab by default with real data, icons rendered as icons not text', async () => {
-    mockLibrary();
-    const { container } = renderWithProviders(<LibraryPage />);
+  it('shows one list of decks with no tabs', async () => {
+    mockDecks();
+    renderWithProviders(<LibraryPage />, ['/library']);
 
-    expect(await screen.findByText('Math')).toBeInTheDocument();
-    expect(screen.getByText('Numbers')).toBeInTheDocument();
-    expect(screen.getByText('Bio')).toBeInTheDocument();
-    expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
-    expect(screen.queryByText('brain')).not.toBeInTheDocument();
-    expect(screen.queryByText('dna')).not.toBeInTheDocument();
+    await screen.findByRole('link', { name: /Algebra/ });
+    const rows = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByRole('link', { name: /Algebra/ })).toBeInTheDocument();
+    expect(within(rows[1]!).getByRole('link', { name: /Cells/ })).toBeInTheDocument();
+    expect(screen.getByText('2 decks')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
-  it('switches to the Decks tab and shows real deck data with subject names', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
+  it('a deck row reads its counts alone beneath its name', async () => {
+    mockDecks();
     renderWithProviders(<LibraryPage />);
 
-    await screen.findByText('Math');
-    await user.click(screen.getByRole('tab', { name: 'Decks' }));
-
-    expect(await screen.findByText('Algebra')).toBeInTheDocument();
-    expect(screen.getByText('Cells')).toBeInTheDocument();
-    expect(screen.getByText('Math · 3 cards · 2 fields')).toBeInTheDocument();
-    expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
+    expect(await screen.findByText('3 cards · 2 fields')).toBeInTheDocument();
+    expect(screen.getByText('0 cards · 1 field')).toBeInTheDocument();
   });
 
-  it("a deck row shows its subject's name from the row, whatever the subjects read is doing", async () => {
-    server.use(
-      http.get(`${BASE}/api/subjects`, () => new Promise(() => {})),
-      http.get(`${BASE}/api/decks`, () => HttpResponse.json(decks)),
-    );
-    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
-
-    expect(await screen.findByText('Math · 3 cards · 2 fields')).toBeInTheDocument();
-    expect(screen.getByText('Bio · 0 cards · 1 field')).toBeInTheDocument();
-  });
-
-  it('opens straight onto the Decks tab when ?tab=decks is in the URL', async () => {
-    mockLibrary();
-    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
-
-    expect(await screen.findByText('Algebra')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Decks' })).toHaveAttribute('aria-selected', 'true');
-  });
-
-  it('falls back to Subjects for an unrecognized ?tab= value', async () => {
-    mockLibrary();
-    renderWithProviders(<LibraryPage />, ['/library?tab=bogus']);
-
-    expect(await screen.findByText('Math')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Subjects' })).toHaveAttribute('aria-selected', 'true');
-  });
-
-  it('writes and clears ?tab= as the tab changes, mirroring DeckDetailPage.setTab', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
-    renderWithProviders(
-      <>
-        <LibraryPage />
-        <LocationProbe />
-      </>,
-    );
-
-    await screen.findByText('Math');
-    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '');
-
-    await user.click(screen.getByRole('tab', { name: 'Decks' }));
-    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?tab=decks');
-
-    await user.click(screen.getByRole('tab', { name: 'Subjects' }));
-    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '');
-  });
-
-  it('tapping a subject row links to its detail page', async () => {
-    mockLibrary();
+  it('reads "Decks" over the list while it loads', () => {
+    server.use(http.get(`${BASE}/api/decks`, () => new Promise(() => {})));
     renderWithProviders(<LibraryPage />);
 
-    const row = await screen.findByRole('link', { name: /Math/ });
-    expect(row).toHaveAttribute('href', '/subjects/s1');
+    expect(screen.getByText('Decks')).toBeInTheDocument();
   });
 
   it('tapping a deck row links to its detail page', async () => {
-    mockLibrary();
-    const user = userEvent.setup();
+    mockDecks();
     renderWithProviders(<LibraryPage />);
-
-    await screen.findByText('Math');
-    await user.click(screen.getByRole('tab', { name: 'Decks' }));
 
     const row = await screen.findByRole('link', { name: /Algebra/ });
     expect(row).toHaveAttribute('href', '/decks/d1');
   });
 
-  it('shows an empty state with a create button when there are no subjects', async () => {
-    mockLibrary({ subjectsData: [] });
-    renderWithProviders(<LibraryPage />);
-
-    expect(await screen.findByText('No subjects yet.')).toBeInTheDocument();
-    // The count row's create button is the only one; the empty state is its text
-    // alone. getByRole throws on a second match.
-    expect(screen.getByRole('button', { name: 'Add subject' })).toBeInTheDocument();
-  });
-
   it('shows an empty state with a create button when there are no decks', async () => {
-    mockLibrary({ decksData: [] });
-    const user = userEvent.setup();
+    mockDecks([]);
     renderWithProviders(<LibraryPage />);
-
-    await screen.findByText('Math');
-    await user.click(screen.getByRole('tab', { name: 'Decks' }));
 
     expect(await screen.findByText('No decks yet.')).toBeInTheDocument();
-    // The count row's create button is the only one.
+    // The count row's create button is the only one; the empty state is its text
+    // alone. getByRole throws on a second match.
     expect(screen.getByRole('button', { name: 'Add deck' })).toBeInTheDocument();
   });
 
-  it('the Subjects tab create button is present and sized for touch', async () => {
-    mockLibrary();
-    renderWithProviders(<LibraryPage />);
-
-    await screen.findByText('Math');
-    const button = screen.getByRole('button', { name: 'Add subject' });
-    expect(button).toBeInTheDocument();
-    expect(button.className).toMatch(/h-10/);
-  });
-
-  it('navigates to /subjects/new when the Subjects create button is clicked', async () => {
-    mockLibrary();
+  it('the create button is sized for touch and opens New deck, Cancel returning here', async () => {
+    mockDecks();
     const user = userEvent.setup();
     renderWithProviders(
       <>
         <LibraryPage />
         <LocationProbe />
       </>,
+      ['/library'],
     );
 
-    await screen.findByText('Math');
-    await user.click(screen.getByRole('button', { name: 'Add subject' }));
+    await screen.findByRole('link', { name: /Algebra/ });
+    const button = screen.getByRole('button', { name: 'Add deck' });
+    expect(button.className).toMatch(/h-10/);
+    await user.click(button);
 
-    expect(screen.getByTestId('location')).toHaveTextContent('/subjects/new');
-  });
-
-  it('subject rows show their deck count, pluralized', async () => {
-    mockLibrary();
-    renderWithProviders(<LibraryPage />);
-
-    await screen.findByText('Math');
-    expect(screen.getByText('2 decks')).toBeInTheDocument();
-    expect(screen.getByText('1 deck')).toBeInTheDocument();
-  });
-
-  it('a subject row shows its mastery, and a subject with no card shows none', async () => {
-    mockLibrary({
-      subjectsData: [
-        { ...subjects[0]!, readiness: 0.42 },
-        { ...subjects[1]!, readiness: null },
-      ],
-    });
-    renderWithProviders(<LibraryPage />);
-
-    const withCards = await screen.findByRole('link', { name: /Math/ });
-    expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
-    const withoutCards = screen.getByRole('link', { name: /Bio/ });
-    expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/decks/new');
+    expect(screen.getByTestId('location')).toHaveAttribute('data-search', '?cancelTo=%2Flibrary');
   });
 
   it('a deck row shows its mastery, and a deck with no card shows none', async () => {
-    mockLibrary({ decksData: [{ ...decks[0]!, readiness: 0.42 }, decks[1]!] });
-    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+    mockDecks([{ ...decks[0]!, readiness: 0.42 }, decks[1]!]);
+    renderWithProviders(<LibraryPage />);
 
     const withCards = await screen.findByRole('link', { name: /Algebra/ });
     expect(within(withCards).getByRole('img', { name: 'Mastery 42%' })).toBeInTheDocument();
@@ -255,24 +124,11 @@ describe('LibraryPage', () => {
     expect(within(withoutCards).queryByRole('img', { name: /Mastery/ })).not.toBeInTheDocument();
   });
 
-  it('a failed subjects load says so instead of rendering an empty list', async () => {
-    mockLibrary();
-    server.use(
-      http.get(`${BASE}/api/subjects`, () =>
-        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
-      ),
-    );
-    renderWithProviders(<LibraryPage />);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load subjects.');
-  });
-
-  it('a failed decks load says so on the Decks tab', async () => {
-    mockLibrary();
+  it('a failed decks load says so instead of rendering an empty list', async () => {
     server.use(
       http.get(`${BASE}/api/decks`, () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
     );
-    renderWithProviders(<LibraryPage />, ['/library?tab=decks']);
+    renderWithProviders(<LibraryPage />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load decks.');
   });

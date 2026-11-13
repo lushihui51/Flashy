@@ -5,372 +5,6 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/subjects": {
-      "post": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Create Subject",
-        "operationId": "create_subject_api_subjects_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subjects",
-        "operationId": "read_subjects_api_subjects_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SubjectSummary"
-                  },
-                  "title": "Response Read Subjects Api Subjects Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/subjects/{subject_id}": {
-      "get": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Read Subject",
-        "operationId": "read_subject_api_subjects__subject_id__get",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectSummary"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Update Subject",
-        "operationId": "update_subject_api_subjects__subject_id__patch",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Subjects"
-        ],
-        "summary": "Delete Subject",
-        "operationId": "delete_subject_api_subjects__subject_id__delete",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/decks": {
       "post": {
         "tags": [
@@ -452,23 +86,6 @@
         "summary": "Read Decks",
         "operationId": "read_decks_api_decks_get",
         "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1611,430 +1228,15 @@
         }
       }
     },
-    "/api/deck_practice_configs": {
-      "post": {
-        "tags": [
-          "Practice Config"
-        ],
-        "summary": "Create Deck Practice Config",
-        "operationId": "create_deck_practice_config_api_deck_practice_configs_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeckPracticeConfigCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Practice Config"
-        ],
-        "summary": "Read Deck Practice Configs",
-        "description": "Every config the user owns unless narrowed by subject and/or deck. Each row\ncarries its deck and subject: the creation page groups by deck, and two decks in\ndifferent subjects may share a name, so the subject has to travel with the row\nrather than be joined back in on the client.",
-        "operationId": "read_deck_practice_configs_api_deck_practice_configs_get",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "deck_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Deck Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeckPracticeConfigSummary"
-                  },
-                  "title": "Response Read Deck Practice Configs Api Deck Practice Configs Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/deck_practice_configs/{config_id}": {
-      "get": {
-        "tags": [
-          "Practice Config"
-        ],
-        "summary": "Read Deck Practice Config",
-        "operationId": "read_deck_practice_config_api_deck_practice_configs__config_id__get",
-        "parameters": [
-          {
-            "name": "config_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Config Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Practice Config"
-        ],
-        "summary": "Patch Deck Practice Config",
-        "operationId": "patch_deck_practice_config_api_deck_practice_configs__config_id__patch",
-        "parameters": [
-          {
-            "name": "config_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Config Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeckPracticeConfigUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeckPracticeConfigRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Practice Config"
-        ],
-        "summary": "Delete Deck Practice Config",
-        "operationId": "delete_deck_practice_config_api_deck_practice_configs__config_id__delete",
-        "parameters": [
-          {
-            "name": "config_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Config Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/deletion-impact": {
       "get": {
         "tags": [
           "Deletion"
         ],
         "summary": "Get Deletion Impact",
-        "description": "The advisory preview behind every delete confirm: the same closure a deletion\ntransaction computes for itself, reported as counts. 404 for the first id that's\nforeign or doesn't exist; 422 when all four lists are empty \u2014 there's nothing to\npreview.",
+        "description": "The advisory preview behind every delete confirm: the same closure a deletion\ntransaction computes for itself, reported as counts. 404 for the first id that's\nforeign or doesn't exist; 422 when all three lists are empty \u2014 there's nothing to\npreview.",
         "operationId": "get_deletion_impact_api_deletion_impact_get",
         "parameters": [
-          {
-            "name": "subject_ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "default": [],
-              "title": "Subject Ids"
-            }
-          },
           {
             "name": "deck_ids",
             "in": "query",
@@ -2134,14 +1336,14 @@
         }
       }
     },
-    "/api/practice_runs": {
+    "/api/practices": {
       "post": {
         "tags": [
           "Practice"
         ],
-        "summary": "Create Practice Run",
-        "description": "Create *is* start: the session, its snapshots, and every practice_card are\nwritten in one transaction. There is no draft session and no deferred generation.",
-        "operationId": "create_practice_run_api_practice_runs_post",
+        "summary": "Post Practices",
+        "description": "404 naming a deck that is missing or not the user's; 400 `practice_name_taken` for a\nname the user's other practice has; a plain 400 for no deck or a deck picked twice.",
+        "operationId": "post_practices_api_practices_post",
         "parameters": [
           {
             "name": "authorization",
@@ -2181,7 +1383,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PracticeRunCreate"
+                "$ref": "#/components/schemas/PracticeCreate"
               }
             }
           }
@@ -2192,7 +1394,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeRunRead"
+                  "$ref": "#/components/schemas/PracticeSummary"
                 }
               }
             }
@@ -2213,44 +1415,10 @@
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Runs",
-        "description": "Newest first, each row carrying the decks (and their subjects) it snapshotted.\nFilters are the same relation, asked as a question: a session matches a subject or\ndeck if any of its practice_deck rows points at a matching deck (`source_config_id`\nis attribution only, never a filter).",
-        "operationId": "read_practice_runs_api_practice_runs_get",
+        "summary": "Get Practices",
+        "description": "Most recently run first; a practice never run by when it was made.",
+        "operationId": "get_practices_api_practices_get",
         "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "deck_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Deck Id"
-            }
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -2292,9 +1460,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PracticeRunSummary"
+                    "$ref": "#/components/schemas/PracticeSummary"
                   },
-                  "title": "Response Read Practice Runs Api Practice Runs Get"
+                  "title": "Response Get Practices Api Practices Get"
                 }
               }
             }
@@ -2312,23 +1480,26 @@
         }
       }
     },
-    "/api/practice_runs/{practice_run_id}": {
+    "/api/practices/suggested-name": {
       "get": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Run",
-        "description": "The detail page needs the same deck chips the list already renders, so this\nanswers with PracticeRunSummary rather than the bare PracticeRunRead \u2014 API-\nfirst beats a client-side join of the list endpoint.",
-        "operationId": "read_practice_run_api_practice_runs__practice_run_id__get",
+        "summary": "Get Suggested Practice Name",
+        "description": "The name a practice of these decks, in this order, takes when created with none.\n404 naming a deck that is missing or not the user's.",
+        "operationId": "get_suggested_practice_name_api_practices_suggested_name_get",
         "parameters": [
           {
-            "name": "practice_run_id",
-            "in": "path",
+            "name": "deck_ids",
+            "in": "query",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Practice Run Id"
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": "Deck Ids"
             }
           },
           {
@@ -2370,7 +1541,166 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeRunSummary"
+                  "$ref": "#/components/schemas/SuggestedPracticeName"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practices/{practice_id}": {
+      "get": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Get Practice",
+        "operationId": "get_practice_api_practices__practice_id__get",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Patch Practice",
+        "description": "404 for an unknown or foreign practice; 400 `practice_name_taken` for a name the\nuser's other practice has; a plain 400 for a blank name.",
+        "operationId": "patch_practice_api_practices__practice_id__patch",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSummary"
                 }
               }
             }
@@ -2391,18 +1721,18 @@
         "tags": [
           "Practice"
         ],
-        "summary": "Delete Practice Run",
-        "description": "User delete is the only way a session leaves the list \u2014 there is no `abandoned`\nstatus for one to fall out of view into.",
-        "operationId": "delete_practice_run_api_practice_runs__practice_run_id__delete",
+        "summary": "Delete Practice",
+        "description": "Deletes the practice with its runs; the user's mastery stays. 404 for an unknown or\nforeign practice.",
+        "operationId": "delete_practice_api_practices__practice_id__delete",
         "parameters": [
           {
-            "name": "practice_run_id",
+            "name": "practice_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Run Id"
+              "title": "Practice Id"
             }
           },
           {
@@ -2455,23 +1785,119 @@
         }
       }
     },
-    "/api/practice_runs/{practice_run_id}/state": {
-      "get": {
+    "/api/practices/{practice_id}/configurations/{deck_id}": {
+      "put": {
         "tags": [
           "Practice"
         ],
-        "summary": "Read Practice Run State",
-        "description": "One server-composed payload. 404 for an unknown or foreign session;\n`current_card: null` once nothing is pending, at which point `session_status`\nalready reads \"completed\".",
-        "operationId": "read_practice_run_state_api_practice_runs__practice_run_id__state_get",
+        "summary": "Put Practice Configuration",
+        "description": "Replaces how the practice's next run asks the deck; a run already cut keeps how it\nasks it, so the save is taken while the practice has an active run. 404 for an unknown\nor foreign practice or a deck that is not the practice's; a plain 400 naming the first\nrule the configuration breaks, writing nothing.",
+        "operationId": "put_practice_configuration_api_practices__practice_id__configurations__deck_id__put",
         "parameters": [
           {
-            "name": "practice_run_id",
+            "name": "practice_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Run Id"
+              "title": "Practice Id"
+            }
+          },
+          {
+            "name": "deck_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Deck Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurationArrays"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeConfigurationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/practices/{practice_id}/runs": {
+      "post": {
+        "tags": [
+          "Practice"
+        ],
+        "summary": "Post Runs",
+        "description": "The practice's active run, or a new one when it has none. 404 for an unknown or\nforeign practice; 400 `no_cards` when a new run would have no card.",
+        "operationId": "post_runs_api_practices__practice_id__runs_post",
+        "parameters": [
+          {
+            "name": "practice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Practice Id"
             }
           },
           {
@@ -2513,7 +1939,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeRunState"
+                  "$ref": "#/components/schemas/RunRead"
                 }
               }
             }
@@ -2531,23 +1957,23 @@
         }
       }
     },
-    "/api/practice_runs/{practice_run_id}/breakdown": {
+    "/api/runs/{run_id}": {
       "get": {
         "tags": [
-          "Practice"
+          "Run"
         ],
-        "summary": "Read Practice Run Breakdown",
-        "description": "The completion dataset behind the retrospective view, including each card's\nmastery/delta and per-field detail. 409 while\nthe session is still active \u2014 the bucket refinement only makes sense once nothing\nis pending; 404 for an unknown or foreign session.",
-        "operationId": "read_practice_run_breakdown_api_practice_runs__practice_run_id__breakdown_get",
+        "summary": "Get Run",
+        "description": "404 for an unknown or foreign run.",
+        "operationId": "get_run_api_runs__run_id__get",
         "parameters": [
           {
-            "name": "practice_run_id",
+            "name": "run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Run Id"
+              "title": "Run Id"
             }
           },
           {
@@ -2589,7 +2015,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeRunBreakdown"
+                  "$ref": "#/components/schemas/RunDetail"
                 }
               }
             }
@@ -2607,23 +2033,327 @@
         }
       }
     },
-    "/api/practice_runs/{practice_run_id}/rerun": {
-      "post": {
+    "/api/runs/{run_id}/state": {
+      "get": {
         "tags": [
-          "Practice"
+          "Run"
         ],
-        "summary": "Rerun Run",
-        "description": "Creates a new run from the completed run's own frozen practice_deck snapshots,\nnamed verbatim from the request body; the original run is untouched.\n404 for an unknown or foreign session; 400 `run_active` if it hasn't completed; 400\n`nothing_to_rerun` if every snapshot has since gone stale or lost its deck; 400\n`no_cards` if the surviving snapshots generate no practice card.",
-        "operationId": "rerun_run_api_practice_runs__practice_run_id__rerun_post",
+        "summary": "Get Run State",
+        "description": "One server-composed payload. 404 for an unknown or foreign run; `current_card: null`\nonce nothing is pending, at which point `status` already reads \"completed\".",
+        "operationId": "get_run_state_api_runs__run_id__state_get",
         "parameters": [
           {
-            "name": "practice_run_id",
+            "name": "run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Run Id"
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/breakdown": {
+      "get": {
+        "tags": [
+          "Run"
+        ],
+        "summary": "Get Run Breakdown",
+        "description": "Everything the summary shows. 409 `run_active` while the run is active; 404 for an\nunknown or foreign run.",
+        "operationId": "get_run_breakdown_api_runs__run_id__breakdown_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunBreakdownRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/end": {
+      "post": {
+        "tags": [
+          "Run"
+        ],
+        "summary": "Post Run End",
+        "description": "Ends the run as it stands: its unreached cards leave it and it is completed. 404 for\nan unknown or foreign run.",
+        "operationId": "post_run_end_api_runs__run_id__end_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/rerun": {
+      "post": {
+        "tags": [
+          "Run"
+        ],
+        "summary": "Post Run Rerun",
+        "description": "A new run of the whole practice of the completed run. 404 for an unknown or foreign\nrun; 400 `run_active`, `practice_has_active_run` or `no_cards`.",
+        "operationId": "post_run_rerun_api_runs__run_id__rerun_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-timezone",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/chosen_cards": {
+      "post": {
+        "tags": [
+          "Run"
+        ],
+        "summary": "Post Run Chosen Cards",
+        "description": "A new run of exactly the chosen cards of the completed run. 404 for an unknown or\nforeign run; 400 `run_active`, `practice_has_active_run` or `no_cards`; a plain 400\nfor an empty list or a card the run did not hold.",
+        "operationId": "post_run_chosen_cards_api_runs__run_id__chosen_cards_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
             }
           },
           {
@@ -2664,7 +2394,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PracticeRunRerun"
+                "$ref": "#/components/schemas/RunChosenCards"
               }
             }
           }
@@ -2675,7 +2405,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PracticeRunRead"
+                  "$ref": "#/components/schemas/RunRead"
                 }
               }
             }
@@ -2693,108 +2423,22 @@
         }
       }
     },
-    "/api/practice_runs/{practice_run_id}/chosen_cards": {
+    "/api/run_cards/{run_card_id}/rate": {
       "post": {
         "tags": [
-          "Practice"
+          "Run"
         ],
-        "summary": "Start Chosen Cards",
-        "description": "Creates a new practice of exactly the chosen cards, from the completed practice's\nown snapshots; the original is untouched. 404 for an unknown or foreign practice; 400\n`run_active` if it hasn't completed; 400 `nothing_to_practice` if no snapshot holding a\nchosen card still validates; 400 `no_cards` if the survivors generate no practice card;\n400 with a string detail for an empty list or a card the practice did not hold.",
-        "operationId": "start_chosen_cards_api_practice_runs__practice_run_id__chosen_cards_post",
+        "summary": "Post Run Card Rating",
+        "operationId": "post_run_card_rating_api_run_cards__run_card_id__rate_post",
         "parameters": [
           {
-            "name": "practice_run_id",
+            "name": "run_card_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Practice Run Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-timezone",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Timezone"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PracticeRunChosenCards"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PracticeRunRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/practice_cards/{practice_card_id}/rate": {
-      "post": {
-        "tags": [
-          "Practice"
-        ],
-        "summary": "Rate Practice Card",
-        "operationId": "rate_practice_card_api_practice_cards__practice_card_id__rate_post",
-        "parameters": [
-          {
-            "name": "practice_card_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Practice Card Id"
+              "title": "Run Card Id"
             }
           },
           {
@@ -2960,10 +2604,10 @@
     "schemas": {
       "BreakdownAttempt": {
         "properties": {
-          "practice_card_id": {
+          "run_card_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Practice Card Id"
+            "title": "Run Card Id"
           },
           "prompts": {
             "items": {
@@ -2982,7 +2626,7 @@
         },
         "type": "object",
         "required": [
-          "practice_card_id",
+          "run_card_id",
           "prompts",
           "answers"
         ],
@@ -3263,12 +2907,73 @@
         ],
         "title": "ChangeKind"
       },
+      "ConfigurationArrays": {
+        "properties": {
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts"
+        ],
+        "title": "ConfigurationArrays",
+        "description": "How a deck is asked: the fields every card shows or asks on each side, and the\nfields drawn at random on each side with the counts one draw picks from."
+      },
       "CurrentRunCard": {
         "properties": {
-          "practice_card_id": {
+          "run_card_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Practice Card Id"
+            "title": "Run Card Id"
           },
           "card_id": {
             "type": "string",
@@ -3296,7 +3001,7 @@
         },
         "type": "object",
         "required": [
-          "practice_card_id",
+          "run_card_id",
           "card_id",
           "attempt",
           "prompts",
@@ -3316,18 +3021,6 @@
               }
             ],
             "title": "Name"
-          },
-          "subject_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject Id"
           },
           "field_defs": {
             "anyOf": [
@@ -3360,11 +3053,6 @@
             "type": "string",
             "title": "Name"
           },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
           "field_defs": {
             "items": {
               "$ref": "#/components/schemas/FieldDefCreate"
@@ -3376,7 +3064,6 @@
         "type": "object",
         "required": [
           "name",
-          "subject_id",
           "field_defs"
         ],
         "title": "DeckCreate"
@@ -3391,11 +3078,6 @@
           "name": {
             "type": "string",
             "title": "Name"
-          },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
           },
           "created_at": {
             "type": "string",
@@ -3437,7 +3119,6 @@
         "required": [
           "id",
           "name",
-          "subject_id",
           "created_at",
           "last_activity_at",
           "readiness",
@@ -3474,384 +3155,27 @@
         ],
         "title": "DeckFieldDefRead"
       },
-      "DeckPracticeConfigCreate": {
+      "DeckNameRead": {
         "properties": {
           "deck_id": {
             "type": "string",
             "format": "uuid",
             "title": "Deck Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "prompt_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Field Ids"
-          },
-          "answer_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Field Ids"
-          },
-          "prompt_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Pool Ids"
-          },
-          "prompt_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Pool Ids"
-          },
-          "answer_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Answer Pool Counts"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deck_id",
-          "name",
-          "prompt_field_ids",
-          "answer_field_ids",
-          "prompt_pool_ids",
-          "prompt_pool_counts",
-          "answer_pool_ids",
-          "answer_pool_counts"
-        ],
-        "title": "DeckPracticeConfigCreate"
-      },
-      "DeckPracticeConfigRead": {
-        "properties": {
-          "deck_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Deck Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "prompt_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Field Ids"
-          },
-          "answer_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Field Ids"
-          },
-          "prompt_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Pool Ids"
-          },
-          "prompt_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Pool Ids"
-          },
-          "answer_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Answer Pool Counts"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deck_id",
-          "name",
-          "prompt_field_ids",
-          "answer_field_ids",
-          "prompt_pool_ids",
-          "prompt_pool_counts",
-          "answer_pool_ids",
-          "answer_pool_counts",
-          "id",
-          "created_at",
-          "last_activity_at"
-        ],
-        "title": "DeckPracticeConfigRead"
-      },
-      "DeckPracticeConfigSummary": {
-        "properties": {
-          "deck_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Deck Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "prompt_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Field Ids"
-          },
-          "answer_field_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Field Ids"
-          },
-          "prompt_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Prompt Pool Ids"
-          },
-          "prompt_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Answer Pool Ids"
-          },
-          "answer_pool_counts": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Answer Pool Counts"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
           },
           "deck_name": {
             "type": "string",
             "title": "Deck Name"
-          },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
           }
         },
         "type": "object",
         "required": [
           "deck_id",
-          "name",
-          "prompt_field_ids",
-          "answer_field_ids",
-          "prompt_pool_ids",
-          "prompt_pool_counts",
-          "answer_pool_ids",
-          "answer_pool_counts",
-          "id",
-          "created_at",
-          "last_activity_at",
-          "deck_name",
-          "subject_id",
-          "subject_name"
+          "deck_name"
         ],
-        "title": "DeckPracticeConfigSummary",
-        "description": "A list row for the config picker and the config management surface: the config\nplus where it lives. Two decks in different subjects may share a name, so a row is\nonly unambiguous with its subject alongside its deck."
-      },
-      "DeckPracticeConfigUpdate": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "prompt_field_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Field Ids"
-          },
-          "answer_field_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Field Ids"
-          },
-          "prompt_pool_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Pool Ids"
-          },
-          "prompt_pool_counts": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prompt Pool Counts"
-          },
-          "answer_pool_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Pool Ids"
-          },
-          "answer_pool_counts": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Answer Pool Counts"
-          }
-        },
-        "type": "object",
-        "title": "DeckPracticeConfigUpdate"
+        "title": "DeckNameRead"
       },
       "DeckSummary": {
         "properties": {
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -3870,10 +3194,6 @@
             "type": "string",
             "format": "date-time",
             "title": "Last Activity At"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
           },
           "card_count": {
             "type": "integer",
@@ -3900,25 +3220,19 @@
         },
         "type": "object",
         "required": [
-          "subject_id",
           "name",
           "id",
           "created_at",
           "last_activity_at",
-          "subject_name",
           "card_count",
           "field_names",
           "readiness"
         ],
         "title": "DeckSummary",
-        "description": "A deck as a list row shows it. The single-deck reads\n(`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which\nalready includes everything here except the subject's name, card_count and\nfield_names."
+        "description": "A deck as a list row shows it. The single-deck reads\n(`GET`/`POST`/`PATCH /api/decks/{id}`) return the richer `DeckDetail` instead, which\nalready includes everything here except card_count and field_names."
       },
       "DeletionImpactRead": {
         "properties": {
-          "subjects_deleted": {
-            "type": "integer",
-            "title": "Subjects Deleted"
-          },
           "decks_deleted": {
             "type": "integer",
             "title": "Decks Deleted"
@@ -3935,24 +3249,23 @@
             "type": "integer",
             "title": "Cards Affected"
           },
-          "configurations_deleted": {
-            "type": "integer",
-            "title": "Configurations Deleted"
-          },
           "runs_deleted": {
             "type": "integer",
             "title": "Runs Deleted"
+          },
+          "practices_affected": {
+            "type": "integer",
+            "title": "Practices Affected"
           }
         },
         "type": "object",
         "required": [
-          "subjects_deleted",
           "decks_deleted",
           "fields_deleted",
           "cards_deleted",
           "cards_affected",
-          "configurations_deleted",
-          "runs_deleted"
+          "runs_deleted",
+          "practices_affected"
         ],
         "title": "DeletionImpactRead",
         "description": "The `GET /api/deletion-impact` response: the deletion closure's size, by type,\nfor a delete confirm to word its warning. Each\nfield is the count of one closure set `compute_deletion_impact` returns \u2014\n`cards_affected` is `DeletionImpact.affected_card_count`, every other field is\n`len()` of the matching id set. Never nests another shape."
@@ -4207,53 +3520,6 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "HomeActivePractice": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "decks": {
-            "items": {
-              "$ref": "#/components/schemas/PracticeRunDeckSummary"
-            },
-            "type": "array",
-            "title": "Decks"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/RunProgress"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "user_id",
-          "name",
-          "status",
-          "created_at",
-          "decks",
-          "progress"
-        ],
-        "title": "HomeActivePractice"
-      },
       "HomeRead": {
         "properties": {
           "steps": {
@@ -4266,35 +3532,112 @@
               }
             ]
           },
-          "active_practices": {
+          "active_runs": {
             "items": {
-              "$ref": "#/components/schemas/HomeActivePractice"
+              "$ref": "#/components/schemas/HomeRun"
             },
             "type": "array",
-            "title": "Active Practices"
+            "title": "Active Runs"
           },
-          "recent_decks": {
+          "recent_runs": {
             "items": {
-              "$ref": "#/components/schemas/DeckSummary"
+              "$ref": "#/components/schemas/HomeRun"
             },
             "type": "array",
-            "title": "Recent Decks"
+            "title": "Recent Runs"
           }
         },
         "type": "object",
         "required": [
           "steps",
-          "active_practices",
-          "recent_decks"
+          "active_runs",
+          "recent_runs"
         ],
         "title": "HomeRead"
       },
+      "HomeRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          },
+          "practice_name": {
+            "type": "string",
+            "title": "Practice Name"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckNameRead"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at",
+          "reached_cards",
+          "counted_cards",
+          "practice_name",
+          "decks",
+          "progress"
+        ],
+        "title": "HomeRun"
+      },
       "HomeSteps": {
         "properties": {
-          "has_subject": {
-            "type": "boolean",
-            "title": "Has Subject"
-          },
           "has_deck": {
             "type": "boolean",
             "title": "Has Deck"
@@ -4302,178 +3645,86 @@
           "has_card": {
             "type": "boolean",
             "title": "Has Card"
-          },
-          "has_configuration": {
-            "type": "boolean",
-            "title": "Has Configuration"
           }
         },
         "type": "object",
         "required": [
-          "has_subject",
           "has_deck",
-          "has_card",
-          "has_configuration"
+          "has_card"
         ],
         "title": "HomeSteps",
-        "description": "Whether each of the first four things exists; the fifth, a practice, never does\nwhile the steps show."
+        "description": "Whether the user has a deck and a card, the first two steps; the third, a\npractice, never exists while the steps show."
       },
-      "PracticeCardRead": {
+      "PracticeConfigurationRead": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "practice_run_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Practice Run Id"
-          },
-          "card_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Card Id"
-          },
-          "position": {
-            "type": "integer",
-            "title": "Position"
-          },
-          "prompts": {
+          "prompt_field_ids": {
             "items": {
               "type": "string",
               "format": "uuid"
             },
             "type": "array",
-            "title": "Prompts"
+            "title": "Prompt Field Ids"
           },
-          "answers": {
+          "answer_field_ids": {
             "items": {
               "type": "string",
               "format": "uuid"
             },
             "type": "array",
-            "title": "Answers"
+            "title": "Answer Field Ids"
           },
-          "status": {
-            "$ref": "#/components/schemas/PracticeCardStatus"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "practice_run_id",
-          "card_id",
-          "position",
-          "prompts",
-          "answers",
-          "status",
-          "created_at"
-        ],
-        "title": "PracticeCardRead"
-      },
-      "PracticeCardStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "passed",
-          "failed"
-        ],
-        "title": "PracticeCardStatus"
-      },
-      "PracticeRunBreakdown": {
-        "properties": {
-          "total_cards": {
-            "type": "integer",
-            "title": "Total Cards"
-          },
-          "cards": {
-            "items": {
-              "$ref": "#/components/schemas/BreakdownCard"
-            },
-            "type": "array",
-            "title": "Cards"
-          }
-        },
-        "type": "object",
-        "required": [
-          "total_cards",
-          "cards"
-        ],
-        "title": "PracticeRunBreakdown",
-        "description": "The whole `GET .../breakdown` payload: every card and what the run did to it, so the\nsummary needs no second request. Only ever built for a completed session; the router\n409s an active one before this is composed."
-      },
-      "PracticeRunChosenCards": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "card_ids": {
+          "prompt_pool_ids": {
             "items": {
               "type": "string",
               "format": "uuid"
             },
             "type": "array",
-            "title": "Card Ids"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "card_ids"
-        ],
-        "title": "PracticeRunChosenCards",
-        "description": "Body of POST .../chosen_cards: the client-formatted name for the new run, stored\nverbatim, and the cards to practice, each one a card of the completed practice."
-      },
-      "PracticeRunCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
+            "title": "Prompt Pool Ids"
           },
-          "deck_practice_config_ids": {
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
             "items": {
               "type": "string",
               "format": "uuid"
             },
             "type": "array",
-            "title": "Deck Practice Config Ids"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "deck_practice_config_ids"
-        ],
-        "title": "PracticeRunCreate"
-      },
-      "PracticeRunDeckSummary": {
-        "properties": {
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
           "deck_id": {
             "type": "string",
             "format": "uuid",
             "title": "Deck Id"
-          },
-          "deck_name": {
-            "type": "string",
-            "title": "Deck Name"
-          },
-          "subject_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Subject Id"
-          },
-          "subject_name": {
-            "type": "string",
-            "title": "Subject Name"
-          },
-          "configuration_name": {
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "deck_id"
+        ],
+        "title": "PracticeConfigurationRead",
+        "description": "How the practice's next run asks one of its decks."
+      },
+      "PracticeCreate": {
+        "properties": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -4482,56 +3733,156 @@
                 "type": "null"
               }
             ],
-            "title": "Configuration Name"
+            "title": "Name"
+          },
+          "deck_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Deck Ids"
           }
         },
         "type": "object",
         "required": [
-          "deck_id",
-          "deck_name",
-          "subject_id",
-          "subject_name",
-          "configuration_name"
+          "deck_ids"
         ],
-        "title": "PracticeRunDeckSummary",
-        "description": "One deck a session touches, resolved through `practice_deck \u2192 deck \u2192 subject`.\n\nThis chain is the only link between a session and a subject/deck, and the only thing\nthe filters use. `practice_deck.source_config_id` is read here for the label\nonly: `configuration_name` is the live configuration's name while\nthe link resolves, else the snapshot's stored `source_config_name`, else None. The\nlink is never read for filtering, generation, validation or rerun."
+        "title": "PracticeCreate"
       },
-      "PracticeRunRead": {
+      "PracticeDetail": {
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckNameRead"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Id"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunListing"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "configurations": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeConfigurationRead"
+            },
+            "type": "array",
+            "title": "Configurations"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "user_id",
           "name",
-          "status",
-          "created_at"
+          "created_at",
+          "decks",
+          "active_run_id",
+          "readiness",
+          "runs",
+          "configurations"
         ],
-        "title": "PracticeRunRead"
+        "title": "PracticeDetail"
       },
-      "PracticeRunRerun": {
+      "PracticeSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckNameRead"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Id"
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "decks",
+          "active_run_id",
+          "readiness"
+        ],
+        "title": "PracticeSummary"
+      },
+      "PracticeUpdate": {
         "properties": {
           "name": {
             "type": "string",
@@ -4542,85 +3893,7 @@
         "required": [
           "name"
         ],
-        "title": "PracticeRunRerun",
-        "description": "Body of POST .../rerun: the client-formatted name for the new run,\nthe same way PracticeRunCreate.name is \u2014 the server derives nothing."
-      },
-      "PracticeRunState": {
-        "properties": {
-          "session_name": {
-            "type": "string",
-            "title": "Session Name"
-          },
-          "session_status": {
-            "$ref": "#/components/schemas/RunStatus"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/RunProgress"
-          },
-          "current_card": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CurrentRunCard"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "session_name",
-          "session_status",
-          "progress",
-          "current_card"
-        ],
-        "title": "PracticeRunState",
-        "description": "The whole `GET .../state` payload \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `session_status` reads `completed`."
-      },
-      "PracticeRunSummary": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "decks": {
-            "items": {
-              "$ref": "#/components/schemas/PracticeRunDeckSummary"
-            },
-            "type": "array",
-            "title": "Decks"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "user_id",
-          "name",
-          "status",
-          "created_at",
-          "decks"
-        ],
-        "title": "PracticeRunSummary",
-        "description": "A list row for the practice overview: the session plus the decks it snapshotted,\nso the client can render and filter by subject/deck without a second round trip or a\nclient-side join.\n\n`decks` lists every snapshot of the run \u2014 a `practice_deck` never outlives its\ndeck: deleting a deck deletes its snapshots with it, and a run\nleft owning no snapshot at all is deleted alongside its last one. There is no\n\"deleted deck\" state for a summary to represent."
+        "title": "PracticeUpdate"
       },
       "RatedFieldValue": {
         "properties": {
@@ -4654,7 +3927,7 @@
           "rating"
         ],
         "title": "RatedFieldValue",
-        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == practice_card.id` and `field_def_id`."
+        "description": "A resolved answer field plus the rating it was given, joined from `review_log`\non `review_group_id == run_card.id` and `field_def_id`."
       },
       "RatingSubmission": {
         "properties": {
@@ -4677,13 +3950,13 @@
       },
       "RatingSubmissionResult": {
         "properties": {
-          "rated_practice_card": {
-            "$ref": "#/components/schemas/PracticeCardRead"
+          "rated_run_card": {
+            "$ref": "#/components/schemas/RunCardRead"
           },
-          "requeued_practice_card": {
+          "requeued_run_card": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/PracticeCardRead"
+                "$ref": "#/components/schemas/RunCardRead"
               },
               {
                 "type": "null"
@@ -4693,8 +3966,8 @@
         },
         "type": "object",
         "required": [
-          "rated_practice_card",
-          "requeued_practice_card"
+          "rated_run_card",
+          "requeued_run_card"
         ],
         "title": "RatingSubmissionResult"
       },
@@ -4725,7 +3998,317 @@
           "value"
         ],
         "title": "ResolvedFieldValue",
-        "description": "One prompt/answer field id from a practice_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution every run payload uses instead of bare ids. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the practice_card\nwas generated (the blank filter governs generation-time candidacy, not later edits)."
+        "description": "One prompt/answer field id from a run_card's `prompts`/`answers` array,\njoined against its field_def (name, type) and this card's current value \u2014 the\nserver-side resolution every run payload uses instead of bare ids. `value` is `\"\"`\nwhen no card_field_value row exists for this (card, field) pair; it is passed\nthrough as-is even if blank, since a value can go blank *after* the run_card was\ngenerated (the blank filter governs generation-time candidacy, not later edits)."
+      },
+      "RunBreakdownRead": {
+        "properties": {
+          "total_cards": {
+            "type": "integer",
+            "title": "Total Cards"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cards",
+          "cards"
+        ],
+        "title": "RunBreakdownRead",
+        "description": "The whole `GET /api/runs/{id}/breakdown` payload: every card and what the run did to\nit, so the summary needs no second request. Only ever built for a completed run; the\nrouter 409s an active one before this is composed."
+      },
+      "RunCardRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "card_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Card Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "prompts": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompts"
+          },
+          "answers": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answers"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunCardStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "card_id",
+          "position",
+          "prompts",
+          "answers",
+          "status",
+          "created_at"
+        ],
+        "title": "RunCardRead"
+      },
+      "RunCardStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "passed",
+          "failed"
+        ],
+        "title": "RunCardStatus"
+      },
+      "RunChosenCards": {
+        "properties": {
+          "card_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Card Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_ids"
+        ],
+        "title": "RunChosenCards"
+      },
+      "RunConfigurationRead": {
+        "properties": {
+          "prompt_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Field Ids"
+          },
+          "answer_field_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Field Ids"
+          },
+          "prompt_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Prompt Pool Ids"
+          },
+          "prompt_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prompt Pool Counts"
+          },
+          "answer_pool_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Answer Pool Ids"
+          },
+          "answer_pool_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Answer Pool Counts"
+          },
+          "deck_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Deck Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_field_ids",
+          "answer_field_ids",
+          "prompt_pool_ids",
+          "prompt_pool_counts",
+          "answer_pool_ids",
+          "answer_pool_counts",
+          "deck_id"
+        ],
+        "title": "RunConfigurationRead",
+        "description": "How a run asked one deck, as it stood when the run was cut."
+      },
+      "RunDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          },
+          "practice_name": {
+            "type": "string",
+            "title": "Practice Name"
+          },
+          "decks": {
+            "items": {
+              "$ref": "#/components/schemas/DeckNameRead"
+            },
+            "type": "array",
+            "title": "Decks"
+          },
+          "configurations": {
+            "items": {
+              "$ref": "#/components/schemas/RunConfigurationRead"
+            },
+            "type": "array",
+            "title": "Configurations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at",
+          "reached_cards",
+          "counted_cards",
+          "practice_name",
+          "decks",
+          "configurations"
+        ],
+        "title": "RunDetail"
+      },
+      "RunListing": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "reached_cards": {
+            "type": "integer",
+            "title": "Reached Cards"
+          },
+          "counted_cards": {
+            "type": "integer",
+            "title": "Counted Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at",
+          "reached_cards",
+          "counted_cards"
+        ],
+        "title": "RunListing",
+        "description": "A run as a practice's page lists it, with how many of its cards it reached."
       },
       "RunProgress": {
         "properties": {
@@ -4759,7 +4342,104 @@
           "still_failed"
         ],
         "title": "RunProgress",
-        "description": "The live-progress counts: `total_cards` is fixed at session start\n(distinct card_ids that received a practice_card row then) and never changes, so\nthe other four counts \u2014 a partition of it by chain-fold bucket \u2014 only ever\nredistribute, never grow the denominator mid-session."
+        "description": "The live-progress counts: `total_cards` is fixed when the run is cut (distinct\ncard_ids that received a run_card row then) and never changes, so the other four\ncounts \u2014 a partition of it by chain-fold bucket \u2014 only ever redistribute, never grow\nthe denominator mid-run."
+      },
+      "RunRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "practice_id",
+          "status",
+          "day",
+          "day_index",
+          "created_at",
+          "last_activity_at"
+        ],
+        "title": "RunRead"
+      },
+      "RunState": {
+        "properties": {
+          "practice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Practice Id"
+          },
+          "practice_name": {
+            "type": "string",
+            "title": "Practice Name"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/RunProgress"
+          },
+          "current_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentRunCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "practice_id",
+          "practice_name",
+          "day",
+          "day_index",
+          "status",
+          "progress",
+          "current_card"
+        ],
+        "title": "RunState",
+        "description": "The whole `GET /api/runs/{id}/state` payload \u2014 everything the run page needs to\nrender one screen, in one round trip. `current_card` is None once nothing is\npending, which is also exactly when `status` reads `completed`."
       },
       "RunStatus": {
         "type": "string",
@@ -4768,181 +4448,20 @@
           "completed"
         ],
         "title": "RunStatus",
-        "description": "Two states, not three: nothing could distinguish an \"abandoned\" session from a\n`completed` one without tracking why it ran out of pending cards, and no state is\nkept for that. A session is either still practisable or it isn't."
+        "description": "Nothing records why a run stopped being active: finished and stranded by a\ndeletion both read as completed."
       },
-      "SubjectCreate": {
+      "SuggestedPracticeName": {
         "properties": {
           "name": {
             "type": "string",
             "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
           }
         },
         "type": "object",
         "required": [
           "name"
         ],
-        "title": "SubjectCreate"
-      },
-      "SubjectRead": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "id",
-          "user_id",
-          "created_at",
-          "last_activity_at"
-        ],
-        "title": "SubjectRead"
-      },
-      "SubjectSummary": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon",
-            "default": "book-open"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_activity_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Activity At"
-          },
-          "deck_count": {
-            "type": "integer",
-            "title": "Deck Count"
-          },
-          "readiness": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Readiness"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "id",
-          "user_id",
-          "created_at",
-          "last_activity_at",
-          "deck_count",
-          "readiness"
-        ],
-        "title": "SubjectSummary",
-        "description": "A subject as a library row and its own page show it."
-      },
-      "SubjectUpdate": {
-        "properties": {
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          }
-        },
-        "type": "object",
-        "title": "SubjectUpdate"
+        "title": "SuggestedPracticeName"
       },
       "ValidationError": {
         "properties": {

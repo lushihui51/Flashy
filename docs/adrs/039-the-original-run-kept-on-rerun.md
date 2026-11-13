@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Superseded by ADR 112, ADR 114 and ADR 118
 
 ## Context
 

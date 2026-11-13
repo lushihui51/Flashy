@@ -30,12 +30,13 @@ export default defineConfig([
         {
           selector: 'MemberExpression[property.name=/^toLocale(Date|Time)?String$/]',
           message:
-            'format dates via formatDate/formatDateTime in src/lib/datetime.ts, which pins the user timezone. For numbers, use Intl.NumberFormat.',
+            'format dates only in src/lib/datetime.ts, the one place a date is turned into text. For numbers, use Intl.NumberFormat.',
         },
         {
-          selector: ':matches(NewExpression, CallExpression)[callee.object.name=\'Intl\'][callee.property.name=\'DateTimeFormat\']',
+          selector:
+            ":matches(NewExpression, CallExpression)[callee.object.name='Intl'][callee.property.name='DateTimeFormat']",
           message:
-            'use formatDate/formatDateTime from src/lib/datetime.ts rather than constructing Intl.DateTimeFormat, so `timeZone` is always explicit.',
+            'construct Intl.DateTimeFormat only in src/lib/datetime.ts, the one place a date is turned into text.',
         },
       ],
       // Holds every write to a page's own URL to the one hook, so that no write can forget
@@ -56,7 +57,8 @@ export default defineConfig([
     },
   },
   {
-    // The sanctioned exception — this module exists to apply the user's zone explicitly.
+    // The sanctioned exception — the one module that turns a date into text and reads the
+    // browser's zone.
     files: ['src/lib/datetime.ts'],
     rules: { 'no-restricted-syntax': 'off' },
   },

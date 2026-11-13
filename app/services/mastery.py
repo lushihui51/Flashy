@@ -13,10 +13,10 @@ from app.database_ops.mastery_log import (
     db_fetch_deck_mastery_read_rows,
     db_fetch_latest_mastery_states,
     db_fetch_mastery_read_rows,
-    db_fetch_subject_mastery_read_rows,
+    db_fetch_practice_mastery_read_rows,
     db_lock_card,
 )
-from app.database_ops.practice_card import db_read_run_ids_for_practice_cards
+from app.database_ops.run_card import db_read_run_ids_for_run_cards
 from app.database_ops.review_log import (
     ReviewGroupWriteOutcome,
     db_fetch_review_log_for_rebuild,
@@ -33,7 +33,7 @@ def apply_rating(
     db: Session,
     strategy: MasteryStrategy,
     group: ReviewGroup,
-    practice_run_id: uuid.UUID | None,
+    run_id: uuid.UUID | None,
 ) -> None:
     """Unconditionally blends one appearance into mastery — the pure write-path
     primitive. Assumes the caller has already established that this group is new to
@@ -45,7 +45,7 @@ def apply_rating(
 
     expand() decides every (card, field, side) update up front — including the prompt
     side's breadth, which needs the whole group, not one row, hence taking a
-    ReviewGroup rather than a raw log row. `practice_run_id` attributes the appended
+    ReviewGroup rather than a raw log row. `run_id` attributes the appended
     rows to the run this appearance happened in (None for a rebuild replay that can't
     reconstruct one, e.g. the run itself no longer exists).
 
@@ -68,7 +68,7 @@ def apply_rating(
         states[field_def_id] = strategy.apply_review(states.get(field_def_id), update)
 
     db_stage_append_mastery_log(
-        db, group.card_id, states, group.reviewed_at, group.review_group_id, practice_run_id
+        db, group.card_id, states, group.reviewed_at, group.review_group_id, run_id
     )
 
 
@@ -77,7 +77,7 @@ def record_review_group(
     strategy: MasteryStrategy,
     user_id: uuid.UUID,
     group: ReviewGroup,
-    practice_run_id: uuid.UUID | None,
+    run_id: uuid.UUID | None,
 ) -> ReviewGroupWriteOutcome:
     """The retry-safe write-path entry point for one appearance — what the rating
     endpoint calls, not apply_rating directly. Logs the group, then blends it
@@ -131,7 +131,7 @@ def record_review_group(
     ]
     outcome = db_stage_log_review_group(db, group.review_group_id, rows)
     if outcome is ReviewGroupWriteOutcome.new:
-        apply_rating(db, strategy, group, practice_run_id)
+        apply_rating(db, strategy, group, run_id)
     return outcome
 
 
@@ -199,13 +199,14 @@ def deck_readiness(
     return _fold_collections(strategy, db_fetch_deck_mastery_read_rows(db, deck_ids), deck_ids)
 
 
-def subject_readiness(
-    db: Session, strategy: MasteryStrategy, subject_ids: list[uuid.UUID]
+def practice_readiness(
+    db: Session, strategy: MasteryStrategy, practice_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, float | None]:
-    """Each subject's readiness: the fold over every card of its decks, each card once;
-    None for a subject whose decks hold no card."""
+    """Each practice's readiness: every card's fold over every field of its deck, then the
+    practice's fold over the cards of all its decks, each card once; None for a practice
+    whose decks hold no card."""
     return _fold_collections(
-        strategy, db_fetch_subject_mastery_read_rows(db, subject_ids), subject_ids
+        strategy, db_fetch_practice_mastery_read_rows(db, practice_ids), practice_ids
     )
 
 
@@ -237,12 +238,12 @@ def _fetch_run_attribution(
     db: Session, review_group_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, uuid.UUID | None]:
     """Reconstructs run attribution for a rebuild replay: a group's review_group_id is
-    the practice_card.id it was submitted against (submit_rating's construction), so a
-    still-existing practice_card row gives back its practice_run_id; a group whose run
+    the run_card.id it was submitted against (submit_rating's construction), so a
+    still-existing run_card row gives back its run_id; a group whose run
     was deleted gets no entry here and rebuild_mastery treats that as None — an
     accepted asymmetry, which no breakdown can show anyway. (A deleted card's review
     rows cascade with it, so they never reach a replay.)"""
-    return db_read_run_ids_for_practice_cards(db, review_group_ids)
+    return db_read_run_ids_for_run_cards(db, review_group_ids)
 
 
 def _replay_review_groups(db: Session, strategy: MasteryStrategy, rows: list[ReviewLog]) -> None:
@@ -261,8 +262,8 @@ def _replay_review_groups(db: Session, strategy: MasteryStrategy, rows: list[Rev
         db, [group.review_group_id for group in groups]
     )
     for group in groups:
-        practice_run_id = run_ids_by_review_group.get(group.review_group_id)
-        apply_rating(db, strategy, group, practice_run_id)
+        run_id = run_ids_by_review_group.get(group.review_group_id)
+        apply_rating(db, strategy, group, run_id)
 
 
 def rebuild_mastery(

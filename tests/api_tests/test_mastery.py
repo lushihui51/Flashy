@@ -25,15 +25,19 @@ from app.mastery.readiness import (
 from app.mastery.types import FieldMasteryState, MasteryUpdate, ReviewGroup, ReviewSide
 from app.models.card import Card
 from app.models.mastery_log import MasteryLog
-from app.models.practice_card import PracticeCard, PracticeCardStatus
-from app.models.practice_run import PracticeRun, RunStatus
+from app.models.practice import Practice
+from app.models.run import Run, RunStatus
+from app.models.run_card import RunCard, RunCardStatus
 from app.models.review_log import ReviewLog
 from app.services.mastery import (
     apply_rating,
+    deck_readiness,
+    practice_readiness,
     rebuild_deck_mastery,
     rebuild_mastery,
     record_review_group,
 )
+from tests.conftest import create_practice
 
 STRATEGIES = [EmaStrategy()]
 
@@ -74,31 +78,34 @@ def _snapshot(db):
     return latest
 
 
-def _make_practice_run(db, user_id, status=RunStatus.active):
-    run = PracticeRun(user_id=user_id, name="attribution test", status=status)
+def _make_run(db, user_id, status=RunStatus.active):
+    practice = Practice(user_id=user_id, name=f"attribution test {uuid.uuid4()}")
+    db.add(practice)
+    db.commit()
+    run = Run(practice_id=practice.id, status=status)
     db.add(run)
     db.commit()
     db.refresh(run)
     return run
 
 
-def _make_practice_card(db, practice_run_id, card_id, position=0):
-    """review_group_id == practice_card.id is submit_rating's actual construction
-    (app/services/practice_run.py); building one directly here, with no generation
+def _make_run_card(db, run_id, card_id, position=0):
+    """review_group_id == run_card.id is submit_rating's actual construction
+    (app/services/run.py); building one directly here, with no generation
     machinery, is enough to exercise the attribution join since it only cares about
-    id and practice_run_id."""
-    practice_card = PracticeCard(
-        practice_run_id=practice_run_id,
+    id and run_id."""
+    run_card = RunCard(
+        run_id=run_id,
         card_id=card_id,
         position=position,
         prompts=[],
         answers=[],
-        status=PracticeCardStatus.pending,
+        status=RunCardStatus.pending,
     )
-    db.add(practice_card)
+    db.add(run_card)
     db.commit()
-    db.refresh(practice_card)
-    return practice_card
+    db.refresh(run_card)
+    return run_card
 
 
 class TestApplyReviewPurity:
@@ -196,6 +203,73 @@ class TestReadinessFolds:
 
     def test_collection_with_no_card_has_none(self):
         assert fold_collection_readiness([]) is None
+
+
+def _deck_of_cards(client, name, cards):
+    """A deck of the client's user with fields "front" and "back" and `cards` cards; its id
+    and its cards' ids."""
+    res = client.post(
+        "/api/decks",
+        json={"name": name, "field_defs": [{"name": n, "type": "text"} for n in ("front", "back")]},
+    )
+    assert res.status_code == 201, res.text
+    deck = res.json()
+    card_ids = []
+    for i in range(cards):
+        card = client.post(
+            "/api/cards",
+            json={
+                "deck_id": deck["id"],
+                "values": {fd["id"]: f"{name}-{i}" for fd in deck["field_defs"]},
+            },
+        )
+        assert card.status_code == 201, card.text
+        card_ids.append(uuid.UUID(card.json()["id"]))
+    return uuid.UUID(deck["id"]), [uuid.UUID(fd["id"]) for fd in deck["field_defs"]], card_ids
+
+
+class TestPracticeReadiness:
+    def test_each_card_counts_once_over_decks_of_different_sizes(self, client, db):
+        strategy = EmaStrategy()
+        small, small_fields, (small_card,) = _deck_of_cards(client, "Small", 1)
+        large, _, _ = _deck_of_cards(client, "Large", 3)
+        ready = _rated_side(strategy, ReviewSide.answer, [100.0] * 4)
+        db_stage_append_mastery_log(
+            db,
+            small_card,
+            {field_id: ready for field_id in small_fields},
+            datetime.now(UTC),
+            uuid.uuid4(),
+            None,
+        )
+        db.commit()
+        practice = uuid.UUID(create_practice(client, {small: None, large: None})["id"])
+
+        decks = deck_readiness(db, strategy, [small, large])
+        assert decks == {small: 1.0, large: 0.0}
+        # Four cards, one of them ready: a quarter, where averaging the two decks would give a half.
+        assert practice_readiness(db, strategy, [practice]) == {practice: pytest.approx(0.25)}
+
+    def test_a_practice_whose_decks_hold_no_card_has_none(self, client, db):
+        empty, _, _ = _deck_of_cards(client, "Empty", 0)
+        practice = uuid.UUID(create_practice(client, {empty: None})["id"])
+
+        assert practice_readiness(db, EmaStrategy(), [practice]) == {practice: None}
+
+    def test_every_practice_is_read_in_one_statement(
+        self, client, db, mastery_log_statement_counter
+    ):
+        decks = [_deck_of_cards(client, f"Deck {i}", 2)[0] for i in range(3)]
+        practices = [
+            uuid.UUID(create_practice(client, {deck: None for deck in decks[: i + 1]})["id"])
+            for i in range(3)
+        ]
+
+        mastery_log_statement_counter.reset()
+        readiness = practice_readiness(db, EmaStrategy(), practices)
+
+        assert mastery_log_statement_counter.count == 1
+        assert readiness == {practice: 0.0 for practice in practices}
 
 
 class TestClassifyChange:
@@ -579,7 +653,7 @@ class TestReviewedAtOrder:
 
 
 class TestRunAttribution:
-    """The practice_run_id parameter on the write path: each appended row is
+    """The run_id parameter on the write path: each appended row is
     attributed to the run it happened in, and a retry of an already-logged group
     appends nothing at all — not even an unattributed row."""
 
@@ -587,11 +661,11 @@ class TestRunAttribution:
         strategy = EmaStrategy()
         card_id = mastery_cards["card_ids"][0]
         field_ids = mastery_cards["field_ids"]
-        run = _make_practice_run(db, existing_user.id)
-        practice_card = _make_practice_card(db, run.id, card_id)
+        run = _make_run(db, existing_user.id)
+        run_card = _make_run_card(db, run.id, card_id)
 
         group = ReviewGroup(
-            review_group_id=practice_card.id,
+            review_group_id=run_card.id,
             card_id=card_id,
             reviewed_at=datetime.now(UTC),
             ratings=((field_ids[0], 4),),
@@ -609,17 +683,17 @@ class TestRunAttribution:
             )
         ).all()
         assert rows, "record_review_group should have appended ledger rows"
-        assert all(row.practice_run_id == run.id for row in rows)
+        assert all(row.run_id == run.id for row in rows)
 
     def test_exact_retry_appends_no_rows(self, db, existing_user, mastery_cards):
         strategy = EmaStrategy()
         card_id = mastery_cards["card_ids"][0]
         field_ids = mastery_cards["field_ids"]
-        run = _make_practice_run(db, existing_user.id)
-        practice_card = _make_practice_card(db, run.id, card_id)
+        run = _make_run(db, existing_user.id)
+        run_card = _make_run_card(db, run.id, card_id)
 
         group = ReviewGroup(
-            review_group_id=practice_card.id,
+            review_group_id=run_card.id,
             card_id=card_id,
             reviewed_at=datetime.now(UTC),
             ratings=((field_ids[0], 4),),
@@ -745,20 +819,20 @@ class TestRebuildOracle:
     def test_rebuild_reconstructs_attribution_and_preserves_state(
         self, db, existing_user, mastery_cards
     ):
-        """A group's review_group_id is the practice_card.id it was submitted against,
-        so rebuild_mastery recovers practice_run_id by joining back to still-existing
-        practice_card rows — surviving for a run that's still around, nulled for a run
-        that was deleted (its practice_card cascades away with it; the reviewed card
+        """A group's review_group_id is the run_card.id it was submitted against,
+        so rebuild_mastery recovers run_id by joining back to still-existing
+        run_card rows — surviving for a run that's still around, nulled for a run
+        that was deleted (its run_card cascades away with it; the reviewed card
         itself is untouched and its ledger state must come out unchanged either
         way)."""
         strategy = EmaStrategy()
         card_a, card_b = mastery_cards["card_ids"][0], mastery_cards["card_ids"][1]
         answer_field, prompt_field = mastery_cards["field_ids"][0], mastery_cards["field_ids"][1]
 
-        surviving_run = _make_practice_run(db, existing_user.id)
-        surviving_card = _make_practice_card(db, surviving_run.id, card_a)
-        deleted_run = _make_practice_run(db, existing_user.id)
-        deleted_run_card = _make_practice_card(db, deleted_run.id, card_b)
+        surviving_run = _make_run(db, existing_user.id)
+        surviving_card = _make_run_card(db, surviving_run.id, card_a)
+        deleted_run = _make_run(db, existing_user.id)
+        deleted_run_card = _make_run_card(db, deleted_run.id, card_b)
         # captured now — deleted_run_card is about to be cascade-deleted out from
         # under this session, and accessing an expired ORM attribute on a row that's
         # since vanished raises ObjectDeletedError instead of quietly refreshing.
@@ -789,7 +863,7 @@ class TestRebuildOracle:
         db.delete(deleted_run)
         db.commit()
         assert (
-            db.exec(select(PracticeCard).where(PracticeCard.id == deleted_run_card_id)).first()
+            db.exec(select(RunCard).where(RunCard.id == deleted_run_card_id)).first()
             is None
         )
         assert db.get(Card, card_b) is not None  # the card itself outlives its run
@@ -823,8 +897,8 @@ class TestRebuildOracle:
             .order_by(desc(MasteryLog.reviewed_at))
             .limit(1)
         ).first()
-        assert latest_a.practice_run_id == surviving_run.id
-        assert latest_b.practice_run_id is None
+        assert latest_a.run_id == surviving_run.id
+        assert latest_b.run_id is None
 
 
 class TestDeckScopedRebuild:
@@ -864,7 +938,7 @@ class TestDeckScopedRebuild:
         }
 
     def test_scoped_rebuild_matches_user_wide_rebuild_and_leaves_other_deck_untouched(
-        self, db, client, existing_user, existing_subject, existing_deck, mastery_cards
+        self, db, client, existing_user, existing_deck, mastery_cards
     ):
         strategy = EmaStrategy()
         deck_a_id = uuid.UUID(existing_deck["id"])
@@ -875,7 +949,6 @@ class TestDeckScopedRebuild:
             "/api/decks",
             json={
                 "name": "Deck B",
-                "subject_id": existing_subject["id"],
                 "field_defs": [
                     {"name": "front", "type": "text"},
                     {"name": "back", "type": "text"},

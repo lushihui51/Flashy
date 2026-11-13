@@ -377,4 +377,54 @@ describe('PickerCombobox', () => {
       expect(onClear).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('inputLabel and listLabel', () => {
+    it('name the search input and the list it opens', async () => {
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Search decks" inputLabel="Search decks" listLabel="Decks" />,
+      );
+
+      await user.click(screen.getByRole('combobox', { name: 'Search decks' }));
+
+      expect(screen.getByRole('listbox', { name: 'Decks' })).toBeInTheDocument();
+    });
+  });
+
+  describe('clearOnPick', () => {
+    it('a pick hands the item on, clears the input, and marks no row as chosen', async () => {
+      const onSelect = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <PickerCombobox items={items} selected={items[1]!} onSelect={onSelect} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" clearOnPick />,
+      );
+      const input = screen.getByRole('combobox');
+      expect(input).toHaveValue('');
+
+      await user.type(input, 'Deck 3');
+      await user.click(screen.getByRole('option', { name: 'Deck 3' }));
+
+      expect(onSelect).toHaveBeenCalledWith(items[3]);
+      expect(input).toHaveValue('');
+      await user.click(input);
+      expect(screen.getAllByRole('option')).toHaveLength(9);
+      expect(screen.getAllByRole('option').filter((o) => o.querySelector('svg.lucide-check'))).toEqual([]);
+    });
+
+    it('shows its chevron while closed, pointing down', () => {
+      const { container } = render(
+        <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" clearOnPick />,
+      );
+
+      expect(container.querySelector('svg.lucide-chevron-down')).not.toBeNull();
+    });
+
+    it('without it, a closed picker for one value shows no chevron', () => {
+      const { container } = render(
+        <PickerCombobox items={items} selected={null} onSelect={() => {}} onSelectCreate={() => {}} createLabel="New deck…" placeholder="Deck" />,
+      );
+
+      expect(container.querySelector('svg.lucide-chevron-down')).toBeNull();
+    });
+  });
 });

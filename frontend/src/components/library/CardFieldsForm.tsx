@@ -1,4 +1,5 @@
 import { isSupportedFieldType } from 'src/lib/fieldTypes';
+import { fieldLabel } from 'src/lib/fieldLabel';
 
 export type CardFieldsFormField = {
   /** Identifies the field within `values` — a real field id for a persisted deck's
@@ -26,7 +27,7 @@ export default function CardFieldsForm({ fieldDefs, values, onChange }: CardFiel
         const supported = isSupportedFieldType(field.type);
         return (
           <label key={field.key} className="flex flex-col gap-1.5">
-            <span className="text-label text-(--color-aside)">{field.name}</span>
+            <span className="text-label text-(--color-aside)">{fieldLabel(field.name)}</span>
             <input
               type="text"
               value={values[field.key] ?? ''}

@@ -5,24 +5,24 @@ import type { components } from 'src/api/types';
 type DeletionImpactRead = components['schemas']['DeletionImpactRead'];
 
 /**
- * The one sentence behind the deck and subject delete confirms: everything the
- * deletion closure also takes, beyond the entity the user asked to delete, as one
- * English list — decks, cards, fields, deck configurations, then practices, each
- * clause omitted when its count is 0. `subjects_deleted` never appears (a subject
- * delete confirm names *its* decks and below, not itself) and neither does
- * `cards_affected` — cards affected rather than deleted is the editor save confirm's
- * concern, not this one's.
+ * The one sentence behind the deck delete confirm: the cards, fields and runs the
+ * deletion closure deletes, as one English list, then the practices it takes the deck
+ * out of, each clause omitted when its count is 0. `cards_affected` never appears —
+ * cards affected rather than deleted is the editor save confirm's concern, not this
+ * one's.
  */
 export function deletionSummaryText(impact: DeletionImpactRead): string {
-  const clauses = [
-    ...(impact.decks_deleted > 0 ? [pluralize(impact.decks_deleted, 'deck')] : []),
+  const deleted = [
     ...(impact.cards_deleted > 0 ? [pluralize(impact.cards_deleted, 'card')] : []),
     ...(impact.fields_deleted > 0 ? [pluralize(impact.fields_deleted, 'field')] : []),
-    ...(impact.configurations_deleted > 0
-      ? [pluralize(impact.configurations_deleted, 'deck configuration')]
-      : []),
-    ...(impact.runs_deleted > 0 ? [pluralize(impact.runs_deleted, 'practice')] : []),
+    ...(impact.runs_deleted > 0 ? [pluralize(impact.runs_deleted, 'run')] : []),
   ];
-  if (clauses.length === 0) return "This can't be undone.";
-  return `This also deletes ${joinClauses(clauses)}. This can't be undone.`;
+  const takenOut =
+    impact.practices_affected > 0
+      ? `takes the deck out of ${pluralize(impact.practices_affected, 'practice')}`
+      : null;
+  if (deleted.length === 0 && takenOut === null) return "This can't be undone.";
+  const deletes = deleted.length > 0 ? `deletes ${joinClauses(deleted)}` : null;
+  const actions = [deletes, takenOut].filter((clause) => clause !== null).join(', and ');
+  return `This also ${actions}. This can't be undone.`;
 }

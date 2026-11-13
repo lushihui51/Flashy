@@ -60,14 +60,14 @@ describe('CardList', () => {
   it('renders one entry per field, in position order, each label over its value', () => {
     renderList({ cards: [cards[0]!] });
 
-    expect(screen.getByRole('link')).toHaveTextContent(/^FrontBonjourBackHello$/);
+    expect(screen.getByRole('link')).toHaveTextContent(/^\[Front\]Bonjour\[Back\]Hello$/);
   });
 
   it('renders an "empty" placeholder for a blank value, and still one entry per field', () => {
     renderList();
 
     const second = screen.getAllByRole('link')[1]!;
-    expect(second).toHaveTextContent(/^FrontemptyBackSalut$/);
+    expect(second).toHaveTextContent(/^\[Front\]empty\[Back\]Salut$/);
   });
 
   it('keys cards by card id, not index', () => {
@@ -124,7 +124,7 @@ describe('CardList', () => {
       ],
     });
 
-    expect(screen.getByRole('link')).toHaveTextContent(/^FrontBonjour$/);
+    expect(screen.getByRole('link')).toHaveTextContent(/^\[Front\]Bonjour$/);
   });
 
   it("shows each card's mastery on its lead line, an empty circle for a card never practiced", () => {
@@ -152,7 +152,7 @@ describe('CardList', () => {
     });
 
     const card = screen.getByRole('link');
-    manyFields.forEach((f) => expect(within(card).getByText(f.name)).toBeInTheDocument());
+    manyFields.forEach((f) => expect(within(card).getByText(`[${f.name}]`)).toBeInTheDocument());
     expect(within(card).getAllByText('empty')).toHaveLength(8);
   });
 });

@@ -36,10 +36,10 @@ describe('TopBar', () => {
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
-  it('has no link named Practice', () => {
+  it('has no link named All practices', () => {
     renderTopBar();
 
-    expect(screen.queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'All practices' })).not.toBeInTheDocument();
   });
 
   it('signed in: renders the avatar instead of Log in', () => {
@@ -79,7 +79,7 @@ describe('TopBar', () => {
         onAvatarClick={() => {}}
         onCreateClick={onCreateClick}
       />,
-      ['/practice'],
+      ['/practices'],
     );
 
     await user.click(screen.getByRole('button', { name: 'New' }));

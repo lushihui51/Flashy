@@ -1,57 +1,83 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import HomePage from 'src/pages/HomePage';
 import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
-type HomeActivePractice = components['schemas']['HomeActivePractice'];
-type DeckSummary = components['schemas']['DeckSummary'];
+type HomeRun = components['schemas']['HomeRun'];
+type ChangeKind = components['schemas']['ChangeKind'];
 
 const BASE = 'http://localhost:8000';
 const MAIN_ACTION_CLASS = 'bg-(--color-main-action)';
 
-const practice = (id: string, name: string): HomeActivePractice => ({
+const homeRun = (id: string, practiceName: string, status: HomeRun['status']): HomeRun => ({
   id,
-  user_id: 'u1',
-  name,
-  status: 'active',
-  created_at: '2026-11-01T00:00:00Z',
-  decks: [
-    {
-      deck_id: `deck-of-${id}`,
-      deck_name: `Deck of ${name}`,
-      subject_id: 's1',
-      subject_name: 'Networking',
-      configuration_name: `Configuration of ${name}`,
-    },
-  ],
-  progress: { total_cards: 4, passed: 1, still_failed: 0, retry_pending: 0, unseen: 3 },
-});
-
-const deck = (id: string, name: string, readiness: number | null): DeckSummary => ({
-  id,
-  subject_id: `subject-of-${id}`,
-  subject_name: 'Networking',
-  name,
+  practice_id: `practice-of-${id}`,
+  practice_name: practiceName,
+  status,
+  day: '2026-11-01',
+  day_index: 0,
   created_at: '2026-11-01T00:00:00Z',
   last_activity_at: '2026-11-01T00:00:00Z',
-  card_count: 21,
-  field_names: ['Port', 'Protocol', 'Use', 'Layer'],
-  readiness,
+  reached_cards: 1,
+  counted_cards: 4,
+  decks: [{ deck_id: `deck-of-${id}`, deck_name: `Deck of ${practiceName}` }],
+  progress:
+    status === 'active'
+      ? { total_cards: 4, passed: 1, still_failed: 0, retry_pending: 0, unseen: 3 }
+      : null,
 });
+const activeRun = (id: string, practiceName: string) => homeRun(id, practiceName, 'active');
+const completedRun = (id: string, practiceName: string) => homeRun(id, practiceName, 'completed');
 
-function renderHome(home: Partial<HomeRead>) {
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+}
+
+function SearchProbe() {
+  const location = useLocation();
+  return <span data-testid="search">{location.search}</span>;
+}
+
+function renderHome(home: Partial<HomeRead>, address = '/') {
   server.use(
     http.get(`${BASE}/api/home`, () =>
-      HttpResponse.json({ steps: null, active_practices: [], recent_decks: [], ...home }),
+      HttpResponse.json({ steps: null, active_runs: [], recent_runs: [], ...home }),
     ),
   );
-  return renderWithProviders(<HomePage />);
+  return renderWithProviders(
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <>
+            <HomePage />
+            <SearchProbe />
+          </>
+        }
+      />
+      <Route path="*" element={<LocationProbe />} />
+    </Routes>,
+    [address],
+  );
 }
+
+const breakdownCard = (id: string, change: ChangeKind) => ({
+  card_id: id,
+  primary_field: { field_def_id: `front-${id}`, name: 'Front', type: 'text', value: id },
+  readiness: 0.5,
+  delta: 0,
+  change,
+  fields: [],
+  attempts: [],
+});
 
 describe('HomePage', () => {
   it('titles the browser tab and heads the page', async () => {
@@ -61,143 +87,299 @@ describe('HomePage', () => {
   });
 
   describe('the steps', () => {
-    it('counts the two done, strikes them and makes the next the one main action', async () => {
-      renderHome({
-        steps: { has_subject: true, has_deck: true, has_card: false, has_configuration: false },
-      });
+    const steps = (hasDeck: boolean, hasCard: boolean) => ({
+      has_deck: hasDeck,
+      has_card: hasCard,
+    });
+
+    it('a user with nothing made reads "0 of 3" over New deck, New card and New practice', async () => {
+      renderHome({ steps: steps(false, false) });
 
       const list = await screen.findByRole('list', { name: 'Your first practice' });
       expect(
         screen.getByRole('heading', { level: 2, name: 'Your first practice' }),
       ).toBeInTheDocument();
-      expect(screen.getByText('2 of 5')).toBeInTheDocument();
-      expect(within(list).getAllByRole('listitem')).toHaveLength(5);
+      expect(screen.getByText('0 of 3')).toBeInTheDocument();
+      expect(
+        within(list)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['1New deck', '2New card', '3New practice']);
+    });
 
-      expect(within(list).getByText('New subject')).toHaveClass('line-through');
+    it('counts the one done, strikes it and makes the next the one main action', async () => {
+      renderHome({ steps: steps(true, false) });
+
+      const list = await screen.findByRole('list', { name: 'Your first practice' });
+      expect(screen.getByText('1 of 3')).toBeInTheDocument();
+      expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+
       expect(within(list).getByText('New deck')).toHaveClass('line-through');
 
       // The next step is the only link, so nothing else on the list can be followed or yellow.
       const link = within(list).getByRole('link');
       expect(link).toHaveTextContent('New card');
-      expect(link).toHaveAttribute('href', '/cards/new');
+      expect(link).toHaveAttribute('href', '/cards/new?cancelTo=%2F');
       expect(link).toHaveClass(MAIN_ACTION_CLASS);
 
-      for (const label of ['New configuration', 'New practice']) {
-        expect(within(list).getByText(label)).not.toHaveClass('line-through');
-      }
+      expect(within(list).getByText('New practice')).not.toHaveClass('line-through');
       expect(screen.getAllByRole('link')).toHaveLength(1);
     });
 
     it.each([
-      { done: 0, label: 'New subject', href: '/subjects/new' },
-      { done: 1, label: 'New deck', href: '/decks/new' },
-      { done: 3, label: 'New configuration', href: '/deck-configurations/new' },
-      { done: 4, label: 'New practice', href: '/practice/new' },
-    ])('with $done done links $label to $href', async ({ done, label, href }) => {
-      renderHome({
-        steps: {
-          has_subject: done >= 1,
-          has_deck: done >= 2,
-          has_card: done >= 3,
-          has_configuration: done >= 4,
-        },
-      });
+      { done: 0, label: 'New deck', href: '/decks/new' },
+      { done: 1, label: 'New card', href: '/cards/new' },
+      { done: 2, label: 'New practice', href: '/practices/new' },
+    ])(
+      'with $done done links $label to $href, Cancel returning to Home',
+      async ({ done, label, href }) => {
+        renderHome({ steps: steps(done >= 1, done >= 2) });
 
-      const link = await screen.findByRole('link', { name: label });
-      expect(link).toHaveAttribute('href', href);
-      expect(screen.getByText(`${done} of 5`)).toBeInTheDocument();
-    });
+        const link = await screen.findByRole('link', { name: label });
+        expect(link).toHaveAttribute('href', `${href}?cancelTo=%2F`);
+        expect(screen.getByText(`${done} of 3`)).toBeInTheDocument();
+      },
+    );
   });
 
   describe('once a practice has been made', () => {
-    it('renders each active practice with its chips and bar, and Start practice on the first', async () => {
+    it('lists the active runs under "Active" and the completed ones under "Recently completed", each a row', async () => {
       renderHome({
-        active_practices: [
-          practice('p1', 'First practice'),
-          practice('p2', 'Second practice'),
-          practice('p3', 'Third practice'),
-        ],
+        active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')],
+        recent_runs: [completedRun('r3', 'Third')],
       });
 
-      const first = await screen.findByRole('link', { name: /First practice/ });
-      expect(first).toHaveAttribute('href', '/practice/p1');
-      expect(screen.getByRole('link', { name: /Second practice/ })).toHaveAttribute(
-        'href',
-        '/practice/p2',
-      );
-      expect(screen.getByRole('link', { name: /Third practice/ })).toHaveAttribute(
-        'href',
-        '/practice/p3',
-      );
-      expect(screen.getAllByText('Active')).toHaveLength(3);
+      const active = await screen.findByRole('list', { name: 'Active' });
+      expect(screen.getByRole('heading', { level: 2, name: 'Active' })).toBeInTheDocument();
       expect(
-        screen.getByText('Deck of First practice · Configuration of First practice'),
+        within(active)
+          .getAllByRole('button')
+          .map((button) => button.getAttribute('aria-label')),
+      ).toEqual(['First', 'Practice First', 'Second', 'Practice Second']);
+      expect(
+        within(active).getAllByRole('img', { name: '1 passed, 0 failed, 0 retrying, 3 unseen' }),
+      ).toHaveLength(2);
+
+      const recent = screen.getByRole('list', { name: 'Recently completed' });
+      expect(
+        screen.getByRole('heading', { level: 2, name: 'Recently completed' }),
       ).toBeInTheDocument();
-      expect(
-        screen.getAllByRole('img', { name: '1 passed, 0 failed, 0 retrying, 3 unseen' }),
-      ).toHaveLength(3);
-
-      const starts = screen.getAllByRole('link', { name: 'Start practice' });
-      expect(starts).toHaveLength(1);
-      expect(starts[0]).toHaveAttribute('href', '/practice/p1/run');
-      expect(starts[0]).toHaveClass(MAIN_ACTION_CLASS);
-    });
-
-    it('renders no steps', async () => {
-      renderHome({ active_practices: [practice('p1', 'First practice')] });
-
-      await screen.findByRole('link', { name: 'Start practice' });
+      expect(within(recent).getByText('Third')).toBeInTheDocument();
+      expect(recent).toHaveTextContent('Deck of Third');
+      expect(within(recent).queryByRole('img', { name: /passed/ })).not.toBeInTheDocument();
       expect(screen.queryByText('Your first practice')).not.toBeInTheDocument();
     });
 
-    it('renders the recent decks, the first yellow when no practice is active', async () => {
-      renderHome({ recent_decks: [deck('d1', 'Ports', 0.5), deck('d2', 'Commands', null)] });
+    it('leaves out a section with no run', async () => {
+      renderHome({ recent_runs: [completedRun('r3', 'Third')] });
 
-      expect(
-        await screen.findByRole('heading', { level: 2, name: 'Recently practiced' }),
-      ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Ports/ })).toHaveAttribute('href', '/decks/d1');
-      expect(screen.getByRole('link', { name: /Commands/ })).toHaveAttribute('href', '/decks/d2');
-      expect(screen.getAllByText('Networking · 21 cards · 4 fields')).toHaveLength(2);
-      // The second deck has no readiness, so it has no circle.
-      expect(screen.getAllByRole('img', { name: /^Mastery/ })).toHaveLength(1);
-      expect(screen.getByRole('img', { name: 'Mastery 50%' })).toBeInTheDocument();
-
-      const practiceLinks = screen.getAllByRole('link', { name: 'Practice' });
-      expect(practiceLinks[0]).toHaveAttribute('href', '/practice?subject=subject-of-d1&deck=d1');
-      expect(practiceLinks[1]).toHaveAttribute('href', '/practice?subject=subject-of-d2&deck=d2');
-      expect(practiceLinks[0]).toHaveClass(MAIN_ACTION_CLASS);
-      expect(practiceLinks[1]).not.toHaveClass(MAIN_ACTION_CLASS);
+      await screen.findByRole('list', { name: 'Recently completed' });
+      expect(screen.queryByRole('heading', { name: 'Active' })).not.toBeInTheDocument();
     });
 
-    it('leaves every Practice white while a practice is active', async () => {
+    it("draws the first active run's play button yellow and every other white", async () => {
       renderHome({
-        active_practices: [practice('p1', 'First practice')],
-        recent_decks: [deck('d1', 'Ports', 0.5)],
+        active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')],
+        recent_runs: [completedRun('r3', 'Third')],
       });
 
-      const link = await screen.findByRole('link', { name: 'Practice' });
-      expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
+      expect(await screen.findByRole('button', { name: 'Practice First' })).toHaveClass(
+        MAIN_ACTION_CLASS,
+      );
+      expect(screen.getByRole('button', { name: 'Practice Second' })).not.toHaveClass(
+        MAIN_ACTION_CLASS,
+      );
+      expect(screen.getByRole('button', { name: 'Practice Third' })).not.toHaveClass(
+        MAIN_ACTION_CLASS,
+      );
     });
 
-    it('renders no heading without a recent deck, and links New practice last', async () => {
+    it("draws the first completed run's play button yellow when no run is active", async () => {
+      renderHome({ recent_runs: [completedRun('r3', 'Third'), completedRun('r4', 'Fourth')] });
+
+      expect(await screen.findByRole('button', { name: 'Practice Third' })).toHaveClass(
+        MAIN_ACTION_CLASS,
+      );
+      expect(screen.getByRole('button', { name: 'Practice Fourth' })).not.toHaveClass(
+        MAIN_ACTION_CLASS,
+      );
+    });
+
+    it("opens an active run's page from its play button, asking the server nothing", async () => {
+      let started = false;
+      server.use(
+        http.post(`${BASE}/api/practices/:practiceId/runs`, () => {
+          started = true;
+          return HttpResponse.json({});
+        }),
+      );
+      renderHome({ active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')] });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Practice Second' }));
+
+      expect(screen.getByTestId('location')).toHaveTextContent('/runs/r2');
+      expect(started).toBe(false);
+    });
+
+    it("starts a completed run's practice again from its play button and opens the new run", async () => {
+      let startedPractice: unknown = null;
+      server.use(
+        http.post(`${BASE}/api/practices/:practiceId/runs`, ({ params }) => {
+          startedPractice = params.practiceId;
+          return HttpResponse.json({ id: 'new-run' });
+        }),
+      );
+      renderHome({ recent_runs: [completedRun('r3', 'Third')] });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Practice Third' }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('/runs/new-run'),
+      );
+      expect(startedPractice).toBe('practice-of-r3');
+    });
+
+    it.each([
+      {
+        response: () =>
+          HttpResponse.json({ detail: { code: 'no_cards', message: 'x' } }, { status: 400 }),
+        sentence:
+          "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows.",
+      },
+      {
+        response: () => HttpResponse.json({ detail: 'Practice not found' }, { status: 404 }),
+        sentence: 'Practice not found.',
+      },
+    ])('shows a refused start beneath its row alone: $sentence', async ({ response, sentence }) => {
+      server.use(http.post(`${BASE}/api/practices/:practiceId/runs`, response));
+      renderHome({ recent_runs: [completedRun('r3', 'Third'), completedRun('r4', 'Fourth')] });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Practice Fourth' }));
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(sentence);
+      const [, fourth] = within(
+        screen.getByRole('list', { name: 'Recently completed' }),
+      ).getAllByRole('listitem');
+      expect(fourth).toContainElement(alert);
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+    });
+
+    it('ends with "All practices" in the bar at the foot, opening All practices, and no New practice', async () => {
+      renderHome({ active_runs: [activeRun('r1', 'First')] });
+
+      const bar = await screen.findByTestId('form-bar');
+      const link = within(bar).getByRole('link', { name: 'All practices' });
+      expect(link).toHaveAttribute('href', '/practices');
+      expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
+      expect(screen.queryByText('New practice')).not.toBeInTheDocument();
+    });
+
+    it('holds the bar with no run at all', async () => {
       renderHome({});
 
-      const link = await screen.findByRole('link', { name: 'New practice' });
-      expect(link).toHaveAttribute('href', '/practice/new');
-      expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
-      expect(screen.queryByText('Recently practiced')).not.toBeInTheDocument();
+      expect(await screen.findByRole('link', { name: 'All practices' })).toBeInTheDocument();
+      expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    });
+
+    describe("a run's details", () => {
+      it('open beneath a row tapped anywhere but its play button, each row on its own, and stand in the address', async () => {
+        renderHome({ active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')] });
+
+        const first = await screen.findByRole('button', { name: 'First' });
+        const second = screen.getByRole('button', { name: 'Second' });
+        await userEvent.click(first);
+        await userEvent.click(second);
+
+        expect(first).toHaveAttribute('aria-expanded', 'true');
+        expect(second).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('search')).toHaveTextContent('?open=r1&open=r2');
+        const firstItem = within(screen.getByRole('list', { name: 'Active' })).getAllByRole(
+          'listitem',
+        )[0]!;
+        expect(firstItem).toHaveTextContent('1 passed0 failed0 retrying3 unseen');
+
+        await userEvent.click(within(firstItem).getByRole('button', { name: 'Hide' }));
+        expect(first).toHaveAttribute('aria-expanded', 'false');
+        expect(second).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByTestId('search')).toHaveTextContent('?open=r2');
+      });
+
+      it('open from the address, a run Home does not show being ignored', async () => {
+        renderHome(
+          { active_runs: [activeRun('r1', 'First'), activeRun('r2', 'Second')] },
+          '/?open=r2&open=gone',
+        );
+
+        expect(await screen.findByRole('button', { name: 'Second' })).toHaveAttribute(
+          'aria-expanded',
+          'true',
+        );
+        expect(screen.getByRole('button', { name: 'First' })).toHaveAttribute(
+          'aria-expanded',
+          'false',
+        );
+        expect(screen.getAllByRole('button', { name: 'Hide' })).toHaveLength(1);
+      });
+
+      it('of a completed run count its kinds of change from its breakdown, read only once it is open', async () => {
+        const read: string[] = [];
+        server.use(
+          http.get(`${BASE}/api/runs/:runId/breakdown`, ({ params }) => {
+            read.push(params.runId as string);
+            return HttpResponse.json({
+              total_cards: 4,
+              cards: [
+                breakdownCard('c1', 'up'),
+                breakdownCard('c2', 'up'),
+                breakdownCard('c3', 'down_a_lot'),
+                breakdownCard('c4', 'no_change'),
+              ],
+            });
+          }),
+        );
+        renderHome({ recent_runs: [completedRun('r3', 'Third'), completedRun('r4', 'Fourth')] });
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Fourth' }));
+
+        expect(screen.getByText('1 of 4 cards')).toBeInTheDocument();
+        expect(await screen.findByRole('img', { name: '2 up' })).toHaveTextContent('2');
+        expect(screen.getByRole('img', { name: '0 up a lot' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '1 no change' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '0 down' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '1 down a lot' })).toBeInTheDocument();
+        expect(read).toEqual(['r4']);
+      });
+
+      it('of a completed run say "Could not load this run." when its breakdown fails', async () => {
+        server.use(
+          http.get(`${BASE}/api/runs/:runId/breakdown`, () =>
+            HttpResponse.json({}, { status: 500 }),
+          ),
+        );
+        renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/?open=r3');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this run.');
+        expect(screen.getByText('1 of 4 cards')).toBeInTheDocument();
+      });
     });
 
     it('says nothing of when anything happened or that anything is waiting', async () => {
       const { container } = renderHome({
-        active_practices: [practice('p1', 'First practice')],
-        recent_decks: [deck('d1', 'Ports', 0.5)],
+        active_runs: [activeRun('r1', 'First')],
+        recent_runs: [completedRun('r3', 'Third')],
       });
 
-      await screen.findByRole('link', { name: 'New practice' });
+      await screen.findByRole('link', { name: 'All practices' });
       expect(container.textContent).not.toMatch(/\bago\b|\bdue\b|coming soon/i);
     });
+  });
+
+  it('holds no bar while the steps show', async () => {
+    renderHome({ steps: { has_deck: false, has_card: false } });
+
+    await screen.findByRole('list', { name: 'Your first practice' });
+    expect(screen.queryByTestId('form-bar')).not.toBeInTheDocument();
   });
 
   it('shows the failure sentence when the read fails', async () => {
