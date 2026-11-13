@@ -53,3 +53,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B35. Do the practice's vocabulary row and the run's rows give their code names, `practice`, `Practice` and `/practices` for a practice and `RunStatus` and `status` for a run's state?
   - Reason: the row "A named set of decks the user keeps and runs as many times as they like" reads "—" in Code, though the `practice` table and the `Practice` model name its concept; no row's Code names `RunStatus` or `RunRead.status`, and "A run that can still be continued" and "A run that has finished" give only `active` and `completed`.
   - Owner: /code-decide
+- B36. Does a run's row on Home name its practice with no practice mark, while PDR 049 gives every practice's name its mark?
+  - Reason: `HomeRunRow` in `frontend/src/components/run/HomeRunRow.tsx` writes the practice's name with no `PracticeMark`, and PDR 049 gives the mark wherever a practice's name appears; giving the row the mark, or excepting it, amends PDR 049.
+  - Owner: /product-decide
