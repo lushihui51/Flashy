@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide with the page's ro
 
 **Status**
 
-- [ ]
+- [ ] [BLOCKED]
 
 **Goal**
 
@@ -61,6 +61,19 @@ None.
 - `frontend/src/pages/RunPage.tsx`
 - `frontend/src/pages/DeckBoardPage.tsx`
 - `frontend/src/test/nameWrap.test.ts` (new)
+- `frontend/src/components/ui/MarkedName.tsx` (new)
+- `frontend/src/components/library/DeckRow.tsx`
+- `frontend/src/components/library/DeckRow.test.tsx`
+- `frontend/src/pages/HomePage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
+- `frontend/src/pages/PracticeOverviewPage.test.tsx`
+- `frontend/src/pages/RunPage.test.tsx`
+- `frontend/src/components/practice/DeckLine.test.tsx`
+- `frontend/src/components/ui/Breadcrumb.test.tsx`
+- `frontend/src/components/run/HomeRunRow.test.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `frontend/src/components/library/DeckPicker.test.tsx`
+- `frontend/src/pages/LibraryPage.test.tsx`
 
 **Details**
 
@@ -88,7 +101,12 @@ PDR 050, drawings 7-practice and 7-deck:
 
 **Debrief**
 
-None.
+- Attempted: the build within Files and Details; files the engineer approved during the build were added to Files: `MarkedName.tsx` (new), `DeckRow.tsx`, `DeckRow.test.tsx`, and the tests in `HomePage`, `PracticeDetailsPage`, `PracticeOverviewPage`, `RunPage`, `DeckLine`, `Breadcrumb`, `HomeRunRow`, `CardStandaloneForm`, `DeckPicker` and `LibraryPage`. With them, at 390 wide with a 24px root, `document.documentElement.scrollWidth` equalled `clientWidth` on all fourteen pages of the judgement, the scan and the full vitest suite passed, and lint and build were clean.
+- Found: drawings 7-practice and 7-deck are drawn with 16px side gutters and 52px icon buttons at the largest text, while the app's gutters (`p-4`, `px-4`) and buttons (`h-11`) are in rem and measure 24px and 66px at a 24px root; fixing them in px is barred by `pxLiterals.test.ts` and by PDR 050.
+- Found: at those sizes the top bar's menu, logo, "+" and "Log in" take about 420px of a 390px screen, so "+" and "Log in" wrap onto a second line, where the two drawings draw one.
+- Found: on a deck's page the mark and "Commands" at `text-page` with the circle need about 368px of a 342px line, so the circle can stand beside the heading only by splitting "Commands", which the judgement forbids; built, the circle and the pencil wrap together beneath the heading, where drawing 7-deck draws the circle beside it.
+- Found: holding a mark to its name's first word needs the mark and the name's first letter in one `whitespace-nowrap` span. A no-break space after the mark still breaks in Chromium. A space inside the span holds on screen in Chromium and Firefox but jsdom names it "DeckCommands". So every marked name in a list needs `MarkedName`, and the tests above that find a name by one text node change with it.
+- Alternatives 7-practice-A and 7-deck-A on the cycle's canvas draw the pages as built; the engineer agreed to them, and changing a drawing is the planner's, so the file cannot settle it.
 
 ### T2 — Inputs that move beneath their label
 
