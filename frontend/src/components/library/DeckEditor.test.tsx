@@ -392,6 +392,28 @@ describe('DeckEditor — edit mode', () => {
     expect(screen.queryByRole('button', { name: /card/i })).not.toBeInTheDocument();
   });
 
+  it("each field's name and type keep their names, and the narrow layout's labels point at them", async () => {
+    mockEditDeck();
+    const user = userEvent.setup();
+    renderEditDeck();
+
+    await screen.findByDisplayValue('French Vocab');
+    await user.click(screen.getByRole('button', { name: 'Add field' }));
+    await user.click(screen.getByRole('button', { name: 'Remove Back' }));
+
+    // Front, Back staged for removal, and the added field.
+    const nameInputs = screen.getAllByRole('textbox', { name: 'Field name' });
+    const typeSelects = screen.getAllByRole('combobox', { name: 'Field type' });
+    expect(nameInputs).toHaveLength(3);
+    expect(typeSelects).toHaveLength(3);
+    expect(nameInputs[1]).toBeDisabled();
+
+    const nameLabels = screen.getAllByText('Field name', { selector: 'label' });
+    const typeLabels = screen.getAllByText('Field type', { selector: 'label' });
+    expect(nameLabels.map((label) => (label as HTMLLabelElement).control)).toEqual(nameInputs);
+    expect(typeLabels.map((label) => (label as HTMLLabelElement).control)).toEqual(typeSelects);
+  });
+
   it('shows a not-found message instead of crashing for a missing deck', async () => {
     server.use(
       http.get(`${BASE}/api/decks/:id`, () =>
@@ -814,7 +836,9 @@ describe('DeckEditor — edit mode', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
     expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/library');
     // The deleted deck's query is gone from the cache once the form has left.
-    await waitFor(() => expect(queryClient.getQueryCache().find({ queryKey: ['deck', 'd1'] })).toBeUndefined());
+    await waitFor(() =>
+      expect(queryClient.getQueryCache().find({ queryKey: ['deck', 'd1'] })).toBeUndefined(),
+    );
   });
 
   it("Delete deck with nothing else to lose: the confirm says only that it can't be undone", async () => {

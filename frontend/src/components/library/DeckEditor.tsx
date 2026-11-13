@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
@@ -32,12 +32,72 @@ import SubmitButton from 'src/components/ui/SubmitButton';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 
-// Centres a control's h-9 box on the field name input beside it, in a row aligned to its bottom.
+// Centres a button's h-9 box on the h-field input or type beside it, in a row aligned to its bottom.
 const FIELD_ICON_MARGIN = 'my-1.25';
-const FIELD_ICON_BUTTON =
-  `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
+const FIELD_ICON_BUTTON = `${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center rounded-tight outlined-reserved text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside)`;
 const FIELD_TYPE_SELECT =
   'h-field shrink-0 appearance-none rounded-field outlined-line bg-(--color-ground) px-2.5 text-sm text-(--color-aside) disabled:opacity-100';
+// Shown only where the list of fields is too narrow for a field's one row, as at a large text
+// size on a phone.
+const FIELD_LABEL = 'hidden text-label text-(--color-aside) @max-[16rem]:block';
+// Each field its own card where the list of fields is too narrow for a field's one row.
+const FIELD_CARD =
+  '@max-[16rem]:rounded-block @max-[16rem]:outlined-line @max-[16rem]:bg-(--color-surface) @max-[16rem]:px-3.25 @max-[16rem]:py-3';
+
+type FieldRowProps = {
+  field: EditorField;
+  /** Whether "Primary" stands above the field's name. */
+  primary: boolean;
+  /** The field's name input, given the id its label points at. */
+  nameInput: (id: string) => ReactNode;
+  /** The Move up, Move down and Remove buttons, or what stands in their place. */
+  buttons: ReactNode;
+};
+
+/** One field of the deck form: its name input, its type and its buttons on one row, or, where
+ * the `@container` around the list is narrower than 16rem, stacked with the name and the type
+ * each under a visible label at the full width. */
+function FieldRow({ field, primary, nameInput, buttons }: FieldRowProps) {
+  const nameId = `field-${field.key}-name`;
+  const typeId = `field-${field.key}-type`;
+
+  // Each wrapper below is `contents` on the one row, so the row's flex items are the input, the
+  // type and the buttons alone.
+  return (
+    <div className="flex items-end gap-1 py-3 @max-[16rem]:flex-col @max-[16rem]:items-stretch @max-[16rem]:gap-2 @max-[16rem]:py-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 @max-[16rem]:flex-none">
+        {primary && <span className="text-label text-(--color-aside)">Primary</span>}
+        <div className="contents @max-[16rem]:flex @max-[16rem]:flex-col @max-[16rem]:gap-1.5">
+          <label htmlFor={nameId} className={FIELD_LABEL}>
+            Field name
+          </label>
+          {nameInput(nameId)}
+        </div>
+      </div>
+      <div className="contents @max-[16rem]:flex @max-[16rem]:flex-wrap @max-[16rem]:items-end @max-[16rem]:gap-x-1 @max-[16rem]:gap-y-2">
+        <div className="contents @max-[16rem]:flex @max-[16rem]:flex-auto @max-[16rem]:flex-col @max-[16rem]:gap-1.5">
+          <label htmlFor={typeId} className={FIELD_LABEL}>
+            Field type
+          </label>
+          <select
+            id={typeId}
+            aria-label="Field type"
+            value={field.type}
+            disabled
+            className={FIELD_TYPE_SELECT}
+          >
+            {SUPPORTED_FIELD_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t === 'text' ? 'Text' : t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="contents @max-[16rem]:flex @max-[16rem]:gap-1">{buttons}</div>
+      </div>
+    </div>
+  );
+}
 
 type FieldsSectionProps = {
   fields: EditorField[];
@@ -68,58 +128,55 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
   const primaryIndex = fields.findIndex((f) => !f.pendingRemoval);
 
   return (
-    <section className="mt-6">
+    <section className="mt-6 @container">
       <h2 className="text-sm font-medium text-(--color-aside)">Fields</h2>
       <p className="text-label text-(--color-aside)">
         The first field identifies this card in lists and summaries.
       </p>
-      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3">
+      <ul className="tappable mt-2 flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface) px-3 @max-[16rem]:gap-3 @max-[16rem]:divide-y-0 @max-[16rem]:border-0 @max-[16rem]:bg-transparent @max-[16rem]:px-0 @max-[16rem]:shadow-none">
         {fields.map((field, index) => {
           if (field.pendingRemoval) {
             return (
-              <li key={field.key}>
-                <div className="flex items-end gap-1 py-3">
-                  <div className="min-w-0 flex-1">
+              <li key={field.key} className={FIELD_CARD}>
+                <FieldRow
+                  field={field}
+                  primary={false}
+                  nameInput={(id) => (
                     <input
+                      id={id}
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       disabled
                       className="h-field w-full rounded-field outlined-line bg-(--color-ground) px-3 text-base text-(--color-aside) line-through"
                     />
-                  </div>
-                  <select
-                    aria-label="Field type"
-                    value={field.type}
-                    disabled
-                    className={FIELD_TYPE_SELECT}
-                  >
-                    {SUPPORTED_FIELD_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t === 'text' ? 'Text' : t}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} up`}
-                    disabled
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowUp aria-hidden="true" className="size-icon" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} down`}
-                    disabled
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowDown aria-hidden="true" className="size-icon" />
-                  </button>
-                  <span className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}>
-                    <X aria-hidden="true" className="size-icon" />
-                  </span>
-                </div>
+                  )}
+                  buttons={
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} up`}
+                        disabled
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowUp aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} down`}
+                        disabled
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowDown aria-hidden="true" className="size-icon" />
+                      </button>
+                      <span
+                        className={`${FIELD_ICON_MARGIN} flex h-9 w-9 shrink-0 items-center justify-center text-(--color-aside)`}
+                      >
+                        <X aria-hidden="true" className="size-icon" />
+                      </span>
+                    </>
+                  }
+                />
               </li>
             );
           }
@@ -137,63 +194,58 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
             trimmed === '' ? 'Name is required.' : isDuplicate ? 'Duplicate name' : null;
 
           return (
-            <li key={field.key}>
-              <FormPart sentence={error} look="wrong" className="[&>[data-reveal-sentence]]:pb-3">
-                <div className="flex items-end gap-1 py-3">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    {index === primaryIndex && <span className="text-label text-(--color-aside)">Primary</span>}
+            <li key={field.key} className={FIELD_CARD}>
+              <FormPart
+                sentence={error}
+                look="wrong"
+                className="[&>[data-reveal-sentence]]:pb-3 @max-[16rem]:flex @max-[16rem]:flex-col @max-[16rem]:gap-2 @max-[16rem]:[&>[data-reveal-sentence]]:pb-0"
+              >
+                <FieldRow
+                  field={field}
+                  primary={index === primaryIndex}
+                  nameInput={(id) => (
                     <input
+                      id={id}
                       type="text"
                       aria-label="Field name"
                       value={field.name}
                       onChange={(e) => onRename(field.key, e.target.value)}
                       className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
                     />
-                  </div>
-  
-                  <select
-                    aria-label="Field type"
-                    value={field.type}
-                    disabled
-                    className={FIELD_TYPE_SELECT}
-                  >
-                    {SUPPORTED_FIELD_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t === 'text' ? 'Text' : t}
-                      </option>
-                    ))}
-                  </select>
-  
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} up`}
-                    disabled={index === 0}
-                    onClick={() => onMove(field.key, index - 1)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowUp aria-hidden="true" className="size-icon" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Move ${field.name || 'field'} down`}
-                    disabled={index === fields.length - 1}
-                    onClick={() => onMove(field.key, index + 1)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <ArrowDown aria-hidden="true" className="size-icon" />
-                  </button>
-  
-                  <button
-                    type="button"
-                    aria-label={`Remove ${field.name || 'field'}`}
-                    title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
-                    disabled={activeCount <= 2}
-                    onClick={() => onRemove(field.key)}
-                    className={FIELD_ICON_BUTTON}
-                  >
-                    <X aria-hidden="true" className="size-icon" />
-                  </button>
-                </div>
+                  )}
+                  buttons={
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} up`}
+                        disabled={index === 0}
+                        onClick={() => onMove(field.key, index - 1)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowUp aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${field.name || 'field'} down`}
+                        disabled={index === fields.length - 1}
+                        onClick={() => onMove(field.key, index + 1)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <ArrowDown aria-hidden="true" className="size-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${field.name || 'field'}`}
+                        title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
+                        disabled={activeCount <= 2}
+                        onClick={() => onRemove(field.key)}
+                        className={FIELD_ICON_BUTTON}
+                      >
+                        <X aria-hidden="true" className="size-icon" />
+                      </button>
+                    </>
+                  }
+                />
               </FormPart>
             </li>
           );
@@ -297,13 +349,7 @@ function impactSummaryText({
   return `This ${joinClauses(clauses)}. This can't be undone.`;
 }
 
-function DeckEditorBody({
-  mode,
-  deckId,
-  deck,
-  cancelTo,
-  returnTo,
-}: DeckEditorBodyProps) {
+function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBodyProps) {
   const leaveForm = useLeaveForm();
   const queryClient = useQueryClient();
   const { revealFirstSentence } = useViewParams();
@@ -315,9 +361,7 @@ function DeckEditorBody({
   // id-based comparison in buildDeckBatchEditPayload. It is rebased after every
   // successful edit-mode save, and the global Undo reverts to it directly.
   const [original, setOriginal] = useState<DeckEditorState>(() =>
-    mode === 'edit' && deck
-      ? deckDetailToEditorState(deck)
-      : initialDeckEditorState(),
+    mode === 'edit' && deck ? deckDetailToEditorState(deck) : initialDeckEditorState(),
   );
   const [state, dispatch] = useReducer(deckEditorReducer, original);
 
