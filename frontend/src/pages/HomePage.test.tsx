@@ -165,7 +165,7 @@ describe('HomePage', () => {
         screen.getByRole('heading', { level: 2, name: 'Recently completed' }),
       ).toBeInTheDocument();
       expect(within(recent).getByText('Third')).toBeInTheDocument();
-      expect(within(recent).getByText('Deck of Third')).toBeInTheDocument();
+      expect(recent).toHaveTextContent('Deck of Third');
       expect(within(recent).queryByRole('img', { name: /passed/ })).not.toBeInTheDocument();
       expect(screen.queryByText('Your first practice')).not.toBeInTheDocument();
     });

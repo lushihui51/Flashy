@@ -7,6 +7,7 @@ export type BreadcrumbPlace = {
   label: string;
   /** The place's own address, never carrying a remembered tab or filter. */
   to: string;
+  /** Drawn before the label, on its first line, and spoken as a word of its own before it. */
   icon?: ReactNode;
 };
 
@@ -23,7 +24,7 @@ export default function Breadcrumb({ places }: BreadcrumbProps): ReactNode {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="inline-flex items-center gap-1.5 text-body font-medium text-(--color-aside)"
+      className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 text-body font-medium text-(--color-aside)"
     >
       {hasEarlierPage() && (
         <button
@@ -44,9 +45,17 @@ export default function Breadcrumb({ places }: BreadcrumbProps): ReactNode {
               ›
             </span>
           )}
-          <Link to={place.to} className="inline-flex items-center gap-1">
-            {place.icon}
-            {place.label}
+          <Link to={place.to} className="inline-flex min-w-0 items-start gap-1">
+            {place.icon !== undefined && (
+              <>
+                {/* One line high, so the icon stays on the label's first line when the label
+                    wraps. */}
+                <span className="flex h-[1lh] shrink-0 items-center">{place.icon}</span>
+                {/* Keeps the icon and the label two words when spoken; on screen the link's gap
+                    spaces them. */}{' '}
+              </>
+            )}
+            <span className="min-w-0 break-words">{place.label}</span>
           </Link>
         </Fragment>
       ))}

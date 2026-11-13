@@ -50,7 +50,7 @@ export default function FormBar({ sentence, count, children }: FormBarProps): Re
           </p>
         )}
         {count && <p className="text-center text-label text-(--color-aside)">{count}</p>}
-        <div className="flex items-center gap-2.5">{children}</div>
+        <div className="flex flex-wrap items-center gap-2.5">{children}</div>
       </div>
     </>
   );

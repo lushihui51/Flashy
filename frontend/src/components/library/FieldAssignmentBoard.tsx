@@ -82,9 +82,9 @@ export default function FieldAssignmentBoard({
         triggerRef.current = event.currentTarget;
         setActiveFieldId(fieldId);
       }}
-      className={`h-tab max-w-full truncate rounded-xl bg-(--color-surface) px-3 text-sm font-semibold ${readOnly ? 'outlined-line text-(--color-aside)' : 'tappable-sm text-(--color-ink)'}`}
+      className={`min-h-tab max-w-full rounded-xl bg-(--color-surface) px-3 py-1 text-left text-sm font-semibold ${readOnly ? 'outlined-line text-(--color-aside)' : 'tappable-sm text-(--color-ink)'}`}
     >
-      {labelById.get(fieldId) ?? fieldId}
+      <span className="line-clamp-2 break-words">{labelById.get(fieldId) ?? fieldId}</span>
     </button>
   );
 
@@ -195,7 +195,7 @@ export default function FieldAssignmentBoard({
         triggerRef={triggerRef}
         ariaLabelledBy={titleId}
       >
-        <h2 id={titleId} className="text-base font-semibold text-(--color-ink)">
+        <h2 id={titleId} className="text-base font-semibold break-words text-(--color-ink)">
           Move "{activeLabel}" to…
         </h2>
         <ul className="mt-3 flex flex-col gap-3">

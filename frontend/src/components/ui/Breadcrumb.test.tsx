@@ -93,7 +93,8 @@ describe('Breadcrumb', () => {
 
     const link = screen.getByRole('link', { name: 'Vocab' });
     expect(within(link).getByTestId('place-icon')).toBeInTheDocument();
-    expect(link.firstChild).toBe(screen.getByTestId('place-icon'));
+    expect(link.firstElementChild).toContainElement(screen.getByTestId('place-icon'));
+    expect(link.lastElementChild).toHaveTextContent(/^Vocab$/);
   });
 
   it('renders a single place with no separator', () => {

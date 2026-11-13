@@ -15,7 +15,9 @@ type BottomSheetProps = {
 
 /** The shell's bottom-sheet primitive: scrim, rounded-top panel, drag handle. Used by
  * AccountSheet and CreateSheet — anything anchored to the bottom edge with this shape
- * should build on this rather than repeating the Dialog wiring. */
+ * should build on this rather than repeating the Dialog wiring. The panel is never taller
+ * than the room beneath the app's header: a child that scrolls gives up its height first, and
+ * past that the panel scrolls. */
 export default function BottomSheet({
   open,
   onClose,
@@ -46,7 +48,9 @@ export default function BottomSheet({
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-4 rounded-t-block ruled-top bg-(--color-surface) p-4 pb-6 focus:outline-none"
+          // The header is drawn above every sheet, so a panel taller than the room beneath it
+          // would have its top covered.
+          className="fixed inset-x-0 bottom-0 z-30 flex max-h-[calc(100dvh-var(--app-header-height))] flex-col gap-4 overflow-y-auto rounded-t-block ruled-top bg-(--color-surface) p-4 pb-6 focus:outline-none"
         >
           <div
             aria-hidden="true"

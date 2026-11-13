@@ -40,6 +40,8 @@ export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   placeholder: string;
   /** Static chip, no combobox — edit mode only (a card can't move between decks). */
   locked?: boolean;
+  /** Drawn before the item's name on its row in the list, on the name's first line, and
+   * spoken as a word of its own before the name. */
   renderLeading?: (item: T) => ReactNode;
   /** Drawn under the item's name on its row in the list, and nowhere else. */
   renderBeneath?: (item: T) => ReactNode;
@@ -178,8 +180,10 @@ export default function PickerCombobox<T extends PickerItem>({
       onMouseDown={() => chooseIndex(actionIndex)}
       className={rowClassName(highlighted === actionIndex)}
     >
-      <ChosenMark chosen={clearChosen} />
-      <span className="min-w-0 truncate">{filtering ? clearLabel : createLabel}</span>
+      <span className={ROW_CONTENT_CLASS}>
+        <ChosenMark chosen={clearChosen} />
+        <span className="min-w-0 flex-1">{filtering ? clearLabel : createLabel}</span>
+      </span>
     </li>
   );
 
@@ -241,7 +245,7 @@ export default function PickerCombobox<T extends PickerItem>({
             }}
             // A press anywhere in the panel leaves focus in the input, so the user keeps typing.
             onMouseDown={(e) => e.preventDefault()}
-            className="tappable z-60 flex max-h-(--radix-popover-content-available-height) w-65 flex-col rounded-[1.125rem] bg-(--color-surface) p-1.5"
+            className="tappable z-60 flex max-h-(--radix-popover-content-available-height) w-65 max-w-(--radix-popover-content-available-width) flex-col rounded-[1.125rem] bg-(--color-surface) p-1.5"
           >
             <Popover.Arrow asChild>
               {/* Radix turns this element to whichever side the panel took, 180° when it opens
@@ -273,19 +277,27 @@ export default function PickerCombobox<T extends PickerItem>({
                   onMouseDown={() => chooseIndex(index + firstItemIndex)}
                   className={rowClassName(index + firstItemIndex === highlighted)}
                 >
-                  <ChosenMark chosen={chosen?.id === item.id} />
-                  {renderLeading?.(item)}
-                  {renderBeneath ? (
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <span className="block truncate">{item.name}</span>
-                      {/* Wraps rather than clips: it is what tells two decks of one name apart. */}
-                      <span className="mt-0.25 block text-label leading-tight font-normal wrap-break-word text-(--color-aside)">
-                        {renderBeneath(item)}
+                  <span className={`${ROW_CONTENT_CLASS} ${renderBeneath ? 'leading-tight' : ''}`}>
+                    <ChosenMark chosen={chosen?.id === item.id} />
+                    {renderLeading && (
+                      <>
+                        <span className={FIRST_LINE_CLASS}>{renderLeading(item)}</span>
+                        {/* Keeps the leading item and the name two words in the row's spoken
+                            name; on screen the row's gap spaces them. */}{' '}
+                      </>
+                    )}
+                    {renderBeneath ? (
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 break-words">{item.name}</span>
+                        {/* Wraps rather than clips: it is what tells two decks of one name apart. */}
+                        <span className="mt-0.25 block text-label leading-tight font-normal wrap-break-word text-(--color-aside)">
+                          {renderBeneath(item)}
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    <span className="min-w-0 truncate">{item.name}</span>
-                  )}
+                    ) : (
+                      <span className="line-clamp-2 min-w-0 flex-1 break-words">{item.name}</span>
+                    )}
+                  </span>
                 </li>
               ))}
               {hasMore && (
@@ -305,11 +317,19 @@ export default function PickerCombobox<T extends PickerItem>({
   );
 }
 
+// The row centres its contents as one group, so a row of one line stands in the middle of the
+// row's least height.
 function rowClassName(highlighted: boolean) {
-  return `flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-base font-semibold text-(--color-ink) ${
+  return `flex min-h-11 w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-base font-semibold text-(--color-ink) ${
     highlighted ? 'bg-(--color-ground)' : ''
   }`;
 }
+
+// A row's contents, top-aligned, so its words wrap onto further lines beneath their first.
+const ROW_CONTENT_CLASS = 'flex min-w-0 flex-1 items-start gap-2.5';
+
+// One line high, so a mark it holds stays on the first line of the words beside it.
+const FIRST_LINE_CLASS = 'flex h-[1lh] shrink-0 items-center';
 
 function chevronClassName(filtering: boolean) {
   return `pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-(--color-ink) ${
@@ -318,11 +338,11 @@ function chevronClassName(filtering: boolean) {
 }
 
 /** A row's opening mark: a check when `chosen`, otherwise a blank of its width, so every
- * row's words line up. */
+ * row's words line up. It stands on the first line of the words beside it. */
 function ChosenMark({ chosen }: { chosen: boolean }) {
-  return chosen ? (
-    <Check aria-hidden="true" strokeWidth={2.4} className="size-icon shrink-0" />
-  ) : (
-    <span aria-hidden="true" className="size-icon shrink-0" />
+  return (
+    <span aria-hidden="true" className={`${FIRST_LINE_CLASS} w-icon`}>
+      {chosen && <Check aria-hidden="true" strokeWidth={2.4} className="size-icon" />}
+    </span>
   );
 }

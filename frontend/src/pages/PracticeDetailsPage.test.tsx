@@ -88,8 +88,8 @@ describe('PracticeDetailsPage', () => {
   it('writes each deck on a line of its own, its mark and name', async () => {
     renderPractice();
 
-    const commands = (await screen.findByText('Commands')).closest('li')!;
-    const ports = screen.getByText('Ports').closest('li')!;
+    const commands = (await screen.findByRole('link', { name: 'Deck Commands' })).closest('li')!;
+    const ports = screen.getByRole('link', { name: 'Deck Ports' }).closest('li')!;
     expect(commands.parentElement).toBe(ports.parentElement);
     expect(within(commands).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
     expect(within(ports).getByRole('img', { name: 'Deck' })).toBeInTheDocument();
@@ -99,8 +99,8 @@ describe('PracticeDetailsPage', () => {
     renderPractice();
 
     const here = encodeURIComponent('/practices/p1');
-    const commands = within((await screen.findByText('Commands')).closest('li')!).getByRole('link');
-    const ports = within(screen.getByText('Ports').closest('li')!).getByRole('link');
+    const commands = await screen.findByRole('link', { name: 'Deck Commands' });
+    const ports = screen.getByRole('link', { name: 'Deck Ports' });
     expect(commands).toHaveAttribute(
       'href',
       `/practices/p1/decks/d1?cancelTo=${here}&returnTo=${here}`,

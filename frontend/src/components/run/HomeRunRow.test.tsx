@@ -82,7 +82,8 @@ describe('HomeRunRow', () => {
     const { container } = renderRow(homeRun({ day_index: 1 }));
 
     const mark = screen.getByRole('img', { name: 'Run' });
-    const block = mark.parentElement!;
+    // The mark is held to the day's first character, inside the day's block.
+    const block = mark.parentElement!.parentElement!;
     expect(block).toHaveTextContent('2026-11-09 (1)');
     expect(block).toHaveClass('outlined-line');
 
@@ -179,9 +180,11 @@ describe('HomeRunRow', () => {
 
       const hide = screen.getByRole('button', { name: 'Hide' });
       const details = hide.parentElement!;
-      expect(within(details).getAllByRole('img', { name: 'Deck' })).toHaveLength(2);
-      expect(within(details).getByText('Commands')).toBeInTheDocument();
-      expect(within(details).getByText('Ports')).toBeInTheDocument();
+      const deckLines = within(details)
+        .getAllByRole('img', { name: 'Deck' })
+        .map((deckMark) => deckMark.parentElement!.parentElement!);
+      expect(deckLines.map((line) => line.textContent)).toEqual([' Commands', ' Ports']);
+      deckLines.forEach((line) => expect(line).toHaveClass('line-clamp-2', 'break-words'));
       const counts = ['3 passed', '2 failed', '1 retrying', '68 unseen'].map((words) =>
         within(details).getByText(
           (_, element) =>

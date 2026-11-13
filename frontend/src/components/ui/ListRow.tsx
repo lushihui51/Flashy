@@ -6,13 +6,14 @@ type ListRowBaseProps = {
   leading?: ReactNode;
   /** Usually a plain string; accepts ReactNode so a caller can style a placeholder
    * value in place (e.g. an italic, muted "empty" for a blank value) — the wrapping
-   * span still owns truncation/line-height, an inner element only overrides its own
-   * color/style. */
+   * span still owns the two-line clamp and the line-height, an inner element only overrides
+   * its own color/style. */
   title: ReactNode;
   /** Omitted entirely when absent — no placeholder element, no extra text node. A row
-   * without one is floored by the row's own min-height to a row with one. */
+   * without one is floored by the row's own min-height to a row with one. Wraps to two lines
+   * and is shortened after that, as the title is. */
   subtitle?: string;
-  /** On its own line under the subtitle, never truncated. */
+  /** On its own line under the subtitle, never shortened. */
   meta?: string;
   /** Sits between the text column and the chevron, at its own width. */
   trailing?: ReactNode;
@@ -40,11 +41,11 @@ export default function ListRow({
     <>
       {leading && <span className="shrink-0">{leading}</span>}
       <span className="flex min-w-0 flex-1 flex-col gap-0.75">
-        <span className="block truncate text-title leading-6 font-semibold text-(--color-ink)">
+        <span className="line-clamp-2 text-title leading-6 font-semibold break-words text-(--color-ink)">
           {title}
         </span>
         {subtitle && (
-          <span className="block truncate text-label leading-4 text-(--color-aside)">
+          <span className="line-clamp-2 text-label leading-4 break-words text-(--color-aside)">
             {subtitle}
           </span>
         )}
@@ -55,8 +56,8 @@ export default function ListRow({
     </>
   );
 
-  // The min-height is a two-line row's height at the default text size, so a title-only
-  // row is floored up to match it instead of rendering visibly shorter.
+  // The min-height is the height of a row whose title and subtitle take one line each, so a
+  // title-only row is floored up to match it instead of rendering visibly shorter.
   const blockClass =
     'tappable flex min-h-[4.875rem] items-center gap-3.5 rounded-block bg-(--color-surface) p-4';
 

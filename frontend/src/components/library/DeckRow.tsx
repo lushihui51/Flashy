@@ -1,6 +1,7 @@
 import type { components } from 'src/api/types';
 import DeckMark from 'src/components/ui/DeckMark';
 import ListRow from 'src/components/ui/ListRow';
+import MarkedName from 'src/components/ui/MarkedName';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { pluralize } from 'src/lib/pluralize';
 
@@ -11,11 +12,7 @@ type DeckSummary = components['schemas']['DeckSummary'];
 export default function DeckRow({ deck }: { deck: DeckSummary }) {
   return (
     <ListRow
-      title={
-        <>
-          <DeckMark /> {deck.name}
-        </>
-      }
+      title={<MarkedName mark={<DeckMark />} name={deck.name} />}
       subtitle={`${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`}
       trailing={
         deck.readiness !== null ? (

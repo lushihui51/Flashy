@@ -10,6 +10,7 @@ import FieldAssignmentBoard from 'src/components/library/FieldAssignmentBoard';
 import DeckMark from 'src/components/ui/DeckMark';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
+import MarkedName from 'src/components/ui/MarkedName';
 import PracticeMark from 'src/components/ui/PracticeMark';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import {
@@ -166,24 +167,13 @@ function DeckBoardBody({
 
   const leave = () => void leaveForm(internalReturnTo(params, 'cancelTo') ?? leavesTo);
 
-  // The heading holds each mark to its name's first letter alone, so the mark always starts the
-  // first word's line and a word too long for one line still breaks inside itself.
-  const [deckFirstLetter = '', ...deckRest] = Array.from(deck.name);
-  const [practiceFirstLetter = '', ...practiceRest] = Array.from(practiceName);
-
   return (
     <div className="p-4">
       <h1 className="break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-        <span className="whitespace-nowrap">
-          <DeckMark /> {deckFirstLetter}
-        </span>
-        {deckRest.join('')}
+        <MarkedName mark={<DeckMark />} name={deck.name} />
       </h1>
       <p className="mt-2 break-words text-body text-(--color-aside)">
-        <span className="whitespace-nowrap">
-          <PracticeMark /> {practiceFirstLetter}
-        </span>
-        {practiceRest.join('')}
+        <MarkedName mark={<PracticeMark />} name={practiceName} />
       </p>
 
       {readOnlyLine && <p className="mt-3.5 text-sm text-(--color-aside)">{readOnlyLine}</p>}

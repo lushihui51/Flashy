@@ -6,6 +6,7 @@ import CardList from 'src/components/library/CardList';
 import AddButton from 'src/components/ui/AddButton';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import { pluralize } from 'src/lib/pluralize';
 import { usePageTitle } from 'src/lib/pageTitle';
@@ -42,9 +43,6 @@ export default function DeckDetailPage() {
   if (!deck) return null;
 
   const fieldDefs = [...deck.field_defs].sort((a, b) => a.position - b.position);
-  // The heading holds the mark to the name's first letter alone, so the mark always starts the
-  // first word's line and a word too long for one line still breaks inside itself.
-  const [nameFirstLetter = '', ...nameRest] = Array.from(deck.name);
 
   const cancelToHere = returnAddressParams(location, 'cancelTo').toString();
 
@@ -56,12 +54,11 @@ export default function DeckDetailPage() {
     <div className="p-4">
       <Breadcrumb places={[{ label: 'Your library', to: '/library' }]} />
 
-      <div className="mt-3.5 flex items-center gap-3">
-        <h1 className="min-w-0 flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          <span className="whitespace-nowrap">
-            <DeckMark /> {nameFirstLetter}
-          </span>
-          {nameRest.join('')}
+      {/* The heading is never narrower than its mark and longest word, so the circle and the
+          button wrap beneath it once that word no longer fits beside them. */}
+      <div className="mt-3.5 flex flex-wrap items-center gap-3">
+        <h1 className="max-w-full flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          <MarkedName mark={<DeckMark />} name={deck.name} />
         </h1>
         {deck.readiness !== null && <MasteryCircle readiness={deck.readiness} size="heading" />}
         <button
@@ -75,7 +72,7 @@ export default function DeckDetailPage() {
       </div>
 
       <div className="mt-3.5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <h2 className="text-body font-medium text-(--color-aside)">
             {pluralize(deck.cards.length, 'card')} · {pluralize(fieldDefs.length, 'field')}
           </h2>

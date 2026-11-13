@@ -11,6 +11,7 @@ import {
 } from 'src/components/run/runProgressColors';
 import ChangeBadge from 'src/components/ui/ChangeBadge';
 import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 import RunMark from 'src/components/ui/RunMark';
 import { CHANGE_KINDS, CHANGE_WORDS, countChanges, type ChangeKind } from 'src/lib/changeKinds';
 import { formatRunDay } from 'src/lib/datetime';
@@ -49,12 +50,15 @@ function ProgressCounts({ progress }: { progress: RunProgress }) {
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
       {PROGRESS_COUNTS.map((count) => (
-        <span key={count.key} className="flex items-center gap-1.5 text-sm text-(--color-ink)">
+        <span
+          key={count.key}
+          className="flex min-w-0 items-center gap-1.5 text-sm text-(--color-ink)"
+        >
           <span
             aria-hidden="true"
             className={`size-2.5 shrink-0 rounded-[0.1875rem] ${count.color}`}
           />
-          <span>
+          <span className="min-w-0 break-words">
             <span className="font-semibold">{progress[count.key]}</span> {count.word}
           </span>
         </span>
@@ -75,13 +79,13 @@ function ChangeCounts({ breakdown }: { breakdown: Breakdown }) {
   }
   const counts = countChanges(breakdown);
   return (
-    <div className="grid grid-cols-5 gap-1">
+    <div className="flex flex-wrap gap-1">
       {CHANGE_KINDS.map((kind) => (
         <span
           key={kind}
           role="img"
           aria-label={`${counts[kind]} ${CHANGE_WORDS[kind]}`}
-          className="flex flex-col items-center gap-0.75 text-sm font-semibold text-(--color-ink)"
+          className="flex flex-1 flex-col items-center gap-0.75 text-sm font-semibold text-(--color-ink)"
         >
           <ChangeBadge kind={kind} />
           {counts[kind]}
@@ -106,9 +110,9 @@ function RunDetails({
         {run.decks.map((deck) => (
           <span
             key={deck.deck_id}
-            className="block truncate text-label leading-4.5 text-(--color-aside)"
+            className="line-clamp-2 text-label leading-4.5 break-words text-(--color-aside)"
           >
-            <DeckMark /> {deck.deck_name}
+            <MarkedName mark={<DeckMark />} name={deck.deck_name} />
           </span>
         ))}
       </div>
@@ -160,11 +164,11 @@ export default function HomeRunRow({
           className="flex min-w-0 flex-1 flex-col gap-1.25 text-left"
         >
           <span className="flex">
-            <span className="outlined-line inline-block h-6 rounded-xl pr-2.25 pl-1.75 text-xs leading-5.25 font-semibold whitespace-nowrap text-(--color-aside)">
-              <RunMark /> {formatRunDay(run.day, run.day_index)}
+            <span className="outlined-line inline-block min-h-6 rounded-xl pr-2.25 pl-1.75 text-xs leading-5.25 font-semibold break-words text-(--color-aside)">
+              <MarkedName mark={<RunMark />} name={formatRunDay(run.day, run.day_index)} />
             </span>
           </span>
-          <span className="block w-full truncate text-body leading-5 font-semibold text-(--color-ink)">
+          <span className="line-clamp-2 w-full text-body leading-5 font-semibold break-words text-(--color-ink)">
             {run.practice_name}
           </span>
           <DeckLine decks={run.decks} className="w-full" />

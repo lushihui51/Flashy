@@ -103,14 +103,14 @@ function SheetField({
 
   return (
     <div className="flex flex-col gap-1 pt-2.5 pb-3">
-      <div className="flex items-center gap-2.5">
-        <span className="min-w-0 flex-1 text-label text-(--color-aside)">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <span className="min-w-0 flex-1 text-label break-words text-(--color-aside)">
           {fieldLabel(field.name)}
         </span>
         <span
           role="img"
           aria-label={`${field.name}: ${marks.map((mark) => mark.word).join(', then ')}`}
-          className="flex flex-none items-center gap-1"
+          className="flex max-w-full shrink-0 flex-wrap items-center gap-1"
         >
           {marks.map((mark) => (
             <span key={mark.id} className="flex w-[0.8125rem] justify-center">
@@ -140,7 +140,8 @@ function MarksKey() {
     <div
       role="dialog"
       aria-label="Key"
-      className="tappable absolute top-3.5 left-3 z-2 flex w-60 flex-col gap-2 rounded-2xl bg-(--color-surface) px-3.5 py-3 text-label text-(--color-ink)"
+      // No wider than the card less its left offset on each side, so it stays within the sheet.
+      className="tappable absolute top-3.5 left-3 z-2 flex w-60 max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-2xl bg-(--color-surface) px-3.5 py-3 text-label text-(--color-ink)"
     >
       <div className="font-semibold">Prompt</div>
       <div className="flex flex-wrap gap-x-3.5 gap-y-1.5">
@@ -204,10 +205,12 @@ function CardSheetContent({
           className="absolute inset-0 z-1 rounded-t-block bg-(--color-ink)/35"
         />
       )}
-      <div className="flex items-center gap-3">
+      {/* The title is never narrower than its longest word, so the circle wraps beneath it
+          once that word no longer fits beside it. */}
+      <div className="flex flex-wrap items-center gap-3">
         <h2
           id={titleId}
-          className="min-w-0 flex-1 text-2xl font-bold break-words text-(--color-ink)"
+          className="max-w-full flex-1 text-2xl font-bold break-words text-(--color-ink)"
         >
           {cardTitle(card)}
         </h2>
@@ -330,7 +333,7 @@ export default function RunBreakdown({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div ref={countsRef} role="group" className="flex gap-1.5 pb-0.5">
+      <div ref={countsRef} role="group" className="flex flex-wrap gap-1.5 pb-0.5">
         {CHANGE_KINDS.map((kind) => {
           const pressed = chosen.includes(kind);
           const count = counts[kind];
@@ -385,7 +388,7 @@ export default function RunBreakdown({
         ref={orderRef}
         role="radiogroup"
         aria-label="Order by"
-        className="flex items-center gap-2"
+        className="flex flex-wrap items-center gap-2"
       >
         <span className="mr-0.5 text-body font-medium text-(--color-aside)">Order by:</span>
         {ORDER_OPTIONS.map((option) => (
@@ -421,7 +424,7 @@ export default function RunBreakdown({
               onClick={(event) => open(card.card_id, event.currentTarget)}
               className="flex w-full items-center gap-3 py-2.75 pr-3 pl-4 text-left text-(--color-ink)"
             >
-              <span className="min-w-0 flex-1 text-base font-semibold break-words">
+              <span className="line-clamp-2 min-w-0 flex-1 text-base font-semibold break-words">
                 {cardTitle(card)}
               </span>
               <MasteryCircle readiness={card.readiness} size="summary" change={card.change} />

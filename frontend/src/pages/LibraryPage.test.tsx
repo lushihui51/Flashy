@@ -105,7 +105,7 @@ describe('LibraryPage', () => {
       ['/library'],
     );
 
-    await screen.findByText('Algebra');
+    await screen.findByRole('link', { name: /Algebra/ });
     const button = screen.getByRole('button', { name: 'Add deck' });
     expect(button.className).toMatch(/h-10/);
     await user.click(button);

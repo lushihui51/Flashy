@@ -19,12 +19,19 @@ describe('DeckLine', () => {
     const { container } = render(<DeckLine decks={DECKS} />);
 
     expect(screen.getAllByRole('img', { name: 'Deck' })).toHaveLength(2);
-    const decks = Array.from(container.querySelectorAll('.whitespace-nowrap'));
-    expect(decks.map((deck) => deck.firstElementChild?.getAttribute('aria-label'))).toEqual([
+    // Each mark is held to its name's first letter alone, so a long name breaks between its words.
+    const held = Array.from(container.querySelectorAll('.whitespace-nowrap'));
+    expect(held.map((span) => span.firstElementChild?.getAttribute('aria-label'))).toEqual([
       'Deck',
       'Deck',
     ]);
-    expect(decks.map((deck) => deck.textContent)).toEqual([' Commands', ' Ports']);
+    expect(held.map((span) => span.textContent)).toEqual([' C', ' P']);
+  });
+
+  it('wraps to two lines and is shortened after that', () => {
+    const { container } = render(<DeckLine decks={DECKS} />);
+
+    expect(container.firstElementChild).toHaveClass('line-clamp-2', 'break-words');
   });
 
   it('writes one deck with no joiner', () => {

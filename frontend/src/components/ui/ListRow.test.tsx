@@ -44,22 +44,22 @@ describe('ListRow', () => {
     expect(rowWithout.className).toMatch(/min-h-\[4\.875rem\]/);
   });
 
-  it('meta is not truncated (no truncate class) while subtitle is', () => {
+  it('clamps the title and the subtitle to two lines, breaking an over-wide word, and never shortens meta', () => {
     renderWithRouter(
       <ListRow
-        title="Algebra"
-        subtitle="A very long subtitle that should ellipsis instead of wrapping or pushing meta off the row"
+        title="A very long title that wraps onto a second line and is shortened after that"
+        subtitle="A very long subtitle that wraps onto a second line and is shortened after that"
         meta="6 cards"
         to="/decks/d1"
       />,
     );
 
-    const row = screen.getByRole('link', { name: /Algebra/ });
+    const titleEl = screen.getByText(/A very long title/);
     const subtitleEl = screen.getByText(/A very long subtitle/);
     const metaEl = screen.getByText('6 cards');
-    expect(subtitleEl.className).toMatch(/truncate/);
-    expect(metaEl.className).not.toMatch(/truncate/);
-    expect(row).toBeInTheDocument();
+    expect(titleEl).toHaveClass('line-clamp-2', 'break-words');
+    expect(subtitleEl).toHaveClass('line-clamp-2', 'break-words');
+    expect(metaEl.className).not.toMatch(/line-clamp/);
   });
 
   it('navigates to `to` when clicked', async () => {

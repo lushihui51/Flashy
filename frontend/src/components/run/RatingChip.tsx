@@ -45,7 +45,7 @@ export default function RatingChip({ fieldName, rating, onSelect }: RatingChipPr
             align="center"
             sideOffset={8}
             collisionPadding={16}
-            className="tappable z-60 flex gap-1.5 rounded-2xl bg-(--color-surface) p-2"
+            className="tappable z-60 flex max-w-(--radix-popover-content-available-width) flex-wrap justify-center gap-1.5 rounded-2xl bg-(--color-surface) p-2"
           >
             {RATING_TIERS.map((t) => (
               <button

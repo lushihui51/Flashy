@@ -7,6 +7,7 @@ import type { components } from 'src/api/types';
 import DeckPicker from 'src/components/library/DeckPicker';
 import DeckLine from 'src/components/practice/DeckLine';
 import AddButton from 'src/components/ui/AddButton';
+import MarkedName from 'src/components/ui/MarkedName';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import PracticeMark from 'src/components/ui/PracticeMark';
 import { usePageTitle } from 'src/lib/pageTitle';
@@ -25,8 +26,8 @@ function PracticeRow({ practice }: { practice: PracticeSummary }) {
       className="flex min-w-0 items-center gap-3 py-3.25 pr-3 pl-4"
     >
       <span className="flex min-w-0 flex-1 flex-col gap-1.25">
-        <span className="truncate text-base leading-5 font-semibold text-(--color-ink)">
-          <PracticeMark /> {practice.name}
+        <span className="line-clamp-2 text-base leading-5 font-semibold break-words text-(--color-ink)">
+          <MarkedName mark={<PracticeMark />} name={practice.name} />
         </span>
         <DeckLine decks={practice.decks} />
       </span>
@@ -73,7 +74,7 @@ export default function PracticeOverviewPage() {
 
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
           All practices
         </h1>

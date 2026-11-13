@@ -23,7 +23,7 @@ Judgement: The engineer judges on the live server at 390 wide with the page's ro
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -74,6 +74,7 @@ None.
 - `frontend/src/components/library/CardStandaloneForm.test.tsx`
 - `frontend/src/components/library/DeckPicker.test.tsx`
 - `frontend/src/pages/LibraryPage.test.tsx`
+- `frontend/src/components/ui/BottomSheet.tsx`
 
 **Details**
 
@@ -133,7 +134,26 @@ export default function MarkedName({ mark, name }: MarkedNameProps): ReactNode;
 
 **Debrief**
 
-None.
+- Criterion 1: `cd frontend && npx vitest run src/test/nameWrap.test.ts src/components/ui/ListRow.test.tsx` printed "Test Files 2 passed (2)" and "Tests 14 passed (14)". Run before any change, the scan failed on 14 `truncate` classes, in `FieldAssignmentBoard.tsx`, `DeckLine.tsx`, `HomeRunRow.tsx`, `ListRow.tsx`, `PickerCombobox.tsx`, `PracticeCreatePage.tsx`, `PracticeDetailsPage.tsx`, `PracticeOverviewPage.tsx` and `RunPage.tsx`.
+- Criterion 2, the data: the dev database already held "Commands" with its 12 fields and the card "format", its "Key subcommands" empty, "Ports", and the practice "Judgement practice of every command before the CompTIA exam next month". Made through the app's screens and left in the dev database: the practices "Commands + Ports" and "Ports before the exam", a run of "Commands + Ports" with three cards rated then ended through "End run", and a second run of it started after.
+- Criterion 2, the widths: in headless Chromium, signed out, driven by a mouse, at 390 by 844 with the root set to 24px after each page loaded, `document.documentElement.scrollWidth` and `clientWidth` both read 390 on Home, Home with an active and a completed run's details open, Your library, the page of "Commands", New card, Edit card of "format", All practices, All practices with its filter's list open, New practice with both decks picked, New practice with its picker's list open, the pages of the long practice and of "Commands + Ports", Edit practice, the board of "Commands" from the practice and from the completed run, the active run's page, that page with its answers shown and a rating chip's list open, and the completed run's page. At the commit before, the same pages read 419 to 481 against 390.
+- Criterion 2, the drawings: All practices reads as 7-practice, with "+" and "Log in" on a second line at the right, "Log in" from 253 to 366, "Add practice" beneath the heading, "Commands + Ports" and "Ports before the exam" on two lines each, and the long practice on two 30px lines reading "Judgement practice of every…", its `clientHeight` 60 against a `scrollHeight` of 150. The page of "Commands" reads as 7-deck, with "Commands" whole on one line, the heading 47.25px high at a 47.25px line, its circle and pencil beneath it, "Add card" beneath "54 cards · 12 fields", and each card's other values one to a line. The long practice's heading on its own page shows the whole name with no clamp.
+- Criterion 3: with the sheet open from the completed run's first row and its key open at a 24px root, the key's right edge is at 347 and the sheet's at 390, and the sheet's scrolling area reads 390 of 390.
+- Default text size, 22 screenshots of the same pages at a 16px root before and after: 12 are byte-identical; Home, Home with details open, Your library, All practices and the two open lists differ only from the first name too long for one line downward, which now takes a second line; the deck's page and the completed run's page differ by at most 2 of 255 in any pixel; the card's sheet and its key differ by at most 11 of 255, with every one of the sheet's 87 elements at the same box with and without `BottomSheet`'s change.
+- An over-wide word: with "Commands" and the card "net use" each replaced on the page by one unbroken word of 65 characters, Home with details open, Your library, the deck's page, All practices and its open list, New practice, the page of "Commands + Ports", its board, both run pages and the card's sheet still read 390 of 390, at 16px and at 24px; Edit card reads 390 of 390 with the deck's name alone replaced.
+- Home's steps to a first practice cannot show in the dev database, so they were drawn from a `/api/home` answered in the browser: at 24px the next step's button now grows to hold "New practice" on two lines, 95px high where its fixed height let the words run 5px past it, and at 16px it stays 44px.
+- Every commit's checks: `npx vitest run` passed 732 tests in 76 files, `npm run lint` and `npm run build` printed no error.
+- Outside guidance, the spoken space: `PickerCombobox` and `Breadcrumb` now write the space between a leading mark and the name themselves, and `DeckPicker`'s `renderDeckMark` and `RunPage`'s `icon` pass the mark alone. Holding the mark to the first line needs a box around it, and with the caller's space inside that box the tests no longer found the option "Deck Ports" or the link "Practice Evening practice".
+- Outside guidance, the picker's rows: `rowClassName` still centres, and a new inner span, `ROW_CONTENT_CLASS`, top-aligns the check, the mark and the name, each mark in a box one line high, `FIRST_LINE_CLASS`. Top-aligning the row itself would lift a one-line row's words by 0.125rem at the default text size, the row's least height being 0.25rem more than its line and padding.
+- Outside guidance, the card's container: `CardList` puts the container on each card's `li`, not on its link, so 16rem is measured against the card's whole width. Against the link's inner width a 320-wide phone at the default text size comes to 253px, under 16rem, and would lose its two columns; this is arithmetic, not a live check.
+- Outside guidance, the lead value's clamp: at its line height of 1.1 the clamp cut about a pixel off the foot of "g" and "p" at the default text size, so the lead value carries 0.075em of bottom padding taken back by a margin. The cost: a hidden third line that starts with an accented capital shows the top of its accent beneath the second line.
+- Outside guidance, smaller choices: `TopBar` drops its spacer for `ml-auto` on the "+" and account group and takes `py-1.75`, so two lines keep the bar's room above and below; `SheetField`'s row of marks wraps; `FieldAssignmentBoard`'s chip clamps an inner span, since a button takes no clamp, with `py-1` and `text-left`; `HomePage`'s next-step link takes `min-h-field`. `AuthSlot.tsx` and `PracticeEditPage.tsx` are unchanged, as the scan and the live check found nothing in them.
+- A path outside Files, `frontend/src/components/ui/BottomSheet.tsx`, added on the engineer's go-ahead: the top bar's second line makes the header 249px tall at a 24px root where it was 171px, and the header is drawn above every sheet, so it covered the card's sheet from 68 down, the key's button at 185 to 227 among it, which stood clear before. The panel is now no taller than `100dvh` less `--app-header-height`, and scrolls past that. At 24px the card's sheet starts at 249, its title at 305 to 353, the key's button at 363 to 405 and "Edit card" at 748 to 808, its scrolling area giving up the height, 365 of 543; the board's "Move to…" sheet starts at 249 where it started at 246; the Create sheet starts at 480. At 16px the three start at 363, 469 and 601 against a header of 114, as before. The side drawer's first item starts at 267 and the "End run?" dialog is drawn above the header, so neither is covered. T2 does not list the file, and the two other cycle files that do, 031 and 046, have every task done.
+- Read `MarkedName.tsx`, the interface the other pages now depend on; `rowClassName`, `ROW_CONTENT_CLASS` and `ChosenMark` in `PickerCombobox.tsx`, the one place the markup of a shared component changed shape; and the panel's class in `BottomSheet.tsx`, which all four sheets now take.
+- Seen while judging, as the Details require: on Your library at 24px the row of "Commands" reads "Command" over "s", since the mark and the word need 196px and the title's line is 187px, so `break-words` breaks inside it. On the run page at 24px "Show answer" wraps onto two lines inside its button.
+- Found outside this task's Files, not fixed: a field name of one over-wide word scrolls New card and Edit card sideways at any text size, 497 against 390 at 16px with one label replaced on the page, since `CardFieldsForm`'s label carries no `break-words`.
+- Not in the file: no Done-when line checks a sheet, the drawer or a dialog beneath the two-line header; the measurements above stand in for one, and the line is the planner's to write.
+- Not checked: any touch interaction, and the top bar signed in.
 
 ### T2 — Inputs that move beneath their label
 

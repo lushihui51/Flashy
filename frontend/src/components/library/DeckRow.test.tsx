@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithRouter } from 'src/test/testUtils';
 import DeckRow from 'src/components/library/DeckRow';
 
@@ -18,7 +18,7 @@ describe('DeckRow', () => {
   it('shows the name over its counts', () => {
     renderWithRouter(<DeckRow deck={deck} />);
 
-    expect(screen.getByText('Algebra')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Deck Algebra/ })).toBeInTheDocument();
     expect(screen.getByText('6 cards · 2 fields')).toBeInTheDocument();
   });
 
@@ -58,8 +58,13 @@ describe('DeckRow', () => {
   it("shows the deck's mark before the deck's name", () => {
     renderWithRouter(<DeckRow deck={deck} />);
 
-    const title = screen.getByText('Algebra');
-    expect(title.firstElementChild).toBe(screen.getByRole('img', { name: 'Deck' }));
-    expect(screen.getByRole('link', { name: /^Deck Algebra/ })).toBeInTheDocument();
+    const row = screen.getByRole('link', { name: /^Deck Algebra/ });
+    const mark = within(row).getByRole('img', { name: 'Deck' });
+    // The mark is held to the name's first letter, inside the title's clamp.
+    expect(mark.parentElement).toHaveClass('whitespace-nowrap');
+    expect(mark.parentElement).toHaveTextContent(/^A$/);
+    const title = mark.parentElement!.parentElement!;
+    expect(title).toHaveTextContent(/^Algebra$/);
+    expect(title).toHaveClass('line-clamp-2');
   });
 });

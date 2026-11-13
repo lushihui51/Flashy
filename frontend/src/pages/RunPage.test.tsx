@@ -282,7 +282,10 @@ describe('RunPage', () => {
     expect(links.map((link) => link.textContent)).toEqual(['All practices', ' Evening practice']);
     expect(row).toHaveTextContent(/^All practices› Evening practice$/);
     // The practice mark leads the practice's name, and All practices carries none.
-    expect(practice.firstElementChild).toHaveAttribute('aria-label', 'Practice');
+    expect(practice.firstElementChild!.firstElementChild).toHaveAttribute(
+      'aria-label',
+      'Practice',
+    );
     expect(within(links[0]!).queryByRole('img')).not.toBeInTheDocument();
 
     await user.click(within(row).getByRole('link', { name: 'All practices' }));

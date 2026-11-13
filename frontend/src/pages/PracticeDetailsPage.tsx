@@ -6,6 +6,7 @@ import { isNotFound } from 'src/api/unwrap';
 import RunRow from 'src/components/run/RunRow';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 import MasteryCircle from 'src/components/ui/MasteryCircle';
 import PracticeMark from 'src/components/ui/PracticeMark';
 import { failureSentence } from 'src/lib/failureSentence';
@@ -55,20 +56,15 @@ export default function PracticeDetailsPage() {
   const practice = practiceQuery.data;
   if (!practice) return null;
 
-  // The heading holds the mark to the name's first letter alone, so the mark always starts the
-  // first word's line and a word too long for one line still breaks inside itself.
-  const [nameFirstLetter = '', ...nameRest] = Array.from(practice.name);
-
   return (
     <div className="p-4">
       <Breadcrumb places={[{ label: 'All practices', to: '/practices' }]} />
 
-      <div className="mt-3.5 flex items-center justify-between gap-3">
-        <h1 className="min-w-0 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          <span className="whitespace-nowrap">
-            <PracticeMark /> {nameFirstLetter}
-          </span>
-          {nameRest.join('')}
+      {/* The heading is never narrower than its mark and longest word, so the circle wraps
+          beneath it once that word no longer fits beside it. */}
+      <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="max-w-full flex-1 break-words text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
+          <MarkedName mark={<PracticeMark />} name={practice.name} />
         </h1>
         {practice.readiness !== null && (
           <MasteryCircle readiness={practice.readiness} size="heading" className="mr-2.5" />
@@ -114,8 +110,8 @@ export default function PracticeDetailsPage() {
               }}
               className="flex min-h-11 items-center justify-between gap-3 py-3 pr-3 pl-4"
             >
-              <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
-                <DeckMark /> {deck.deck_name}
+              <span className="line-clamp-2 min-w-0 text-body leading-5 font-semibold break-words text-(--color-ink)">
+                <MarkedName mark={<DeckMark />} name={deck.deck_name} />
               </span>
               <ChevronRight aria-hidden="true" className="size-icon shrink-0 text-(--color-aside)" />
             </Link>

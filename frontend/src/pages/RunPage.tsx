@@ -12,6 +12,7 @@ import RunStatusBadge from 'src/components/run/RunStatusBadge';
 import Breadcrumb from 'src/components/ui/Breadcrumb';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 import PracticeMark from 'src/components/ui/PracticeMark';
 import RunMark from 'src/components/ui/RunMark';
 import type { components } from 'src/api/types';
@@ -75,13 +76,7 @@ export default function RunPage() {
                 {
                   label: runQuery.data.practice_name,
                   to: `/practices/${runQuery.data.practice_id}`,
-                  // The space keeps the mark and the name two words when spoken; on screen the
-                  // link's gap spaces them.
-                  icon: (
-                    <>
-                      <PracticeMark />{' '}
-                    </>
-                  ),
+                  icon: <PracticeMark />,
                 },
               ]
             : []),
@@ -192,13 +187,11 @@ function CompletedRun({ runId, day }: { runId: string; day: string }) {
   return (
     <div className="mt-3.5 flex flex-col gap-3.5">
       <div>
-        <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] text-(--color-ink)">
-          <span className="whitespace-nowrap">
-            <RunMark /> {day}
-          </span>
+        <h1 className="text-page leading-[1.05] font-bold tracking-[-0.02em] break-words text-(--color-ink)">
+          <MarkedName mark={<RunMark />} name={day} />
         </h1>
         {run && (
-          <p className="mt-2 flex items-center gap-2.5">
+          <p className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <RunStatusBadge status={run.status} />
             <span className="text-body font-medium text-(--color-aside)">
               {run.reached_cards} of {pluralize(run.counted_cards, 'card')}
@@ -228,8 +221,8 @@ function CompletedRun({ runId, day }: { runId: string; day: string }) {
                     }}
                     className="flex min-h-11 items-center justify-between gap-3 py-3 pr-3 pl-4"
                   >
-                    <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
-                      <DeckMark /> {deck.deck_name}
+                    <span className="line-clamp-2 min-w-0 text-body leading-5 font-semibold break-words text-(--color-ink)">
+                      <MarkedName mark={<DeckMark />} name={deck.deck_name} />
                     </span>
                     <ChevronRight
                       aria-hidden="true"
@@ -361,7 +354,7 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
         </section>
       </div>
 
-      <div className="mt-2 flex gap-2.5">
+      <div className="mt-2 flex flex-wrap gap-2.5">
         <button
           type="button"
           aria-disabled={!showAnswer || undefined}

@@ -15,12 +15,6 @@ export default function DeckPicker<T extends DeckPickerItem>(props: DeckPickerPr
   return <PickerCombobox<T> {...props} renderLeading={renderDeckMark} />;
 }
 
-// The space keeps the mark and the name two words in the row's spoken name; on screen the
-// row's gap spaces them.
 function renderDeckMark(): ReactNode {
-  return (
-    <>
-      <DeckMark />{' '}
-    </>
-  );
+  return <DeckMark />;
 }

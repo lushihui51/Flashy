@@ -245,7 +245,7 @@ function CardStandaloneFormBody({
         {deckLocked ? (
           <div className="flex items-baseline gap-2.5">
             <span className="text-label text-(--color-aside)">Deck</span>
-            <span className="text-body font-semibold text-(--color-ink)">
+            <span className="min-w-0 text-body font-semibold break-words text-(--color-ink)">
               {selectedDeck?.name ?? ''}
             </span>
           </div>

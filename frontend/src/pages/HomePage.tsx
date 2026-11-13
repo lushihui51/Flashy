@@ -67,7 +67,7 @@ function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
                     pathname: step.to,
                     search: returnAddressParams(location, 'cancelTo').toString(),
                   }}
-                  className="tappable flex h-field min-w-0 flex-1 items-center justify-start gap-2 rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink)"
+                  className="tappable flex min-h-field min-w-0 flex-1 items-center justify-start gap-2 rounded-2xl bg-(--color-main-action) px-4.5 py-1.5 text-action font-semibold text-(--color-ink)"
                 >
                   <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5 shrink-0" />
                   {step.label}

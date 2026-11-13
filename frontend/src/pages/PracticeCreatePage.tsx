@@ -9,6 +9,7 @@ import DeckPicker from 'src/components/library/DeckPicker';
 import DeckMark from 'src/components/ui/DeckMark';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
+import MarkedName from 'src/components/ui/MarkedName';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import { failureSentence } from 'src/lib/failureSentence';
 import { useLeaveForm } from 'src/lib/leaveForm';
@@ -154,10 +155,10 @@ export default function PracticeCreatePage() {
           {pickedDecks.map((deck) => (
             <li key={deck.id} className="flex items-center gap-4 py-3">
               <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="truncate text-body leading-5 font-semibold text-(--color-ink)">
-                  <DeckMark /> {deck.name}
+                <span className="line-clamp-2 text-body leading-5 font-semibold break-words text-(--color-ink)">
+                  <MarkedName mark={<DeckMark />} name={deck.name} />
                 </span>
-                <span className="truncate text-label leading-4 text-(--color-aside)">
+                <span className="text-label leading-4 text-(--color-aside)">
                   {`${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`}
                 </span>
               </span>

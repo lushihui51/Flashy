@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 import type { components } from 'src/api/types';
 import DeckMark from 'src/components/ui/DeckMark';
+import MarkedName from 'src/components/ui/MarkedName';
 
 type DeckNameRead = components['schemas']['DeckNameRead'];
 
@@ -10,18 +11,18 @@ type DeckLineProps = {
   className?: string;
 };
 
-/** Several decks in one line of muted label text, each its mark and name, joined by " · ", as
- * "Commands · Ports". A line too long for its place is cut short with an ellipsis. */
+/** Several decks as one run of muted label text, each its mark and name, joined by " · ", as
+ * "Commands · Ports". Too long for one line, it wraps onto a second, and is shortened with an
+ * ellipsis after two. */
 export default function DeckLine({ decks, className }: DeckLineProps): ReactNode {
   return (
-    <span className={`block truncate text-label leading-4 text-(--color-aside) ${className ?? ''}`}>
+    <span
+      className={`line-clamp-2 text-label leading-4 break-words text-(--color-aside) ${className ?? ''}`}
+    >
       {decks.map((deck, index) => (
         <Fragment key={deck.deck_id}>
           {index > 0 && ' · '}
-          {/* No break inside a deck, so a mark never ends a line apart from its name. */}
-          <span className="whitespace-nowrap">
-            <DeckMark /> {deck.deck_name}
-          </span>
+          <MarkedName mark={<DeckMark />} name={deck.deck_name} />
         </Fragment>
       ))}
     </span>

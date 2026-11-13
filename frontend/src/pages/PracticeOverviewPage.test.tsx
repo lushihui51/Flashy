@@ -119,7 +119,8 @@ describe('PracticeOverviewPage', () => {
     const row = await screen.findByRole('link', { name: /Commands \+ Ports/ });
     const [name, decks] = Array.from(row.firstElementChild!.children);
     expect(name).toHaveTextContent(/^Commands \+ Ports$/);
-    expect(name!.firstElementChild).toHaveAttribute('aria-label', 'Practice');
+    expect(name).toHaveClass('line-clamp-2', 'break-words');
+    expect(name!.firstElementChild!.firstElementChild).toHaveAttribute('aria-label', 'Practice');
     expect(decks).toHaveTextContent(/^Commands · Ports$/);
     expect(within(decks as HTMLElement).getAllByRole('img', { name: 'Deck' })).toHaveLength(2);
     expect(within(row).getByRole('img', { name: 'Mastery 46%' })).toBeInTheDocument();

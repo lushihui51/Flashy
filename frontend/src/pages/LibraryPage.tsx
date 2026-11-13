@@ -26,7 +26,7 @@ export default function LibraryPage() {
         Your library
       </h1>
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h2 className="text-body font-medium text-(--color-aside)">
           {decksQuery.data ? `${decksQuery.data.length} decks` : 'Decks'}
         </h2>
