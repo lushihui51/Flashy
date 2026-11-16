@@ -1,4 +1,4 @@
-# PDR 053: An example library for anyone not logged in to look through
+# PDR 053: An example library for a guest to look through
 
 ## Status
 

@@ -1,4 +1,4 @@
-# PDR 058: Everything open to read while not logged in, and one dimmed screen that leaves "Log in" lit at every press that would change something
+# PDR 058: A dimmed screen that tells a guest to log in
 
 ## Status
 
