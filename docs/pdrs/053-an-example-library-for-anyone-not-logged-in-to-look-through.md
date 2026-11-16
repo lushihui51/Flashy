@@ -1,4 +1,4 @@
-# PDR 053: An example library for anyone who opens the app to look through, with no invitation for an account and no page before it
+# PDR 053: An example library for anyone not logged in to look through
 
 ## Status
 
