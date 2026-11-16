@@ -1,4 +1,4 @@
-# PDR 054: Colors that each mean one thing, with "Log in" yellow on every page
+# PDR 054: One meaning per color, with "Log in" yellow
 
 ## Status
 

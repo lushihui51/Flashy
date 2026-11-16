@@ -1,4 +1,4 @@
-# PDR 057: Home as the steps to a first run, then the runs the user can continue or start again
+# PDR 057: Home as first steps, then the user's runs
 
 ## Status
 

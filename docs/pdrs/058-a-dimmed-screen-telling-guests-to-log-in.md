@@ -1,4 +1,4 @@
-# PDR 058: A dimmed screen that tells a guest to log in
+# PDR 058: A dimmed screen telling guests to log in
 
 ## Status
 

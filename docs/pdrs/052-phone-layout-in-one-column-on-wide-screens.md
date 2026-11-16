@@ -1,4 +1,4 @@
-# PDR 052: The phone's layout in one column for every page on a wide screen
+# PDR 052: Phone layout in one column on wide screens
 
 ## Status
 

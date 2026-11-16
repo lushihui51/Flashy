@@ -1,4 +1,4 @@
-# PDR 055: A card practiced in a run as a prompt zone above a list of rated answers
+# PDR 055: Prompt zone above rated answers in a run
 
 ## Status
 

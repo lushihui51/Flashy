@@ -1,4 +1,4 @@
-# PDR 056: A drawn mark of its kind beside every name but a practice's on a run's row
+# PDR 056: Kind marks beside names but a run's practice
 
 ## Status
 
