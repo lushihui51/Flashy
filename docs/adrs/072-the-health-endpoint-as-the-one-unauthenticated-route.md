@@ -2,7 +2,7 @@
 
 ## Status
 
-Active
+Superseded by ADR 130 and ADR 131
 
 ## Context
 
