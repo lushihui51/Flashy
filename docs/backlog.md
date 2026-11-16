@@ -9,7 +9,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
   - Owner: /product-decide
 - B4. What does the top bar's search find, and where do its results appear?
-  - Reason: `SearchBar` in `frontend/src/components/shell/SearchBar.tsx` takes typing, and Enter does nothing.
+  - Reason: What a search finds and where its results appear is undecided, and the top bar's search is taken out until it is decided.
   - Owner: /product-decide
 - B9. Can the user create many cards at once by pasting rows of text?
   - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows. The user adds many cards in one sitting only on a wide screen, and a phone's screen is too narrow for pasted rows, so the answer waits on B39.
@@ -26,9 +26,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B15. Can the user share a deck with another user, and does the other user get a copy of their own or a view of the original?
   - Reason: Wanted later; today a deck reaches no other user (PDR 012).
   - Owner: /product-decide
-- B17. How is Flashy hosted and deployed: the provider for the API and for the frontend, whether they share an origin, the managed PostgreSQL, Clerk's production keys, where `alembic upgrade` runs on a deploy, and where secrets live?
-  - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 130); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 130); and a startup check that the database is at alembic head (ADR 045).
-  - Owner: /code-decide
 - B18. In what order does a practice show its cards, across its decks and within one, and where does a card come back after it is rated Again?
   - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in the docstring of the run service's function that starts a run, while the retry's placement is ADR 037 and ADR 058.
   - Owner: /product-decide
@@ -44,12 +41,6 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B34. May a single word wider than its whole line break inside itself, so that nothing on the page scrolls sideways, while PDR 050 has a name or a heading break only between words?
   - Reason: PDR 050 asks both that a name or a heading break only between words and that nothing on a page scroll sideways, and a word wider than its line can keep only one of the two; `overflow-wrap: break-word` breaks such a word inside itself, and no record says it should.
   - Owner: /product-decide
-- B35. Do the practice's vocabulary row and the run's rows give their code names, `practice`, `Practice` and `/practices` for a practice and `RunStatus` and `status` for a run's state?
-  - Reason: the row "A named set of decks the user keeps and runs as many times as they like" reads "—" in Code, though the `practice` table and the `Practice` model name its concept; no row's Code names `RunStatus` or `RunRead.status`, and "A run that can still be continued" and "A run that has finished" give only `active` and `completed`.
-  - Owner: /code-decide
-- B36. Does a run's row on Home name its practice with no practice mark?
-  - Reason: `HomeRunRow` in `frontend/src/components/run/HomeRunRow.tsx` writes the practice's name with no `PracticeMark`, and PDR 056 gives the mark wherever a practice's name appears but on a run's row.
-  - Owner: /product-decide
 - B37. Is a rule or a piece of a screen that several places write alike kept in one shared place, and which of today's repeats move there?
   - Reason: no record says when a repeat earns one home. Two stand today. The rule for a name in a list, two lines then "…" with a word wider than its line broken inside itself, is written as the classes `line-clamp-2` and `break-words` at 14 places in 11 files under `frontend/src/components` and `frontend/src/pages`, so a new list must remember both halves. A heading never narrower than its mark and longest word, whose circle and buttons wrap beneath it, is written three times, in `DeckDetailPage` in `frontend/src/pages/DeckDetailPage.tsx`, `PracticeDetailsPage` in `frontend/src/pages/PracticeDetailsPage.tsx` and `CardSheetContent` in `frontend/src/components/run/RunBreakdown.tsx`, where a `min-w-0` added to any copy brings back the break inside a word; eleven pages also repeat the heading's text classes.
   - Owner: /code-decide
@@ -62,4 +53,7 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Drawings: 2
 - B40. How is the production database backed up, and how far back can it be restored?
   - Reason: The production database runs on Railway's Hobby plan, which gives a volume no backups, so a database that is lost or damaged is gone, with the example library and every user's data. Railway's Pro plan, Render's paid PostgreSQL and a scheduled dump to storage elsewhere each give one.
+  - Owner: /code-decide
+- B41. Does the card sheet's key in a completed run's summary become a Radix Popover over a `Scrim` held to the sheet, as ADR 133 decides for a panel inside a dialog, and at which strength does it dim?
+  - Reason: `MarksKey` and the layer that dims the sheet beneath it, in `frontend/src/components/run/RunBreakdown.tsx`, are drawn by hand at 35% of ink, and `Scrim` in `frontend/src/components/ui/Scrim.tsx` covers the whole screen only. ADR 133 names two strengths, a fifth and a half, and neither is the key's.
   - Owner: /code-decide
