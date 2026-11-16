@@ -1,0 +1,381 @@
+# 058 — A guest's log-in prompt
+
+Waits for: 055, its fourth step "Start run" on Home, and `frontend/src/pages/HomePage.tsx`, `frontend/src/pages/HomePage.test.tsx` and `docs/vocabulary.md`, which it shares; 056, its column, and `frontend/src/pages/RunPage.tsx`, which it shares; 057, its `useViewer` in `frontend/src/lib/viewer.ts`, its "Log in" drawn as a block, its guest's banner, and `frontend/src/lib/viewer.ts`, `frontend/src/lib/viewer.test.tsx`, `frontend/src/components/shell/AppShell.tsx`, `frontend/src/components/shell/AppShell.test.tsx`, `frontend/src/components/shell/AuthSlot.tsx`, `frontend/src/components/shell/AuthSlot.test.tsx`, `frontend/src/test/setup.ts` and `docs/vocabulary.md`, which it shares.
+
+Canvas: https://claude.ai/artifact/A8gXbvneXqHNg6LoTfza5p
+
+## Goal
+
+Outcome: A guest opens and reads everything, every form greyed with Done alone, and every press that would change the example library dims the whole screen but for "Log in" and tells them to log in.
+
+Scope: The cycle covers `Scrim` at the strength its caller names, its hole following its control; `useWriteGuard` and the prompt it opens, `LogInPrompt`, mounted once by the shell; the guard at every handler that starts a write and at the choosing of a rating; the five form components, at their seven addresses, drawn for a guest; and the vocabulary's rows for the prompt and for Done. It leaves out the card sheet's key in a completed run's summary, which stays as it is; and anything the server does for a guest, which stands.
+
+Judgement: The engineer judges on the live server as a guest, at 390 by 844 and at 1440 by 900. New deck, Edit deck, New card, Edit card, New practice, Edit practice and a deck's board each open greyed, with Done alone at the foot, and Done leaves. A press on a greyed input, on Start run, on a completed run's play button on Home, on Re-run, on Re-run these or on End run dims the whole screen at half of ink but for "Log in", with "Log in to use all of Flashy." in white beneath it, as drawings 3 and 4 draw it; a press anywhere else, Escape or "Log in" brings the screen back with nothing changed. On a run's card, Show answer shows the answers, "Rate" opens its four ratings, and choosing one dims the screen. Logged in, every one of those controls acts as it did.
+
+## Records
+
+- PDR 020: A block for everything that can be tapped
+- PDR 031: Failures met in place, up to the whole page, with one banner for the connection
+- PDR 051: Cancel and Create or Save at the foot of every form, and Done alone where nothing can change
+- PDR 053: An example library for guests to look through
+- PDR 055: Prompt zone above rated answers in a run
+- PDR 058: A dimmed screen telling guests to log in
+- ADR 016: Radix Dialog for modal overlays
+- ADR 017: React Testing Library with a per-file jsdom environment
+- ADR 069: One vocabulary file for the user's words and the code's names
+- ADR 088: TanStack Query for the frontend's server state, refetched on mount
+- ADR 090: Eight colour tokens named by meaning as the only colours
+- ADR 097: One hook for a page's URL search params, that never resets scroll
+- ADR 124: Two URL parameters for a form's return addresses, and one function leaving every form by history
+- ADR 127: A measured header height and one component for every bar at the foot
+- ADR 131: Guest reads answered as the example user, read-only
+- ADR 132: One viewer hook, and a reload between viewers
+- ADR 133: Radix Popover and tracking scrim for anchored overlays
+- ADR 134: One write guard opening a guest's log-in prompt
+- ADR 136: One column token for shell and fixed elements
+
+## Tasks
+
+### T1 — The scrim's strength
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+`Scrim` dims at the strength its caller names, and its hole stays over its control whatever moves it.
+
+**Dependencies**
+
+None.
+
+**Files**
+
+- `frontend/src/components/ui/Scrim.tsx`
+- `frontend/src/components/ui/Scrim.test.tsx`
+- `frontend/src/components/ui/PickerCombobox.tsx`
+- `frontend/src/components/run/RatingChip.tsx`
+
+**Details**
+
+ADR 133:
+
+```ts
+type ScrimProps = {
+  anchor: RefObject<HTMLElement | null>;
+  onDismiss: () => void;
+  /** How dark the dimming is: `fifth` of ink beneath a list of choices, `half` beneath the screen dimmed for a guest. */
+  strength: 'fifth' | 'half';
+};
+```
+
+- `strength` must be required, and `Scrim` must draw ink at 20% for `fifth` and at 50% for `half` (ADR 090). `PickerCombobox` and `RatingChip` pass `fifth`, and look as they do today.
+- `Scrim` must measure its anchor's box when it mounts, before the first paint, as today, then on every animation frame while it is mounted, and move the hole when the box has moved. The `resize` listener goes. The frame loop stops when it unmounts.
+- Its catch of a press, its swallowing of the click that ends a touch and its scroll lock stay as they are.
+
+Guidance: keep the last box and set state only when a frame's box differs from it, so a still control costs one read a frame and no render.
+
+**Out of scope**
+
+- A second scrim component for the stronger dim: never; ADR 133 rejects it.
+- The hole moved by watching the header's height: never; ADR 133 rejects it.
+- A `Scrim` held to one bounding element, and the card sheet's key in `frontend/src/components/run/RunBreakdown.tsx` drawn through it: an unsettled decision; the key and its dimming stay as they are.
+- The prompt that uses the stronger dim: T2.
+
+**Done when**
+
+- In `frontend/src/components/ui/Scrim.test.tsx`, `dims at a fifth of ink for fifth and at a half for half` passes.
+- `moves the hole when the anchor's box moves between two frames, and renders nothing new while it is still` passes.
+- `stops measuring once unmounted` passes.
+- Every other case of `frontend/src/components/ui/Scrim.test.tsx` but the one of the window's resize still passes.
+- `grep -c "addEventListener('resize'" frontend/src/components/ui/Scrim.tsx` prints `0`.
+- In headless Chromium as a user at 390 by 844, on a run's card with its answers shown, "Rate" opens its list over the page dimmed as before, and `document.elementFromPoint` at the chip's centre is the chip.
+
+**Debrief**
+
+None.
+
+### T2 — The log-in prompt
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+A guest's press on any control outside a form that would change the example library, the choosing of a rating included, dims the whole screen but for "Log in" and says to log in beneath it, and changes nothing.
+
+**Dependencies**
+
+- T1: `Scrim`'s `strength`, and its hole that follows its anchor.
+
+**Files**
+
+- `frontend/src/lib/viewer.ts`
+- `frontend/src/lib/viewer.test.tsx`
+- `frontend/src/components/shell/LogInPrompt.tsx` (new)
+- `frontend/src/components/shell/LogInPrompt.test.tsx` (new)
+- `frontend/src/components/shell/AppShell.tsx`
+- `frontend/src/components/shell/AppShell.test.tsx`
+- `frontend/src/components/shell/TopBar.tsx`
+- `frontend/src/components/shell/TopBar.test.tsx`
+- `frontend/src/components/shell/AuthSlot.tsx`
+- `frontend/src/components/shell/AuthSlot.test.tsx`
+- `frontend/src/test/setup.ts`
+- `frontend/src/test/mocks/clerk.ts`
+- `frontend/src/pages/RunPage.tsx`
+- `frontend/src/pages/RunPage.test.tsx`
+- `frontend/src/pages/PracticeDetailsPage.tsx`
+- `frontend/src/pages/PracticeDetailsPage.test.tsx`
+- `frontend/src/pages/HomePage.tsx`
+- `frontend/src/pages/HomePage.test.tsx`
+- `frontend/src/components/run/RerunButton.tsx`
+- `frontend/src/components/run/RerunButton.test.tsx`
+- `frontend/src/components/run/RunBreakdown.tsx`
+- `frontend/src/components/run/RunBreakdown.test.tsx`
+- `docs/vocabulary.md`
+
+**Details**
+
+PDR 058 and ADR 134, with drawing 3 and drawing 4's fourth screen as constraints on the dimmed screen. `frontend/src/lib/viewer.ts` gains:
+
+```ts
+/** Opens the log-in prompt. `AppShell` provides it; outside the shell it does nothing. */
+export const LogInPromptContext: Context<() => void>;
+
+/** For a control that would write. The function it returns runs `write` while `useViewer()` answers `user`; otherwise it opens the log-in prompt and runs nothing. */
+export function useWriteGuard(): (write: () => void) => void;
+```
+
+`frontend/src/components/shell/LogInPrompt.tsx`:
+
+```tsx
+type LogInPromptProps = {
+  open: boolean;
+  onClose: () => void;
+  /** "Log in" in the top bar: the prompt is anchored to it, and it stays lit in the scrim's hole. */
+  anchor: RefObject<HTMLButtonElement | null>;
+};
+export default function LogInPrompt({ open, onClose, anchor }: LogInPromptProps): ReactNode;
+```
+
+- `LogInPrompt` must be a non-modal Radix Popover anchored to `anchor`, over `Scrim` at `half` with `anchor` in its hole. Its content is the sentence "Log in to use all of Flashy." alone, with `role="status"`, in white at the banner's text size, straight on the dimmed screen with no block behind it, beneath "Log in" with its right edge on "Log in"'s right edge.
+- Opening it must move no focus: focus stays on the control that was pressed.
+- A press on the scrim, Escape, a press on "Log in" and a change of address must each close it. A press on "Log in" still opens Clerk's dialog. While it is open the page cannot scroll, and the dimming covers both banners and the whole window.
+- `AppShell` must mount `LogInPrompt` once, hold whether it is open, and provide the way to open it through `LogInPromptContext`. `TopBar` and `AuthSlot` hand it the ref of "Log in".
+- A guarded press of a guest must send no request and change nothing on the page, its address included.
+- These handlers must go through `useWriteGuard`:
+  - `frontend/src/pages/RunPage.tsx`: the press on "End run", before its question opens; the choosing of a rating, `rate`; and "Next card".
+  - `frontend/src/pages/PracticeDetailsPage.tsx`: "Start run". With an active run, a guest's "Continue run" opens `/runs/<active_run_id>` and sends no request, since it changes nothing.
+  - `frontend/src/pages/HomePage.tsx`: a completed run's play button, and the fourth step "Start run".
+  - `frontend/src/components/run/RerunButton.tsx`: "Re-run".
+  - `frontend/src/components/run/RunBreakdown.tsx`: "Re-run these".
+- These are not guarded, since each only shows something: "Show answer", the opening of an answer's "Rate" list, "Edit card", an active run's play button on Home, and every press that opens a form.
+- Every existing test of a page or a component must run as a user unless it says otherwise.
+- The vocabulary gains one row, in the App area:
+
+```
+| App | Telling a guest to log in | "Log in to use all of Flashy." | Beneath "Log in", over the dimmed screen, after a guest presses something that would change the example library | `LogInPrompt`; `useWriteGuard` |
+```
+
+Guidance: `Popover.Anchor` takes `virtualRef`; `Popover.Content` with `side="bottom"`, `align="end"` and `onOpenAutoFocus` prevented; the `Scrim` in the popover's portal beneath the content, as `RatingChip` places its own. `frontend/src/test/setup.ts` can give every test file a default of `@clerk/react`'s `useUser` that reads as a user, which `frontend/src/test/mocks/clerk.ts` overrides in the tests that name a viewer.
+
+**Out of scope**
+
+- The form greyed with Done alone beneath the dimming, which drawings 3 and 4 show: T3 and T4. Until then a guest's form looks as a user's does.
+- Drawing 4's first three screens, the menu, a sheet and a question on a wide screen: they stand.
+- A Radix Dialog for the prompt, the sentence drawn by `Scrim`, or the sentence on an ink block: never; ADR 134 and PDR 058 reject each.
+- A sentence at the control that was pressed, or a message that pops up and goes: never; PDR 058.
+- "Log in" as the only thing that can be pressed once the screen has dimmed: never; PDR 058.
+- The API client refusing a guest's write and opening the prompt: never; ADR 134 rejects it.
+- "Rate" itself dimming the screen: never; PDR 058.
+
+**Done when**
+
+- In `frontend/src/lib/viewer.test.tsx`, `the guard runs the write for a user, and for a guest opens the prompt and runs nothing` passes.
+- In `frontend/src/components/shell/LogInPrompt.test.tsx`, `says its sentence with role status and takes no focus` passes.
+- `closes on a press on the scrim and on Escape` passes.
+- In `frontend/src/components/shell/AppShell.test.tsx`, `opens the prompt from the context and closes it on a press on Log in and on a change of address` passes.
+- In `frontend/src/pages/RunPage.test.tsx`, `a guest opens the Rate list, and choosing a rating opens the prompt and sets no rating` passes.
+- `a guest's End run opens the prompt and no question` passes.
+- In `frontend/src/pages/PracticeDetailsPage.test.tsx`, `a guest's Start run opens the prompt and sends nothing, and Continue run opens the active run` passes.
+- In `frontend/src/pages/HomePage.test.tsx`, `a guest's play button on a completed run opens the prompt and sends nothing` passes.
+- In `frontend/src/components/run/RerunButton.test.tsx`, `a guest's Re-run opens the prompt and sends nothing` passes.
+- In `frontend/src/components/run/RunBreakdown.test.tsx`, `a guest's Re-run these opens the prompt and sends nothing` passes.
+- `grep -c "LogInPrompt" docs/vocabulary.md` prints `1`.
+- In headless Chromium as a guest at 390 by 844, on a practice's page with no active run: a press on "Start run" dims the window, "Log in to use all of Flashy." stands beneath "Log in" with one right edge, `document.elementFromPoint` at "Log in"'s centre is "Log in", and no `/api` request with a method other than `GET` was sent; a press on the dimming brings the page back.
+- The same at 1440 by 900, where the dimming's box is the window's and the sentence's right edge is "Log in"'s.
+- In headless Chromium as a guest, with the prompt open and the connection then lost: the connection banner appears, and `document.elementFromPoint` at "Log in"'s new centre is still "Log in".
+- In headless Chromium as a guest on a run's card: "Show answer" shows the answers, "Rate" opens four ratings, and choosing one dims the window and leaves the chip reading "Rate".
+
+**Debrief**
+
+None.
+
+### T3 — A guest's card and deck forms
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+New card, Edit card, New deck and Edit deck open for a guest greyed and unchangeable, with Done alone at the foot, and a press on anything they hold opens the log-in prompt.
+
+**Dependencies**
+
+- T2: `useWriteGuard`, and the prompt it opens.
+
+**Files**
+
+- `frontend/src/components/library/CardStandaloneForm.tsx`
+- `frontend/src/components/library/CardStandaloneForm.test.tsx`
+- `frontend/src/components/library/CardFieldsForm.tsx`
+- `frontend/src/components/library/CardFieldsForm.test.tsx`
+- `frontend/src/components/library/DeckEditor.tsx`
+- `frontend/src/components/library/DeckEditor.test.tsx`
+- `frontend/src/components/ui/PickerCombobox.tsx`
+- `frontend/src/components/ui/PickerCombobox.test.tsx`
+- `frontend/src/components/ui/ReadOnlyButton.tsx` (new)
+- `frontend/src/components/ui/ReadOnlyButton.test.tsx` (new)
+
+**Details**
+
+PDR 058 and ADR 134, with drawing 2's second screen as a constraint on a guest's form. `CardStandaloneForm` and `DeckEditor` read `useViewer()`, and while it answers `guest`:
+
+- Every text input must be `readOnly`, and every other control the form holds that a user could press must carry `aria-disabled="true"`. None of them may be `disabled`, since a browser gives a handler no press on a disabled control.
+- A control a user's form disables too stays `disabled` as it is, since its press would change nothing for anyone: in `DeckEditor`, a field's type `<select>`, the first field's move up, the last field's move down, and remove while the deck has two fields.
+- Each is greyed: an input keeps its white surface and its line-grey outline and writes its value in the aside grey, as drawing 2 draws it; a button takes the look of a Create that is not ready in `SubmitButton`, a line-grey outline, a white surface, aside-grey words and no shadow.
+- A press on any of them must go through `useWriteGuard`, so it opens the prompt, and must change nothing: no value, no field's place, no list opened by the deck picker.
+- The bar at the foot must hold "Done" as its one button, in `FormBar`. It fills the bar's width, as drawing 2 draws it and as `DeckBoardPage`'s Done does. Done leaves as the form's Cancel leaves when nothing is unsaved, and asks nothing. On Edit deck, which has a Done today, it leaves as that Done leaves.
+- The form shows no sentence of its own about being a guest.
+- "Delete card" and "Delete deck" stay where they are, greyed, and a press opens the prompt; no deletion-impact read is sent.
+- Edit deck shows no Undo.
+- Every handler that starts a write must go through `useWriteGuard` as well: `handleSubmit` and `handleDelete` in `CardStandaloneForm`, and `handleSave` and `handleDeleteDeck` in `DeckEditor`.
+
+A shared input takes the press as a prop, and reads no viewer itself:
+
+```ts
+// CardFieldsForm's props, and PickerCombobox's, each gain:
+/** When given, every input is read only and greyed, opens nothing, and a press on one calls this. */
+onReadOnlyPress?: () => void;
+```
+
+`DeckPicker` hands it to `PickerCombobox` with its other props.
+
+A guest's greyed button is one shared component, `frontend/src/components/ui/ReadOnlyButton.tsx`, which holds `aria-disabled` and the greyed look. A form never writes `aria-disabled` itself: `frontend/src/test/formParts.test.ts` fails on a form's source that does, and that test stays as it is and must pass.
+
+```tsx
+type ReadOnlyButtonProps = {
+  /** Runs on a press; the button does nothing else. */
+  onPress: () => void;
+  /** The button's shape and size; the component adds the greyed colours. */
+  className?: string;
+  'aria-label'?: string;
+  children: ReactNode;
+};
+/** A button that shows what cannot be changed: `aria-disabled`, greyed, never `disabled`. */
+export default function ReadOnlyButton(props: ReadOnlyButtonProps): ReactNode;
+```
+
+While `useViewer()` answers `user`, each form is as it is today.
+
+**Out of scope**
+
+- A guest's Edit card with no "Delete card" beneath its fields, as drawing 2's second screen, drawing 3 and drawing 4's fourth screen show it: not built; the button stays, greyed, as ADR 134 greys what a form holds.
+- The inputs `disabled`, as the drawing's markup writes them: never; ADR 134.
+- A form that works until Create, Save or Delete: never; PDR 058 rejects it.
+- A sentence on the form saying the guest is not logged in: never; PDR 058.
+- New practice, Edit practice and a deck's board: T4.
+- Any length, weight or outline in drawing 2 that differs from what the app draws today, but for the greyed inputs and Done: never.
+
+**Done when**
+
+- In `frontend/src/components/ui/ReadOnlyButton.test.tsx`, `is aria-disabled, never disabled, and a press calls onPress` passes.
+- Every case of `frontend/src/test/formParts.test.ts` passes, the file unchanged.
+- In `frontend/src/components/library/CardFieldsForm.test.tsx`, `with onReadOnlyPress every input is read only and a press on one calls it` passes.
+- In `frontend/src/components/ui/PickerCombobox.test.tsx`, `with onReadOnlyPress a press opens no list and calls it` passes.
+- In `frontend/src/components/library/CardStandaloneForm.test.tsx`, `a guest's Edit card is read only, with Done alone, and a press on a field opens the prompt` passes.
+- `a guest's Delete card opens the prompt and asks no question` passes.
+- `a guest's New card holds a greyed deck picker and Done alone` passes.
+- In `frontend/src/components/library/DeckEditor.test.tsx`, `a guest's Edit deck is read only, with Done alone and no Undo, and a press on a field's name opens the prompt` passes.
+- `a guest's Delete deck opens the prompt and reads no deletion impact` passes.
+- Every case those four files held before this task still passes, as a user.
+- In headless Chromium as a guest at 390 by 844: Edit card of a "Common words" card shows five greyed inputs holding the card's values, "Delete card" greyed, and a bar holding "Done" alone; a press on the first input dims the window with the sentence beneath "Log in"; a press on the dimming brings the form back, and the input's value is what it was; "Done" opens the deck's page.
+- In headless Chromium as a guest at 390 by 844, New deck, Edit deck and New card each show a bar holding "Done" alone, and no element in `<main>` is `disabled` but those a user's form disables too.
+
+**Debrief**
+
+None.
+
+### T4 — A guest's practice forms and board
+
+**Status**
+
+- [ ]
+
+**Goal**
+
+New practice, Edit practice and a deck's board open for a guest greyed and unchangeable, with Done alone at the foot, so every form does.
+
+**Dependencies**
+
+- T3: `PickerCombobox`'s `onReadOnlyPress`; `ReadOnlyButton`; the greyed look of a guest's form.
+- T2: `useWriteGuard`; `docs/vocabulary.md`, which it shares.
+
+**Files**
+
+- `frontend/src/pages/PracticeCreatePage.tsx`
+- `frontend/src/pages/PracticeCreatePage.test.tsx`
+- `frontend/src/pages/PracticeEditPage.tsx`
+- `frontend/src/pages/PracticeEditPage.test.tsx`
+- `frontend/src/pages/DeckBoardPage.tsx`
+- `frontend/src/pages/DeckBoardPage.test.tsx`
+- `frontend/src/components/library/FieldAssignmentBoard.tsx`
+- `frontend/src/components/library/FieldAssignmentBoard.test.tsx`
+- `docs/vocabulary.md`
+
+**Details**
+
+PDR 058 and ADR 134. `PracticeCreatePage`, `PracticeEditPage` and `DeckBoardPage` read `useViewer()`, and while it answers `guest` each keeps every constraint T3 gives a guest's form: `readOnly` or `aria-disabled` and never `disabled`, greyed, each greyed button a `ReadOnlyButton`, each press through `useWriteGuard`, "Done" as the one button in `FormBar`, and no sentence of its own.
+
+- New practice: the name, the deck picker and each picked deck's remove button are greyed. A deck the address already names stays listed, and "N selected" stays above "Done" while one is.
+- Edit practice: the name is greyed, and "Delete practice" stays, greyed, its press opening the prompt and no question.
+- A deck's board: `FieldAssignmentBoard` is drawn `readOnly`, with "Done" alone, as it is today for a board that cannot be changed. Where a user could change the board, a practice's board with no active run, a guest's press on a chip or a count opens the prompt, and no line stands above the board. Where a user could not, the board and its line are what a user sees.
+- `FieldAssignmentBoard`'s props gain:
+
+```ts
+/** With `readOnly`, when given: every chip and count is `aria-disabled` in place of `disabled`, and a press on one calls this. */
+onReadOnlyPress?: () => void;
+```
+
+- Every handler that starts a write must go through `useWriteGuard`: `createMutation` in `PracticeCreatePage`, `saveMutation` and `deleteMutation` in `PracticeEditPage`, and `saveMutation` in `DeckBoardPage`.
+- The vocabulary's row "Leaving when nothing is unsaved" must read, in Where, `Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page; every form, while not logged in`.
+
+While `useViewer()` answers `user`, each form is as it is today.
+
+**Out of scope**
+
+- A guest moving a field on a board: never; PDR 058.
+- A board's chips `disabled` for a guest where a user could change them: never; ADR 134.
+- The card sheet's key in a completed run's summary: an unsettled decision; it stays as it is.
+- Anything the server does for a guest: it stands; a guest's write that reached it would still answer 401.
+
+**Done when**
+
+- In `frontend/src/components/library/FieldAssignmentBoard.test.tsx`, `read only with onReadOnlyPress, a chip is aria-disabled, opens no sheet and calls it` passes.
+- In `frontend/src/pages/PracticeCreatePage.test.tsx`, `a guest's New practice is greyed, with Done alone, and a press on the picker opens the prompt` passes.
+- In `frontend/src/pages/PracticeEditPage.test.tsx`, `a guest's Edit practice is read only, with Done alone, and Delete practice opens the prompt` passes.
+- In `frontend/src/pages/DeckBoardPage.test.tsx`, `a guest's board of a practice with no active run is greyed with no line, and a press on a chip opens the prompt` passes.
+- `a guest's board of a practice with an active run reads as a user's` passes.
+- Every case those four files held before this task still passes, as a user.
+- `grep -c "every form, while not logged in" docs/vocabulary.md` prints `1`.
+- In headless Chromium as a guest, at 390 by 844 and at 1440 by 900, `/decks/new`, `/decks/<id>/edit`, `/cards/new`, `/cards/<id>/edit`, `/practices/new`, `/practices/<id>/edit` and the board of "French from English" at `/practices/<id>/decks/<id>` each show a bar whose one button is "Done", no element in `<main>` is `disabled` but those a user's form disables too, and "Done" leaves the form.
+- In headless Chromium as a guest, a screenshot of Edit card with a press made on its first input, at 390 by 844 beside drawing 3 and at 1440 by 900 beside drawing 4's fourth screen, differs from the drawing only in what T2's and T3's Out of scope name.
+- In headless Chromium as a guest at 390 by 844: presses on "Start run" on the page of "French from English", on its completed run's play button on Home, on "Re-run" and "Re-run these" on that run's page, and on "End run" on an active run's card each dim the window with the sentence beneath "Log in", and Escape brings each page back.
+- In headless Chromium as a user, with the three variables set, at 390 by 844: Edit card shows Cancel and Save, a value typed in a field stays, and "Start run" on a practice's page opens a run's card.
+
+**Debrief**
+
+None.
