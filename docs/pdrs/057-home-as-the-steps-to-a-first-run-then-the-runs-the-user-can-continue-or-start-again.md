@@ -20,7 +20,7 @@ PDR 040 starts a next run of a practice from a completed run, under the same pra
 
 A practice the user runs every day has a new completed run every day.
 
-PDR 053 lets a visitor who is not logged in use the app as a new user does, so every visitor's Home starts at the steps to a first practice.
+PDR 053 shows a visitor who is not logged in an example library whose runs Home lists, so a user first meets the steps to a first practice after logging in to a new account.
 
 Today Home shows three steps to a first practice until the user has made one, and lists runs from then on. A user who has made a practice and started no run has no run to list, so Home shows its heading and the way to All practices and nothing between.
 

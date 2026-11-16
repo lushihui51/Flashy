@@ -22,7 +22,7 @@ More colors can mark more states, but each one added is another meaning for the 
 
 The app is named Flashy.
 
-PDR 053 lets a visitor who is not logged in use every page of the app, and keeps "Log in" in the top bar for the one who wants an account. Only a visitor who is not logged in sees "Log in". Today "Log in" is yellow.
+PDR 053 shows a visitor who is not logged in every page of the app, filled from an example library, and keeps "Log in" in the top bar for the one who wants an account. Only a visitor who is not logged in sees "Log in". Today "Log in" is yellow.
 
 PDR 015 gave the app these eight colors and their meanings, and let no screen show more than one yellow thing besides the logo. This record replaces PDR 015 to make "Log in" yellow on every page a visitor who is not logged in sees, and restates the rest unchanged.
 
