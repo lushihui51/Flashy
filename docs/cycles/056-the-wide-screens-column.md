@@ -68,7 +68,7 @@ PDR 055: `RunCardView` and `ZONE_CLASS` in `frontend/src/pages/RunPage.tsx` must
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -152,4 +152,23 @@ A percentage in `left` is of the viewport less a scrollbar that takes room, whic
 
 **Debrief**
 
-None.
+- `reports fixed beside no column utility and passes each of the three` passed. Run against HEAD's `FormBar.tsx`, `BottomSheet.tsx`, `ConfirmDialog.tsx`, `SideDrawer.tsx` and `FieldValue.tsx`, the scan reported each of the five panels; on this branch it reports none.
+- `finds no fixed element outside the column in any source file` passed.
+- `a picture's dialog covers the window and closes on a press outside its surface` passed.
+- `a sound's dialog is held to the column` passed.
+- `grep -c "container-column: 40rem" frontend/src/index.css` printed `1`.
+- At 1440 by 900, scrollbars shown, signed out with the local bypass, by `getBoundingClientRect`:
+  - Your library, which does not scroll: layout viewport 1440; `<header>` and `<main>` 400 to 1040, 640 wide, gaps 400 and 400. A deck's page and Edit card, which scroll: layout viewport 1425; both 392.5 to 1032.5, 640 wide, gaps 392.5 and 392.5.
+  - Connection lost, on Your library: the banner 400 to 1040, `<main>` 400 to 1040.
+  - Edit card: the bar at the foot 392.5 to 1032.5, `<main>` 392.5 to 1032.5.
+  - The menu on Your library: panel's left 400, `<main>`'s 400, the dimming 0,0 to 1440,900. On a deck's page, under a 15px scroll lock: panel's left 392.5, `<main>`'s 392.5, the dimming 0,0 to 1440,900.
+  - The New sheet on Your library, which does not scroll: panel 400 to 1040, `<main>` 400 to 1040. On a deck's page, which scrolls, under a 15px scroll lock: panel 392.5 to 1032.5, `<main>` 392.5 to 1032.5. The dimming 0,0 to 1440,900 on both.
+  - Discard on a changed card, under a 15px scroll lock: panel 412.5 to 1012.5, `<main>` 392.5 to 1032.5, the dimming 0,0 to 1440,900. Nothing was saved.
+- At 390 by 844, scrollbars hidden as on a phone: `<header>` and `<main>` 0 to 390 on Your library, a deck's page and Edit card; the bar at the foot 0 to 390; the New sheet's panel 0 to 390, on a page that scrolls and one that does not; the menu's panel left 0, 288 wide; Discard's panel 20 to 370.
+- The six screenshots at 1440 by 900, beside drawings 1, 4 and 5, place every element as the drawings do. They differ in: no guest's banner; "Log in" without an outline and a shadow; the search beneath the top bar; Edit card editable, with Cancel and Save, not greyed with Done alone; and the account's own decks, cards and mastery. Out of scope names each of these. The menu's panel runs from the window's top under the header, as Details says, so it shows beneath the header as drawing 4 shows it.
+- Departures from guidance:
+  - The scan reads literals with TypeScript's parser, `ts.createSourceFile`, where comments are not nodes, rather than stripping comments from the text. It reads a template literal's own text, substitutions left out, as one class list. Like `stickyOffset.test.ts`, it walks `src/test/`'s helpers as well as the components.
+  - On a picture's dialog, a click on the margin outside the surface closes it, not a pointerdown. Radix closes on pointerdown outside a panel. This dialog is the whole window, so its margin is inside the panel, and the click arrives after the release, so nothing on the page beneath is pressed.
+  - `ConfirmDialog` keeps its side margin as `mx-5`, and a sound's dialog keeps its margin as `mx-4`, each beside `inset-x-column`.
+  - `FormBar.test.tsx`'s first test now asserts `inset-x-column`, and its name reads `is fixed to the foot of the column and carries the mark a reveal clears`.
+- Read `MediaChip`'s picture branch in `frontend/src/components/run/FieldValue.tsx`: no screen can make a picture today, so its layout was checked in jsdom alone, which does no layout. Also read `fixedOutsideColumn` in `frontend/src/test/fixedColumn.test.ts`: it is what keeps every future element fixed to the viewport on the column.

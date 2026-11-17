@@ -84,25 +84,42 @@ function MediaChip({ field, block }: { field: ResolvedFieldValue; block: boolean
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-(--color-ink)/50" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          className="fixed inset-x-4 top-1/2 z-60 -translate-y-1/2 rounded-2xl bg-(--color-surface) p-4 focus:outline-none"
-        >
-          <Dialog.Title className="text-sm font-semibold text-(--color-ink)">
-            {fieldLabel(field.name)}
-          </Dialog.Title>
-          <div className="mt-3">
-            {field.type === 'image' ? (
+        {field.type === 'image' ? (
+          // A picture is shown as large as the window allows, so its dialog covers the window and
+          // the dimming shows only in the margin around the surface; a press there closes it, as a
+          // press on the dimming would.
+          <Dialog.Content
+            aria-describedby={undefined}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setOpen(false);
+            }}
+            className="fixed inset-0 z-60 flex p-4 focus:outline-none"
+          >
+            <div
+              data-testid="picture-surface"
+              className="flex min-h-0 flex-1 flex-col gap-3 rounded-2xl bg-(--color-surface) p-4"
+            >
+              <Dialog.Title className="text-sm font-semibold text-(--color-ink)">
+                {fieldLabel(field.name)}
+              </Dialog.Title>
               <img
                 src={field.value}
                 alt={field.name}
-                className="max-h-[70vh] w-full rounded-lg object-contain"
+                className="min-h-0 w-full flex-1 rounded-lg object-contain"
               />
-            ) : (
-              <audio controls src={field.value} className="w-full" />
-            )}
-          </div>
-        </Dialog.Content>
+            </div>
+          </Dialog.Content>
+        ) : (
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed inset-x-column top-1/2 z-60 mx-4 -translate-y-1/2 rounded-2xl bg-(--color-surface) p-4 focus:outline-none"
+          >
+            <Dialog.Title className="text-sm font-semibold text-(--color-ink)">
+              {fieldLabel(field.name)}
+            </Dialog.Title>
+            <audio controls src={field.value} className="mt-3 w-full" />
+          </Dialog.Content>
+        )}
       </Dialog.Portal>
     </Dialog.Root>
   );

@@ -56,7 +56,7 @@ export default function AppShell() {
       <header
         ref={headerRef}
         data-reveal-clear
-        className="sticky top-0 z-40 flex flex-col gap-0.5 bg-(--color-ground) pb-2"
+        className="sticky top-0 z-40 mx-auto flex w-full max-w-column flex-col gap-0.5 bg-(--color-ground) pb-2"
       >
         {connectionStatus !== 'online' && <ConnectionBanner status={connectionStatus} />}
         <TopBar
@@ -88,7 +88,7 @@ export default function AppShell() {
         triggerRef={createButtonRef}
         hasDecks={decks ? decks.length > 0 : undefined}
       />
-      <main>
+      <main className="mx-auto w-full max-w-column">
         <Outlet />
       </main>
       <ScrollRestoration />

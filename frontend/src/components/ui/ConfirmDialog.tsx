@@ -48,7 +48,7 @@ export default function ConfirmDialog({
         />
         <Dialog.Content
           aria-describedby={undefined}
-          className="tappable fixed inset-x-5 top-1/2 z-80 flex -translate-y-1/2 flex-col gap-3.5 rounded-block bg-(--color-surface) p-5 focus:outline-none"
+          className="tappable fixed inset-x-column top-1/2 z-80 mx-5 flex -translate-y-1/2 flex-col gap-3.5 rounded-block bg-(--color-surface) p-5 focus:outline-none"
         >
           <Dialog.Title className="text-title font-bold text-(--color-ink)">
             {title}

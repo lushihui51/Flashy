@@ -42,7 +42,7 @@ export default function FormBar({ sentence, count, children }: FormBarProps): Re
         ref={barRef}
         data-reveal-clear
         data-testid="form-bar"
-        className="ruled-top-line fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 bg-(--color-ground) px-4 pt-3 pb-4"
+        className="ruled-top-line fixed inset-x-column bottom-0 z-10 flex flex-col gap-2 bg-(--color-ground) px-4 pt-3 pb-4"
       >
         {sentence && (
           <p role="alert" className="text-center text-sm text-(--color-wrong)">
