@@ -96,7 +96,7 @@ The live site, under ADR 130: the Project line of `AGENTS.md` that begins "Auth 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -158,7 +158,11 @@ Guidance: `main` opens `Session(engine)` from `app/database.py`, and the tests c
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_example_user.py -v` printed `9 passed`, among them `test_detach_makes_the_account_the_example_user` (the row's `timezone`, `created_at` and deck unchanged after `detach`), `test_detach_is_refused_for_an_unknown_id_and_when_an_example_user_exists`, `test_attach_gives_the_example_user_an_identity`, `test_attach_is_refused_with_no_example_user_and_for_an_id_in_use` and `test_main_exits_1_and_writes_nothing_on_a_refusal` (four refusals, four lines on stderr, nothing on stdout, both rows unchanged).
+- The full `pytest` printed `393 passed`, `tests/api_tests/test_layering_guard.py` among them. Nothing under `app/models/`, `app/routers/` or `frontend/` changed, so neither `npm run gen:api` nor the frontend checks ran.
+- No departure from guidance: `main` opens `Session(engine)`, and the tests of `main` replace the script's `engine` with `tests/conftest.py`'s through `monkeypatch`.
+- Beyond the Done when, `test_main_prints_the_rows_id_and_exits_0` shows `main` printing the row's id and exiting 0 for `detach` then `attach`. A command line missing its arguments is argparse's usage error, exit status 2, not a refusal. A second process writing between the script's checks and its commit would surface as the `IntegrityError` of `db_update_app_user_clerk_id`, a traceback with nothing written, not as a one-line refusal.
+- Read the module docstring of `app/scripts/example_user.py`, which is the script's usage for the owner, and the module docstring of `app/database_ops/app_user.py`, which now lists taking off and giving back the Clerk identity among the table's writes.
 
 ### T3 — A guest's reads
 

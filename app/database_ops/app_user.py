@@ -2,8 +2,9 @@
 chain. A user's row is keyed by `clerk_user_id` and created lazily on first sight of a
 Clerk id; the example user's row is the one row with no Clerk identity, and nothing here
 creates it. These are the only operations the table has: a row is created, its timezone
-is kept in step with the `X-Timezone` header, its first practice is stamped once, and
-nothing else ever writes it. Unlike every other module here the reads are not
+is kept in step with the `X-Timezone` header, its first practice is stamped once, its
+Clerk identity is taken off to make it the example user or given back to the example
+user, and nothing else ever writes it. Unlike every other module here the reads are not
 ownership-scoped, because this table *is* the ownership scope."""
 
 import uuid
@@ -39,6 +40,16 @@ def db_update_app_user_timezone(db: Session, user: AppUser, timezone: str) -> Ap
     """`user` is a row this session already loaded, so assigning the attribute is
     enough for the unit of work to track it — no `add` is needed."""
     user.timezone = timezone
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def db_update_app_user_clerk_id(db: Session, user: AppUser, clerk_user_id: str | None) -> AppUser:
+    """Sets the Clerk identity of `user`, a row this session already loaded, and commits;
+    None makes the row the example user. Raises `IntegrityError` when another row
+    already holds `clerk_user_id`, or, for None, when an example user already exists."""
+    user.clerk_user_id = clerk_user_id
     db.commit()
     db.refresh(user)
     return user
