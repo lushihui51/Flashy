@@ -177,7 +177,7 @@ Three rows change in their Code column alone, and each must read exactly:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -230,4 +230,13 @@ Guidance: the fourth step's start is a `useMutation` of its own in `HomePage`, b
 
 **Debrief**
 
-None.
+- `a user with nothing made reads "0 of 4" over New deck, New card, New practice and Start run` PASSED: the items read `1New deck`, `2New card`, `3New practice`, `4Start run`, and the list holds no button.
+- `with a practice made reads "3 of 4" and makes Start run the one main action` PASSED: the first three are struck through, "Start run" is a button with the main action's class and no icon, the list holds no link, and the page holds one element with the main action's class.
+- `Start run starts the newest practice and opens its run` PASSED: the request goes to `POST /api/practices/p1/runs`, `p1` being `steps.practice_id`, and the address becomes `/runs/first-run`.
+- `a start refused for no cards says so beneath the fourth step and keeps the steps` PASSED: the alert reads the vocabulary's sentence for `no_cards`, sits inside the fourth list item, and the list still holds four items under "3 of 4".
+- `holds no bar while the user has no practice, and All practices once they have one` PASSED. It replaces the old case `holds no bar while the steps show`.
+- `grep -c '"N of 4"' docs/vocabulary.md` printed `1`, and `grep -c "or the Start run step" docs/vocabulary.md` printed `1`.
+- Browser check in headless Chromium at 390 by 844, signed out of Clerk, as a new account from a second API on port 8001 (`DEV_AUTH_USER_ID=browser-check-055-t3-<epoch> ENV=development`, `/api` sent there by `page.route`). Home read "0 of 4" over the four steps, and the only yellow controls were the top bar's "Log in" and "New deck". Then the deck "Ports", a card (SSH, 22) in it and the practice "Ports drill" were made from the top bar's New, and Home read "1 of 4", then "2 of 4", then "3 of 4". At "3 of 4", "New deck", "New card" and "New practice" were struck through, the yellow controls were "Log in" and the "Start run" button, and the bar at the foot read "All practices". Pressing "Start run" opened `/runs/2a8897f8-…` showing the card's prompt "SSH". Home then read "Home | Active | 2026-11-16 | Ports drill | Ports | All practices" and had no steps list. After "Delete deck" was confirmed (the DELETE answered 204), Home read "Home | All practices" and still had no steps list. The account's rows stay in the dev database.
+- Full `npx vitest run`: 736 passed. `npm run lint` is clean, and `npm run build` succeeds with only the chunk-size warning it already gave.
+- No departure from guidance. One choice the file leaves open: "Start run" is disabled while its start is under way, as Start run on a practice's page is.
+- What to read: `FirstPracticeSteps` in `frontend/src/pages/HomePage.tsx`. `STEPS` now gives each step its own `isDone` and a null `to` for the step that starts a run, in place of the old flag. `HomePage`'s interface comment now says the steps show until the first run, which closes T1's note. The bar at the foot now sits outside the runs branch, under one condition: no steps, or a practice made.

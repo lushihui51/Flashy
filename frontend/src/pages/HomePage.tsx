@@ -13,28 +13,39 @@ import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
 
 type HomeSteps = components['schemas']['HomeSteps'];
-type StepFlag = Extract<keyof HomeSteps, 'has_deck' | 'has_card'>;
 type HomeRun = components['schemas']['HomeRun'];
 type ChangeCards = components['schemas']['RunBreakdownRead']['cards'];
 
-// In the order the things nest. The last has no flag: while the steps show, the user has made
-// no practice.
-const STEPS: { label: string; to: string; flag: StepFlag | null }[] = [
-  { label: 'New deck', to: '/decks/new', flag: 'has_deck' },
-  { label: 'New card', to: '/cards/new', flag: 'has_card' },
-  { label: 'New practice', to: '/practices/new', flag: null },
+// In the order the things nest. The last starts a run rather than opening a form, and is never
+// done while the steps show: the user's first run ends them.
+const STEPS: { label: string; to: string | null; isDone: (steps: HomeSteps) => boolean }[] = [
+  { label: 'New deck', to: '/decks/new', isDone: (steps) => steps.has_deck },
+  { label: 'New card', to: '/cards/new', isDone: (steps) => steps.has_card },
+  { label: 'New practice', to: '/practices/new', isDone: (steps) => steps.practice_id !== null },
+  { label: 'Start run', to: null, isDone: () => false },
 ];
 
 const STEP_CIRCLE_CLASS =
   'flex size-7.5 shrink-0 items-center justify-center rounded-full text-sm font-semibold';
+const MAIN_STEP_CLASS =
+  'tappable flex min-h-field min-w-0 flex-1 items-center justify-start gap-2 rounded-2xl bg-(--color-main-action) px-4.5 py-1.5 text-action font-semibold text-(--color-ink)';
 const BLOCK_CLASS =
   'tappable flex flex-col divide-y divide-(--color-line) rounded-block bg-(--color-surface)';
 
-function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
+type FirstPracticeStepsProps = {
+  steps: HomeSteps;
+  /** Starts a run of `steps.practice_id`, from the last step. */
+  onStart: () => void;
+  /** Whether that start is under way, which holds the last step's button. */
+  starting: boolean;
+  /** The sentence beneath the last step after its start failed, or null. */
+  startError: string | null;
+};
+
+function FirstPracticeSteps({ steps, onStart, starting, startError }: FirstPracticeStepsProps) {
   const location = useLocation();
-  const isDone = (flag: StepFlag | null) => flag !== null && steps[flag];
-  const doneCount = STEPS.filter((step) => isDone(step.flag)).length;
-  const nextIndex = STEPS.findIndex((step) => !isDone(step.flag));
+  const doneCount = STEPS.filter((step) => step.isDone(steps)).length;
+  const nextIndex = STEPS.findIndex((step) => !step.isDone(steps));
 
   return (
     <>
@@ -44,7 +55,7 @@ function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
       </div>
       <ol aria-label="Your first practice" className={`mt-3 ${BLOCK_CLASS}`}>
         {STEPS.map((step, index) => {
-          if (isDone(step.flag)) {
+          if (step.isDone(steps)) {
             return (
               <li key={step.label} className="flex items-center gap-3 px-4 py-3.5">
                 <span className={`${STEP_CIRCLE_CLASS} bg-(--color-ink) text-(--color-surface)`}>
@@ -58,20 +69,38 @@ function FirstPracticeSteps({ steps }: { steps: HomeSteps }) {
           }
           if (index === nextIndex) {
             return (
-              <li key={step.label} className="flex items-center gap-3 px-4 py-3">
-                <span className={`${STEP_CIRCLE_CLASS} outlined-ink text-(--color-ink)`}>
-                  {index + 1}
-                </span>
-                <Link
-                  to={{
-                    pathname: step.to,
-                    search: returnAddressParams(location, 'cancelTo').toString(),
-                  }}
-                  className="tappable flex min-h-field min-w-0 flex-1 items-center justify-start gap-2 rounded-2xl bg-(--color-main-action) px-4.5 py-1.5 text-action font-semibold text-(--color-ink)"
-                >
-                  <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5 shrink-0" />
-                  {step.label}
-                </Link>
+              <li key={step.label} className="flex flex-col">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className={`${STEP_CIRCLE_CLASS} outlined-ink text-(--color-ink)`}>
+                    {index + 1}
+                  </span>
+                  {step.to === null ? (
+                    <button
+                      type="button"
+                      onClick={onStart}
+                      disabled={starting}
+                      className={MAIN_STEP_CLASS}
+                    >
+                      {step.label}
+                    </button>
+                  ) : (
+                    <Link
+                      to={{
+                        pathname: step.to,
+                        search: returnAddressParams(location, 'cancelTo').toString(),
+                      }}
+                      className={MAIN_STEP_CLASS}
+                    >
+                      <Plus aria-hidden="true" strokeWidth={2.8} className="h-3.5 w-3.5 shrink-0" />
+                      {step.label}
+                    </Link>
+                  )}
+                </div>
+                {step.to === null && startError && (
+                  <p role="alert" className="px-4 pb-3 text-sm text-(--color-wrong)">
+                    {startError}
+                  </p>
+                )}
               </li>
             );
           }
@@ -135,9 +164,10 @@ function RunSection({
   );
 }
 
-/** What the user can do next: the steps to a first practice until they have made one, then
- * their active runs and their recently completed runs, each a play button from a card and its
- * details a tap on its row away, over a bar leading to All practices. */
+/** What the user can do next: the steps to a first practice until they have started a run, the
+ * last starting a run of their newest practice, then their active runs and their recently
+ * completed runs, each a play button from a card and its details a tap on its row away. A bar
+ * leading to All practices ends the page once the user has made a practice. */
 export default function HomePage() {
   usePageTitle('Home');
   const navigate = useNavigate();
@@ -162,6 +192,11 @@ export default function HomePage() {
   // so a refusal shows beneath that row alone.
   const startMutation = useMutation({
     mutationFn: (run: HomeRun) => startRun(run.practice_id),
+    onSuccess: (started) => navigate(`/runs/${started.id}`),
+  });
+  // The last step's start, apart from the play buttons' so its refusal shows beneath the step.
+  const firstStartMutation = useMutation({
+    mutationFn: (practiceId: string) => startRun(practiceId),
     onSuccess: (started) => navigate(`/runs/${started.id}`),
   });
 
@@ -213,7 +248,18 @@ export default function HomePage() {
         Home
       </h1>
       {steps ? (
-        <FirstPracticeSteps steps={steps} />
+        <FirstPracticeSteps
+          steps={steps}
+          onStart={() => {
+            if (steps.practice_id) firstStartMutation.mutate(steps.practice_id);
+          }}
+          starting={firstStartMutation.isPending}
+          startError={
+            firstStartMutation.isError
+              ? failureSentence(firstStartMutation.error, 'Practice not found.')
+              : null
+          }
+        />
       ) : (
         <>
           {activeRuns.length > 0 && (
@@ -227,15 +273,17 @@ export default function HomePage() {
               {...runProps}
             />
           )}
-          <FormBar>
-            <Link
-              to="/practices"
-              className="tappable-sm flex h-action flex-1 items-center justify-center rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink)"
-            >
-              All practices
-            </Link>
-          </FormBar>
         </>
+      )}
+      {(!steps || steps.practice_id !== null) && (
+        <FormBar>
+          <Link
+            to="/practices"
+            className="tappable-sm flex h-action flex-1 items-center justify-center rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink)"
+          >
+            All practices
+          </Link>
+        </FormBar>
       )}
     </div>
   );
