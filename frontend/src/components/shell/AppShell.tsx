@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Outlet, ScrollRestoration } from 'react-router-dom';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import TopBar from 'src/components/shell/TopBar';
 import SideDrawer from 'src/components/shell/SideDrawer';
@@ -7,9 +7,10 @@ import AccountSheet from 'src/components/shell/AccountSheet';
 import CreateSheet from 'src/components/shell/CreateSheet';
 import ConnectionBanner from 'src/components/shell/ConnectionBanner';
 import ExampleBanner from 'src/components/shell/ExampleBanner';
+import LogInPrompt from 'src/components/shell/LogInPrompt';
 import { useConnectionStatus } from 'src/components/shell/useConnectionStatus';
 import { readDecks } from 'src/api/deck';
-import { loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
+import { LogInPromptContext, loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
 
 export default function AppShell() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,9 +19,16 @@ export default function AppShell() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const logInButtonRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const viewer = useViewer();
   const connectionStatus = useConnectionStatus();
+  const location = useLocation();
+
+  // The address the log-in prompt was opened at: it stands only while the address is that one,
+  // so any change of address closes it.
+  const [promptKey, setPromptKey] = useState<string | null>(null);
+  const openPrompt = useCallback(() => setPromptKey(location.key), [location.key]);
 
   // The viewer the page is drawn for, set once Clerk has loaded. A different answer after
   // that is a log-in or a log-out: the page stops being drawn, so nothing of one viewer's
@@ -82,8 +90,14 @@ export default function AppShell() {
           menuButtonRef={menuButtonRef}
           avatarButtonRef={avatarButtonRef}
           createButtonRef={createButtonRef}
+          logInButtonRef={logInButtonRef}
         />
       </header>
+      <LogInPrompt
+        open={promptKey === location.key}
+        onClose={() => setPromptKey(null)}
+        anchor={logInButtonRef}
+      />
       <SideDrawer
         open={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
@@ -100,7 +114,11 @@ export default function AppShell() {
         triggerRef={createButtonRef}
         hasDecks={decks ? decks.length > 0 : undefined}
       />
-      <main className="mx-auto w-full max-w-column">{drawsPage && <Outlet />}</main>
+      <main className="mx-auto w-full max-w-column">
+        <LogInPromptContext.Provider value={openPrompt}>
+          {drawsPage && <Outlet />}
+        </LogInPromptContext.Provider>
+      </main>
       <ScrollRestoration />
     </div>
   );

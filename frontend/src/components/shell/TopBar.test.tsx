@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRef } from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRouter } from 'src/test/testUtils';
@@ -34,6 +35,13 @@ describe('TopBar', () => {
     expect(screen.getByRole('link', { name: /flashy home/i })).toHaveAttribute('href', '/');
     expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('hands Log in to logInButtonRef', () => {
+    const logInButtonRef = createRef<HTMLButtonElement>();
+    renderTopBar({ logInButtonRef });
+
+    expect(logInButtonRef.current).toBe(screen.getByRole('button', { name: 'Log in' }));
   });
 
   it('has no link named All practices', () => {

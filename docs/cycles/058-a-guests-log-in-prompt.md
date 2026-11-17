@@ -107,7 +107,7 @@ Guidance: keep the last box and set state only when a frame's box differs from i
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -218,7 +218,29 @@ Guidance: `Popover.Anchor` takes `virtualRef`; `Popover.Content` with `side="bot
 
 **Debrief**
 
-None.
+- `the guard runs the write for a user, and for a guest opens the prompt and runs nothing` passes.
+- `says its sentence with role status and takes no focus` passes: the status reads exactly "Log in to use all of Flashy.", the scrim's class is `bg-(--color-ink)/50`, and "Start run", focused before the prompt opened, keeps focus.
+- `closes on a press on the scrim and on Escape` passes.
+- `opens the prompt from the context and closes it on a press on Log in and on a change of address` passes, as a guest under the real `AppShell`: the guarded press keeps focus on the pressed control, "Log in" closes the prompt and calls Clerk's `openSignIn` once, and a navigation to `/practices` closes it.
+- `a guest opens the Rate list, and choosing a rating opens the prompt and sets no rating` passes: the four ratings list, Good opens the prompt, the chip still reads "Rate", the address is unchanged and Next card stays disabled.
+- `a guest's End run opens the prompt and no question` passes, with no end request.
+- `a guest's Start run opens the prompt and sends nothing, and Continue run opens the active run` passes: Continue run opens `/runs/r1`, and neither press sends a request other than a GET.
+- `a guest's play button on a completed run opens the prompt and sends nothing` passes.
+- `a guest's Re-run opens the prompt and sends nothing` passes; `onError` is not called.
+- `a guest's Re-run these opens the prompt and sends nothing` passes; the address stays `/?kind=down`.
+- With `useWriteGuard` changed to run every write, all eight guest tests above fail; restored, they pass. Full suite: 765 passed.
+- `grep -c "LogInPrompt" docs/vocabulary.md` printed `1`.
+- Headless Chromium as a guest at 390 by 844, on the page of "French from English" with no active run: "Start run" dimmed the window, the scrim's box 0 0 390 844 in ink at 0.5; the sentence 197 to 374 by 99 to 119, white, 14px on a 20px line, on no background, "Log in" 297 to 374 by 45 to 89, so one right edge at 374 and 10px beneath, as drawing 3 places it; `document.elementFromPoint` at "Log in"'s centre (335.5, 67) was "Log in"; focus stayed on "Start run"; the root's overflow was `hidden`. A press on the dimming removed the prompt and the scrim, the address unchanged. No `/api` request but GET was sent.
+- At 1440 by 900: the scrim's box 0 0 1440 900; the sentence 847 to 1024, "Log in" 947 to 1024, one right edge at 1024 and 10px beneath, as drawing 4's fourth screen places it; `elementFromPoint` at (985.5, 67) was "Log in"; a press on the dimming brought the page back at the same address; no request but GET.
+- With the prompt open at 1440 by 900 and the browser then taken offline, the offline banner appeared above the guest's banner, "Log in" moved from y 45 to y 83, the prompt stayed open, `elementFromPoint` at the new centre (985.5, 105) was "Log in", and the sentence's right edge was still 1024, 10px beneath. Escape closed it.
+- On the run card of "Two at random" at 390 by 844: "Show answer" showed the answers and two chips, "Rate Korean" opened Again, Hard, Good and Easy with no prompt, and Good dimmed the window, the scrim 0 0 390 844 in ink at 0.5, the chip still reading "Rate" at the same address; no request but GET.
+- Every browser check ran against the dev server on 5173, its `/api` routed by Playwright to `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`, now stopped.
+- Departure from guidance: `LogInPrompt` also prevents `onFocusOutside`. Without it, choosing a rating opened the prompt and Radix closed it at once, since the rating's list hands focus back to its chip, outside the prompt; the browser check found it, and `stays open while focus moves` in `frontend/src/components/shell/LogInPrompt.test.tsx` fails without it.
+- Departure from guidance: `frontend/src/test/setup.ts` imports `src/test/mocks/clerk`, whose mock of `@clerk/react` then covers every test file, and signs in before each test; `frontend/src/test/mocks/clerk.ts` is unchanged.
+- In the page and component tests, a spy given through `LogInPromptContext` stands in for the shell, so "opens the prompt" there means the opener was called; the shell's test shows the opener opening the prompt.
+- Added beyond the Done when: `a guest's Start run step opens the prompt and sends nothing` in `frontend/src/pages/HomePage.test.tsx`, and a test each in `TopBar.test.tsx` and `AuthSlot.test.tsx` that "Log in" reaches `logInButtonRef`.
+- Read: `AppShell` holds the prompt as the `location.key` it was opened at, so any change of address closes it with no effect to run. `PracticeDetailsPage`'s button sends a user's Continue run through the start, as before.
+- Look at: the scrim's hole is "Log in"'s box, so its four corners outside the rounded button stay undimmed, where drawings 3 and 4 dim behind it. The "Rate" chip's hole has the same corners. Changing the hole's shape is in `Scrim`, `frontend/src/components/ui/Scrim.tsx`, outside this task's Files.
 
 ### T3 — A guest's card and deck forms
 

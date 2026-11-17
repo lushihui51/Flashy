@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import { mockLoading, mockSignedIn, mockSignedOut } from 'src/test/mocks/clerk';
-import { useViewer } from 'src/lib/viewer';
+import { LogInPromptContext, useViewer, useWriteGuard } from 'src/lib/viewer';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -46,5 +47,28 @@ describe('useViewer', () => {
     mockLoading();
     rerender();
     expect(result.current).toBe('loading');
+  });
+});
+
+describe('useWriteGuard', () => {
+  it('the guard runs the write for a user, and for a guest opens the prompt and runs nothing', () => {
+    vi.stubEnv('VITE_DEV_AUTH', '');
+    const openPrompt = vi.fn();
+    const write = vi.fn();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <LogInPromptContext.Provider value={openPrompt}>{children}</LogInPromptContext.Provider>
+    );
+    mockSignedIn();
+    const { result, rerender } = renderHook(() => useWriteGuard(), { wrapper });
+
+    result.current(write);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(openPrompt).not.toHaveBeenCalled();
+
+    mockSignedOut();
+    rerender();
+    result.current(write);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(openPrompt).toHaveBeenCalledTimes(1);
   });
 });

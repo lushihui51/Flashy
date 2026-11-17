@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -7,6 +7,8 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import HomePage from 'src/pages/HomePage';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { LogInPromptContext } from 'src/lib/viewer';
 import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
@@ -46,25 +48,41 @@ function SearchProbe() {
   return <span data-testid="search">{location.search}</span>;
 }
 
-function renderHome(home: Partial<HomeRead>, address = '/') {
+/** The method and path of every request other than a GET sent from here to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
+}
+
+/** Renders Home; `openPrompt` stands for the shell's log-in prompt. */
+function renderHome(home: Partial<HomeRead>, address = '/', openPrompt: () => void = () => {}) {
   server.use(
     http.get(`${BASE}/api/home`, () =>
       HttpResponse.json({ steps: null, active_runs: [], recent_runs: [], ...home }),
     ),
   );
   return renderWithProviders(
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <>
-            <HomePage />
-            <SearchProbe />
-          </>
-        }
-      />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <HomePage />
+              <SearchProbe />
+            </>
+          }
+        />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     [address],
   );
 }
@@ -178,6 +196,19 @@ describe('HomePage', () => {
         expect(screen.getByTestId('location')).toHaveTextContent('/runs/first-run'),
       );
       expect(startedPractice).toBe('p1');
+    });
+
+    it("a guest's Start run step opens the prompt and sends nothing", async () => {
+      mockSignedOut();
+      const writes = recordWrites();
+      const openPrompt = vi.fn();
+      renderHome({ steps: steps(true, true, 'p1') }, '/', openPrompt);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Start run' }));
+
+      expect(openPrompt).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
     });
 
     it('a start refused for no cards says so beneath the fourth step and keeps the steps', async () => {
@@ -313,6 +344,20 @@ describe('HomePage', () => {
         expect(screen.getByTestId('location')).toHaveTextContent('/runs/new-run'),
       );
       expect(startedPractice).toBe('practice-of-r3');
+    });
+
+    it("a guest's play button on a completed run opens the prompt and sends nothing", async () => {
+      mockSignedOut();
+      const writes = recordWrites();
+      const openPrompt = vi.fn();
+      renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/', openPrompt);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Practice Third' }));
+
+      expect(openPrompt).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('search')).toHaveTextContent(/^$/);
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
     });
 
     it.each([

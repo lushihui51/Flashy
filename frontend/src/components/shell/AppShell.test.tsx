@@ -12,9 +12,15 @@ import {
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { server } from 'src/test/server';
-import { mockLoading, mockSignedOut, mockSignedIn, useUserMock } from 'src/test/mocks/clerk';
+import {
+  mockLoading,
+  mockSignedOut,
+  mockSignedIn,
+  openSignIn,
+  useUserMock,
+} from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
-import { loadHomeAfresh } from 'src/lib/viewer';
+import { loadHomeAfresh, useWriteGuard } from 'src/lib/viewer';
 
 vi.mock('src/lib/viewer', async (importOriginal) => ({
   ...(await importOriginal<typeof import('src/lib/viewer')>()),
@@ -314,5 +320,52 @@ describe('AppShell example banner', () => {
     renderShell();
     await screen.findByRole('status');
     expect(screen.queryByText(example)).not.toBeInTheDocument();
+  });
+});
+
+describe('AppShell log-in prompt', () => {
+  /** A page whose one control would write, beneath the shell, with a second page to go to. */
+  function GuardedPage() {
+    const guard = useWriteGuard();
+    return (
+      <button type="button" onClick={() => guard(() => {})}>
+        Start run
+      </button>
+    );
+  }
+
+  it('opens the prompt from the context and closes it on a press on Log in and on a change of address', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router = createMemoryRouter(
+      createRoutesFromElements(
+        <Route element={<AppShell />}>
+          <Route path="/" element={<GuardedPage />} />
+          <Route path="/practices" element={<div>practices content</div>} />
+        </Route>,
+      ),
+      { initialEntries: ['/'] },
+    );
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+    const sentence = 'Log in to use all of Flashy.';
+    const prompt = () => screen.queryByText(sentence, { selector: '[role="status"]' });
+
+    await user.click(screen.getByRole('button', { name: 'Start run' }));
+    expect(prompt()).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start run' })).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    expect(prompt()).not.toBeInTheDocument();
+    expect(openSignIn).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Start run' }));
+    expect(prompt()).toBeInTheDocument();
+    await act(() => router.navigate('/practices'));
+    expect(screen.getByText('practices content')).toBeInTheDocument();
+    expect(prompt()).not.toBeInTheDocument();
   });
 });

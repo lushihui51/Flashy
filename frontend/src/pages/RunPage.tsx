@@ -23,6 +23,7 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { pluralize } from 'src/lib/pluralize';
 import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useWriteGuard } from 'src/lib/viewer';
 
 type RunState = components['schemas']['RunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
@@ -107,6 +108,7 @@ export default function RunPage() {
 function ProgressLine({ runId, progress }: { runId: string; progress: RunProgress }) {
   const { params, setParams } = useViewParams();
   const queryClient = useQueryClient();
+  const guard = useWriteGuard();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const endMutation = useMutation({
@@ -131,7 +133,7 @@ function ProgressLine({ runId, progress }: { runId: string; progress: RunProgres
         <button
           type="button"
           disabled={endMutation.isPending}
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => guard(() => setConfirmOpen(true))}
           className="tappable-sm h-9 shrink-0 rounded-xl bg-(--color-surface) px-3 text-sm font-semibold text-(--color-ink)"
         >
           End run
@@ -259,6 +261,7 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const guard = useWriteGuard();
 
   // The place in the URL belongs to this card only when tagged with it; one left by an
   // earlier card reads as nothing.
@@ -292,11 +295,12 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
     setParams(next);
   };
 
-  const rate = (fieldDefId: string, rating: number) => {
-    const next = new URLSearchParams(params);
-    next.set(`${RATING_PARAM_PREFIX}${fieldDefId}`, String(rating));
-    setParams(next);
-  };
+  const rate = (fieldDefId: string, rating: number) =>
+    guard(() => {
+      const next = new URLSearchParams(params);
+      next.set(`${RATING_PARAM_PREFIX}${fieldDefId}`, String(rating));
+      setParams(next);
+    });
 
   const editCard = () => {
     if (!showAnswer) return;
@@ -368,7 +372,7 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
           <button
             type="button"
             disabled={!canSubmit}
-            onClick={() => rateMutation.mutate()}
+            onClick={() => guard(() => rateMutation.mutate())}
             className={`${CARD_ACTION_CLASS} ${
               canSubmit
                 ? 'tappable bg-(--color-main-action) text-(--color-ink)'

@@ -17,6 +17,7 @@ import { failureSentence } from 'src/lib/failureSentence';
 import { fieldLabel } from 'src/lib/fieldLabel';
 import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useWriteGuard } from 'src/lib/viewer';
 
 type RunBreakdownRead = components['schemas']['RunBreakdownRead'];
 type BreakdownCard = components['schemas']['BreakdownCard'];
@@ -261,6 +262,7 @@ export default function RunBreakdown({
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const guard = useWriteGuard();
   const titleId = useId();
   const rowRef = useRef<HTMLButtonElement | null>(null);
   const countsRef = useRef<HTMLDivElement>(null);
@@ -372,7 +374,7 @@ export default function RunBreakdown({
         <button
           type="button"
           disabled={rerunThese.isPending}
-          onClick={() => rerunThese.mutate()}
+          onClick={() => guard(() => rerunThese.mutate())}
           className="tappable-sm h-12 w-full shrink-0 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink)"
         >
           Re-run these

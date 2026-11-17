@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +8,8 @@ import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { LogInPromptContext } from 'src/lib/viewer';
 
 const BASE = 'http://localhost:8000';
 
@@ -44,7 +46,24 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderPractice(data: Record<string, unknown> | null = detail()) {
+/** The method and path of every request other than a GET sent from here to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
+}
+
+/** Renders the practice's page; `openPrompt` stands for the shell's log-in prompt. */
+function renderPractice(
+  data: Record<string, unknown> | null = detail(),
+  openPrompt: () => void = () => {},
+) {
   server.use(
     http.get(`${BASE}/api/practices/:id`, () =>
       data
@@ -53,10 +72,12 @@ function renderPractice(data: Record<string, unknown> | null = detail()) {
     ),
   );
   return renderWithProviders(
-    <Routes>
-      <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     ['/practices/p1'],
   );
 }
@@ -187,6 +208,31 @@ describe('PracticeDetailsPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(NO_CARDS_MESSAGE);
     expect(button.parentElement!.nextElementSibling).toBe(alert);
+  });
+
+  it("a guest's Start run opens the prompt and sends nothing, and Continue run opens the active run", async () => {
+    mockSignedOut();
+    const writes = recordWrites();
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = renderPractice(detail(), openPrompt);
+
+    await user.click(await screen.findByRole('button', { name: 'Start run' }));
+
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Start run' })).toBeInTheDocument();
+    expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+    unmount();
+
+    renderPractice(
+      detail({ active_run_id: 'r1', runs: [run('r1', 'active', '2026-11-03', 0)] }),
+      openPrompt,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Continue run' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/runs\/r1$/);
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([]);
   });
 
   it('says Practice not found. for an unknown or foreign practice', async () => {

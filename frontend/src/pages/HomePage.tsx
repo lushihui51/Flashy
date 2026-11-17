@@ -11,6 +11,7 @@ import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useWriteGuard } from 'src/lib/viewer';
 
 type HomeSteps = components['schemas']['HomeSteps'];
 type HomeRun = components['schemas']['HomeRun'];
@@ -171,6 +172,7 @@ function RunSection({
 export default function HomePage() {
   usePageTitle('Home');
   const navigate = useNavigate();
+  const guard = useWriteGuard();
   // Nothing invalidates this key: a thing made on any other page shows through the refetch on
   // Home's next mount (ADR 088).
   const homeQuery = useQuery({ queryKey: ['home'], queryFn: readHome });
@@ -215,7 +217,7 @@ export default function HomePage() {
 
   const play = (run: HomeRun) => {
     if (run.status === 'active') navigate(`/runs/${run.id}`);
-    else startMutation.mutate(run);
+    else guard(() => startMutation.mutate(run));
   };
   const toggle = (run: HomeRun) => {
     const next = new URLSearchParams(params);
@@ -250,9 +252,11 @@ export default function HomePage() {
       {steps ? (
         <FirstPracticeSteps
           steps={steps}
-          onStart={() => {
-            if (steps.practice_id) firstStartMutation.mutate(steps.practice_id);
-          }}
+          onStart={() =>
+            guard(() => {
+              if (steps.practice_id) firstStartMutation.mutate(steps.practice_id);
+            })
+          }
           starting={firstStartMutation.isPending}
           startError={
             firstStartMutation.isError

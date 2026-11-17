@@ -6,6 +6,8 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { LogInPromptContext } from 'src/lib/viewer';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import RunPage from 'src/pages/RunPage';
 
@@ -151,23 +153,26 @@ function LocationProbe() {
   );
 }
 
-function renderRun(runId = 'run1', search = '') {
+/** Renders the run's page; `openPrompt` stands for the shell's log-in prompt. */
+function renderRun(runId = 'run1', search = '', openPrompt: () => void = () => {}) {
   return renderWithProviders(
-    <Routes>
-      <Route
-        path="/runs/:runId"
-        element={
-          <>
-            <RunPage />
-            <LocationProbe />
-          </>
-        }
-      />
-      <Route path="/runs/:runId/decks/:deckId" element={<LocationProbe />} />
-      <Route path="/practices/:practiceId" element={<LocationProbe />} />
-      <Route path="/practices" element={<LocationProbe />} />
-      <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route
+          path="/runs/:runId"
+          element={
+            <>
+              <RunPage />
+              <LocationProbe />
+            </>
+          }
+        />
+        <Route path="/runs/:runId/decks/:deckId" element={<LocationProbe />} />
+        <Route path="/practices/:practiceId" element={<LocationProbe />} />
+        <Route path="/practices" element={<LocationProbe />} />
+        <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     [`/runs/${runId}${search}`],
   );
 }
@@ -565,6 +570,28 @@ describe('RunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
   });
 
+  it('a guest opens the Rate list, and choosing a rating opens the prompt and sets no rating', async () => {
+    mockSignedOut();
+    mockRun();
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    renderRun('run1', '', openPrompt);
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    const shown = probedAddress().search.toString();
+    await user.click(screen.getByRole('button', { name: 'Rate Back' }));
+    expect(screen.getAllByRole('button', { name: /^(Again|Hard|Good|Easy)$/ })).toHaveLength(4);
+    expect(openPrompt).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Rate Back' })).toHaveTextContent(/^Rate$/);
+    expect(probedAddress().search.toString()).toBe(shown);
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeDisabled();
+  });
+
   it('keeps Next card disabled until every answer field is rated', async () => {
     mockRun(twoAnswerRunState());
     const user = userEvent.setup();
@@ -928,6 +955,21 @@ describe('RunPage End run', () => {
     );
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'End run' })).toBeInTheDocument();
+    expect(ends).toEqual([]);
+  });
+
+  it("a guest's End run opens the prompt and no question", async () => {
+    mockSignedOut();
+    const ends = mockEndableRun();
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    renderRun('run1', '', openPrompt);
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show answer' })).toBeInTheDocument();
     expect(ends).toEqual([]);
   });
 

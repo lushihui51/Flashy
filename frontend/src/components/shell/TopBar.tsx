@@ -11,6 +11,7 @@ type TopBarProps = {
   menuButtonRef?: Ref<HTMLButtonElement>;
   avatarButtonRef?: Ref<HTMLButtonElement>;
   createButtonRef?: Ref<HTMLButtonElement>;
+  logInButtonRef?: Ref<HTMLButtonElement>;
 };
 
 export default function TopBar({
@@ -21,6 +22,7 @@ export default function TopBar({
   menuButtonRef,
   avatarButtonRef,
   createButtonRef,
+  logInButtonRef,
 }: TopBarProps) {
   return (
     <div className="flex min-h-14.5 w-full flex-wrap items-center gap-2 bg-(--color-ground) px-4 py-1.75">
@@ -57,7 +59,11 @@ export default function TopBar({
         </button>
 
         <div data-testid="auth-slot" className="flex h-11 shrink-0 items-center">
-          <AuthSlot onAvatarClick={onAvatarClick} avatarButtonRef={avatarButtonRef} />
+          <AuthSlot
+            onAvatarClick={onAvatarClick}
+            avatarButtonRef={avatarButtonRef}
+            logInButtonRef={logInButtonRef}
+          />
         </div>
       </div>
     </div>

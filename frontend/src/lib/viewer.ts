@@ -1,3 +1,4 @@
+import { createContext, useCallback, useContext, type Context } from 'react';
 import { useUser } from '@clerk/react';
 
 export type Viewer = 'loading' | 'guest' | 'user';
@@ -16,4 +17,21 @@ export function useViewer(): Viewer {
 /** Loads Home afresh in the browser, replacing the current address. */
 export function loadHomeAfresh(): void {
   window.location.replace('/');
+}
+
+/** Opens the log-in prompt. `AppShell` provides it; outside the shell it does nothing. */
+export const LogInPromptContext: Context<() => void> = createContext<() => void>(() => {});
+
+/** For a control that would write. The function it returns runs `write` while `useViewer()`
+ * answers `user`; otherwise it opens the log-in prompt and runs nothing. */
+export function useWriteGuard(): (write: () => void) => void {
+  const viewer = useViewer();
+  const openPrompt = useContext(LogInPromptContext);
+  return useCallback(
+    (write: () => void) => {
+      if (viewer === 'user') write();
+      else openPrompt();
+    },
+    [viewer, openPrompt],
+  );
 }

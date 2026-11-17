@@ -12,6 +12,7 @@ import PracticeMark from 'src/components/ui/PracticeMark';
 import { failureSentence } from 'src/lib/failureSentence';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { returnAddressParams } from 'src/lib/returnTo';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 /** One practice's own page: its mark, name and circle; "Start run" with no active run and
  * "Continue run" with one, beside the pencil to Edit practice; a line per deck, each opening the
@@ -21,6 +22,8 @@ export default function PracticeDetailsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const viewer = useViewer();
+  const guard = useWriteGuard();
 
   const practiceQuery = useQuery({
     queryKey: ['practice', practiceId],
@@ -75,7 +78,14 @@ export default function PracticeDetailsPage() {
         <button
           type="button"
           disabled={startMutation.isPending}
-          onClick={() => startMutation.mutate()}
+          onClick={() => {
+            // A guest's Continue run opens the active run without the start, which can write.
+            if (practice.active_run_id && viewer === 'guest') {
+              navigate(`/runs/${practice.active_run_id}`);
+            } else {
+              guard(() => startMutation.mutate());
+            }
+          }}
           className="tappable h-action min-w-0 flex-1 rounded-2xl bg-(--color-main-action) text-action font-semibold text-(--color-ink)"
         >
           {practice.active_run_id ? 'Continue run' : 'Start run'}
