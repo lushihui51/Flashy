@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import PracticeEditPage from 'src/pages/PracticeEditPage';
 import type { components } from 'src/api/types';
+import { LogInPromptContext } from 'src/lib/viewer';
+import { mockSignedOut } from 'src/test/mocks/clerk';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 
@@ -53,13 +55,15 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderEdit(entry = '/practices/p1/edit') {
+function renderEdit(entry = '/practices/p1/edit', openPrompt: () => void = () => {}) {
   server.use(http.get(`${BASE}/api/practices/:practice_id`, () => HttpResponse.json(PRACTICE)));
   return renderWithProviders(
-    <Routes>
-      <Route path="/practices/:practiceId/edit" element={<PracticeEditPage />} />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route path="/practices/:practiceId/edit" element={<PracticeEditPage />} />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     [entry],
   );
 }
@@ -251,5 +255,47 @@ describe('PracticeEditPage', () => {
     );
 
     expect(await screen.findByText('Practice not found.')).toBeVisible();
+  });
+});
+
+describe('PracticeEditPage for a guest', () => {
+  beforeEach(() => mockSignedOut());
+
+  it("a guest's Edit practice is read only, with Done alone, and Delete practice opens the prompt", async () => {
+    const openPrompt = vi.fn();
+    const requests: string[] = [];
+    const record = ({ request }: { request: Request }) => {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`);
+    };
+    const user = userEvent.setup();
+    const { container } = renderEdit('/practices/p1/edit', openPrompt);
+    await screen.findByRole('heading', { level: 1, name: 'Edit practice' });
+    server.events.on('request:start', record);
+    onTestFinished(() => {
+      server.events.removeListener('request:start', record);
+    });
+
+    expect(nameInput()).toHaveAttribute('readonly');
+    expect(nameInput()).toHaveClass('outlined-line', 'text-(--color-aside)');
+    const deletePractice = screen.getByRole('button', { name: 'Delete practice' });
+    expect(deletePractice).toHaveAttribute('aria-disabled', 'true');
+    expect(container.querySelectorAll(':disabled')).toHaveLength(0);
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+
+    await user.click(nameInput());
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    await user.type(nameInput(), 'x', { skipClick: true });
+    expect(nameInput()).toHaveValue('Ports before the exam');
+
+    await user.click(deletePractice);
+    expect(openPrompt).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete this practice?')).not.toBeInTheDocument();
+    expect(requests).toEqual([]);
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/practices/p1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/practices/p1');
   });
 });

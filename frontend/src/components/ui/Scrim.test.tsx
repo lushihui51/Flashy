@@ -83,10 +83,38 @@ describe('Scrim', () => {
     render(<Harness />);
 
     const { clipPath } = screen.getByTestId('scrim').style;
-    expect(clipPath).toContain('16px 120px');
-    expect(clipPath).toContain('374px 120px');
-    expect(clipPath).toContain('374px 166px');
-    expect(clipPath).toContain('16px 166px');
+    expect(clipPath).toContain('M 16 120 H 374');
+    expect(clipPath).toContain('374 120 V 166');
+    expect(clipPath).toContain('374 166 H 16');
+    expect(clipPath).toContain('16 166 V 120');
+  });
+
+  it("rounds the hole's corners as the anchor's are, at most half its shorter side", () => {
+    mockRect(RECT);
+    function Rounded() {
+      const anchor = useRef<HTMLInputElement>(null);
+      return (
+        <>
+          <input
+            ref={anchor}
+            aria-label="Control"
+            style={{
+              borderTopLeftRadius: '14px',
+              borderTopRightRadius: '999px',
+              borderBottomRightRadius: '50%',
+              borderBottomLeftRadius: '0px',
+            }}
+          />
+          <Scrim anchor={anchor} onDismiss={() => {}} strength="half" />
+        </>
+      );
+    }
+    render(<Rounded />);
+
+    // 46 high: 999px and 50% each round to 23, half the shorter side.
+    expect(screen.getByTestId('scrim').style.clipPath).toContain(
+      'M 30 120 H 351 A 23 23 0 0 1 374 143 V 143 A 23 23 0 0 1 351 166 H 16 A 0 0 0 0 1 16 166 V 134 A 14 14 0 0 1 30 120 Z',
+    );
   });
 
   it('dims at a fifth of ink for fifth and at a half for half', () => {
@@ -110,7 +138,7 @@ describe('Scrim', () => {
     const moved = { ...RECT, top: 160, bottom: 206, y: 160 };
     rect.mockImplementation(() => ({ ...moved, toJSON: () => moved }));
     runFrame();
-    expect(screen.getByTestId('scrim').style.clipPath).toContain('16px 160px');
+    expect(screen.getByTestId('scrim').style.clipPath).toContain('M 16 160');
 
     const rendersAfterMove = onRender.mock.calls.length;
     const readsAfterMove = rect.mock.calls.length;
@@ -118,7 +146,7 @@ describe('Scrim', () => {
     runFrame();
     expect(rect.mock.calls.length).toBe(readsAfterMove + 2);
     expect(onRender.mock.calls.length).toBe(rendersAfterMove);
-    expect(screen.getByTestId('scrim').style.clipPath).toContain('16px 160px');
+    expect(screen.getByTestId('scrim').style.clipPath).toContain('M 16 160');
   });
 
   it('stops measuring once unmounted', () => {

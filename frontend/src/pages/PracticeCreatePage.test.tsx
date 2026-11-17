@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import PracticeCreatePage from 'src/pages/PracticeCreatePage';
+import { LogInPromptContext } from 'src/lib/viewer';
+import { mockSignedOut } from 'src/test/mocks/clerk';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 
@@ -48,6 +50,7 @@ function LocationProbe() {
 
 function renderCreate(
   entry: string | { pathname: string; search?: string; state?: unknown } = '/practices/new',
+  openPrompt: () => void = () => {},
 ) {
   server.use(
     http.get(`${BASE}/api/decks`, () => HttpResponse.json(DECKS)),
@@ -59,18 +62,20 @@ function renderCreate(
     }),
   );
   return renderWithProviders(
-    <Routes>
-      <Route
-        path="/practices/new"
-        element={
-          <>
-            <PracticeCreatePage />
-            <LocationProbe />
-          </>
-        }
-      />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route
+          path="/practices/new"
+          element={
+            <>
+              <PracticeCreatePage />
+              <LocationProbe />
+            </>
+          }
+        />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     [entry],
   );
 }
@@ -395,5 +400,50 @@ describe('PracticeCreatePage', () => {
 
     expect(await screen.findByRole('button', { name: 'Remove Cells' })).toBeInTheDocument();
     expect(address().params.getAll('deck')).toEqual(['d1', 'd3']);
+  });
+});
+
+describe('PracticeCreatePage for a guest', () => {
+  beforeEach(() => mockSignedOut());
+
+  it("a guest's New practice is greyed, with Done alone, and a press on the picker opens the prompt", async () => {
+    const openPrompt = vi.fn();
+    const requests: string[] = [];
+    const record = ({ request }: { request: Request }) => {
+      if (request.method !== 'GET') requests.push(`${request.method} ${request.url}`);
+    };
+    const user = userEvent.setup();
+    const { container } = renderCreate('/practices/new?deck=d2&cancelTo=%2Fpractices', openPrompt);
+    const remove = await screen.findByRole('button', { name: 'Remove Ports' });
+    server.events.on('request:start', record);
+    onTestFinished(() => {
+      server.events.removeListener('request:start', record);
+    });
+
+    expect(nameInput()).toHaveAttribute('readonly');
+    expect(nameInput()).toHaveClass('outlined-line', 'text-(--color-aside)');
+    const picker = screen.getByRole('combobox', { name: 'Search decks' });
+    expect(picker).toHaveAttribute('readonly');
+    expect(remove).toHaveAttribute('aria-disabled', 'true');
+    expect(container.querySelectorAll(':disabled')).toHaveLength(0);
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+    expect(bar.getByText('1 selected')).toBeInTheDocument();
+
+    await user.click(picker);
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await user.click(nameInput());
+    await user.type(nameInput(), 'x', { skipClick: true });
+    await user.click(remove);
+    expect(openPrompt).toHaveBeenCalledTimes(3);
+    expect(nameInput()).toHaveValue('');
+    expect(address().params.getAll('deck')).toEqual(['d2']);
+    expect(address().params.has('name')).toBe(false);
+    expect(requests).toEqual([]);
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(address().pathname).toBe('/practices'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/practices');
   });
 });

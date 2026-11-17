@@ -23,7 +23,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Finishing a form that changes a thing | "Save" | Edit deck; Edit card; Edit practice; a deck's board, opened from a practice's page while no run is active; the save confirm | `mode="edit"` |
 | App | Feedback after a save | "Saved ✓" | Edit deck | `savedFlash` |
 | App | Backing out | "Cancel" | Every form and confirm | `cancelLabel` |
-| App | Leaving when nothing is unsaved | "Done" | Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page | `showDone`; `DeckBoardPage` |
+| App | Leaving when nothing is unsaved | "Done" | Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page; every form, while not logged in | `showDone`; `DeckBoardPage` |
 | App | Reversing a staged change | "Undo" | Edit deck | `DeckEditor` |
 | App | Accepting a warning | "Continue" | New card | `confirmLabel` |
 | App | Throwing away unsaved work | "Discard" | Every discard confirm | `ConfirmDialog` |

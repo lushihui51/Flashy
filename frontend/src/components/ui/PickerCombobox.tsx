@@ -194,7 +194,7 @@ export default function PickerCombobox<T extends PickerItem>({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Anchor asChild>
-        <div ref={controlRef} className="relative">
+        <div ref={controlRef} className="relative rounded-field">
           <input
             type="text"
             role="combobox"

@@ -358,7 +358,7 @@ While `useViewer()` answers `user`, each form is as it is today.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -366,8 +366,9 @@ New practice, Edit practice and a deck's board open for a guest greyed and uncha
 
 **Dependencies**
 
-- T3: `PickerCombobox`'s `onReadOnlyPress`; `ReadOnlyButton`; the greyed look of a guest's form.
+- T3: `PickerCombobox`'s `onReadOnlyPress`; `ReadOnlyButton`; the greyed look of a guest's form; `frontend/src/components/ui/PickerCombobox.tsx`, which it shares.
 - T2: `useWriteGuard`; `docs/vocabulary.md`, which it shares.
+- T1: `Scrim`'s hole that follows its anchor; `frontend/src/components/ui/Scrim.tsx` and `frontend/src/components/ui/Scrim.test.tsx`, which it shares.
 
 **Files**
 
@@ -380,6 +381,9 @@ New practice, Edit practice and a deck's board open for a guest greyed and uncha
 - `frontend/src/components/library/FieldAssignmentBoard.tsx`
 - `frontend/src/components/library/FieldAssignmentBoard.test.tsx`
 - `docs/vocabulary.md`
+- `frontend/src/components/ui/Scrim.tsx`
+- `frontend/src/components/ui/Scrim.test.tsx`
+- `frontend/src/components/ui/PickerCombobox.tsx`
 
 **Details**
 
@@ -423,4 +427,19 @@ While `useViewer()` answers `user`, each form is as it is today.
 
 **Debrief**
 
-None.
+- `read only with onReadOnlyPress, a chip is aria-disabled, opens no sheet and calls it` passes: each chip and each count is enabled and `aria-disabled="true"`, a chip greyed and without `tappable-sm`; a press on a chip calls it once and opens no sheet, a press on a count calls it again and leaves the counts checked as they were, and neither `onMove` nor `onToggleCount` is called.
+- `a guest's New practice is greyed, with Done alone, and a press on the picker opens the prompt` passes: from `?deck=d2`, Name and the picker are read only, Name outlined in line grey with aside-grey words, "Remove Ports" `aria-disabled`, nothing `:disabled`, the bar `["Done"]` above "1 selected"; presses on the picker, on Name and on "Remove Ports" open the prompt three times, open no list, change no value and no `deck` or `name` param, and send nothing but GET; Done lands on `/practices`.
+- `a guest's Edit practice is read only, with Done alone, and Delete practice opens the prompt` passes: Name read only and greyed, "Delete practice" `aria-disabled`, nothing `:disabled`, the bar `["Done"]`; a press on Name, typing, then "Delete practice" open the prompt twice, change no value, ask no question and send no request; Done lands on `/practices/p1`.
+- `a guest's board of a practice with no active run is greyed with no line, and a press on a chip opens the prompt` passes: no "A run is active.", the bar `["Done"]`, nothing `:disabled`, all three chips and the count `aria-disabled`; a press on a chip and one on the count open the prompt twice, open no sheet, leave the count checked and Port Number on the prompt side; Done leaves for `/practices/p1` and nothing but GET is sent.
+- `a guest's board of a practice with an active run reads as a user's` passes: "A run is active." stands, the chip is `disabled` with no `aria-disabled` anywhere, the bar `["Done"]`, and a press opens neither the prompt nor a sheet.
+- Every case the four files held before passes, as a user: the full suite is 780 passed, T3's 774, this task's 5, and one case of `frontend/src/components/ui/Scrim.test.tsx` below. With `guest` forced false in the three pages, the three page cases for a guest fail; with `onReadOnlyPress` ignored in `FieldAssignmentBoard`, its new case fails; restored, all pass. Every case of `frontend/src/test/formParts.test.ts` passes, the file unchanged.
+- `grep -c "every form, while not logged in" docs/vocabulary.md` printed `1`.
+- Headless Chromium as a guest, at 390 by 844 and at 1440 by 900 alike, each bar's buttons were `["Done"]`, every text input in `<main>` read only, no request but GET was sent, and Done left each form: New deck to `/library`; Edit deck of "Common words" to `/decks/<Common words id>`; New card to `/library`; Edit card of the card holding water to `/decks/<Common words id>`; New practice to `/practices`; Edit practice of "French from English" and its board of "Common words" to `/practices/<French from English id>`. `:disabled` in `<main>` were, in New deck, each Field type, Move Term up, Remove Term, Move Definition down and Remove Definition, and in Edit deck, each Field type, Move English up and Move Spanish down, which a user's form disables too; in the five other forms nothing. `aria-disabled` were "Delete card", "Delete practice", and the board's five chips.
+- On the board at 390 by 844, a press on the chip [Chinese] dimmed the window, the scrim 0 to 390 by 0 to 844, the sentence 197 to 374 by 99 to 119 beneath "Log in" at 297 to 374 by 45 to 89, `elementFromPoint` at "Log in"'s centre "Log in", no sheet and no line; Escape brought the board back at the same address.
+- Edit card with a press on its first input, screenshotted at 390 by 844 beside drawing 3 and at 1440 by 900 beside drawing 4's fourth screen, each drawing rendered from the canvas: the sentence 197 to 374 and 847 to 1024 by 99 to 119, "Log in" 297 to 374 and 947 to 1024 by 45 to 89, so one right edge and 10px beneath, as each drawing places them. It differs from the drawings in "Delete card", which T3's Out of scope names, and in the browser's focus outline on the pressed input, which no Out of scope names: T2 keeps focus on the pressed control. Before this task's change to `Scrim`, the corners of "Log in"'s box stayed undimmed, where the drawings dim them; now `elementFromPoint` at its box's top-left corner is the scrim.
+- Headless Chromium as a guest at 390 by 844, each of these dimmed the window, the scrim 0 to 390 by 0 to 844, the sentence 197 to 374 by 99 to 119 beneath "Log in" at 297 to 374 by 45 to 89, `elementFromPoint` at "Log in"'s centre "Log in", and Escape removed the scrim and the sentence at the same address, with no request but GET: "Start run" on the page of "French from English"; "Practice French from English", its completed run's play button on Home; "Re-run" on that run's page; "Re-run these" on it at `?kind=up`; and "End run" on the active run of "Two at random".
+- Headless Chromium as a user at 390 by 844, against a Vite on port 5180 with `VITE_DEV_AUTH` and its `/api` routed to an API on port 8002 with `DEV_AUTH_USER_ID` and `ENV=development`: Edit card showed `["Cancel","Save"]` and no guest's banner, and "zz" typed in the first field read "pwdzz", with no prompt and no request. The dev user's one practice, "Commands: Basic", has an active run, so its page shows "Continue run", which goes through the same guarded start as "Start run": it sent `POST /api/practices/<id>/runs` and opened the run's card, the existing run, with "Show answer" on it. No practice was made to show "Start run".
+- The guest checks ran against the dev server on 5173, its `/api` routed by Playwright to `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`. The APIs on 8001 and 8002 and the Vite on 5180 are stopped; 5173 and 8000 were left untouched.
+- Departure, with the engineer's approval: `frontend/src/components/ui/Scrim.tsx` cuts its hole with the anchor's own rounded corners, and `frontend/src/components/ui/PickerCombobox.tsx` gives its anchor, the `<div>` around the input, the input's `rounded-field`. The holes of "Log in", the "Rate" chip and the deck picker each now fit their control: as a user, `elementFromPoint` at the top-left corner of the chip's box and of the picker's box is the scrim, at its centre the control. `rounds the hole's corners as the anchor's are, at most half its shorter side` in `frontend/src/components/ui/Scrim.test.tsx` fails with a radius forced to 0, and two cases there check the hole in the path's form.
+- Departure from guidance: none in the Details.
+- Read: `holeClipPath` and `cornerRadii` in `frontend/src/components/ui/Scrim.tsx`, where the radii are read only when the anchor's box moves. In `frontend/src/components/library/FieldAssignmentBoard.tsx`, a guest's chip is a `ReadOnlyButton`, and a guest's count keeps its checkbox, `aria-disabled`, whose change calls `onReadOnlyPress` in place of `onToggleCount`. `DeckBoardPage` greys a board for a guest only where `readOnlyLine` is null, so a board no one can change reads as a user's.

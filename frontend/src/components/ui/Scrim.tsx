@@ -1,8 +1,9 @@
 import { useLayoutEffect, useState, type ReactNode, type RefObject } from 'react';
 
 type ScrimProps = {
-  /** The control the panel belongs to: the scrim leaves a hole over its box and dims
-   * everything else. The hole follows the box wherever it moves while the scrim is mounted. */
+  /** The control the panel belongs to: the scrim leaves a hole over its box, with its rounded
+   * corners, and dims everything else. The hole follows the box wherever it moves while the scrim
+   * is mounted. */
   anchor: RefObject<HTMLElement | null>;
   /** Called on a pointerdown on the scrim, which reaches nothing beneath; the caller
    * closes its panel. */
@@ -20,7 +21,7 @@ const DIMMING: Record<ScrimProps['strength'], string> = {
  * while the panel is open: the page cannot scroll while it is mounted. A panel drawn with
  * it stacks above `z-50`. */
 export default function Scrim({ anchor, onDismiss, strength }: ScrimProps): ReactNode {
-  const [hole, setHole] = useState<DOMRect | null>(null);
+  const [hole, setHole] = useState<Hole | null>(null);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -33,10 +34,11 @@ export default function Scrim({ anchor, onDismiss, strength }: ScrimProps): Reac
     let last: DOMRect | null = null;
     let frame = 0;
     const measure = () => {
-      const box = anchor.current?.getBoundingClientRect() ?? null;
+      const control = anchor.current;
+      const box = control?.getBoundingClientRect() ?? null;
       if (!sameBox(box, last)) {
         last = box;
-        setHole(box);
+        setHole(control && box ? { box, radii: cornerRadii(control, box) } : null);
       }
       frame = requestAnimationFrame(measure);
     };
@@ -85,16 +87,49 @@ function sameBox(a: DOMRect | null, b: DOMRect | null): boolean {
   return a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
 }
 
-/** A clip path of the whole screen less `rect`, which also lets pointer events through the
- * cut-out to the control. */
-function holeClipPath({ left, top, right, bottom }: DOMRect): string {
-  const screen = '0 0, 100% 0, 100% 100%, 0 100%, 0 0';
+/** The control's box, and its corners' radii in px: top left, top right, bottom right, bottom
+ * left. */
+type Hole = { box: DOMRect; radii: [number, number, number, number] };
+
+/** The control's four corner radii in px, each at most half its shorter side, as the browser
+ * draws them. */
+function cornerRadii(control: HTMLElement, box: DOMRect): Hole['radii'] {
+  const style = getComputedStyle(control);
+  const most = Math.min(box.width, box.height) / 2;
+  const radius = (value: string) => {
+    const length = parseFloat(value) || 0;
+    const px = value.trim().split(/\s+/)[0]!.endsWith('%')
+      ? (length / 100) * Math.min(box.width, box.height)
+      : length;
+    return Math.min(Math.max(px, 0), most);
+  };
+  return [
+    radius(style.borderTopLeftRadius),
+    radius(style.borderTopRightRadius),
+    radius(style.borderBottomRightRadius),
+    radius(style.borderBottomLeftRadius),
+  ];
+}
+
+/** A clip path of the whole screen less the control's rounded box, which also lets pointer
+ * events through the cut-out to the control. */
+function holeClipPath({
+  box: { left, top, right, bottom },
+  radii: [tl, tr, br, bl],
+}: Hole): string {
+  // Far past any screen, so the dimming needs no measure of the window.
+  const screen = 'M -1 -1 H 100000 V 100000 H -1 Z';
   const cutOut = [
-    `${left}px ${top}px`,
-    `${right}px ${top}px`,
-    `${right}px ${bottom}px`,
-    `${left}px ${bottom}px`,
-    `${left}px ${top}px`,
-  ].join(', ');
-  return `polygon(evenodd, ${screen}, ${cutOut})`;
+    `M ${left + tl} ${top}`,
+    `H ${right - tr}`,
+    `A ${tr} ${tr} 0 0 1 ${right} ${top + tr}`,
+    `V ${bottom - br}`,
+    `A ${br} ${br} 0 0 1 ${right - br} ${bottom}`,
+    `H ${left + bl}`,
+    `A ${bl} ${bl} 0 0 1 ${left} ${bottom - bl}`,
+    `V ${top + tl}`,
+    `A ${tl} ${tl} 0 0 1 ${left + tl} ${top}`,
+    'Z',
+  ].join(' ');
+  return `path(evenodd, "${screen} ${cutOut}")`;
 }
