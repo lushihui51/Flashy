@@ -30,15 +30,15 @@ A sentence shown at a control sits beside what was pressed, in a different place
 
 Whatever the dimming covers fades with the page, the words on it included.
 
-The connection banner's words are white on red, and a guest's banner's are white on ink. Small white words set straight on a dimmed page that shows through stand at about 3.5 to 1 against it, less than small text needs.
+A guest's banner's words are white on ink. Small white words set straight on a dimmed page that shows through stand at about 3.5 to 1 against it, less than small text needs.
 
 ## Decision
 
-We will let a guest open and read everything that only shows something. Every form opens for a guest, with what it holds greyed and unchangeable and Done alone at its foot.
+We will let a guest open and read everything that only shows something. Every form opens for a guest, with what it holds greyed and unchangeable.
 
-We will give every press of a guest that would change the example library one answer, a press on a greyed form's input included: the whole screen dims but for the banner across the top and "Log in". Nothing new appears with the press; the banner's sentence alone tells them to log in. A tap anywhere else brings the screen back as it was, and nothing has changed.
+We will give every press of a guest that would change the example library one answer, a press on a greyed form's input included: the whole screen dims but for the banner across the top and "Log in". No sentence appears with the press; the banner's sentence alone tells them to log in. A tap anywhere but "Log in" brings the screen back as it was, and nothing has changed.
 
-We will let a guest choose a rating for each answer on a run's card, and show it on the answer. Choosing a rating changes nothing, and "Next card" is the press that dims the screen.
+We will let a guest choose a rating for each answer on a run's card, and show it on the answer. "Next card", not the choice of a rating, is the press that dims the screen.
 
 ## Alternatives considered
 
@@ -76,7 +76,7 @@ Rejected because it would add a second sentence to read, still in small white wo
 
 ### No form opening for a guest
 
-Rejected because every way to start or change a thing would answer with the same sentence, and the guest would never see how a thing is made.
+Rejected because every way to start or change a thing would answer with the same dimmed screen, and the guest would never see how a thing is made.
 
 ### Forms that work until Create, Save or Delete
 
@@ -96,16 +96,15 @@ Rejected because the guest would never see a rated answer, and "Next card" would
 
 ### Going on through the cards with nothing kept
 
-Rejected because the guest would believe they were practicing, and lose it when the page loaded again.
+Rejected because the guest would believe they were practicing, and lose what they rated when the page loaded again.
 
 ## Consequences
 
 **Positive**
 
-- The user who is not logged in meets one answer to every press that would change something, at the thing to press next.
 - The user who is not logged in sees the screen answer every such press, and reads why once, at full strength, in the banner.
 - The user who is not logged in sees what making each thing asks of them, and types nothing that could be lost.
-- The user who is not logged in sees a rated answer and "Next card" come alive, and is told to log in before the card is rated.
+- The user who is not logged in sees a rated answer and "Next card" come alive, and is told to log in at the press that would rate the card.
 
 **Negative**
 
@@ -119,5 +118,5 @@ Rejected because the guest would believe they were practicing, and lose it when 
 
 - The user who is not logged in meets an empty, greyed form wherever they start a new thing.
 - The user who is not logged in finds no sentence of its own on a form.
-- The user who is not logged in sees nothing new appear with the press, only the screen going dark around the banner and "Log in".
+- The user who is not logged in sees no sentence appear with the press, only the screen going dark around the banner and "Log in".
 - The user who is not logged in sees the banner and "Log in" lit together at the top of the dimmed screen.
