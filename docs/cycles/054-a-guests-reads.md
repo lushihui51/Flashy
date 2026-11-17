@@ -350,7 +350,7 @@ Guidance: a route's dependencies are `route.dependant.dependencies`, each with t
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -408,4 +408,15 @@ Each on a local API started with the bypass off, `DEV_AUTH_USER_ID= uv run uvico
 
 **Debrief**
 
-None.
+- The library was made by requests to an API on port 8001 started as `DEV_AUTH_USER_ID=example-library ENV=development`, each carrying `X-Timezone: America/Toronto`, the dev machine's zone; that API was stopped before `uv run python -m app.scripts.example_user detach example-library`, which printed `ae192372-129b-40d9-b69c-53a8daf97d62` and exited 0. The example user's stored zone reads `America/Toronto`. Every check below ran on `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`, with no `Authorization` header.
+- `GET /api/decks` answered 200 with "Capitals", 20 cards, and "Common words", 50 cards; `GET /api/decks/{deck_id}/fields` gave Capitals `Country, Capital, Continent` and Common words `English, Chinese, Korean, French, Spanish`.
+- `GET /api/practices` listed "Common words + Capitals", "Korean from Chinese and English", "Two at random" and "French from English". `GET /api/practices/{practice_id}` gave the first three one completed run each and "French from English" two, the second ended by `POST /api/runs/{run_id}/end` after 18 ratings. Their configurations: Common words English to Spanish and Capitals Country to Capital and Continent; Common words Chinese and English to Korean; Common words English to an answer pool of Chinese, Korean, French and Spanish with counts `[2]`; Common words English to French.
+- `GET /api/home` answered 200 with `steps` null, `active_runs` "Common words + Capitals", "Korean from Chinese and English", "Two at random", and `recent_runs` "French from English".
+- The run of "Common words + Capitals" stands at Australia: `prompts` hold Country alone, `attempt` 1, `progress` `total_cards` 70, `passed` 8, `retry_pending` 0, `still_failed` 0.
+- The run of "Korean from Chinese and English" stands at table / 桌子 with `attempt` 2 and `retry_pending` 3, after table, to go and blue were rated Again and to drink Good.
+- The run of "Two at random" stands at morning, `attempt` 1, answering Korean and French. Its ratings, in order: blue Chinese Hard, French Good; tea Chinese Again, Spanish Good; to drink Korean Again, Spanish Easy; small Chinese Good, Korean Good; thank you Korean Again, Spanish Good; friend French Good, Spanish Easy; tea, attempt 2, Chinese Good, French Good; moon Chinese Good, French Hard; thank you, attempt 2, Chinese Good, Korean Good. Tea and thank you were rated Again and answered again before morning; to drink's retry is still to come.
+- `POST /api/decks` answered 401 and `/docs` 404.
+- On the dev server on port 8000, `GET /api/decks` listed Commands, Ports and Reformer Repertoire, with the same ids and card counts as before the task.
+- Every run reads the day 2026-11-16. The decks' readiness reads 0.52 for Capitals and 0.433 for Common words, so neither mastery circle is empty or full. The bypass-off API's log holds no 500.
+- No departure from guidance. The requests were sent by a script in the session's scratchpad, never in the repository, with ratings drawn at random from fixed seeds and weighted harder for Korean and Chinese; each card was added through `POST /api/cards`, the last first, so a deck's page lists them in the order they were written. Nothing in the repository but this file changed, so neither `pytest` nor the frontend checks ran.
+- No code to read. The partway run of "Common words + Capitals" was cut with its Capitals cards first, so all eight cards rated in it so far are Capitals cards.
