@@ -1,7 +1,6 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Outlet, ScrollRestoration } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useUser } from '@clerk/react';
 import TopBar from 'src/components/shell/TopBar';
 import SideDrawer from 'src/components/shell/SideDrawer';
 import AccountSheet from 'src/components/shell/AccountSheet';
@@ -9,6 +8,7 @@ import CreateSheet from 'src/components/shell/CreateSheet';
 import ConnectionBanner from 'src/components/shell/ConnectionBanner';
 import { useConnectionStatus } from 'src/components/shell/useConnectionStatus';
 import { readDecks } from 'src/api/deck';
+import { loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
 
 export default function AppShell() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,8 +18,24 @@ export default function AppShell() {
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
-  const { isSignedIn } = useUser();
+  const viewer = useViewer();
   const connectionStatus = useConnectionStatus();
+
+  // The viewer the page is drawn for, set once Clerk has loaded. A different answer after
+  // that is a log-in or a log-out: the page stops being drawn, so nothing of one viewer's
+  // shows under the other, and Home loads afresh, which empties everything held in memory
+  // (ADR 132).
+  const [pageViewer, setPageViewer] = useState<Viewer>('loading');
+  if (pageViewer === 'loading' && viewer !== 'loading') setPageViewer(viewer);
+  const viewerChanged =
+    pageViewer !== 'loading' && viewer !== 'loading' && viewer !== pageViewer;
+  const drawsPage = viewer !== 'loading' && viewer === pageViewer;
+  const homeLoading = useRef(false);
+  useEffect(() => {
+    if (!viewerChanged || homeLoading.current) return;
+    homeLoading.current = true;
+    loadHomeAfresh();
+  }, [viewerChanged]);
 
   // Only the Create sheet's Card row needs this (its "create a deck first" empty state,
   // since creating a card never creates a deck) — gated so opening the sheet is the
@@ -27,7 +43,7 @@ export default function AppShell() {
   const { data: decks } = useQuery({
     queryKey: ['decks'],
     queryFn: () => readDecks(),
-    enabled: isCreateSheetOpen && !!isSignedIn,
+    enabled: isCreateSheetOpen && viewer !== 'loading',
   });
 
   // The side menu starts at this variable, so it follows the header as the connection
@@ -84,9 +100,7 @@ export default function AppShell() {
         triggerRef={createButtonRef}
         hasDecks={decks ? decks.length > 0 : undefined}
       />
-      <main className="mx-auto w-full max-w-column">
-        <Outlet />
-      </main>
+      <main className="mx-auto w-full max-w-column">{drawsPage && <Outlet />}</main>
       <ScrollRestoration />
     </div>
   );

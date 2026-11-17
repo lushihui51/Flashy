@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useSyncExternalStore } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -11,8 +12,14 @@ import {
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { server } from 'src/test/server';
-import { mockSignedOut, mockSignedIn } from 'src/test/mocks/clerk';
+import { mockLoading, mockSignedOut, mockSignedIn, useUserMock } from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
+import { loadHomeAfresh } from 'src/lib/viewer';
+
+vi.mock('src/lib/viewer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('src/lib/viewer')>()),
+  loadHomeAfresh: vi.fn(),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -116,6 +123,53 @@ describe('AppShell', () => {
     // overlays can't both be open through the UI.
     expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Main menu' })).toBeInTheDocument();
+  });
+});
+
+describe('AppShell viewer', () => {
+  it('draws the header and no page while the viewer is loading', () => {
+    mockLoading();
+    renderShell();
+
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeEmptyDOMElement();
+  });
+
+  it('stops drawing the page and loads Home afresh once when the viewer changes between guest and user', () => {
+    // Clerk's answer, held where a change re-renders the shell as Clerk's own hook would.
+    let signedIn = false;
+    const listeners = new Set<() => void>();
+    const subscribe = (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    useUserMock.mockImplementation(() => {
+      const isSignedIn = useSyncExternalStore(subscribe, () => signedIn);
+      return { isLoaded: true, isSignedIn, user: isSignedIn ? { id: 'user_1' } : null };
+    });
+    const signIn = (next: boolean) =>
+      act(() => {
+        signedIn = next;
+        listeners.forEach((listener) => listener());
+      });
+
+    for (const startsSignedIn of [false, true]) {
+      vi.mocked(loadHomeAfresh).mockClear();
+      signedIn = startsSignedIn;
+      const { unmount } = renderShell();
+      expect(screen.getByText('home content')).toBeInTheDocument();
+
+      signIn(!startsSignedIn);
+      expect(screen.queryByText('home content')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+      expect(loadHomeAfresh).toHaveBeenCalledTimes(1);
+
+      signIn(startsSignedIn);
+      signIn(!startsSignedIn);
+      expect(loadHomeAfresh).toHaveBeenCalledTimes(1);
+      unmount();
+    }
   });
 });
 

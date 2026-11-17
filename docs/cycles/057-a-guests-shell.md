@@ -84,7 +84,7 @@ None.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -174,7 +174,21 @@ Guidance: Clerk's `window.Clerk` exists once `ClerkProvider` has mounted and car
 
 **Debrief**
 
-None.
+- `answers loading until Clerk has loaded, then guest with no session and user with one` passed.
+- `answers user for a guest in development with VITE_DEV_AUTH set, and guest without it` passed; it also asserts a guest under `DEV` false with the switch set, and `loading` with the switch set while Clerk loads. A production build made with `VITE_DEV_AUTH=1` compiles `useViewer` to `if (isSignedIn) return "user"; return "guest";`.
+- `sends nothing before Clerk has loaded, then sends with no token when Clerk holds no session` passed; nothing was sent with `window.Clerk` absent, nor with it present and not loaded, and one request with no `Authorization` left once `loaded` was true.
+- `sends the session's token while a session exists` passed.
+- `fails a request whose session gives no token as a lost connection, and sends nothing` passed, for a `getToken` that gives `null` and one that rejects.
+- `sends the health probe before Clerk has loaded, with no token` passed; `getToken` was never called.
+- `draws the header and no page while the viewer is loading` passed.
+- `stops drawing the page and loads Home afresh once when the viewer changes between guest and user` passed, from guest to user and from user to guest; a change back and forth after the first left `loadHomeAfresh` called once.
+- `Log out calls signOut and onClose, and navigates nowhere` passed; the location stayed `/library`.
+- `grep -c "useViewer" docs/vocabulary.md` printed `1`.
+- In headless Chromium as a guest at 390 by 844, against the dev server on 5173 with its `/api` routed to `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`: Home listed 3 runs under Active and 1 under Recently completed; Your library held "Common words" and "Capitals"; of the requests `/api/health`, `/api/home` and `/api/decks`, the 2 that were not `/api/health` carried no `Authorization` header.
+- In headless Chromium with every request to a Clerk host aborted, 6 of them, `clerk.browser.js` first: after 6 seconds the top bar was drawn, `<main>`'s inner HTML was `""`, and the only `/api` request sent was 1 `/api/health`.
+- In headless Chromium as a user, against a Vite started with `VITE_DEV_AUTH=1` on port 5180 and the API on 8000 with `DEV_AUTH_USER_ID` and `ENV=development`: Your library showed each of the bypass account's decks, "Commands", "Ports" and "Reformer Repertoire".
+- Departures from guidance: none.
+- Code to read: `clerkLoaded` in `frontend/src/api/client.ts`, which checks `window.Clerk?.loaded` every 50 ms on one shared promise and drops that promise once it resolves, so a request never waits on a Clerk that has already loaded and a test can set Clerk back to not loaded. `AppShell` keeps the viewer it first drew the page for in `pageViewer`, set during render, and draws the page only while `useViewer()` still answers the same. No browser check drove a real log-in or log-out through Clerk's dialog; the reload rests on the `AppShell` test and on `ClerkProvider`'s three addresses.
 
 ### T3 — The guest's banner and "Log in"
 

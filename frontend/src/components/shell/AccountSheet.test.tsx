@@ -39,7 +39,7 @@ describe('AccountSheet', () => {
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
   });
 
-  it('Log out calls signOut, then onClose, then navigates to /', async () => {
+  it('Log out calls signOut and onClose, and navigates nowhere', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderWithRouter(
@@ -54,7 +54,7 @@ describe('AccountSheet', () => {
 
     expect(signOut).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('location')).toHaveTextContent('/');
+    expect(screen.getByTestId('location')).toHaveTextContent('/library');
   });
 
   it('has dialog semantics labelled by the profile name', () => {
