@@ -40,7 +40,7 @@ Judgement: The engineer judges on the live server as a guest, at 390 by 844 and 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -94,7 +94,14 @@ Guidance: keep the last box and set state only when a frame's box differs from i
 
 **Debrief**
 
-None.
+- `npx vitest run src/components/ui/Scrim.test.tsx`: `dims at a fifth of ink for fifth and at a half for half` passes; it asserts the scrim's class is `bg-(--color-ink)/20` for `fifth` and `bg-(--color-ink)/50` for `half`, since jsdom computes no Tailwind colour.
+- `moves the hole when the anchor's box moves between two frames, and renders nothing new while it is still` passes. Frames run only when the test calls them, and every box read returns a fresh object, so a scrim that set state on every frame would render again; with the comparison of boxes removed from `Scrim`, this case fails, and with it restored, it passes.
+- `stops measuring once unmounted` passes: after unmount no frame is pending, and running frames reads no box.
+- The seven other cases pass, the window's resize case removed: 10 passed (10).
+- `grep -c "addEventListener('resize'" frontend/src/components/ui/Scrim.tsx` printed `0`.
+- Headless Chromium as a user at 390 by 844, on the active run of "Commands: Basic" with its answers shown: "Rate" opened Again, Hard, Good and Easy over a scrim of class `bg-(--color-ink)/20`, computed background ink at 0.2, box 0 0 390 844; `document.elementFromPoint` at the chip's centre (323.5, 534) was the chip; no `/api` request other than `GET` was sent. The check ran against a second Vite on port 5180 with `VITE_DEV_AUTH` set, since the Vite on 5173 runs without it and stayed untouched; the API on 8000 runs with `DEV_AUTH_USER_ID` and `ENV=development` from `.env`. The second Vite is stopped.
+- Departure from guidance: none. The last box is kept in the effect and compared by its four edges, as guided.
+- Read: `Scrim`'s effect in `frontend/src/components/ui/Scrim.tsx`, where the first measure stays synchronous before the first paint and each frame schedules the next.
 
 ### T2 — The log-in prompt
 

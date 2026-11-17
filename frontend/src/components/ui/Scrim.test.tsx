@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { useRef, useState } from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Profiler, useRef, useState } from 'react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { act, createEvent, fireEvent, render, screen } from '@testing-library/react';
 import Scrim from 'src/components/ui/Scrim';
 
@@ -9,15 +9,29 @@ const RECT = { left: 16, top: 120, right: 374, bottom: 166, width: 358, height: 
 function mockRect(rect: typeof RECT) {
   return vi
     .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-    .mockReturnValue({ ...rect, toJSON: () => rect });
+    .mockImplementation(() => ({ ...rect, toJSON: () => rect }));
+}
+
+// Frames run only when a test calls runFrame, so a test sees each measure the scrim makes.
+let frames = new Map<number, FrameRequestCallback>();
+let nextFrame = 1;
+
+function runFrame() {
+  const due = [...frames.values()];
+  frames = new Map();
+  act(() => {
+    for (const callback of due) callback(performance.now());
+  });
 }
 
 function Harness({
   onDismiss = () => {},
   onBeneathClick = () => {},
+  strength = 'fifth',
 }: {
   onDismiss?: () => void;
   onBeneathClick?: () => void;
+  strength?: 'fifth' | 'half';
 }) {
   const anchor = useRef<HTMLInputElement>(null);
   return (
@@ -26,7 +40,7 @@ function Harness({
       <button type="button" onClick={onBeneathClick}>
         Beneath
       </button>
-      <Scrim anchor={anchor} onDismiss={onDismiss} />
+      <Scrim anchor={anchor} onDismiss={onDismiss} strength={strength} />
     </>
   );
 }
@@ -40,12 +54,25 @@ function RemovedOnDismiss({ onBeneathClick }: { onBeneathClick: () => void }) {
       <button type="button" onClick={onBeneathClick}>
         Beneath
       </button>
-      {open && <Scrim anchor={anchor} onDismiss={() => setOpen(false)} />}
+      {open && <Scrim anchor={anchor} onDismiss={() => setOpen(false)} strength="fifth" />}
     </>
   );
 }
 
+beforeEach(() => {
+  frames = new Map();
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    const id = nextFrame++;
+    frames.set(id, callback);
+    return id;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+    frames.delete(id);
+  });
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   document.documentElement.style.overflow = '';
 });
@@ -62,16 +89,49 @@ describe('Scrim', () => {
     expect(clipPath).toContain('16px 166px');
   });
 
-  it('measures the anchor again on a window resize', () => {
+  it('dims at a fifth of ink for fifth and at a half for half', () => {
+    const { unmount } = render(<Harness strength="fifth" />);
+    expect(screen.getByTestId('scrim')).toHaveClass('bg-(--color-ink)/20');
+    unmount();
+
+    render(<Harness strength="half" />);
+    expect(screen.getByTestId('scrim')).toHaveClass('bg-(--color-ink)/50');
+  });
+
+  it("moves the hole when the anchor's box moves between two frames, and renders nothing new while it is still", () => {
     const rect = mockRect(RECT);
-    render(<Harness />);
+    const onRender = vi.fn();
+    render(
+      <Profiler id="scrim" onRender={onRender}>
+        <Harness />
+      </Profiler>,
+    );
 
-    rect.mockReturnValue({ ...RECT, left: 40, right: 398, toJSON: () => RECT });
-    act(() => {
-      window.dispatchEvent(new Event('resize'));
-    });
+    const moved = { ...RECT, top: 160, bottom: 206, y: 160 };
+    rect.mockImplementation(() => ({ ...moved, toJSON: () => moved }));
+    runFrame();
+    expect(screen.getByTestId('scrim').style.clipPath).toContain('16px 160px');
 
-    expect(screen.getByTestId('scrim').style.clipPath).toContain('40px 120px');
+    const rendersAfterMove = onRender.mock.calls.length;
+    const readsAfterMove = rect.mock.calls.length;
+    runFrame();
+    runFrame();
+    expect(rect.mock.calls.length).toBe(readsAfterMove + 2);
+    expect(onRender.mock.calls.length).toBe(rendersAfterMove);
+    expect(screen.getByTestId('scrim').style.clipPath).toContain('16px 160px');
+  });
+
+  it('stops measuring once unmounted', () => {
+    const rect = mockRect(RECT);
+    const { unmount } = render(<Harness />);
+    runFrame();
+    expect(frames.size).toBe(1);
+
+    unmount();
+    expect(frames.size).toBe(0);
+    const readsAtUnmount = rect.mock.calls.length;
+    runFrame();
+    expect(rect.mock.calls.length).toBe(readsAtUnmount);
   });
 
   it('calls onDismiss once on a pointerdown and prevents its default', () => {
