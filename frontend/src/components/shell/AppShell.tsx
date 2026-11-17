@@ -3,7 +3,6 @@ import { Outlet, ScrollRestoration } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from '@clerk/react';
 import TopBar from 'src/components/shell/TopBar';
-import SearchBar from 'src/components/shell/SearchBar';
 import SideDrawer from 'src/components/shell/SideDrawer';
 import AccountSheet from 'src/components/shell/AccountSheet';
 import CreateSheet from 'src/components/shell/CreateSheet';
@@ -68,9 +67,6 @@ export default function AppShell() {
           avatarButtonRef={avatarButtonRef}
           createButtonRef={createButtonRef}
         />
-        <div className="px-4">
-          <SearchBar />
-        </div>
       </header>
       <SideDrawer
         open={isMenuOpen}

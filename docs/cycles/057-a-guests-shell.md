@@ -35,7 +35,7 @@ Judgement: The engineer judges on the live server, at 390 by 844 and at 1440 by 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -73,7 +73,12 @@ None.
 
 **Debrief**
 
-None.
+- `ls frontend/src/components/shell | grep -c SearchBar` printed `0`, and `grep -rc "SearchBar" frontend/src | grep -v ":0"` printed nothing.
+- `renders the top bar and the routed page content, and no search` passed; it asserts no `searchbox` and no `textbox` in the shell.
+- `grep -c "| App | Searching | \"Search\" | Not shown yet | — |" docs/vocabulary.md` printed `1`.
+- In headless Chromium at 390 by 844, signed out of Clerk, Home's `<header>` held 0 inputs and one child, the top bar, 58px tall; the header was 66px tall, with 0px top padding and 8px bottom padding.
+- Departures from guidance: none; the Details hold constraints alone.
+- Code to read: nothing beyond the diff. The header keeps its `gap-0.5`, which now spaces only the connection banner from the top bar.
 
 ### T2 — The viewer
 

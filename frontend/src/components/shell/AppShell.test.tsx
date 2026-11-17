@@ -37,11 +37,12 @@ function renderShell(initialEntries: string[] = ['/']) {
 }
 
 describe('AppShell', () => {
-  it('renders the top bar, search bar, and the routed page content', () => {
+  it('renders the top bar and the routed page content, and no search', () => {
     renderShell();
 
     expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByText('home content')).toBeInTheDocument();
   });
 
