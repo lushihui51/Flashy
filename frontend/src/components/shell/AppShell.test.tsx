@@ -222,6 +222,11 @@ describe('AppShell header height', () => {
 });
 
 describe('AppShell connection banner', () => {
+  // A user, so the guest's banner never stands among the statuses these cases read.
+  beforeEach(() => {
+    mockSignedIn();
+  });
+
   afterEach(() => {
     onlineManager.setOnline(true);
   });
@@ -277,5 +282,37 @@ describe('AppShell connection banner', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       "You're offline. Flashy will reconnect automatically.",
     );
+  });
+});
+
+describe('AppShell example banner', () => {
+  it('shows the example banner to a guest, beneath the connection banner, and to no user', async () => {
+    const example = 'This is an example. Log in to use all of Flashy.';
+    server.use(
+      http.get('*/api/health', () =>
+        HttpResponse.json(
+          { detail: { code: 'database_unavailable', message: 'x' } },
+          { status: 503 },
+        ),
+      ),
+    );
+    const { unmount } = renderShell();
+
+    await waitFor(() => expect(screen.getAllByRole('status')).toHaveLength(2));
+    const [connection, guest] = screen.getAllByRole('status');
+    expect(connection).toHaveTextContent(
+      'Flashy is having trouble right now. Retrying automatically.',
+    );
+    expect(guest).toHaveTextContent(example);
+    const topBarButton = screen.getByRole('button', { name: 'Open menu' });
+    expect(
+      guest!.compareDocumentPosition(topBarButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    unmount();
+
+    mockSignedIn();
+    renderShell();
+    await screen.findByRole('status');
+    expect(screen.queryByText(example)).not.toBeInTheDocument();
   });
 });

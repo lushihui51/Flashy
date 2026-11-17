@@ -1,4 +1,5 @@
 import { TriangleAlert, WifiOff } from 'lucide-react';
+import Banner from 'src/components/shell/Banner';
 import type { ConnectionStatus } from 'src/components/shell/useConnectionStatus';
 
 const BANNER = {
@@ -22,12 +23,8 @@ export default function ConnectionBanner({
 }) {
   const { Icon, text } = BANNER[status];
   return (
-    <div
-      role="status"
-      className="flex items-center gap-2 bg-(--color-wrong) px-4 py-2 text-sm text-(--color-surface)"
-    >
-      <Icon aria-hidden className="h-4 w-4 shrink-0" />
+    <Banner color="wrong" Icon={Icon}>
       {text}
-    </div>
+    </Banner>
   );
 }

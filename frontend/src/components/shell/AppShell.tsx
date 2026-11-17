@@ -6,6 +6,7 @@ import SideDrawer from 'src/components/shell/SideDrawer';
 import AccountSheet from 'src/components/shell/AccountSheet';
 import CreateSheet from 'src/components/shell/CreateSheet';
 import ConnectionBanner from 'src/components/shell/ConnectionBanner';
+import ExampleBanner from 'src/components/shell/ExampleBanner';
 import { useConnectionStatus } from 'src/components/shell/useConnectionStatus';
 import { readDecks } from 'src/api/deck';
 import { loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
@@ -27,8 +28,7 @@ export default function AppShell() {
   // (ADR 132).
   const [pageViewer, setPageViewer] = useState<Viewer>('loading');
   if (pageViewer === 'loading' && viewer !== 'loading') setPageViewer(viewer);
-  const viewerChanged =
-    pageViewer !== 'loading' && viewer !== 'loading' && viewer !== pageViewer;
+  const viewerChanged = pageViewer !== 'loading' && viewer !== 'loading' && viewer !== pageViewer;
   const drawsPage = viewer !== 'loading' && viewer === pageViewer;
   const homeLoading = useRef(false);
   useEffect(() => {
@@ -46,9 +46,8 @@ export default function AppShell() {
     enabled: isCreateSheetOpen && viewer !== 'loading',
   });
 
-  // The side menu starts at this variable, so it follows the header as the connection
-  // banner comes and goes, and is written before the first paint so no frame draws the menu
-  // with it unset.
+  // The side menu starts at this variable, so it follows the header as the banners come
+  // and go, and is written before the first paint so no frame draws the menu with it unset.
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (!header) return;
@@ -74,6 +73,7 @@ export default function AppShell() {
         className="sticky top-0 z-40 mx-auto flex w-full max-w-column flex-col gap-0.5 bg-(--color-ground) pb-2"
       >
         {connectionStatus !== 'online' && <ConnectionBanner status={connectionStatus} />}
+        {viewer === 'guest' && <ExampleBanner />}
         <TopBar
           onMenuClick={() => setIsMenuOpen((open) => !open)}
           isMenuOpen={isMenuOpen}

@@ -194,7 +194,7 @@ Guidance: Clerk's `window.Clerk` exists once `ClerkProvider` has mounted and car
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -265,4 +265,13 @@ export default function Banner({ color, Icon, children }: BannerProps): ReactNod
 
 **Debrief**
 
-None.
+- `draws its words with role status, with an icon only when given one` passed; with no icon the status held no `svg`, and with `WifiOff` it held one, `aria-hidden`.
+- `shows the example banner to a guest, beneath the connection banner, and to no user` passed; as a guest with the probe answering 503 the header held two statuses, the connection banner first and the example banner second, both before the top bar's "Open menu", and as a user with the same probe it held the connection banner and no example banner.
+- `draws Log in as a block` passed; "Log in" carries `tappable-sm` and `bg-(--color-main-action)`.
+- `grep -c "ExampleBanner" docs/vocabulary.md` printed `1`.
+- In headless Chromium as a guest at 390 by 844, against the dev server on 5173 with its `/api` routed to `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`: on Home, Your library and Edit card, the banner read "This is an example. Log in to use all of Flashy.", its box was 390 by 36 at y 0, and the top bar began at y 38. With `/api/health` aborted, the header's children were the connection banner, y 0 to 56, the example banner, y 58 to 94, and the top bar, from y 96.
+- In headless Chromium as a guest at 1440 by 900, on Your library: the banner's left and right edges were 400 and 1040, and `<main>`'s were 400 and 1040.
+- Your library as a guest, screenshotted at 390 by 844 and 1440 by 900, and drawing 2's first screen and drawing 1's first, rendered at the same sizes: the header measured the same in both at each size, the banner 390 by 36 at 0,0 and 640 by 36 at 400,0, the top bar 58 tall from y 38, and "Log in" 77 by 44 at 297,45 and 947,45, with a computed border of `1px solid rgb(23, 33, 43)` and a shadow of `0px 2px 0px 0px` in both, since Chromium draws `tappable-sm`'s 1.5px border as 1px at a device pixel ratio of 1. The banner is ink, `rgb(23, 33, 43)`, with white words at 14px on a 20px line. Set one above the other, the headers show no difference. Below the header, the two decks stand in the opposite order and the mastery circles differ, which Out of scope names.
+- In headless Chromium as a user, against a Vite started with `VITE_DEV_AUTH=1` on port 5180 and the API on 8000 with `DEV_AUTH_USER_ID` and `ENV=development`: Your library, Home, a deck's page, All practices and Edit card each drew their page and showed no example banner and no status.
+- Departures from guidance: none; the Details hold constraints alone.
+- Code to read: in `frontend/src/components/shell/AppShell.test.tsx`, the cases under `AppShell connection banner` now run as a user, so the guest's banner, also `role="status"`, does not stand among the statuses they read.

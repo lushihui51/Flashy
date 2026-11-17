@@ -37,7 +37,7 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
       <button
         type="button"
         onClick={() => clerk.openSignIn()}
-        className="h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
+        className="tappable-sm h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
       >
         Log in
       </button>

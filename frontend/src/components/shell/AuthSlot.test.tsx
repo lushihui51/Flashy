@@ -28,6 +28,14 @@ describe('AuthSlot', () => {
     expect(openSignIn).toHaveBeenCalledTimes(1);
   });
 
+  it('draws Log in as a block', () => {
+    mockSignedOut();
+    renderWithRouter(<AuthSlot onAvatarClick={() => {}} />);
+
+    const logIn = screen.getByRole('button', { name: 'Log in' });
+    expect(logIn).toHaveClass('tappable-sm', 'bg-(--color-main-action)');
+  });
+
   it('signed in: renders the avatar image with the user name in alt text', () => {
     mockSignedIn({ fullName: 'Ada Lovelace', imageUrl: 'https://example.com/ada.png' });
     renderWithRouter(<AuthSlot onAvatarClick={() => {}} />);
