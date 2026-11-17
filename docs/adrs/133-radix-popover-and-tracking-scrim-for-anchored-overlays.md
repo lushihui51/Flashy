@@ -10,7 +10,7 @@ Every modal overlay is a Radix Dialog, with its scrim, focus trap, scroll lock a
 
 An anchored, non-modal overlay is a small panel beside the control it is anchored to, with the page behind it still usable, dismissed by an interaction outside it. It needs positioning against the anchor and the viewport, outside-dismiss, and focus return.
 
-A picker's list and a rating's list are each a Radix Popover over the app's `Scrim`, which dims the page at one strength, a fifth of ink, with a hole over the control that opened the list.
+A picker's list and a rating's list are each a Radix Popover over the app's `Scrim`, which dims the page at a fifth of ink, with a hole over the control that opened the list.
 
 The user types in a picker's input while its list is open.
 
@@ -18,17 +18,23 @@ While a list of choices is open, the page is to be dimmed but readable, with the
 
 The card sheet is a `BottomSheet`, a Radix Dialog whose own overlay dims the page. The sheet's key is to open over the sheet from an "i", dim only the sheet, and close on a tap on the "i" or anywhere outside the panel, without closing the sheet.
 
-PDR 058 answers a guest's press that would change the example library by dimming the whole screen but for "Log in", with a sentence in white beneath "Log in". A tap anywhere else brings the screen back. That screen is to be dimmed at half of ink, and "Log in" is the control its sentence is anchored to, not the control that was pressed.
+PDR 058 answers a guest's press that would change the example library by dimming the whole screen but for the banner across the top and "Log in", with no sentence. A tap anywhere but "Log in" brings the screen back. That screen is to be dimmed at half of ink, and neither the banner nor "Log in" is the control that was pressed.
 
-"Log in" sits in `AppShell`'s header, whose height changes while the app runs as the connection banner comes and goes (ADR 127), so "Log in" moves while a screen is dimmed.
+The banner is the guest's banner, which spans the column above the top bar. "Log in" stands at the right of the top bar, on one row with the menu button, the logo and "+".
 
-`Scrim` measures its control's box when it mounts and when the window is resized, and at no other time. It is mounted only while its panel is open.
+Both sit in `AppShell`'s header, whose height changes while the app runs as the connection banner comes and goes (ADR 127), so they can move while a screen is dimmed.
+
+A box measured when a scrim mounts and when the window is resized goes stale when its element moves for any other reason. `Scrim` is mounted only while a screen is dimmed.
+
+`Scrim` has three callers: a picker's list, a rating's list and the screen dimmed for a guest.
+
+A press inside a hole reaches the element beneath it and never the scrim.
 
 Radix Popover's modal mode traps focus in the panel and hides everything outside it, the input included.
 
 Radix decides what counts as inside a layer by React's component tree.
 
-A layer lifted by `z-index` stays beneath any ancestor that starts its own stacking context, such as a dialog.
+A layer lifted by `z-index` stays beneath any ancestor that starts its own stacking context, such as a dialog. `AppShell`'s header starts one, beneath `Scrim`.
 
 The app has a positioning library only through Radix, and does not list it as a package of its own.
 
@@ -36,7 +42,7 @@ jsdom does no layout (ADR 017) and has no `ResizeObserver`, which the popover's 
 
 A translucent colour is one of the app's eight colours at an opacity (ADR 090).
 
-ADR 098 made every anchored non-modal overlay a Radix Popover over the app's `Scrim`, at one strength, with a hole over the control that opened the panel, placed when the scrim mounts. PDR 058's dimmed screen is darker, is anchored to a control that did not open it, and that control moves, so this record restates ADR 098.
+ADR 098 made every anchored non-modal overlay a Radix Popover over the app's `Scrim`, at one strength, with a hole over the control that opened the panel, placed when the scrim mounts. PDR 058's dimmed screen is darker, lights two elements of which neither opened it, and both can move, so this record restates ADR 098.
 
 ## Decision
 
@@ -44,9 +50,9 @@ We will implement an anchored, non-modal overlay with `@radix-ui/react-popover`,
 
 We will keep an anchored panel that dims what lies behind it a non-modal Popover, so focus stays where it was, and make its dimming and the catching of taps on it the app's own `Scrim`, rendered in the popover's portal beneath the panel.
 
-We will have `Scrim` cover the whole screen, or one bounding element, in ink at the strength its caller names, a fifth for a list of choices and a half for the screen dimmed for a guest, with a hole cut over the control its panel is anchored to. It prevents a pointerdown on it, closes the panel, lets the tap reach nothing beneath, and locks the page's scroll while it is open.
+We will have `Scrim` cover the whole screen, or one bounding element, in ink at the strength its caller names, a fifth for a list of choices and a half for the screen dimmed for a guest, with one hole cut over each element its caller names, in that element's own corners. It prevents a pointerdown on it, closes the panel it lies beneath, where there is one, lets the tap reach nothing beneath, and locks the page's scroll while it is open.
 
-While it is mounted, `Scrim` measures that control's box on every animation frame, and moves the hole when the box has moved.
+While it is mounted, `Scrim` measures each named element's box on every animation frame, and moves its hole when the box has moved.
 
 We will render a `Scrim` for a panel inside a dialog as a React child of `Popover.Content`, so a tap on it counts as inside both layers and closes the panel without closing the dialog.
 
@@ -80,13 +86,25 @@ Rejected because it would leave two ways to build one dimmed panel.
 
 Rejected because it would cover the scrolled content rather than the visible dialog, and outside-dismiss, `Esc` and focus return would be written by hand.
 
-### A second scrim component at the stronger dim
+### A second scrim component for the screen dimmed for a guest
 
 Rejected because the hole, the swallowed tap and the scroll lock would be written twice.
 
-### The hole measured again when the header's height changes
+### One hole over a box enclosing the guest's banner and "Log in"
 
-Rejected because `Scrim` would then know about the shell, and a control that moves for any other reason would be missed.
+Rejected because the box would also hold the menu button, the logo and "+", which PDR 058 dims.
+
+### The guest's banner and "Log in" lifted above the scrim by `z-index`
+
+Rejected because they sit inside the header's stacking context, and could not rise above a scrim outside it.
+
+### The scrim beneath the header, with a second dim layer inside the header
+
+Rejected because two layers would be kept at one strength and opened and closed together, and the header would know about the dimmed screen.
+
+### The holes measured again when the header's height changes
+
+Rejected because `Scrim` would then know about the shell, and an element that moves for any other reason would be missed.
 
 ### The positioning library's own watcher
 
@@ -99,8 +117,8 @@ Rejected because the app has that library only through Radix, and would be impor
 - The developer has one primitive per kind of overlay, Dialog for modal and Popover for anchored, and one way to build a dimmed panel.
 - The user keeps typing in a list's input while the page is dimmed, the control stays bright, and a tap on the dimmed page closes the list and acts on nothing.
 - The developer gets a panel inside a dialog that closes on a tap outside it and leaves the dialog open, with no outside-dismiss, `Esc` or focus return written by hand.
-- The user sees the hole stay over its control whatever moves it, under a list and under the screen dimmed for a guest alike.
-- The developer who builds another dimmed panel picks one of the two strengths and writes no scrim.
+- The user sees each hole stay over its element whatever moves it, under a list and under the screen dimmed for a guest alike.
+- The developer who builds another dimmed screen picks one of the two strengths, names the elements to leave lit, and writes no scrim.
 
 **Negative**
 
@@ -109,7 +127,8 @@ Rejected because the app has that library only through Radix, and would be impor
 - The developer keeps the scrim's hole, its catch and its scroll lock correct by hand, since they are the app's own.
 - The developer checks the hole's place in a browser, since jsdom does no layout.
 - The developer relies on Radix judging inside by React's tree, and a change to that would let a tap on a dialog's `Scrim` close the dialog too, with no error.
-- The user's browser reads one box a frame while a scrim is open.
+- The developer who names an element that is not mounted gets no hole and no error, and the element dims.
+- The user's browser reads one box a frame for each lit element while a scrim is open.
 
 **Neutral**
 
