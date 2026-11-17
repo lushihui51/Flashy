@@ -11,7 +11,7 @@ from app.database_ops.card import (
 )
 from app.database_ops.deck import db_read_deck
 from app.database_ops.field_def import db_read_field_defs
-from app.dependencies import CurrentUserDep
+from app.dependencies import CurrentUserDep, ViewerDep
 from app.mastery.config import get_mastery_strategy
 from app.models.card import CardCreate, CardRead, CardUpdate
 from app.services.activity import touch
@@ -69,7 +69,7 @@ def create_card(db: SessionDep, current_user: CurrentUserDep, card: CardCreate):
 
 
 @router.get("", response_model=list[CardRead], status_code=200)
-def read_cards(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID):
+def read_cards(db: SessionDep, current_user: ViewerDep, deck_id: uuid.UUID):
     if not db_read_deck(db, deck_id, current_user.id):
         raise HTTPException(status_code=404, detail="Deck not found")
     active_field_ids = {fd.id for fd in db_read_field_defs(db, deck_id, current_user.id)}
@@ -80,7 +80,7 @@ def read_cards(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID)
 
 
 @router.get("/{card_id}", response_model=CardRead, status_code=200)
-def read_card(db: SessionDep, current_user: CurrentUserDep, card_id: uuid.UUID):
+def read_card(db: SessionDep, current_user: ViewerDep, card_id: uuid.UUID):
     card = db_read_card(db, card_id, current_user.id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")

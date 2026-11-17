@@ -10,7 +10,7 @@ from app.database_ops.deck import (
     db_read_deck_listings,
 )
 from app.database_ops.field_def import db_read_field_defs
-from app.dependencies import CurrentUserDep
+from app.dependencies import CurrentUserDep, ViewerDep
 from app.mastery.config import get_mastery_strategy
 from app.models.card import CardSummary
 from app.models.deck import Deck, DeckSummary
@@ -81,13 +81,13 @@ def create_deck(db: SessionDep, current_user: CurrentUserDep, payload: DeckCreat
 
 
 @router.get("", response_model=list[DeckSummary], status_code=200)
-def read_decks(db: SessionDep, current_user: CurrentUserDep):
+def read_decks(db: SessionDep, current_user: ViewerDep):
     listings = db_read_deck_listings(db, current_user.id)
     return deck_summaries(db, get_mastery_strategy(), listings)
 
 
 @router.get("/{deck_id}", response_model=DeckDetail, status_code=200)
-def read_deck(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID):
+def read_deck(db: SessionDep, current_user: ViewerDep, deck_id: uuid.UUID):
     deck = db_read_deck(db, deck_id, current_user.id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")

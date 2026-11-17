@@ -445,8 +445,8 @@ export interface paths {
         };
         /**
          * Read Health
-         * @description The one route without `CurrentUserDep`: the frontend's health probe must answer
-         *     signed-out visitors and must not depend on Clerk. 503
+         * @description The one route that resolves no user: the frontend's health probe must answer
+         *     signed-out visitors and must not depend on Clerk or on an example user. 503
          *     `database_unavailable` when the database does not answer.
          */
         get: operations["read_health_api_health_get"];

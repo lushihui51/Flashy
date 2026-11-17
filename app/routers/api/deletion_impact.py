@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import SessionDep
-from app.dependencies import CurrentUserDep
+from app.dependencies import ViewerDep
 from app.models.deletion_payloads import DeletionImpactRead
 from app.services.deletion import compute_deletion_impact
 
@@ -19,7 +19,7 @@ _IdListQuery = Annotated[list[uuid.UUID], Query()]
 @router.get("", response_model=DeletionImpactRead)
 def get_deletion_impact(
     db: SessionDep,
-    current_user: CurrentUserDep,
+    current_user: ViewerDep,
     deck_ids: _IdListQuery = [],  # noqa: B006 — FastAPI query params, not shared state
     field_ids: _IdListQuery = [],  # noqa: B006
     card_ids: _IdListQuery = [],  # noqa: B006

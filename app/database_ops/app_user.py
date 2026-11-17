@@ -4,13 +4,14 @@ Clerk id; the example user's row is the one row with no Clerk identity, and noth
 creates it. These are the only operations the table has: a row is created, its timezone
 is kept in step with the `X-Timezone` header, its first practice is stamped once, its
 Clerk identity is taken off to make it the example user or given back to the example
-user, and nothing else ever writes it. Unlike every other module here the reads are not
-ownership-scoped, because this table *is* the ownership scope."""
+user, and nothing else ever writes it. A guest's request, answered as the example user,
+has its transaction made read only here once that row is read. Unlike every other module
+here the reads are not ownership-scoped, because this table *is* the ownership scope."""
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import update
+from sqlalchemy import text, update
 from sqlmodel import Session, col, select
 
 from app.models.app_user import AppUser
@@ -23,6 +24,11 @@ def db_read_app_user_by_clerk_id(db: Session, clerk_user_id: str) -> AppUser | N
 def db_read_example_app_user(db: Session) -> AppUser | None:
     """The example user, the one row with no Clerk identity, or None when the database has none."""
     return db.exec(select(AppUser).where(col(AppUser.clerk_user_id).is_(None))).first()
+
+
+def db_lock_transaction_read_only(db: Session) -> None:
+    """Makes the session's open transaction read only, so a later statement that writes raises in PostgreSQL. No commit."""
+    db.execute(text("SET TRANSACTION READ ONLY"))
 
 
 def db_create_app_user(db: Session, clerk_user_id: str, timezone: str) -> AppUser:

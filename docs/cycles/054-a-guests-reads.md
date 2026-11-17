@@ -168,7 +168,7 @@ Guidance: `main` opens `Session(engine)` from `app/database.py`, and the tests c
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -282,7 +282,13 @@ Guidance: `get_viewer` keeps `get_current_app_user`'s two header parameters by n
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_guest_reads.py -v` printed `7 passed`: `test_every_get_route_answers_a_guest_200` (its fourteen requests each 200, the decks listed are the example library's "Verbs", and home's one active run is the library's), `test_the_read_test_covers_every_get_route_in_the_route_table` (the set of paths in `READ_REQUESTS` equals the route table's `GET` paths under `/api` but health), `test_every_writing_route_answers_a_guest_401` (eighteen routes taken from the route table, each 401, with home reading the same after), `test_a_token_that_fails_verification_is_401_on_a_read`, `test_a_read_with_no_header_is_401_in_a_database_with_no_example_user`, `test_a_guests_transaction_refuses_a_write_and_the_next_one_writes` (the write raises `DBAPIError` with `pgcode` `25006`, read_only_sql_transaction, and after `rollback` the same write commits) and `test_the_bypass_answers_a_read_with_no_header_as_its_user` (the bypass's user's deck "Nouns" is listed, not the example library's).
+- `test_a_guests_zone_header_changes_neither_the_stored_zone_nor_a_runs_day` in `tests/api_tests/test_user_timezone.py` passed: a run whose start is set to 20:30 UTC on 2026-11-03 reads `2026-11-03` under `America/Los_Angeles`, still reads it for a guest sending `X-Timezone: Pacific/Auckland`, where it is already the 4th, and the stored zone stays `America/Los_Angeles`. The start is set on the row by hand, as `TestRunDay` in `tests/api_tests/test_runs.py` does.
+- `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed`.
+- `grep -c "ViewerDep" docs/vocabulary.md` printed `1`; the row stands after "The signed-in user" in the App area.
+- The full `pytest` printed `401 passed`, with no other connection to the test database before it. `npm run gen:api` changed only `read_health`'s description in `frontend/src/api/openapi.json` and `frontend/src/api/types.ts`. `npx vitest run` printed `733 passed`, `npm run lint` printed nothing, and `npm run build` exited 0.
+- No departure from guidance: `get_viewer` keeps `get_current_app_user`'s two header parameters by name. Its 401 for a guest in a database with no example user carries the same detail as the 401 of a request with no header had before.
+- Read `get_viewer` in `app/dependencies.py`, the one branch a guest takes; the member comment on `AppUser.timezone` in `app/models/app_user.py`, rewritten since the example user's zone comes from no request; and `READ_REQUESTS` in `tests/api_tests/test_guest_reads.py`, which a new `GET` route must join.
 
 ### T4 — The route table's guard
 

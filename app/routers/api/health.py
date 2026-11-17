@@ -9,8 +9,8 @@ router = APIRouter(prefix="/health", tags=["Health"])
 
 @router.get("", response_model=dict[str, str], status_code=200)
 def read_health(db: SessionDep) -> dict[str, str]:
-    """The one route without `CurrentUserDep`: the frontend's health probe must answer
-    signed-out visitors and must not depend on Clerk. 503
+    """The one route that resolves no user: the frontend's health probe must answer
+    signed-out visitors and must not depend on Clerk or on an example user. 503
     `database_unavailable` when the database does not answer."""
     try:
         db_ping(db)

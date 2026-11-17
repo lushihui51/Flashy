@@ -23,8 +23,10 @@ class AppUser(AppModel, TimestampMixin, table=True):
     # The `sub` of the user's verified Clerk token. Null on one row at most: the example
     # user, whose library every guest is shown and whom no session signs in as.
     clerk_user_id: str | None = Field(unique=True)
-    # The user's IANA zone name (e.g. "America/Los_Angeles"), supplied by the
-    # client on every request via the X-Timezone header. This is a *rendering* input and
+    # The user's IANA zone name (e.g. "America/Los_Angeles"), supplied by the client via
+    # the X-Timezone header of every request signed in as the user. The example user's
+    # comes from no request: it stays the zone its library was made in, whatever a guest's
+    # request sends. This is a *rendering* input and
     # nothing else — every stored timestamp is a server-stamped UTC instant, so changing
     # this value changes what the user sees and never what is stored or how it orders.
     # Defaults to UTC until a client has told us otherwise.

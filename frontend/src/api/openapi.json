@@ -2579,7 +2579,7 @@
           "Health"
         ],
         "summary": "Read Health",
-        "description": "The one route without `CurrentUserDep`: the frontend's health probe must answer\nsigned-out visitors and must not depend on Clerk. 503\n`database_unavailable` when the database does not answer.",
+        "description": "The one route that resolves no user: the frontend's health probe must answer\nsigned-out visitors and must not depend on Clerk or on an example user. 503\n`database_unavailable` when the database does not answer.",
         "operationId": "read_health_api_health_get",
         "responses": {
           "200": {
