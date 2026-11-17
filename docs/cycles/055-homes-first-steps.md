@@ -131,7 +131,7 @@ class HomeSteps(AppModel):
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -166,7 +166,12 @@ Three rows change in their Code column alone, and each must read exactly:
 
 **Debrief**
 
-None.
+- `grep -c "RunStatus" docs/vocabulary.md` printed `2`.
+- The practice row's grep printed `1`.
+- Only the three Code cells changed: `git diff --stat` shows `docs/vocabulary.md | 6 +++---`. Each name is one the code uses: `RunStatus` and `status` in `app/models/run.py`, `practiceId` in `frontend/src/api/practice.ts`.
+- No code changed, so no frontend check applies; the record citation guard printed `2 passed`.
+- No departure from guidance.
+- Nothing in the code to read.
 
 ### T3 — Home's four steps
 
