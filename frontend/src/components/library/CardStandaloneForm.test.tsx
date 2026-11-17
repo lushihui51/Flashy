@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { LogInPromptContext } from 'src/lib/viewer';
 import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
 
 // Every call the form makes to leave, passed on to the real leave, which under a memory
@@ -96,18 +98,36 @@ function LocationProbe() {
   );
 }
 
-function renderForm(initialPath: string | { pathname: string; search?: string; state?: unknown }) {
+function renderForm(
+  initialPath: string | { pathname: string; search?: string; state?: unknown },
+  openPrompt: () => void = () => {},
+) {
   return renderWithProviders(
-    <Routes>
-      <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
-      <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
-      <Route path="/decks/:deckId" element={<LocationProbe />} />
-      <Route path="/library" element={<LocationProbe />} />
-      <Route path="/decks/new" element={<LocationProbe />} />
-      <Route path="/opener" element={<LocationProbe />} />
-    </Routes>,
+    <LogInPromptContext.Provider value={openPrompt}>
+      <Routes>
+        <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
+        <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
+        <Route path="/decks/:deckId" element={<LocationProbe />} />
+        <Route path="/library" element={<LocationProbe />} />
+        <Route path="/decks/new" element={<LocationProbe />} />
+        <Route path="/opener" element={<LocationProbe />} />
+      </Routes>
+    </LogInPromptContext.Provider>,
     [initialPath],
   );
+}
+
+/** The method and path of every request sent from here to the test's end. */
+function recordRequests(): string[] {
+  const requests: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    requests.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return requests;
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -563,5 +583,74 @@ describe('CardStandaloneForm — edit mode', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this card.');
     expect(screen.queryByText('Card not found.')).not.toBeInTheDocument();
+  });
+});
+
+describe('CardStandaloneForm — a guest', () => {
+  beforeEach(() => {
+    mockSignedOut();
+    mockAll();
+  });
+
+  it("a guest's Edit card is read only, with Done alone, and a press on a field opens the prompt", async () => {
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    const { container } = renderForm('/cards/c1/edit', openPrompt);
+    const front = await screen.findByRole('textbox', { name: '[Front]' });
+    const requests = recordRequests();
+
+    for (const input of screen.getAllByRole('textbox')) expect(input).toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: 'Delete card' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(container.querySelectorAll(':disabled')).toHaveLength(0);
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+
+    await user.click(front);
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    await user.type(front, 'x{Enter}', { skipClick: true });
+    expect(front).toHaveValue('Bonjour');
+    expect(requests).toEqual([]);
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
+  });
+
+  it("a guest's Delete card opens the prompt and asks no question", async () => {
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    renderForm('/cards/c1/edit', openPrompt);
+    const deleteCard = await screen.findByRole('button', { name: 'Delete card' });
+    const requests = recordRequests();
+
+    await user.click(deleteCard);
+
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete card?')).not.toBeInTheDocument();
+    expect(requests).toEqual([]);
+  });
+
+  it("a guest's New card holds a greyed deck picker and Done alone", async () => {
+    const openPrompt = vi.fn();
+    const user = userEvent.setup();
+    const { container } = renderForm('/cards/new', openPrompt);
+    const picker = await screen.findByRole('combobox');
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: '[Front]' })).toBeNull());
+
+    expect(picker).toHaveAttribute('readonly');
+    expect(container.querySelectorAll(':disabled')).toHaveLength(0);
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+
+    await user.click(picker);
+    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/library'));
   });
 });

@@ -38,6 +38,37 @@ describe('CardFieldsForm', () => {
     expect(onChange).toHaveBeenLastCalledWith('f1', 'x');
   });
 
+  it('with onReadOnlyPress every input is read only and a press on one calls it', async () => {
+    const onChange = vi.fn();
+    const onReadOnlyPress = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <CardFieldsForm
+        fieldDefs={[
+          { key: 'f1', name: 'Front', type: 'text' },
+          { key: 'f2', name: 'Back', type: 'text' },
+        ]}
+        values={{ f1: 'Hola', f2: 'Hello' }}
+        onChange={onChange}
+        onReadOnlyPress={onReadOnlyPress}
+      />,
+    );
+
+    for (const input of screen.getAllByRole('textbox')) {
+      expect(input).toHaveAttribute('readonly');
+      expect(input).toBeEnabled();
+      expect(input).toHaveClass('bg-(--color-surface)', 'text-(--color-aside)');
+    }
+    const back = screen.getByRole('textbox', { name: '[Back]' });
+    await user.click(back);
+    expect(onReadOnlyPress).toHaveBeenCalledTimes(1);
+
+    await user.type(back, 'x', { skipClick: true });
+    expect(back).toHaveValue('Hello');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onReadOnlyPress).toHaveBeenCalledTimes(1);
+  });
+
   it('renders an unsupported field type read-only with a note, and does not crash', () => {
     render(
       <CardFieldsForm

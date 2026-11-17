@@ -246,7 +246,7 @@ Guidance: `Popover.Anchor` takes `virtualRef`; `Popover.Content` with `side="bot
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -336,7 +336,23 @@ While `useViewer()` answers `user`, each form is as it is today.
 
 **Debrief**
 
-None.
+- `is aria-disabled, never disabled, and a press calls onPress` passes: the button is `type="button"`, enabled, `aria-disabled="true"`, keeps its caller's classes, and a press calls `onPress` once with no argument.
+- Every case of `frontend/src/test/formParts.test.ts` passes, 5 of 5; `git diff --quiet HEAD -- src/test/formParts.test.ts` holds.
+- `with onReadOnlyPress every input is read only and a press on one calls it` passes: both inputs read only, enabled, white with aside-grey words; a click calls it once, and typing after it changes no value and calls no `onChange`.
+- `with onReadOnlyPress a press opens no list and calls it` passes: the combobox is read only, enabled and greyed; a click calls it once and opens no list; ArrowDown, Enter and typing then open nothing, choose nothing and leave "Deck 3".
+- `a guest's Edit card is read only, with Done alone, and a press on a field opens the prompt` passes: every input read only, "Delete card" `aria-disabled`, nothing `:disabled`, the bar's buttons `["Done"]`; a press on [Front] opens the prompt, typing and Enter change nothing and send no request; Done lands on `/decks/d1`.
+- `a guest's Delete card opens the prompt and asks no question` passes, with no request.
+- `a guest's New card holds a greyed deck picker and Done alone` passes: the picker is read only, a press opens the prompt and no list, and Done lands on `/library`.
+- `a guest's Edit deck is read only, with Done alone and no Undo, and a press on a field's name opens the prompt` passes: the first field's Move up, the last field's Move down, both Removes of a two-field deck and each field's type stay `disabled`; Move Front down, Move Back up, Add field and Delete deck are enabled and `aria-disabled`; presses on a field's name, Move Front down, Add field and Deck name open the prompt four times, and the fields still read Front, Back, the name French Vocab, with no request; Done lands on `/decks/d1`.
+- `a guest's Delete deck opens the prompt and reads no deletion impact` passes: no request of any method is sent after the press.
+- Every case the four files held before passes, as a user: the full suite is 774 passed, T2's 765 and this task's 9. With `guest` forced false in both forms, all six guest cases of the two forms fail; restored, they pass.
+- Headless Chromium as a guest at 390 by 844, Edit card of the "Common words" card holding water: five inputs read only, holding "water", "水", "물", "eau", "agua", the card's values; each white, outlined in rgb(213, 218, 226), words in rgb(92, 102, 114), as drawing 2 draws them; "Delete card" `aria-disabled`, white, the same outline and grey, no shadow; the bar `["Done"]`, Done 16 to 374 wide; nothing in `<main>` `:disabled`. A press on the first input and "zz" typed dimmed the window, the scrim 0 to 390 by 0 to 844, the sentence 197 to 374 by 99 to 119 beneath "Log in" at 297 to 374 by 45 to 89, `elementFromPoint` at "Log in"'s centre was "Log in", and focus stayed on the input. A press on the dimming removed the scrim, and the input still read "water". Done opened `/decks/<Common words id>`. No `/api` request but GET was sent.
+- At 390 by 844 as a guest, each bar's buttons were `["Done"]`. New deck: every input read only; `:disabled` in `<main>` were each Field type, Move Term up, Remove Term, Move Definition down and Remove Definition, which a user's New deck disables too; `aria-disabled` were Move Term down, Move Definition up and Add field. Edit deck of "Common words", five fields: `:disabled` were each Field type, Move English up and Move Spanish down; every other move, every Remove, Add field and Delete deck were `aria-disabled`. New card: the picker read only, nothing `:disabled`. No request but GET on any of them.
+- The browser checks ran against the dev server on 5173, its `/api` routed by Playwright to `DEV_AUTH_USER_ID= uv run uvicorn app.main:app --port 8001`, now stopped.
+- Departure from guidance: none.
+- Added beyond the Done when: `a guest's New deck holds Done alone, which leaves as Cancel does` in `frontend/src/components/library/DeckEditor.test.tsx`, which pins the controls a user's New deck disables too.
+- Read: `CardStandaloneFormBody`'s form now calls `preventDefault` in its `onSubmit` before the guard, and `handleSubmit` takes no event, so a guest's Enter in a deck of one field submits nothing and reloads nothing. `FieldButton` in `frontend/src/components/library/DeckEditor.tsx` keeps a button `disabled` where a user's form disables it, and draws a `ReadOnlyButton` for a guest everywhere else.
+- Read: "Delete card" and "Delete deck" put the press that opens their question through the guard, besides `handleDelete` and `handleDeleteDeck`, so a guest reads no deletion impact.
 
 ### T4 — A guest's practice forms and board
 
