@@ -294,7 +294,7 @@ Guidance: `get_viewer` keeps `get_current_app_user`'s two header parameters by n
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -338,7 +338,13 @@ Guidance: a route's dependencies are `route.dependant.dependencies`, each with t
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_route_table.py -v` printed `5 passed`: `test_every_get_route_under_api_but_health_takes_viewer_dep`, `test_every_route_of_another_method_takes_current_user_dep`, `test_health_resolves_no_user`, `test_no_route_stands_outside_api`, and `test_the_guard_finds_each_kind_of_offending_route`.
+- On the dev server, after it reloaded, `curl -s -o /dev/null -w '%{http_code}'` printed `404` for `localhost:8000/docs`, `/redoc`, `/openapi.json` and `/docs/oauth2-redirect`, and `200` for `/api/health`.
+- In `frontend/`, `npm run gen:api` exited 0 and `git status --porcelain src/api` printed nothing.
+- `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed`. The full `pytest` printed `406 passed`, with no other connection to the test database before it. Nothing under `frontend/` changed, so the frontend checks did not run.
+- No departure from guidance: a route's dependencies are read from `route.dependant.dependencies` by `.call`, walked into sub-dependencies, so a dependency that itself takes `ViewerDep` or `CurrentUserDep` counts. An entry with no `dependant`, such as a plain Starlette route, holds neither function. `HEAD`, which Starlette adds beside a plain route's `GET`, is set aside, and an entry under `/api` with no methods, such as a mount, is held to the rule for a route of another method, since it answers every method.
+- Beyond the Done when, `test_the_guard_finds_each_kind_of_offending_route` runs the three rules over an app of its own, with a `GET` taking no user, a `GET` taking `CurrentUserDep`, a `POST` taking none, a `POST` taking `ViewerDep` and a mount under `/api`, and with FastAPI's pages on; each rule names exactly its offenders, so the four tests passing on `app.routes` means the app is clean, not that a rule matches nothing.
+- Read the comment above `app` in `app/main.py`, which says why FastAPI's pages are off and that `app.openapi()` still builds the schema, and the docstrings of `_calls` and `_others_without_current_user` in `tests/api_tests/test_route_table.py`, which state what counts as a route's dependencies and why a mount falls under the second rule.
 
 ### T5 — Dev's example library
 

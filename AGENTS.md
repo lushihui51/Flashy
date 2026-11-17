@@ -5,7 +5,7 @@
 - A drawing is a phone screen, 390 by 844, or a wide screen, 1440 by 900, whichever the human names.
 - Auth is Clerk: CurrentUserDep in app/dependencies.py verifies a session on every route of a method other than GET, and ViewerDep answers a GET with no Authorization header as the example user, on every route but GET /api/health.
   - Reason: ADR 007, ADR 130, ADR 131
-  - Guard: tests/api_tests/test_auth_scoping.py
+  - Guard: tests/api_tests/test_auth_scoping.py, tests/api_tests/test_route_table.py
 
 # Commands
 

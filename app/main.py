@@ -12,7 +12,10 @@ from app.routers.api.home import router as api_home_router
 from app.routers.api.practice import router as api_practice_router
 from app.routers.api.run import router as api_run_router
 
-app = FastAPI()
+# FastAPI's own pages are turned off so that every route stands under /api and resolves
+# its user by its method; app.openapi() still builds the schema the frontend's types are
+# generated from (ADR 131).
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(api_deck_router, prefix="/api")
 app.include_router(api_field_def_router, prefix="/api")
 app.include_router(api_card_router, prefix="/api")
