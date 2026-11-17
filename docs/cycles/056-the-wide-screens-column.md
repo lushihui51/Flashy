@@ -29,7 +29,7 @@ Judgement: The engineer judges on the live server at 1440 by 900, then at 390 by
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -59,7 +59,10 @@ PDR 055: `RunCardView` and `ZONE_CLASS` in `frontend/src/pages/RunPage.tsx` must
 
 **Debrief**
 
-None.
+- `grep -c "landscape:" frontend/src/pages/RunPage.tsx` printed `0`.
+- On the dev user's active run of "Commands: Basic", signed out with the local bypass, measured by `boundingBox`: at 1440 by 900, Prompt's bottom 516.5 above Answer's top 530.5, both left edges 16; at 844 by 390, the same figures, both left edges 16. At 390 by 844, where the removed variants never applied, the same tops and left edges.
+- No departure from the Details: the change removes `landscape:flex-1` from `ZONE_CLASS` and `landscape:flex-row` from the zones' wrapper in `RunCardView`, and nothing else.
+- Nothing in the code needs reading beyond that two-line diff.
 
 ### T2 — The column
 

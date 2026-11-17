@@ -28,7 +28,7 @@ type RunState = components['schemas']['RunState'];
 type CurrentRunCard = components['schemas']['CurrentRunCard'];
 type RunProgress = components['schemas']['RunProgress'];
 
-const ZONE_CLASS = 'tappable rounded-block bg-(--color-surface) px-4.5 landscape:flex-1';
+const ZONE_CLASS = 'tappable rounded-block bg-(--color-surface) px-4.5';
 const ZONE_HEADING_CLASS =
   'flex h-10.5 items-center ruled-bottom text-sm font-semibold text-(--color-ink)';
 const ZONE_ROW_CLASS = 'pt-3.5 pb-4 last:pb-4.5';
@@ -314,7 +314,7 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
         </span>
       )}
 
-      <div className="flex flex-col gap-3.5 landscape:flex-row">
+      <div className="flex flex-col gap-3.5">
         <section className={ZONE_CLASS}>
           <h2 className={ZONE_HEADING_CLASS}>Prompt</h2>
           <div className="divide-y divide-(--color-line)">
