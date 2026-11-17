@@ -2,7 +2,7 @@
 chain. A user's row is keyed by `clerk_user_id` and created lazily on first sight of a
 Clerk id; the example user's row is the one row with no Clerk identity, and nothing here
 creates it. These are the only operations the table has: a row is created, its timezone
-is kept in step with the `X-Timezone` header, its first practice is stamped once, its
+is kept in step with the `X-Timezone` header, its first run is stamped once, its
 Clerk identity is taken off to make it the example user or given back to the example
 user, and nothing else ever writes it. A guest's request, answered as the example user,
 has its transaction made read only here once that row is read. Unlike every other module
@@ -61,12 +61,10 @@ def db_update_app_user_clerk_id(db: Session, user: AppUser, clerk_user_id: str |
     return user
 
 
-def db_stage_set_first_practice_at(db: Session, user_id: uuid.UUID, at: datetime) -> None:
-    """Stamps the user's first practice, leaving a stamp already there untouched. No
-    commit: the caller's transaction is the practice's own, so a refused practice leaves
-    it unwritten."""
+def db_stage_set_first_run_at(db: Session, user_id: uuid.UUID, at: datetime) -> None:
+    """Stamps the user's first run, leaving a stamp already there untouched. No commit."""
     db.execute(
         update(AppUser)
-        .where(col(AppUser.id) == user_id, col(AppUser.first_practice_at).is_(None))
-        .values(first_practice_at=at)
+        .where(col(AppUser.id) == user_id, col(AppUser.first_run_at).is_(None))
+        .values(first_run_at=at)
     )

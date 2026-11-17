@@ -32,7 +32,7 @@ Judgement: The engineer judges on the live server at 390 wide, as a new account.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -113,7 +113,19 @@ class HomeSteps(AppModel):
 
 **Debrief**
 
-None.
+- `test_steps_stay_once_a_practice_is_made_and_name_it` PASSED: `steps` is `{"has_deck": True, "has_card": True, "practice_id": practice["id"]}`.
+- `test_the_newest_of_several_practices_is_the_one_named` PASSED; each practice is made by its own committed request, so their `created_at` differ and the id tie-break does not decide the case.
+- `test_steps_are_null_once_a_run_is_started` PASSED.
+- `test_a_refused_run_leaves_the_steps_and_no_stamp` PASSED: the start answers 400 with code `no_cards`, `steps` still names the practice, and `first_run_at` is None.
+- `test_the_stamp_and_null_steps_survive_deleting_everything` PASSED against `first_run_at`.
+- `test_a_rerun_and_a_run_of_chosen_cards_leave_the_stamp_as_it_was` PASSED; both routes answer 201.
+- `test_making_a_practice_stamps_nothing_and_its_first_run_stamps_once` PASSED: two practices leave `first_run_at` None, the first start stamps it, and a start of the second practice leaves it as it was.
+- `test_the_statement_count_is_equal_for_one_run_of_each_and_for_five` PASSED; `practice_id` is a scalar subquery in the one statement `db_read_home_steps` already made.
+- Migration `e91cd2d84924`, `down_revision` `64c8eb861c12`. On a `pg_dump` copy: `upgrade head` ran `64c8eb861c12 -> e91cd2d84924`, `alembic check` printed `No new upgrade operations detected.`, the query printed `0` (6 users, 2 stamped; before, 3 held `first_practice_at`), and a `downgrade -1` then `upgrade head` round trip ran clean. On the dev database: the same upgrade line, `No new upgrade operations detected.`, and `0`.
+- The grep printed nothing (exit 1).
+- Full `pytest`: 409 passed. `npx vitest run`: 733 passed; `npm run lint` and `npm run build` clean.
+- No departure from guidance.
+- Left for T3: the interface comment of `HomePage` in `frontend/src/pages/HomePage.tsx` still says the steps show until the user has made a practice; that file is T3's.
 
 ### T2 — The vocabulary's code names
 

@@ -3645,15 +3645,28 @@
           "has_card": {
             "type": "boolean",
             "title": "Has Card"
+          },
+          "practice_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Practice Id"
           }
         },
         "type": "object",
         "required": [
           "has_deck",
-          "has_card"
+          "has_card",
+          "practice_id"
         ],
         "title": "HomeSteps",
-        "description": "Whether the user has a deck and a card, the first two steps; the third, a\npractice, never exists while the steps show."
+        "description": "What the user has made of the first three steps to a first practice."
       },
       "PracticeConfigurationRead": {
         "properties": {

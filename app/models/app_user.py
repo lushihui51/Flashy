@@ -34,6 +34,6 @@ class AppUser(AppModel, TimestampMixin, table=True):
         default=DEFAULT_TIMEZONE,
         sa_column=Column(String, nullable=False, server_default=DEFAULT_TIMEZONE),
     )
-    # The server's instant of the user's first practice; null until they make one. It
-    # records that event, so it stays set whatever the user later deletes.
-    first_practice_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    # The server's instant of the user's first run, cut on any path; null until they
+    # start one. It records that event, so it stays set whatever the user later deletes.
+    first_run_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))

@@ -142,6 +142,7 @@ class TestForeignResourcesAreNotFound:
             "steps": {
                 "has_deck": False,
                 "has_card": False,
+                "practice_id": None,
             },
             "active_runs": [],
             "recent_runs": [],

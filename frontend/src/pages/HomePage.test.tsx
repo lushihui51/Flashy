@@ -90,6 +90,7 @@ describe('HomePage', () => {
     const steps = (hasDeck: boolean, hasCard: boolean) => ({
       has_deck: hasDeck,
       has_card: hasCard,
+      practice_id: null,
     });
 
     it('a user with nothing made reads "0 of 3" over New deck, New card and New practice', async () => {
@@ -376,7 +377,7 @@ describe('HomePage', () => {
   });
 
   it('holds no bar while the steps show', async () => {
-    renderHome({ steps: { has_deck: false, has_card: false } });
+    renderHome({ steps: { has_deck: false, has_card: false, practice_id: null } });
 
     await screen.findByRole('list', { name: 'Your first practice' });
     expect(screen.queryByTestId('form-bar')).not.toBeInTheDocument();

@@ -1,17 +1,20 @@
 """The composed response of the home router: a page's payload, nesting other entities'
 shapes, so it lives here rather than in any entity module."""
 
+import uuid
+
 from app.models.base import AppModel
 from app.models.practice_payloads import DeckNameRead, RunListing
 from app.models.run_payloads import RunProgress
 
 
 class HomeSteps(AppModel):
-    """Whether the user has a deck and a card, the first two steps; the third, a
-    practice, never exists while the steps show."""
+    """What the user has made of the first three steps to a first practice."""
 
     has_deck: bool
     has_card: bool
+    # The practice the user made most recently, which the fourth step starts; None while they have none.
+    practice_id: uuid.UUID | None
 
 
 class HomeRun(RunListing):
@@ -23,7 +26,7 @@ class HomeRun(RunListing):
 
 
 class HomeRead(AppModel):
-    # None once the user has made a practice.
+    # None once the user has started a run.
     steps: HomeSteps | None
     # Up to three, newest last_activity_at first.
     active_runs: list[HomeRun]

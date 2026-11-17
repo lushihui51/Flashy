@@ -942,14 +942,15 @@ export interface components {
         };
         /**
          * HomeSteps
-         * @description Whether the user has a deck and a card, the first two steps; the third, a
-         *     practice, never exists while the steps show.
+         * @description What the user has made of the first three steps to a first practice.
          */
         HomeSteps: {
             /** Has Deck */
             has_deck: boolean;
             /** Has Card */
             has_card: boolean;
+            /** Practice Id */
+            practice_id: string | null;
         };
         /**
          * PracticeConfigurationRead
