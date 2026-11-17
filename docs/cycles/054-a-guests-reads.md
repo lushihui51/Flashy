@@ -28,7 +28,7 @@ Judgement: The engineer judges on a local API started with the bypass off, `DEV_
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -85,7 +85,12 @@ The live site, under ADR 130: the Project line of `AGENTS.md` that begins "Auth 
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_example_user.py -q` printed `3 passed`, covering `test_a_second_row_without_a_clerk_id_is_refused`, `test_rows_with_a_clerk_id_stand_beside_the_one_without` and `test_db_read_example_app_user_returns_the_row_or_none`.
+- On a `pg_dump` copy of the dev database, `uv run alembic upgrade head` ran `2691a674095a -> 64c8eb861c12, app_user_without_clerk_identity`, and `uv run alembic check` printed `No new upgrade operations detected.`; on the copy, `downgrade -1` then `upgrade head` both ran too, and the copy was dropped. On the dev database, `upgrade head` ran the same revision, `alembic check` printed `No new upgrade operations detected.`, and `\d app_user` shows `"uq_app_user_example" UNIQUE, btree ((clerk_user_id IS NULL)) WHERE clerk_user_id IS NULL`. Its five rows all keep their `clerk_user_id`.
+- `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed`.
+- The full `pytest` printed `387 passed`, and `npm run gen:api` left `frontend/src/api/openapi.json` and `frontend/src/api/types.ts` unchanged, since no response carries `AppUser`. There are no frontend changes, so the frontend checks did not run.
+- No departure from guidance: the index is declared as the guidance gives it. The migration's revision id came from `alembic revision --autogenerate`, and its operations were rewritten in the style of the migrations before it.
+- Read the new member comment on `AppUser.clerk_user_id` in `app/models/app_user.py`, and the rewritten module docstring of `app/database_ops/app_user.py`, which now separates a user's row, made on first sight of a Clerk id, from the example user's row, which nothing in the module creates.
 
 ### T2 — The example user's script
 

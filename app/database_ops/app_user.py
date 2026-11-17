@@ -1,9 +1,10 @@
-"""Persistence for the `app_user` table — the authenticated user, keyed by
-`clerk_user_id`, and the root of every ownership chain. These are the only
-operations the table has: the row is created lazily on first sight of a Clerk id, its
-timezone is kept in step with the `X-Timezone` header, its first practice is stamped
-once, and nothing else ever writes it. Unlike every other module here the reads are not ownership-scoped, because
-this table *is* the ownership scope."""
+"""Persistence for the `app_user` table — one row per user, the root of every ownership
+chain. A user's row is keyed by `clerk_user_id` and created lazily on first sight of a
+Clerk id; the example user's row is the one row with no Clerk identity, and nothing here
+creates it. These are the only operations the table has: a row is created, its timezone
+is kept in step with the `X-Timezone` header, its first practice is stamped once, and
+nothing else ever writes it. Unlike every other module here the reads are not
+ownership-scoped, because this table *is* the ownership scope."""
 
 import uuid
 from datetime import datetime
@@ -16,6 +17,11 @@ from app.models.app_user import AppUser
 
 def db_read_app_user_by_clerk_id(db: Session, clerk_user_id: str) -> AppUser | None:
     return db.exec(select(AppUser).where(AppUser.clerk_user_id == clerk_user_id)).first()
+
+
+def db_read_example_app_user(db: Session) -> AppUser | None:
+    """The example user, the one row with no Clerk identity, or None when the database has none."""
+    return db.exec(select(AppUser).where(col(AppUser.clerk_user_id).is_(None))).first()
 
 
 def db_create_app_user(db: Session, clerk_user_id: str, timezone: str) -> AppUser:
