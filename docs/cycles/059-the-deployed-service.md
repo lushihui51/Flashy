@@ -105,7 +105,7 @@ def add_frontend(app: FastAPI, dist: Path) -> None:
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -163,4 +163,19 @@ Guidance: `fastapi run --host 0.0.0.0 --port ${PORT:-8000}` runs `app.main:app` 
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_config.py -v` printed `test_settings_start_without_a_test_database_url PASSED`; the case builds `Settings(_env_file=None)` from the four variables alone, with `TEST_DATABASE_URL`, `DEV_AUTH_USER_ID` and `ENV` unset, and asserts `test_database_url` is `None`.
+- `docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=<the key in frontend/.env> -t flashy .` exited 0. It printed one warning, `SecretsUsedInArgOrEnv` for that build argument; a publishable key is public by design, and Vite writes it into the built files whatever carries it.
+- `docker run --rm flashy sh -c 'ls -a . | grep -c -x -e .env -e tests -e docs -e node_modules -e .git'` printed `0`, and `docker run --rm flashy ls frontend` printed `dist` alone. The working directory `/app` holds `.venv`, `alembic`, `alembic.ini`, `app`, `frontend`, `pyproject.toml` and `uv.lock`.
+- With the image run as `docker run --network host` with `DATABASE_URL` naming the dev database, `PERMITTED_ORIGINS='["http://localhost:8001"]'`, `CLERK_FAPI_URL`, `VITE_CLERK_PUBLISHABLE_KEY` and `PORT=8001`, `docker exec ... env` showed those five of the app's variables and no `TEST_DATABASE_URL`, `ENV` or `DEV_AUTH_USER_ID`:
+  - `curl -s localhost:8001/api/health` printed `{"status":"ok"}`;
+  - the bodies of `/` and `/library` were identical by `cmp`, and `grep -c '<div id="root">'` counted 1;
+  - the script that body names, `/assets/index-WNLPKFJl.js`, answered 200;
+  - `/api/nope` printed `404`;
+  - `/api/home` with no `Authorization` header answered 200 with 3 `active_runs`;
+  - `POST /api/decks` printed `401`.
+- On `flashy_image_check`, a database made empty for the check with 0 tables in `public`, `alembic upgrade head` in the image exited 0, its last line `Running upgrade 64c8eb861c12 -> e91cd2d84924, first_run_at_on_app_user`; `alembic current` in the image printed `e91cd2d84924 (head)`, the head `uv run alembic heads` prints. The database was then dropped.
+- In headless Chromium at 390 by 844 against `localhost:8001`, signed out: Home showed "This is an example. Log in to use all of Flashy." above the top bar, Active holding "Common words + Capitals", "Korean from Chinese and English" and "Two at random", and Recently completed holding "French from English"; `/library`, opened directly, listed "Capitals" and "Common words" under "Your library"; no page error.
+- With `frontend/dist` moved to the scratchpad and the dev API reloaded, `localhost:8000/library` answered 404 and `uv run pytest tests/api_tests/test_route_table.py -q` printed `5 passed`; the text of Home and `/library` at `localhost:5173`, at 390 by 844 and signed out, was identical by `diff` to a capture taken before the move. `frontend/dist` was then moved back and the dev API reloaded, `/library` answering 200 again.
+- The full `uv run pytest -q`, with no other connection to the test database, printed `421 passed`. No file under `frontend/`, `app/models/` or `app/routers/` changed, so no frontend check and no `npm run gen:api` ran.
+- The guidance is followed: `fastapi run --host 0.0.0.0 --port ${PORT:-8000}`, through `sh -c` so `PORT` expands, and `uv sync --frozen --no-dev`, on `python:3.14-slim` and `node:24-slim`. Additions within it: `uv sync` runs once with `--no-install-project` before `app/` is copied, so a change to the code alone reuses the dependencies' layer; `uv` comes from `ghcr.io/astral-sh/uv:0.12.19`, the dev machine's version; and `.dockerignore` also keeps out `**/__pycache__/`. Its `node_modules/` also keeps out the repository root's `node_modules`, which git does not track and which holds Vite's and Vitest's caches.
+- Read the `Dockerfile`'s two stages; it is short, and it is the whole of what Railway builds.
