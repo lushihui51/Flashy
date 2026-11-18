@@ -44,8 +44,9 @@ def detach(db: Session, clerk_user_id: str) -> AppUser:
 
 def attach(db: Session, clerk_user_id: str) -> AppUser:
     """Gives the example user `clerk_user_id`, and commits, so the database then has no
-    example user. Raises `ExampleUserError`, writing nothing, when there is no example
-    user or another row holds the id."""
+    example user. "Delete account" on the attached account then deletes the example
+    library. Raises `ExampleUserError`, writing nothing, when there is no example user or
+    another row holds the id."""
     example = db_read_example_app_user(db)
     if example is None:
         raise ExampleUserError("The database has no example user.")

@@ -23,7 +23,7 @@ Judgement: On the dev servers with the local bypass off, the engineer logs in to
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -115,7 +115,13 @@ def delete_account(
 
 **Debrief**
 
-None.
+- Done when 1: `uv run pytest tests/api_tests/test_account.py tests/api_tests/test_route_table.py tests/api_tests/test_auth_scoping.py tests/api_tests/test_config.py tests/api_tests/test_layering_guard.py -q` printed `26 passed`. In `test_account.py`, the 204 case first asserts that every one of the thirteen tables holds at least one row of the user, so its check that each then holds none is not vacuous; rows with no `user_id` column are reached from the ids of the deck, practice and run the setup made.
+- Done when 2: with the development key in `.env`, the command ended in `app.clerk_users.ClerkUnavailable: Clerk's DELETE /users answered 404`. Clerk accepted the key and found no such user.
+- Done when 3: `grep -c "/api/account" frontend/src/api/types.ts` printed `1`.
+- Checks of every commit: the full `uv run pytest -q` printed `428 passed`, `npx vitest run` printed `785 passed`, and `npm run lint` and `npm run build` were clean, with the build's chunk-size warning that was already there.
+- Departures from guidance: none.
+- Beyond the Details: the comment over the backend job's `env:` block in `.github/workflows/ci.yml` now also names `tests/api_tests/test_account.py` as standing in for Clerk's server API, since the placeholder key would otherwise read as unexplained. `delete_account` in `app/routers/api/account.py` has a docstring naming its 502, which reaches the OpenAPI description.
+- Read: `delete_account` in `app/services/account.py`, for the order of staging, flush, the call to Clerk, and rollback or commit.
 
 ### T2 — Delete account in the account sheet
 

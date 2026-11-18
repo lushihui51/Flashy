@@ -14,6 +14,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | New card while there is no deck | "Create a deck first" | Top bar's New sheet, under "New card" | `CreateSheet` |
 | App | Signing in | "Log in" | Top bar, signed out | `AuthSlot` |
 | App | Signing out | "Log out" | Account sheet | `AccountSheet` |
+| App | Deleting an account | "Delete account" | Account sheet, below "Log out" | `DELETE /api/account`; `delete_account` |
 | App | The signed-in user | "Account"; "Account menu for <name>", spoken | Top bar; Account sheet | `app_user`; `AppUser`; `AccountSheet` |
 | App | The example library a guest is shown | — | — | `ViewerDep`; `get_viewer`; `db_read_example_app_user`; `useViewer` |
 | App | Telling a guest they are looking at an example | "This is an example. Log in to use all of Flashy." | A banner across the top of every page, while not logged in | `ExampleBanner` |
@@ -167,7 +168,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Failure | Flashy cannot be reached | "Can't reach Flashy. Check your connection; retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `unreachable`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |
 | Failure | Flashy is having trouble | "Flashy is having trouble right now. Retrying automatically." | A banner at the top of every page | `ConnectionStatus`; `server_trouble`; `useConnectionStatus`; `/api/health`; `ConnectionBanner` |
 | Failure | An action that could not reach Flashy | "Couldn't reach Flashy. Check your connection and try again." | Beside the control that failed | `failureSentence`; `CONNECTION_FAILED_MESSAGE` |
-| Failure | An action Flashy had trouble with | "Flashy is having trouble right now. Try again in a moment." | Beside the control that failed | `ApiError`; `unwrap`; `failureSentence`; `SERVER_TROUBLE_MESSAGE` |
+| Failure | An action Flashy had trouble with | "Flashy is having trouble right now. Try again in a moment." | Beside the control that failed | `ApiError`; `unwrap`; `failureSentence`; `SERVER_TROUBLE_MESSAGE`; `clerk_unavailable` |
 | Failure | An action while Flashy is temporarily unavailable | "Flashy is temporarily unavailable." | Not shown yet | `database_unavailable` |
 | Failure | A thing that is gone | "<Thing> not found." | In place of a thing that is gone; beside the control that failed; the whole content of the page, for an address that leads to no page | `ApiError`; `unwrap`; `isNotFound`; `failureSentence`; `NotFoundPage` |
 | Failure | A thing that will not load | "Could not load this <thing>."; "Could not load Home." | Edit deck; deck page; Edit card; Edit practice; a deck's board; a practice's page; run page; a completed run's page; Home; the whole content of a page that failed while it was being drawn | `isError`; `FailedPage`; `errorElement` |

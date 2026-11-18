@@ -4,14 +4,15 @@ Clerk id; the example user's row is the one row with no Clerk identity, and noth
 creates it. These are the only operations the table has: a row is created, its timezone
 is kept in step with the `X-Timezone` header, its first run is stamped once, its
 Clerk identity is taken off to make it the example user or given back to the example
-user, and nothing else ever writes it. A guest's request, answered as the example user,
-has its transaction made read only here once that row is read. Unlike every other module
-here the reads are not ownership-scoped, because this table *is* the ownership scope."""
+user, it is deleted with its account, and nothing else ever writes it. A guest's
+request, answered as the example user, has its transaction made read only here once
+that row is read. Unlike every other module here the reads are not ownership-scoped,
+because this table *is* the ownership scope."""
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import text, update
+from sqlalchemy import delete, text, update
 from sqlmodel import Session, col, select
 
 from app.models.app_user import AppUser
@@ -68,3 +69,9 @@ def db_stage_set_first_run_at(db: Session, user_id: uuid.UUID, at: datetime) -> 
         .where(col(AppUser.id) == user_id, col(AppUser.first_run_at).is_(None))
         .values(first_run_at=at)
     )
+
+
+def db_stage_delete_app_user(db: Session, user_id: uuid.UUID) -> None:
+    """Deletes the user's row by id, whose cascades take the user's practices with their
+    configurations and runs. No commit."""
+    db.execute(delete(AppUser).where(col(AppUser.id) == user_id))
