@@ -5,6 +5,7 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 import AppShell from 'src/components/shell/AppShell';
+import AboutPage from 'src/pages/AboutPage';
 import FailedPage from 'src/pages/FailedPage';
 import HomePage from 'src/pages/HomePage';
 import LibraryPage from 'src/pages/LibraryPage';
@@ -41,6 +42,7 @@ export const appRoutes = createRoutesFromElements(
       <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
       <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
       <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
+      <Route path="/about" element={<AboutPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   </Route>,

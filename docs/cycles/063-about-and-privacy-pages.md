@@ -24,7 +24,7 @@ Judgement: On the dev servers, at 390 by 844 and at 1440 by 900, as a user and a
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -68,7 +68,12 @@ None.
 
 **Debrief**
 
-None.
+- Tests: `npx vitest run src/components/shell/SideDrawer.test.tsx src/pages/AboutPage.test.tsx` passed 15 of 15, among them "renders Home, Your library, All practices, then About at its foot, in order when open", "leads About to /about", "heads the page "About Flashy" and names the tab after it", "shows its heading and each line in order", "finds each idea's title by its text, none of them a heading", "numbers the four steps of How it works" and "hides every idea icon from assistive technology".
+- Browser: headless Chromium, menu opened on Home, printed for guest and user at 390x844 and at 1440x900 alike: links `["Home","Your library","All practices","About"]`, "About" below "All practices", path `/about`, h1 "About Flashy", title "About Flashy · Flashy", 0 navigations named "Breadcrumb". The guest's run showed the example banner and the user's did not.
+- Screenshots at 390 by 844: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/e050ce2a-9639-4512-9bae-21291eba4dc0/scratchpad/063-T1-guest-menu-390x844.png`, `063-T1-guest-about-390x844.png`, `063-T1-user-menu-390x844.png` and `063-T1-user-about-390x844.png` in the same folder.
+- Departure: the guest ran against localhost:5173, but the user ran against a second pair of servers, vite on 5174 with `VITE_DEV_AUTH` proxying to an API on 8001 with `DEV_AUTH_USER_ID` and `ENV=development`, both from this checkout and stopped after, because the servers on 5173 and 8000 run with none of the three set and restarting them would disrupt whoever runs them.
+- Following drawing 8, the foot sits at the bottom of the menu, pushed down from the main places, and the h1's line height is drawing 8's 34 pixels rather than the 1.05 the other pages' headings take.
+- Read: `SideDrawer` in `frontend/src/components/shell/SideDrawer.tsx`, where both lists now render through one `NavList`, so a link in either draws the same.
 
 ### T2 — Privacy from the menu's foot
 

@@ -1,7 +1,7 @@
 import { type RefObject } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { NavLink } from 'react-router-dom';
-import { NAV_ITEMS } from 'src/components/shell/navItems';
+import { FOOT_NAV_ITEMS, NAV_ITEMS, type NavItem } from 'src/components/shell/navItems';
 
 type SideDrawerProps = {
   open: boolean;
@@ -11,6 +11,34 @@ type SideDrawerProps = {
    * built-in return-focus-to-trigger doesn't apply — this does it manually). */
   triggerRef: RefObject<HTMLButtonElement | null>;
 };
+
+/** The menu's links, one block each, the open page's drawn pressed; following one closes the menu
+ * through `onClose`. */
+function NavList({ items, onClose }: { items: NavItem[]; onClose: () => void }) {
+  return (
+    <ul className="flex flex-col gap-3">
+      {items.map(({ label, to, icon: Icon, end }) => (
+        <li key={to}>
+          <NavLink
+            to={to}
+            end={end}
+            onClick={onClose}
+            className={({ isActive }) =>
+              `tappable flex h-12 items-center gap-3 rounded-2xl px-4 text-body font-semibold ${
+                isActive
+                  ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)'
+                  : 'bg-(--color-surface) text-(--color-ink)'
+              }`
+            }
+          >
+            <Icon aria-hidden="true" className="h-5 w-5" />
+            {label}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // Real top bar stays visible above the drawer (z-40 in AppShell vs. z-20/30
 // here) instead of repeating the hamburger+logo inside the drawer — the
@@ -43,28 +71,11 @@ export default function SideDrawer({ open, onClose, triggerRef }: SideDrawerProp
           }}
           className="fixed inset-y-0 left-column z-30 flex w-72 max-w-[80vw] flex-col gap-1 bg-(--color-surface) p-3 pt-[calc(var(--app-header-height)+0.75rem)] focus:outline-none"
         >
-          <nav>
-            <ul className="flex flex-col gap-3">
-              {NAV_ITEMS.map(({ label, to, icon: Icon, end }) => (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={end}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      `tappable flex h-12 items-center gap-3 rounded-2xl px-4 text-body font-semibold ${
-                        isActive
-                          ? 'tappable-pressed bg-(--color-ink) text-(--color-surface)'
-                          : 'bg-(--color-surface) text-(--color-ink)'
-                      }`
-                    }
-                  >
-                    <Icon aria-hidden="true" className="h-5 w-5" />
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+          <nav className="flex flex-1 flex-col">
+            <NavList items={NAV_ITEMS} onClose={onClose} />
+            <div className="mt-auto border-t border-(--color-line) pt-3">
+              <NavList items={FOOT_NAV_ITEMS} onClose={onClose} />
+            </div>
           </nav>
         </Dialog.Content>
       </Dialog.Portal>

@@ -14,11 +14,22 @@ function LocationProbe() {
 }
 
 describe('SideDrawer', () => {
-  it('renders exactly Home, Your library and All practices in order when open', () => {
+  it('renders Home, Your library, All practices, then About at its foot, in order when open', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
     const items = screen.getAllByRole('link');
-    expect(items.map((item) => item.textContent)).toEqual(['Home', 'Your library', 'All practices']);
+    expect(items.map((item) => item.textContent)).toEqual([
+      'Home',
+      'Your library',
+      'All practices',
+      'About',
+    ]);
+  });
+
+  it('leads About to /about', () => {
+    renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
+
+    expect(screen.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
   });
 
   it('renders nothing when closed', () => {

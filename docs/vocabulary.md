@@ -9,6 +9,8 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | The browser tab's title | "<page name> · Flashy", as "Verbs · Flashy"; "Flashy" until the page knows its name | Browser tab, every page | `document.title` |
 | App | The menu, spoken | "Main menu" | Side menu | `SideDrawer`; `NAV_ITEMS` |
 | App | Opening and closing the menu, spoken | "Open menu"; "Close menu" | Top bar | `TopBar` |
+| App | The page that says what Flashy is | "About"; "About Flashy" | Side menu, at its foot; its heading | `AboutPage`; `/about`; `FOOT_NAV_ITEMS` |
+| App | What Flashy is | "Flashcards for knowledge that doesn't fit on two sides of a card."; "One card, many fields"; "A word's spelling, meaning, gender and example, all on one card."; "A new question every time"; "Choose what each card shows and asks. Fields drawn at random keep the same card fresh."; "Mastery for every field"; "See exactly what you know. The fields you know least come up most."; "How it works"; "Make a deck and fill it with cards."; "Make a practice from your decks, and choose what each one asks."; "Start a run. Rate each answer, and missed cards come back."; "See how each card's mastery moved, then run it again." | About Flashy | `AboutPage` |
 | App | Starting a new thing from anywhere, spoken | "New" | Top bar's plus button; the sheet it opens | `CreateSheet` |
 | App | The shortcut's rows | "New deck"; "New card"; "New practice" | Top bar's New sheet | `CreateSheet` |
 | App | New card while there is no deck | "Create a deck first" | Top bar's New sheet, under "New card" | `CreateSheet` |
