@@ -9,9 +9,11 @@ from fastapi import APIRouter, FastAPI
 from fastapi.dependencies.models import Dependant
 
 from app.dependencies import CurrentUserDep, ViewerDep, get_current_app_user, get_viewer
+from app.frontend import FRONTEND_ROUTE_NAME
 from app.main import app
 
 HEALTH_PATH = "/api/health"
+FRONTEND_PATH = "/{path:path}"
 
 
 def _calls(dependant: Dependant | None) -> set[Callable]:
@@ -60,11 +62,15 @@ def _others_without_current_user(routes: Iterable) -> list[str]:
     ]
 
 
+def _serves_the_frontend(route) -> bool:
+    return getattr(route, "name", None) == FRONTEND_ROUTE_NAME and route.path == FRONTEND_PATH
+
+
 def _outside_api(routes: Iterable) -> list[str]:
     return [
         f"{type(route).__name__} {getattr(route, 'path', None)}"
         for route in routes
-        if not _under_api(route)
+        if not _under_api(route) and not _serves_the_frontend(route)
     ]
 
 
@@ -88,8 +94,10 @@ def test_health_resolves_no_user():
     assert get_current_app_user not in calls
 
 
-def test_no_route_stands_outside_api():
-    """A route outside /api would be checked by neither rule above."""
+def test_the_only_route_outside_api_serves_the_frontend():
+    """A route outside /api would be checked by neither rule above. The one that serves
+    the frontend's files reads no user's data, and stands in the table only where a
+    built frontend exists."""
     assert _outside_api(app.routes) == []
 
 
@@ -119,6 +127,9 @@ def test_the_guard_finds_each_kind_of_offending_route():
     bad = FastAPI()
     bad.include_router(router, prefix="/api")
     bad.mount("/api/files", FastAPI())
+    bad.add_api_route("/page", open_read, name=FRONTEND_ROUTE_NAME)
+    bad.add_api_route(FRONTEND_PATH, open_read, name="catch_all")
+    bad.add_api_route(FRONTEND_PATH, open_read, name=FRONTEND_ROUTE_NAME)
 
     assert _gets_without_viewer(bad.routes) == [
         "/api/open-read ['GET']",
@@ -134,4 +145,6 @@ def test_the_guard_finds_each_kind_of_offending_route():
         "Route /docs",
         "Route /docs/oauth2-redirect",
         "Route /redoc",
+        "APIRoute /page",
+        "APIRoute /{path:path}",
     ]

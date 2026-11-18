@@ -29,7 +29,7 @@ Judgement: The engineer judges on the image, built and run on their own machine 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -89,7 +89,17 @@ def add_frontend(app: FastAPI, dist: Path) -> None:
 
 **Debrief**
 
-None.
+- `uv run pytest tests/api_tests/test_frontend.py -v` printed `test_a_path_that_names_a_file_answers_the_file PASSED`; the case asserts 200, the file's text and a `javascript` content type for `/assets/app.js`.
+- The same run printed `test_any_other_path_answers_index_html[/] PASSED` and `[/library] PASSED`, each 200 with `index.html`'s text.
+- The same run printed `test_a_path_under_api_answers_404_and_no_page[/api] PASSED` and `[/api/nope] PASSED`, each 404 with `{"detail": "Not Found"}`, the body an unknown `/api` address answered before.
+- The same run printed `test_a_path_that_climbs_out_of_dist_answers_no_file_outside_it` PASSED for five paths: `/..%2Fsecret.txt`, `/assets/..%2F..%2Fsecret.txt`, `/%2E%2E/secret.txt`, `/assets/link.txt`, a link inside the test's `dist` to a file outside it, and `/%00`, which `Path.resolve` refuses with `ValueError`; each answers 200 with `index.html`. With the check that the resolved file stands under `dist` taken out, in a script outside the repository, the first four each answered the outside file's text, so the case catches its loss.
+- The same run printed `test_another_method_answers_405_and_no_page PASSED`, `POST /library` answering 405 with `{"detail": "Method Not Allowed"}`; `11 passed in 0.03s` in all.
+- `uv run pytest tests/api_tests/test_route_table.py -q` printed `5 passed` with `frontend/dist` present, where `app.routes` held `('frontend', '/{path:path}', ['GET'])`, and `5 passed` with it moved to the scratchpad, where `app.routes` held no route at `/{path:path}`; it was then moved back. `test_the_guard_finds_each_kind_of_offending_route` now also adds, outside `/api`, a route named `frontend` at `/page` and a route named `catch_all` at `/{path:path}`, and asserts `_outside_api` names both and not a third, named `frontend` at `/{path:path}`.
+- After `npm run build`, on the dev API already on 8000, which reloaded on the change to `app/main.py`: `curl -s localhost:8000/library` printed the built `index.html`, identical by `diff` to `frontend/dist/index.html`; `/api/nope` printed `404`; `/api/decks/` printed `404`.
+- `npm run gen:api` left `frontend/src/api/types.ts` and `openapi.json` unchanged with the route registered, so the schema is one with a build and without. The full `uv run pytest -q`, with no other connection to `flashy_test` and `frontend/dist` present, printed `420 passed`.
+- The Details' one guidance, the folder `frontend/dist` beside `app/`, is followed: `FRONTEND_DIST` in `app/main.py`. No departure.
+- `app/main.py`'s comment above `app = FastAPI(...)` said every route stands under `/api`; it now says every route but the frontend's does.
+- Read `_file_within` in `app/frontend.py`: it is the whole guard against answering a file outside `dist`, resolving `..` and links before checking the file stands under `dist`.
 
 ### T2 — The image
 
