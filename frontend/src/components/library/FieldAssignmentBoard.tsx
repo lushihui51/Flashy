@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import BottomSheet from 'src/components/ui/BottomSheet';
 import FormPart from 'src/components/ui/FormPart';
+import ReadOnlyButton from 'src/components/ui/ReadOnlyButton';
 import {
   fieldsIn,
   SLOT_LABELS,
@@ -26,6 +27,9 @@ type FieldAssignmentBoardProps = {
   /** True for a board that shows what cannot be changed: every chip and count is greyed, a tap
    * on a chip opens no move sheet, and a tap on a count calls no `onToggleCount`. */
   readOnly: boolean;
+  /** With `readOnly`, when given: every chip and count is `aria-disabled` in place of
+   * `disabled`, and a press on one calls this. */
+  onReadOnlyPress?: () => void;
 };
 
 /** The sheet's five possible destinations, in this fixed order. A field's own current
@@ -61,6 +65,7 @@ export default function FieldAssignmentBoard({
   onToggleCount,
   problem,
   readOnly,
+  onReadOnlyPress,
 }: FieldAssignmentBoardProps) {
   const labelById = new Map(fieldDefs.map((field) => [field.id, fieldLabel(field.name)]));
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
@@ -71,22 +76,32 @@ export default function FieldAssignmentBoard({
 
   const closeSheet = () => setActiveFieldId(null);
   const sentenceOf = (part: BoardPart) => (problem?.part === part ? problem.sentence : null);
+  const pressReadOnly = readOnly ? onReadOnlyPress : undefined;
 
-  const chipButton = (fieldId: string) => (
-    <button
-      key={fieldId}
-      type="button"
-      aria-haspopup={readOnly ? undefined : 'dialog'}
-      disabled={readOnly}
-      onClick={(event) => {
-        triggerRef.current = event.currentTarget;
-        setActiveFieldId(fieldId);
-      }}
-      className={`min-h-tab max-w-full rounded-xl bg-(--color-surface) px-3 py-1 text-left text-sm font-semibold ${readOnly ? 'outlined-line text-(--color-aside)' : 'tappable-sm text-(--color-ink)'}`}
-    >
-      <span className="line-clamp-2 break-words">{labelById.get(fieldId) ?? fieldId}</span>
-    </button>
-  );
+  const chipButton = (fieldId: string) =>
+    pressReadOnly ? (
+      <ReadOnlyButton
+        key={fieldId}
+        onPress={pressReadOnly}
+        className="min-h-tab max-w-full rounded-xl outlined-line px-3 py-1 text-left text-sm font-semibold"
+      >
+        <span className="line-clamp-2 break-words">{labelById.get(fieldId) ?? fieldId}</span>
+      </ReadOnlyButton>
+    ) : (
+      <button
+        key={fieldId}
+        type="button"
+        aria-haspopup={readOnly ? undefined : 'dialog'}
+        disabled={readOnly}
+        onClick={(event) => {
+          triggerRef.current = event.currentTarget;
+          setActiveFieldId(fieldId);
+        }}
+        className={`min-h-tab max-w-full rounded-xl bg-(--color-surface) px-3 py-1 text-left text-sm font-semibold ${readOnly ? 'outlined-line text-(--color-aside)' : 'tappable-sm text-(--color-ink)'}`}
+      >
+        <span className="line-clamp-2 break-words">{labelById.get(fieldId) ?? fieldId}</span>
+      </button>
+    );
 
   const area = (slot: BoardSlot, emptyText: string) => {
     const ids = fieldsIn(state, slot);
@@ -124,8 +139,12 @@ export default function FieldAssignmentBoard({
                 <input
                   type="checkbox"
                   checked={chosen}
-                  disabled={readOnly}
-                  onChange={() => onToggleCount(slot, count)}
+                  disabled={readOnly && !pressReadOnly}
+                  aria-disabled={pressReadOnly ? 'true' : undefined}
+                  onChange={() => {
+                    if (pressReadOnly) pressReadOnly();
+                    else onToggleCount(slot, count);
+                  }}
                   className="sr-only"
                 />
                 {count}

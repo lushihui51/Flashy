@@ -28,6 +28,25 @@
   --spacing-icon-sm: 0.9375rem;
   --spacing-badge-x: 0.5625rem;
   --spacing-badge-y: 0.1875rem;
+  --container-column: 40rem;
+}
+
+/* Hold an element fixed to the viewport to the column every page sits in: its side edges, or its
+   left edge alone, centred on the window less the scrollbar a dialog's scroll lock has taken away,
+   and reaching the window's edges where the window is narrower than the column. */
+@utility inset-x-column {
+  --column-gutter: max(
+    0px,
+    calc((100% - var(--removed-body-scroll-bar-size, 0px) - var(--container-column)) / 2)
+  );
+  left: var(--column-gutter);
+  right: calc(var(--column-gutter) + var(--removed-body-scroll-bar-size, 0px));
+}
+@utility left-column {
+  left: max(
+    0px,
+    calc((100% - var(--removed-body-scroll-bar-size, 0px) - var(--container-column)) / 2)
+  );
 }
 
 @utility tappable {

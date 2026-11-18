@@ -1,15 +1,22 @@
-"""`app_user.timezone` is the user's IANA zone, supplied by the client on every
-request via X-Timezone, and used only to render dates back in their local zone.
-Nothing stored is ever expressed in it — every timestamp column stays a server-stamped
-UTC instant."""
+"""`app_user.timezone` is the user's IANA zone, supplied by the client via X-Timezone on
+every request signed in as the user, and used only to render dates back in their local
+zone; a guest's request never writes the example user's. Nothing stored is ever
+expressed in it — every timestamp column stays a server-stamped UTC instant."""
+
+import uuid
+from datetime import UTC, datetime
 
 import pytest
 from sqlmodel import select
 
 from app import dependencies
-from app.dependencies import get_current_app_user
+from app.database_ops.app_user import db_update_app_user_clerk_id
+from app.dependencies import get_current_app_user, get_viewer
+from app.main import app
 from app.models.app_user import DEFAULT_TIMEZONE, AppUser
+from app.models.run import Run
 from app.services.timezone import normalize_timezone
+from tests.conftest import start_practice
 
 
 @pytest.fixture
@@ -96,3 +103,29 @@ class TestTimezoneSync:
         user = _call(db, zone="Pacific/Auckland")
         assert user.created_at == created_at
         assert user.created_at.utcoffset().total_seconds() == 0
+
+
+def test_a_guests_zone_header_changes_neither_the_stored_zone_nor_a_runs_day(
+    client, db, existing_user, two_deck_library
+):
+    existing_user.timezone = "America/Los_Angeles"
+    db.add(existing_user)
+    db.commit()
+    run = start_practice(client, {two_deck_library["decks"]["a"]["id"]: None})
+    # 20:30 UTC on 2026-11-03 is the 3rd in Los Angeles and already the 4th in Auckland.
+    row = db.get(Run, uuid.UUID(run["id"]))
+    row.created_at = datetime(2026, 11, 3, 20, 30, tzinfo=UTC)
+    db.add(row)
+    db.commit()
+    url = f"/api/practices/{run['practice_id']}"
+    assert client.get(url).json()["runs"][0]["day"] == "2026-11-03"
+
+    db_update_app_user_clerk_id(db, existing_user, None)
+    app.dependency_overrides.pop(get_current_app_user, None)
+    app.dependency_overrides.pop(get_viewer, None)
+    res = client.get(url, headers={"X-Timezone": "Pacific/Auckland"})
+
+    assert res.status_code == 200, res.text
+    assert res.json()["runs"][0]["day"] == "2026-11-03"
+    db.refresh(existing_user)
+    assert existing_user.timezone == "America/Los_Angeles"

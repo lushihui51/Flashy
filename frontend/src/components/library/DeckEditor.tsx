@@ -28,7 +28,9 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { useViewParams } from 'src/lib/viewParams';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
+import ReadOnlyButton from 'src/components/ui/ReadOnlyButton';
 import SubmitButton from 'src/components/ui/SubmitButton';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 
@@ -99,12 +101,56 @@ function FieldRow({ field, primary, nameInput, buttons }: FieldRowProps) {
   );
 }
 
+type FieldButtonProps = {
+  label: string;
+  /** True where the button would change nothing for anyone; it is then `disabled`. */
+  disabled: boolean;
+  title?: string;
+  onPress: () => void;
+  /** When given, the button is greyed and a press calls this in place of `onPress`, unless it is
+   * `disabled`. */
+  onReadOnlyPress?: () => void;
+  children: ReactNode;
+};
+
+/** A field's Move up, Move down or Remove button. */
+function FieldButton({
+  label,
+  disabled,
+  title,
+  onPress,
+  onReadOnlyPress,
+  children,
+}: FieldButtonProps) {
+  if (onReadOnlyPress && !disabled) {
+    return (
+      <ReadOnlyButton aria-label={label} onPress={onReadOnlyPress} className={FIELD_ICON_BUTTON}>
+        {children}
+      </ReadOnlyButton>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      disabled={disabled}
+      onClick={onPress}
+      className={FIELD_ICON_BUTTON}
+    >
+      {children}
+    </button>
+  );
+}
+
 type FieldsSectionProps = {
   fields: EditorField[];
   onRename: (key: string, name: string) => void;
   onMove: (key: string, toIndex: number) => void;
   onRemove: (key: string) => void;
   onAdd: () => void;
+  /** When given, every name is read only and every control greyed, and a press on one calls this. */
+  onReadOnlyPress?: () => void;
 };
 
 /** Reorder via each row's Move up and Move down buttons only — no drag. A pointer-events drag
@@ -119,7 +165,14 @@ type FieldsSectionProps = {
  * global Undo, which is the *only* way to bring it back — there is deliberately no
  * control on the row itself for that. A brand-new field deletes outright — there's
  * nothing on the server to stage against. */
-function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSectionProps) {
+function FieldsSection({
+  fields,
+  onRename,
+  onMove,
+  onRemove,
+  onAdd,
+  onReadOnlyPress,
+}: FieldsSectionProps) {
   const activeCount = fields.filter((f) => !f.pendingRemoval).length;
   // The primary field is the first field still active (not staged for removal), in
   // array order — array index doubles as position here, exactly what the Move up/down
@@ -210,39 +263,40 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
                       aria-label="Field name"
                       value={field.name}
                       onChange={(e) => onRename(field.key, e.target.value)}
-                      className="h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base text-(--color-ink)"
+                      onClick={onReadOnlyPress}
+                      readOnly={!!onReadOnlyPress}
+                      className={`h-field w-full rounded-field outlined-line bg-(--color-surface) px-3 text-base ${
+                        onReadOnlyPress ? 'text-(--color-aside)' : 'text-(--color-ink)'
+                      }`}
                     />
                   )}
                   buttons={
                     <>
-                      <button
-                        type="button"
-                        aria-label={`Move ${field.name || 'field'} up`}
+                      <FieldButton
+                        label={`Move ${field.name || 'field'} up`}
                         disabled={index === 0}
-                        onClick={() => onMove(field.key, index - 1)}
-                        className={FIELD_ICON_BUTTON}
+                        onPress={() => onMove(field.key, index - 1)}
+                        onReadOnlyPress={onReadOnlyPress}
                       >
                         <ArrowUp aria-hidden="true" className="size-icon" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Move ${field.name || 'field'} down`}
+                      </FieldButton>
+                      <FieldButton
+                        label={`Move ${field.name || 'field'} down`}
                         disabled={index === fields.length - 1}
-                        onClick={() => onMove(field.key, index + 1)}
-                        className={FIELD_ICON_BUTTON}
+                        onPress={() => onMove(field.key, index + 1)}
+                        onReadOnlyPress={onReadOnlyPress}
                       >
                         <ArrowDown aria-hidden="true" className="size-icon" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${field.name || 'field'}`}
+                      </FieldButton>
+                      <FieldButton
+                        label={`Remove ${field.name || 'field'}`}
                         title={activeCount <= 2 ? 'A deck needs at least two fields.' : undefined}
                         disabled={activeCount <= 2}
-                        onClick={() => onRemove(field.key)}
-                        className={FIELD_ICON_BUTTON}
+                        onPress={() => onRemove(field.key)}
+                        onReadOnlyPress={onReadOnlyPress}
                       >
                         <X aria-hidden="true" className="size-icon" />
-                      </button>
+                      </FieldButton>
                     </>
                   }
                 />
@@ -251,14 +305,24 @@ function FieldsSection({ fields, onRename, onMove, onRemove, onAdd }: FieldsSect
           );
         })}
       </ul>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
-      >
-        <Plus aria-hidden="true" className="h-4 w-4" />
-        Add field
-      </button>
+      {onReadOnlyPress ? (
+        <ReadOnlyButton
+          onPress={onReadOnlyPress}
+          className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full px-3.5 text-body font-semibold"
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          Add field
+        </ReadOnlyButton>
+      ) : (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="tappable-sm mt-3 flex h-10 items-center gap-1.5 rounded-full bg-(--color-surface) px-3.5 text-body font-semibold text-(--color-ink)"
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          Add field
+        </button>
+      )}
     </section>
   );
 }
@@ -354,6 +418,10 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
   const queryClient = useQueryClient();
   const { revealFirstSentence } = useViewParams();
   const rootRef = useRef<HTMLDivElement>(null);
+  const guest = useViewer() === 'guest';
+  const guard = useWriteGuard();
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
+  const pressReadOnly = guest ? () => guard(() => {}) : undefined;
 
   // Computed once, at mount. `original` doubles as the baseline the edit-mode diff compares
   // against: deckDetailToEditorState mints a fresh client `key` per field, and calling
@@ -542,7 +610,7 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
         return;
       }
     }
-    void handleSave();
+    guard(() => void handleSave());
   };
 
   const sayWhatIsMissing = () => {
@@ -573,7 +641,11 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
                 dispatch({ type: 'SET_NAME', name: e.target.value });
                 setNameError(null);
               }}
-              className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+              onClick={pressReadOnly}
+              readOnly={guest}
+              className={`h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base placeholder:text-(--color-aside) ${
+                guest ? 'text-(--color-aside)' : 'text-(--color-ink)'
+              }`}
             />
           </label>
         </FormPart>
@@ -585,48 +657,71 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
         onMove={(key, toIndex) => dispatch({ type: 'MOVE_FIELD', key, toIndex })}
         onRemove={handleRemoveField}
         onAdd={() => dispatch({ type: 'ADD_FIELD' })}
+        onReadOnlyPress={pressReadOnly}
       />
 
-      {mode === 'edit' && (
-        <button
-          type="button"
-          onClick={() => void handleDeleteClick()}
-          disabled={deleting || checkingDeletionImpact}
-          className="mt-6 tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-        >
-          <Trash2 aria-hidden="true" className="h-4 w-4" />
-          Delete deck
-        </button>
-      )}
-
-      <FormBar sentence={saveError}>
-        <button
-          type="button"
-          onClick={showDone ? leaveByDone : handleCancel}
-          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
-        >
-          {showDone ? 'Done' : 'Cancel'}
-        </button>
-        {mode === 'edit' && (
+      {mode === 'edit' &&
+        (guest ? (
+          <ReadOnlyButton
+            onPress={() => guard(() => void handleDeleteClick())}
+            className="mt-6 tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold"
+          >
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            Delete deck
+          </ReadOnlyButton>
+        ) : (
           <button
             type="button"
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+            onClick={() => void handleDeleteClick()}
+            disabled={deleting || checkingDeletionImpact}
+            className="mt-6 tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
           >
-            Undo
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            Delete deck
           </button>
-        )}
-        <SubmitButton
-          ready={valid && state.dirty}
-          busy={saving || checkingSaveImpact}
-          onNotReady={sayWhatIsMissing}
-          onPress={() => void handleSaveClick()}
-        >
-          {/* Reverts the instant a new edit re-dirties the form, not just after the
+        ))}
+
+      <FormBar sentence={saveError}>
+        {guest ? (
+          // A guest can change nothing here, so the form only leaves, as it does with nothing unsaved.
+          <button
+            type="button"
+            onClick={mode === 'edit' ? leaveByDone : leaveByCancel}
+            className="tappable h-action flex-1 rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+          >
+            Done
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={showDone ? leaveByDone : handleCancel}
+              className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+            >
+              {showDone ? 'Done' : 'Cancel'}
+            </button>
+            {mode === 'edit' && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+              >
+                Undo
+              </button>
+            )}
+            <SubmitButton
+              ready={valid && state.dirty}
+              busy={saving || checkingSaveImpact}
+              onNotReady={sayWhatIsMissing}
+              onPress={() => void handleSaveClick()}
+            >
+              {/* Reverts the instant a new edit re-dirties the form, not just after the
               2s timer — "Saved ✓" while something's already unsaved again reads wrong. */}
-          {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
-        </SubmitButton>
+              {mode === 'create' ? 'Create' : savedFlash && !state.dirty ? 'Saved ✓' : 'Save'}
+            </SubmitButton>
+          </>
+        )}
       </FormBar>
 
       <ConfirmDialog
@@ -645,7 +740,7 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
         confirmLabel="Save"
         onConfirm={() => {
           setSaveConfirm(null);
-          void handleSave();
+          guard(() => void handleSave());
         }}
         onCancel={() => setSaveConfirm(null)}
       />
@@ -658,7 +753,7 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
           // included — nothing about it survives the delete.
           description={deletionImpact ? deletionSummaryText(deletionImpact) : ''}
           confirmLabel="Delete"
-          onConfirm={() => void handleDeleteDeck()}
+          onConfirm={() => guard(() => void handleDeleteDeck())}
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}

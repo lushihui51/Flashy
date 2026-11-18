@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import RunPage from 'src/pages/RunPage';
 
@@ -151,23 +153,26 @@ function LocationProbe() {
   );
 }
 
-function renderRun(runId = 'run1', search = '') {
+/** Renders the run's page; `dimScreen` stands for the shell's dimming of the screen. */
+function renderRun(runId = 'run1', search = '', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <Routes>
-      <Route
-        path="/runs/:runId"
-        element={
-          <>
-            <RunPage />
-            <LocationProbe />
-          </>
-        }
-      />
-      <Route path="/runs/:runId/decks/:deckId" element={<LocationProbe />} />
-      <Route path="/practices/:practiceId" element={<LocationProbe />} />
-      <Route path="/practices" element={<LocationProbe />} />
-      <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
-    </Routes>,
+    <GuestScrimContext.Provider value={dimScreen}>
+      <Routes>
+        <Route
+          path="/runs/:runId"
+          element={
+            <>
+              <RunPage />
+              <LocationProbe />
+            </>
+          }
+        />
+        <Route path="/runs/:runId/decks/:deckId" element={<LocationProbe />} />
+        <Route path="/practices/:practiceId" element={<LocationProbe />} />
+        <Route path="/practices" element={<LocationProbe />} />
+        <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
+      </Routes>
+    </GuestScrimContext.Provider>,
     [`/runs/${runId}${search}`],
   );
 }
@@ -176,6 +181,19 @@ function renderRun(runId = 'run1', search = '') {
 function probedAddress() {
   const [pathname, search = ''] = screen.getByTestId('location').textContent!.split('?');
   return { pathname, search: new URLSearchParams(search) };
+}
+
+/** Every request the page sends with a method other than GET, from this call to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
 }
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -565,6 +583,70 @@ describe('RunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
   });
 
+  it("a guest's chosen rating shows on its answer and in the address, and dims nothing", async () => {
+    mockSignedOut();
+    mockRun();
+    const writes = recordWrites();
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderRun('run1', '', dimScreen);
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Rate Back' }));
+    expect(screen.getAllByRole('button', { name: /^(Again|Hard|Good|Easy)$/ })).toHaveLength(4);
+
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+
+    expect(screen.getByRole('button', { name: 'Back: Good' })).toHaveTextContent(/^Good$/);
+    expect(screen.queryByRole('button', { name: 'Rate Back' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      /^\/runs\/run1\?card=pc1&shown=1&rating\.back=3$/,
+    );
+    expect(dimScreen).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it("a guest's Next card, alive once every answer is rated, dims the screen, sends no request and keeps the ratings in the address", async () => {
+    mockSignedOut();
+    mockRun(twoAnswerRunState());
+    const writes = recordWrites();
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = renderRun('run1', '', dimScreen);
+
+    await user.click(await screen.findByRole('button', { name: 'Show answer' }));
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Rate Back One' }));
+    await user.click(screen.getByRole('button', { name: 'Good' }));
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Rate Back Two' }));
+    await user.click(screen.getByRole('button', { name: 'Easy' }));
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeEnabled();
+    expect(dimScreen).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Next card' }));
+
+    const rated = '/runs/run1?card=pc1&shown=1&rating.back1=3&rating.back2=4';
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([]);
+    expect(screen.getByTestId('location').textContent).toBe(rated);
+    expect(screen.getByRole('button', { name: 'Back One: Good' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back Two: Easy' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeEnabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // A reload: the page mounted afresh at the address the press left.
+    unmount();
+    renderRun('run1', rated.slice('/runs/run1'.length), dimScreen);
+
+    expect(await screen.findByRole('button', { name: 'Back One: Good' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back Two: Easy' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next card' })).toBeEnabled();
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([]);
+  });
+
   it('keeps Next card disabled until every answer field is rated', async () => {
     mockRun(twoAnswerRunState());
     const user = userEvent.setup();
@@ -928,6 +1010,21 @@ describe('RunPage End run', () => {
     );
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'End run' })).toBeInTheDocument();
+    expect(ends).toEqual([]);
+  });
+
+  it("a guest's End run dims the screen and no question", async () => {
+    mockSignedOut();
+    const ends = mockEndableRun();
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderRun('run1', '', dimScreen);
+
+    await user.click(await screen.findByRole('button', { name: 'End run' }));
+
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show answer' })).toBeInTheDocument();
     expect(ends).toEqual([]);
   });
 

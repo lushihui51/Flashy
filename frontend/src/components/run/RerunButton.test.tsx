@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +8,8 @@ import RerunButton from 'src/components/run/RerunButton';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 
 const BASE = 'http://localhost:8000';
 const NEW_RUN = {
@@ -24,12 +26,29 @@ function LocationProbe() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderButton(onError: (sentence: string) => void = () => {}) {
+/** The method and path of every request other than a GET sent from here to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
+}
+
+/** Renders the button; `dimScreen` stands for the shell's dimming of the screen. */
+function renderButton(
+  onError: (sentence: string) => void = () => {},
+  dimScreen: () => void = () => {},
+) {
   return renderWithProviders(
-    <>
+    <GuestScrimContext.Provider value={dimScreen}>
       <RerunButton runId="run1" onError={onError} />
       <LocationProbe />
-    </>,
+    </GuestScrimContext.Provider>,
   );
 }
 
@@ -61,6 +80,22 @@ describe('RerunButton', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/runs/run2'));
     expect(posted).toBe('run1');
+  });
+
+  it("a guest's Re-run dims the screen and sends nothing", async () => {
+    mockSignedOut();
+    const writes = recordWrites();
+    const onError = vi.fn();
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderButton(onError, dimScreen);
+
+    await user.click(screen.getByRole('button', { name: 'Re-run' }));
+
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    expect(writes).toEqual([]);
   });
 
   it('a failure hands over the sentence and draws none itself', async () => {

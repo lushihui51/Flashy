@@ -18,7 +18,7 @@ RECENT_RUN_LIMIT = 3
 def get_home(db: Session, user: AppUser) -> HomeRead:
     """Everything Home shows for `user`, in a number of statements that does not change
     with their practices, runs, decks or cards."""
-    steps = None if user.first_practice_at is not None else db_read_home_steps(db, user.id)
+    steps = None if user.first_run_at is not None else db_read_home_steps(db, user.id)
 
     active = db_read_active_run_listings(db, user.id, ACTIVE_RUN_LIMIT)
     recent = db_read_recent_run_listings(db, user.id, RECENT_RUN_LIMIT)

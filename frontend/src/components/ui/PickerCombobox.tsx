@@ -52,6 +52,8 @@ export type PickerComboboxProps<T extends PickerItem> = PurposeProps & {
   listLabel?: string;
   /** True: after a pick the input clears and shows no chosen item, for picking several. */
   clearOnPick?: boolean;
+  /** When given, every input is read only and greyed, opens nothing, and a press on one calls this. */
+  onReadOnlyPress?: () => void;
 };
 
 /** The one combobox in the app, under `DeckPicker` for a list of decks: open-on-focus-or-click,
@@ -80,6 +82,7 @@ export default function PickerCombobox<T extends PickerItem>({
   inputLabel,
   listLabel,
   clearOnPick = false,
+  onReadOnlyPress,
 }: PickerComboboxProps<T>) {
   const listboxId = useId();
   const controlRef = useRef<HTMLDivElement>(null);
@@ -168,6 +171,7 @@ export default function PickerCombobox<T extends PickerItem>({
     );
   }
 
+  const readOnly = onReadOnlyPress !== undefined;
   const clearChosen = filtering && chosen === null;
   // A closed control shows its chevron when it reads as a search over the list, as a filter's
   // and a picker for several do, rather than as the value it holds.
@@ -190,7 +194,7 @@ export default function PickerCombobox<T extends PickerItem>({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Anchor asChild>
-        <div ref={controlRef} className="relative">
+        <div ref={controlRef} className="relative rounded-field">
           <input
             type="text"
             role="combobox"
@@ -200,21 +204,24 @@ export default function PickerCombobox<T extends PickerItem>({
             aria-label={inputLabel}
             value={query}
             disabled={disabled}
+            readOnly={readOnly}
             onChange={(e) => {
               setQuery(e.target.value);
               setOpen(true);
               setHighlighted(0);
             }}
-            onFocus={() => setOpen(true)}
+            onFocus={readOnly ? undefined : () => setOpen(true)}
             // A click on an *already*-focused input fires no new focus event (a press in the
             // panel or on the dimming deliberately keeps focus in place) — onClick is what
             // actually reopens the list in that case.
-            onClick={() => setOpen(true)}
-            onKeyDown={handleKeyDown}
+            onClick={onReadOnlyPress ?? (() => setOpen(true))}
+            onKeyDown={readOnly ? undefined : handleKeyDown}
             placeholder={placeholder}
-            className={`h-field w-full rounded-field bg-(--color-surface) text-base text-(--color-ink) placeholder:text-(--color-aside) ${
-              open ? 'outlined-ink' : 'outlined-line'
-            } ${chevronWhenClosed || open ? 'pr-9 pl-3.5' : 'px-3.5'}`}
+            className={`h-field w-full rounded-field bg-(--color-surface) text-base placeholder:text-(--color-aside) ${
+              readOnly ? 'text-(--color-aside)' : 'text-(--color-ink)'
+            } ${open ? 'outlined-ink' : 'outlined-line'} ${
+              chevronWhenClosed || open ? 'pr-9 pl-3.5' : 'px-3.5'
+            }`}
           />
           {open ? (
             <ChevronUp aria-hidden="true" className={chevronClassName(filtering)} />
@@ -229,7 +236,7 @@ export default function PickerCombobox<T extends PickerItem>({
         {/* One element, since the portal takes a single child; it starts no stacking context,
             so the panel's z-60 stands above the scrim's z-50. */}
         <div>
-          <Scrim anchor={controlRef} onDismiss={() => setOpen(false)} />
+          <Scrim lit={[controlRef]} onDismiss={() => setOpen(false)} strength="fifth" />
           <Popover.Content
             // The input keeps focus while the list is open, so this is no dialog of its own.
             role="presentation"

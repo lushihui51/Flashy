@@ -4,10 +4,12 @@ import pytest
 from sqlmodel import select
 
 from app.models.run import Run, RunStatus
+from app.models.run_card import RunCard
 
 NO_STEPS_DONE = {
     "has_deck": False,
     "has_card": False,
+    "practice_id": None,
 }
 
 
@@ -105,25 +107,48 @@ class TestSteps:
 
         _card(client, deck)
         assert _home(client, db, existing_user)["steps"] == {
+            **NO_STEPS_DONE,
             "has_deck": True,
             "has_card": True,
         }
 
-    def test_steps_are_null_once_a_practice_is_made_before_it_is_run(
-        self, client, db, existing_user
-    ):
-        _practisable_deck(client, "Deck")
+    def test_steps_stay_once_a_practice_is_made_and_name_it(self, client, db, existing_user):
+        _, practice = _practisable_deck(client, "Deck")
 
-        assert _home(client, db, existing_user)["steps"] is None
+        assert _home(client, db, existing_user)["steps"] == {
+            "has_deck": True,
+            "has_card": True,
+            "practice_id": practice["id"],
+        }
 
-    def test_a_refused_practice_leaves_the_steps(self, client, db, existing_user):
-        deck = _deck(client, "Deck")
-        res = client.post("/api/practices", json={"deck_ids": [deck["id"], deck["id"]]})
-        assert res.status_code == 400, res.text
+    def test_the_newest_of_several_practices_is_the_one_named(self, client, db, existing_user):
+        deck, _ = _practisable_deck(client, "Deck")
+        _practice(client, deck)
+        newest = _practice(client, deck)
+
+        assert _home(client, db, existing_user)["steps"]["practice_id"] == newest["id"]
+
+    def test_steps_are_null_once_a_run_is_started(self, client, db, existing_user):
+        _, practice = _practisable_deck(client, "Deck")
+        _start(client, practice)
 
         home = _home(client, db, existing_user)
-        assert home["steps"] is not None
-        assert existing_user.first_practice_at is None
+        assert home["steps"] is None
+        assert existing_user.first_run_at is not None
+
+    def test_a_refused_run_leaves_the_steps_and_no_stamp(self, client, db, existing_user):
+        practice = _practice(client, _deck(client, "Empty"))
+        res = client.post(f"/api/practices/{practice['id']}/runs")
+        assert res.status_code == 400, res.text
+        assert res.json()["detail"]["code"] == "no_cards"
+
+        home = _home(client, db, existing_user)
+        assert home["steps"] == {
+            "has_deck": True,
+            "has_card": False,
+            "practice_id": practice["id"],
+        }
+        assert existing_user.first_run_at is None
 
     def test_the_stamp_and_null_steps_survive_deleting_everything(
         self, client, db, existing_user
@@ -131,14 +156,38 @@ class TestSteps:
         deck, practice = _practisable_deck(client, "Deck")
         _start(client, practice)
         db.refresh(existing_user)
-        stamped = existing_user.first_practice_at
+        stamped = existing_user.first_run_at
         assert stamped is not None
 
         assert client.delete(f"/api/decks/{deck['id']}").status_code == 204
 
         home = _home(client, db, existing_user)
         assert home == {"steps": None, "active_runs": [], "recent_runs": []}
-        assert existing_user.first_practice_at == stamped
+        assert existing_user.first_run_at == stamped
+
+    def test_a_rerun_and_a_run_of_chosen_cards_leave_the_stamp_as_it_was(
+        self, client, db, existing_user
+    ):
+        _, practice = _practisable_deck(client, "Deck")
+        first = _complete_run_of(client, practice)
+        db.refresh(existing_user)
+        stamped = existing_user.first_run_at
+        assert stamped is not None
+
+        rerun = client.post(f"/api/runs/{first['id']}/rerun")
+        assert rerun.status_code == 201, rerun.text
+        db.refresh(existing_user)
+        assert existing_user.first_run_at == stamped
+
+        _finish(client, rerun.json()["id"])
+        first_cards = db.exec(select(RunCard).where(RunCard.run_id == uuid.UUID(first["id"])))
+        [card_id] = {row.card_id for row in first_cards}
+        chosen = client.post(
+            f"/api/runs/{rerun.json()['id']}/chosen_cards", json={"card_ids": [str(card_id)]}
+        )
+        assert chosen.status_code == 201, chosen.text
+        db.refresh(existing_user)
+        assert existing_user.first_run_at == stamped
 
 
 class TestActiveRuns:

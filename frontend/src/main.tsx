@@ -11,7 +11,12 @@ const queryClient = new QueryClient();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+      <ClerkProvider
+        publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+        signInForceRedirectUrl="/"
+        signUpForceRedirectUrl="/"
+        afterSignOutUrl="/"
+      >
         <App />
       </ClerkProvider>
     </QueryClientProvider>

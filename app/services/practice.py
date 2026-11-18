@@ -2,7 +2,6 @@ import uuid
 
 from sqlmodel import Session
 
-from app.database_ops.app_user import db_stage_set_first_practice_at
 from app.database_ops.field_def import db_read_field_defs_for_decks
 from app.database_ops.practice import (
     db_read_owned_deck_names,
@@ -19,7 +18,6 @@ from app.database_ops.practice_configuration import (
 from app.database_ops.run import db_read_run_reads_for_practice
 from app.database_ops.run_configuration import db_read_last_run_configurations
 from app.mastery.strategy import MasteryStrategy
-from app.models.base import utcnow
 from app.models.practice_payloads import (
     PracticeConfigurationRead,
     PracticeDetail,
@@ -111,12 +109,11 @@ def create_practice(
     deck_ids: list[uuid.UUID],
 ) -> PracticeSummary:
     """Creates a practice of `deck_ids` named `name`, or the suggested name when `name` is
-    None or blank, and stamps the user's first practice. Each deck's configuration is the
-    one its most recently rated card was last asked by, when that still passes
-    `validate_configuration`, and otherwise the deck's starting configuration. Raises
-    LookupError naming the first deck that is missing or not the user's, ValueError when
-    `deck_ids` is empty or repeats a deck, and `Refusal("practice_name_taken")` when the
-    user already has a practice of that name."""
+    None or blank. Each deck's configuration is the one its most recently rated card was
+    last asked by, when that still passes `validate_configuration`, and otherwise the
+    deck's starting configuration. Raises LookupError naming the first deck that is
+    missing or not the user's, ValueError when `deck_ids` is empty or repeats a deck, and
+    `Refusal("practice_name_taken")` when the user already has a practice of that name."""
     if not deck_ids:
         raise ValueError("a practice needs at least one deck")
     _owned_deck_names(db, user_id, deck_ids)
@@ -149,7 +146,6 @@ def create_practice(
     if db_try_stage_create_practice_configurations(db, rows) is None:
         raise ValueError("a deck is picked twice, or is gone")
 
-    db_stage_set_first_practice_at(db, user_id, utcnow())
     db.commit()
     return practice_summaries(db, strategy, user_id, practice.id)[0]
 

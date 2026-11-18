@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 
-/** The one colour per PDR 015 meaning; a ninth needs a product decision before it
+/** The one colour per PDR 054 meaning; a ninth needs a product decision before it
  * enters `@theme` and this list together (ADR 090). */
 const TOKENS = [
   'main-action',

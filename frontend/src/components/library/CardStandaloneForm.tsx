@@ -9,6 +9,7 @@ import CardFieldsForm from 'src/components/library/CardFieldsForm';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
+import ReadOnlyButton from 'src/components/ui/ReadOnlyButton';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import type { components } from 'src/api/types';
 import { isNotFound } from 'src/api/unwrap';
@@ -17,6 +18,7 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { useLeaveForm } from 'src/lib/leaveForm';
 import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 type CardStandaloneFormProps = {
   mode: 'create' | 'edit';
@@ -99,6 +101,10 @@ function CardStandaloneFormBody({
   const location = useLocation();
   const queryClient = useQueryClient();
   const formId = useId();
+  const guest = useViewer() === 'guest';
+  const guard = useWriteGuard();
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
+  const pressReadOnly = () => guard(() => {});
 
   const [deckId, setDeckId] = useState(initialDeckId);
   const [deckError, setDeckError] = useState<string | null>(null);
@@ -142,7 +148,6 @@ function CardStandaloneFormBody({
     mode === 'create'
       ? Object.values(values).some((v) => v.trim() !== '')
       : !!original && Object.entries(values).some(([k, v]) => v !== (original.values[k] ?? ''));
-
 
   const leaveByCancel = () =>
     void leaveForm(cancelTo ?? (deckId ? `/decks/${deckId}` : '/library'));
@@ -188,8 +193,7 @@ function CardStandaloneFormBody({
     ]);
   };
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
     if (!deckId || !deckQuery.data) return;
     setFormError(null);
     setSubmitting(true);
@@ -241,7 +245,14 @@ function CardStandaloneFormBody({
         {mode === 'create' ? 'New card' : 'Edit card'}
       </h1>
 
-      <form id={formId} onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
+      <form
+        id={formId}
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          guard(() => void handleSubmit());
+        }}
+        className="flex flex-col gap-4"
+      >
         {deckLocked ? (
           <div className="flex items-baseline gap-2.5">
             <span className="text-label text-(--color-aside)">Deck</span>
@@ -261,6 +272,7 @@ function CardStandaloneFormBody({
               onSelectCreate={handleCreateNewDeck}
               createLabel="New deck…"
               placeholder="Deck"
+              onReadOnlyPress={guest ? pressReadOnly : undefined}
             />
           </FormPart>
         )}
@@ -270,35 +282,62 @@ function CardStandaloneFormBody({
             fieldDefs={fieldDefs}
             values={values}
             onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            onReadOnlyPress={guest ? pressReadOnly : undefined}
           />
         )}
       </form>
 
-      {mode === 'edit' && (
-        <button
-          type="button"
-          onClick={() => setConfirmDeleteOpen(true)}
-          className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-        >
-          <Trash2 aria-hidden="true" className="h-4 w-4" />
-          Delete card
-        </button>
-      )}
+      {mode === 'edit' &&
+        (guest ? (
+          <ReadOnlyButton
+            onPress={() => guard(() => setConfirmDeleteOpen(true))}
+            className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold"
+          >
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            Delete card
+          </ReadOnlyButton>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteOpen(true)}
+            className="tappable flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-(--color-surface) text-base font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
+          >
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            Delete card
+          </button>
+        ))}
 
       <FormBar sentence={formError}>
-        <button type="button" onClick={handleCancel} className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)">
-          Cancel
-        </button>
-        <SubmitButton
-          ready={deckId !== null && !!deckQuery.data}
-          busy={submitting}
-          onNotReady={() => {
-            if (!deckId) setDeckError('Choose a deck to create a card.');
-          }}
-          form={formId}
-        >
-          {mode === 'create' ? 'Create' : 'Save'}
-        </SubmitButton>
+        {guest ? (
+          // A guest can change nothing here, so the form only leaves, as Cancel does with nothing unsaved.
+          <button
+            type="button"
+            onClick={leaveByCancel}
+            className="tappable h-action flex-1 rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+          >
+            Done
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+            >
+              Cancel
+            </button>
+            <SubmitButton
+              ready={deckId !== null && !!deckQuery.data}
+              busy={submitting}
+              onNotReady={() => {
+                if (!deckId) setDeckError('Choose a deck to create a card.');
+              }}
+              form={formId}
+            >
+              {mode === 'create' ? 'Create' : 'Save'}
+            </SubmitButton>
+          </>
+        )}
       </FormBar>
 
       <ConfirmDialog
@@ -343,7 +382,7 @@ function CardStandaloneFormBody({
           title="Delete card?"
           description="This can't be undone."
           confirmLabel="Delete"
-          onConfirm={() => void handleDelete()}
+          onConfirm={() => guard(() => void handleDelete())}
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}

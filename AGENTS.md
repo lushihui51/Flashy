@@ -2,10 +2,10 @@
 
 - Flashy is a flashcard web app.
 - The user is a person using the app, not the engineer or the product owner building it; there are none yet, so a product decision covers only what is built.
-- A drawing is a phone screen, 390 by 844.
-- Auth is Clerk, verified by CurrentUserDep in app/dependencies.py on every route but GET /api/health.
-  - Reason: ADR 007, ADR 072
-  - Guard: tests/api_tests/test_auth_scoping.py
+- A drawing is a phone screen, 390 by 844, or a wide screen, 1440 by 900, whichever the human names.
+- Auth is Clerk: CurrentUserDep in app/dependencies.py verifies a session on every route of a method other than GET, and ViewerDep answers a GET with no Authorization header as the example user, on every route under /api but GET /api/health.
+  - Reason: ADR 007, ADR 130, ADR 131
+  - Guard: tests/api_tests/test_auth_scoping.py, tests/api_tests/test_route_table.py
 
 # Commands
 
@@ -15,7 +15,8 @@
 - Dry-run a new migration on a `pg_dump` copy of the dev database, then apply it with `alembic upgrade head` in the task that writes it.
   - Reason: fastapi dev reloads new models before the schema
 - See a page of the running app, or check a frontend change, in headless Chromium through playwright-core, from the scratchpad against localhost:5173.
-- Run a browser check signed out of Clerk, with `DEV_AUTH_USER_ID` and `ENV=development` set.
+- Run a browser check signed out of Clerk, at each of a drawing's screen sizes: as a user, with `DEV_AUTH_USER_ID` and `ENV=development` set for the API and `VITE_DEV_AUTH` set for the frontend; as a guest, with none of the three set.
+  - Reason: ADR 131, ADR 132
 - Run the record citation guard with `uv run pytest tests/api_tests/test_record_citation_guard.py -q`.
 
 # Hard rules

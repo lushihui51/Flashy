@@ -4,6 +4,7 @@ import { useUser, useClerk } from '@clerk/react';
 type AuthSlotProps = {
   onAvatarClick: () => void;
   avatarButtonRef?: Ref<HTMLButtonElement>;
+  logInButtonRef?: Ref<HTMLButtonElement>;
 };
 
 function initialsFor(user: {
@@ -19,7 +20,11 @@ function initialsFor(user: {
 
 // @clerk/react (unlike @clerk/clerk-react) has no <SignedIn>/<SignedOut>
 // components, so this branches on useUser()'s isLoaded/isSignedIn directly.
-export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotProps) {
+export default function AuthSlot({
+  onAvatarClick,
+  avatarButtonRef,
+  logInButtonRef,
+}: AuthSlotProps) {
   const { isLoaded, isSignedIn, user } = useUser();
   const clerk = useClerk();
 
@@ -35,9 +40,10 @@ export default function AuthSlot({ onAvatarClick, avatarButtonRef }: AuthSlotPro
   if (!isSignedIn || !user) {
     return (
       <button
+        ref={logInButtonRef}
         type="button"
         onClick={() => clerk.openSignIn()}
-        className="h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
+        className="tappable-sm h-11 shrink-0 rounded-full bg-(--color-main-action) px-4 text-sm font-semibold text-(--color-ink)"
       >
         Log in
       </button>

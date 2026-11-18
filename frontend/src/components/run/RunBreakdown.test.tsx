@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +8,8 @@ import RunBreakdown from 'src/components/run/RunBreakdown';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 import type { components } from 'src/api/types';
 
 type RunBreakdownRead = components['schemas']['RunBreakdownRead'];
@@ -100,12 +102,13 @@ function LocationProbe() {
   );
 }
 
-function renderBreakdown(entry = '/') {
+/** Renders the summary at `entry`; `dimScreen` stands for the shell's dimming of the screen. */
+function renderBreakdown(entry = '/', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <>
+    <GuestScrimContext.Provider value={dimScreen}>
       <RunBreakdown breakdown={breakdown()} runId="run1" />
       <LocationProbe />
-    </>,
+    </GuestScrimContext.Provider>,
     [entry],
   );
 }
@@ -534,6 +537,30 @@ describe('RunBreakdown Re-run these', () => {
     expect(posted[0]?.id).toBe('run1');
     expect(Object.keys(posted[0]?.body ?? {})).toEqual(['card_ids']);
     expect(posted[0]?.body.card_ids?.toSorted()).toEqual(['c2', 'c4']);
+  });
+
+  it("a guest's Re-run these dims the screen and sends nothing", async () => {
+    mockSignedOut();
+    const writes: string[] = [];
+    const record = ({ request }: { request: Request }) => {
+      if (request.method !== 'GET') {
+        writes.push(`${request.method} ${new URL(request.url).pathname}`);
+      }
+    };
+    server.events.on('request:start', record);
+    onTestFinished(() => {
+      server.events.removeListener('request:start', record);
+    });
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderBreakdown('/?kind=down', dimScreen);
+
+    await user.click(rerunThese()!);
+
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('pathname')).toHaveTextContent(/^\/$/);
+    expect(screen.getByTestId('search')).toHaveTextContent(/^\?kind=down$/);
+    expect(writes).toEqual([]);
   });
 
   it.each([

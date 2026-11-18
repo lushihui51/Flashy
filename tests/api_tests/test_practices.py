@@ -240,25 +240,24 @@ class TestCreate:
         row = _configuration_row(db, practice["id"], ports["id"])
         assert [str(i) for i in row.prompt_field_ids] == [front]
 
-    def test_the_first_practice_is_stamped_once_and_a_run_stamps_nothing(
+    def test_making_a_practice_stamps_nothing_and_its_first_run_stamps_once(
         self, client, db, existing_user
     ):
         ports, _ = _deck(client, "Ports")
 
-        refused = client.post("/api/practices", json={"deck_ids": [ports["id"], ports["id"]]})
-        assert refused.status_code == 400
-        db.expire_all()
-        assert db.get(AppUser, existing_user.id).first_practice_at is None
-
         practice = create_practice(client, {ports["id"]: None})
+        second = create_practice(client, {ports["id"]: None})
         db.expire_all()
-        stamped = db.get(AppUser, existing_user.id).first_practice_at
-        assert stamped is not None
+        assert db.get(AppUser, existing_user.id).first_run_at is None
 
-        create_practice(client, {ports["id"]: None})
         assert client.post(f"/api/practices/{practice['id']}/runs").status_code == 200
         db.expire_all()
-        assert db.get(AppUser, existing_user.id).first_practice_at == stamped
+        stamped = db.get(AppUser, existing_user.id).first_run_at
+        assert stamped is not None
+
+        assert client.post(f"/api/practices/{second['id']}/runs").status_code == 200
+        db.expire_all()
+        assert db.get(AppUser, existing_user.id).first_run_at == stamped
 
 
 class TestStart:

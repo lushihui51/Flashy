@@ -142,6 +142,7 @@ class TestForeignResourcesAreNotFound:
             "steps": {
                 "has_deck": False,
                 "has_card": False,
+                "practice_id": None,
             },
             "active_runs": [],
             "recent_runs": [],
@@ -169,11 +170,13 @@ class TestOwnerStillHasAccess:
 
 
 def test_unauthenticated_request_is_rejected(client):
-    """Clears the test's dependency-override bypass so the request hits the real
-    get_current_app_user — with no Authorization header, it must 401, not 404 or 500."""
-    from app.dependencies import get_current_app_user
+    """Clears both of the test's dependency overrides so the request reaches the real
+    get_viewer — with no Authorization header, in a database with no example user, it
+    must 401, not 404 or 500."""
+    from app.dependencies import get_current_app_user, get_viewer
     from app.main import app
 
     app.dependency_overrides.pop(get_current_app_user, None)
+    app.dependency_overrides.pop(get_viewer, None)
     response = client.get(f"/api/decks/{uuid.uuid4()}")
     assert response.status_code == 401

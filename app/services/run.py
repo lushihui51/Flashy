@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.database_ops.app_user import db_stage_set_first_run_at
 from app.database_ops.card import (
     db_read_card,
     db_read_card_ids_for_deck,
@@ -54,6 +55,7 @@ from app.database_ops.run_counted_card import db_stage_create_run_counted_cards
 from app.mastery.readiness import classify_change, fold_card_readiness
 from app.mastery.strategy import MasteryStrategy
 from app.mastery.types import FieldMasteryState, ReviewGroup
+from app.models.base import utcnow
 from app.models.field_def import FieldDef
 from app.models.practice import Practice
 from app.models.run import Run, RunRead, RunStatus
@@ -162,9 +164,10 @@ def cut_run(
     """Fills `run`, staged by the caller and not yet committed, from the practice's
     configurations as they stand: one copy per deck, the copy's cards, and the cards it
     counts. With `card_ids`, each copy covers only its deck's cards among them, none for a
-    deck that holds none. Touches the run. Raises `Refusal("no_cards")` when no card is
-    written, leaving the caller to discard the transaction, and AssertionError when a
-    configuration no longer passes `validate_configuration`. No commit."""
+    deck that holds none. Touches the run, and stamps the user's first run when it is
+    their first. Raises `Refusal("no_cards")` when no card is written, leaving the caller
+    to discard the transaction, and AssertionError when a configuration no longer passes
+    `validate_configuration`. No commit."""
     rng = rng or random.Random()
 
     chosen_by_deck: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
@@ -202,6 +205,7 @@ def cut_run(
         raise Refusal("no_cards", "the run's copies generated no run card")
 
     db_stage_create_run_counted_cards(db, run.id, counted)
+    db_stage_set_first_run_at(db, practice.user_id, utcnow())
     touch(db, run)
 
 

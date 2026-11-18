@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +8,8 @@ import PracticeDetailsPage from 'src/pages/PracticeDetailsPage';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 
 const BASE = 'http://localhost:8000';
 
@@ -44,7 +46,24 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderPractice(data: Record<string, unknown> | null = detail()) {
+/** The method and path of every request other than a GET sent from here to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
+}
+
+/** Renders the practice's page; `dimScreen` stands for the shell's dimming of the screen. */
+function renderPractice(
+  data: Record<string, unknown> | null = detail(),
+  dimScreen: () => void = () => {},
+) {
   server.use(
     http.get(`${BASE}/api/practices/:id`, () =>
       data
@@ -53,10 +72,12 @@ function renderPractice(data: Record<string, unknown> | null = detail()) {
     ),
   );
   return renderWithProviders(
-    <Routes>
-      <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <GuestScrimContext.Provider value={dimScreen}>
+      <Routes>
+        <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </GuestScrimContext.Provider>,
     ['/practices/p1'],
   );
 }
@@ -187,6 +208,31 @@ describe('PracticeDetailsPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(NO_CARDS_MESSAGE);
     expect(button.parentElement!.nextElementSibling).toBe(alert);
+  });
+
+  it("a guest's Start run dims the screen and sends nothing, and Continue run opens the active run", async () => {
+    mockSignedOut();
+    const writes = recordWrites();
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = renderPractice(detail(), dimScreen);
+
+    await user.click(await screen.findByRole('button', { name: 'Start run' }));
+
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Start run' })).toBeInTheDocument();
+    expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+    unmount();
+
+    renderPractice(
+      detail({ active_run_id: 'r1', runs: [run('r1', 'active', '2026-11-03', 0)] }),
+      dimScreen,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Continue run' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/runs\/r1$/);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([]);
   });
 
   it('says Practice not found. for an unknown or foreign practice', async () => {

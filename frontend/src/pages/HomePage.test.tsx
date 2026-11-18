@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -7,6 +7,8 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import HomePage from 'src/pages/HomePage';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
@@ -46,25 +48,41 @@ function SearchProbe() {
   return <span data-testid="search">{location.search}</span>;
 }
 
-function renderHome(home: Partial<HomeRead>, address = '/') {
+/** The method and path of every request other than a GET sent from here to the test's end. */
+function recordWrites(): string[] {
+  const writes: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    if (request.method !== 'GET') writes.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return writes;
+}
+
+/** Renders Home; `dimScreen` stands for the shell's dimming of the screen. */
+function renderHome(home: Partial<HomeRead>, address = '/', dimScreen: () => void = () => {}) {
   server.use(
     http.get(`${BASE}/api/home`, () =>
       HttpResponse.json({ steps: null, active_runs: [], recent_runs: [], ...home }),
     ),
   );
   return renderWithProviders(
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <>
-            <HomePage />
-            <SearchProbe />
-          </>
-        }
-      />
-      <Route path="*" element={<LocationProbe />} />
-    </Routes>,
+    <GuestScrimContext.Provider value={dimScreen}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <HomePage />
+              <SearchProbe />
+            </>
+          }
+        />
+        <Route path="*" element={<LocationProbe />} />
+      </Routes>
+    </GuestScrimContext.Provider>,
     [address],
   );
 }
@@ -87,32 +105,36 @@ describe('HomePage', () => {
   });
 
   describe('the steps', () => {
-    const steps = (hasDeck: boolean, hasCard: boolean) => ({
+    const steps = (hasDeck: boolean, hasCard: boolean, practiceId: string | null = null) => ({
       has_deck: hasDeck,
       has_card: hasCard,
+      practice_id: practiceId,
     });
+    const NO_CARDS =
+      "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows.";
 
-    it('a user with nothing made reads "0 of 3" over New deck, New card and New practice', async () => {
+    it('a user with nothing made reads "0 of 4" over New deck, New card, New practice and Start run', async () => {
       renderHome({ steps: steps(false, false) });
 
       const list = await screen.findByRole('list', { name: 'Your first practice' });
       expect(
         screen.getByRole('heading', { level: 2, name: 'Your first practice' }),
       ).toBeInTheDocument();
-      expect(screen.getByText('0 of 3')).toBeInTheDocument();
+      expect(screen.getByText('0 of 4')).toBeInTheDocument();
       expect(
         within(list)
           .getAllByRole('listitem')
           .map((item) => item.textContent),
-      ).toEqual(['1New deck', '2New card', '3New practice']);
+      ).toEqual(['1New deck', '2New card', '3New practice', '4Start run']);
+      expect(within(list).queryByRole('button')).not.toBeInTheDocument();
     });
 
     it('counts the one done, strikes it and makes the next the one main action', async () => {
       renderHome({ steps: steps(true, false) });
 
       const list = await screen.findByRole('list', { name: 'Your first practice' });
-      expect(screen.getByText('1 of 3')).toBeInTheDocument();
-      expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+      expect(screen.getByText('1 of 4')).toBeInTheDocument();
+      expect(within(list).getAllByRole('listitem')).toHaveLength(4);
 
       expect(within(list).getByText('New deck')).toHaveClass('line-through');
 
@@ -123,6 +145,7 @@ describe('HomePage', () => {
       expect(link).toHaveClass(MAIN_ACTION_CLASS);
 
       expect(within(list).getByText('New practice')).not.toHaveClass('line-through');
+      expect(within(list).queryByRole('button')).not.toBeInTheDocument();
       expect(screen.getAllByRole('link')).toHaveLength(1);
     });
 
@@ -137,9 +160,93 @@ describe('HomePage', () => {
 
         const link = await screen.findByRole('link', { name: label });
         expect(link).toHaveAttribute('href', `${href}?cancelTo=%2F`);
-        expect(screen.getByText(`${done} of 3`)).toBeInTheDocument();
+        expect(screen.getByText(`${done} of 4`)).toBeInTheDocument();
       },
     );
+
+    it('with a practice made reads "3 of 4" and makes Start run the one main action', async () => {
+      const { container } = renderHome({ steps: steps(true, true, 'p1') });
+
+      const list = await screen.findByRole('list', { name: 'Your first practice' });
+      expect(screen.getByText('3 of 4')).toBeInTheDocument();
+      for (const label of ['New deck', 'New card', 'New practice']) {
+        expect(within(list).getByText(label)).toHaveClass('line-through');
+      }
+
+      const button = within(list).getByRole('button', { name: 'Start run' });
+      expect(button).toHaveClass(MAIN_ACTION_CLASS);
+      expect(button.querySelector('svg')).toBeNull();
+      expect(within(list).queryByRole('link')).not.toBeInTheDocument();
+      expect(container.querySelectorAll(`.${CSS.escape(MAIN_ACTION_CLASS)}`)).toHaveLength(1);
+    });
+
+    it('Start run starts the newest practice and opens its run', async () => {
+      let startedPractice: unknown = null;
+      server.use(
+        http.post(`${BASE}/api/practices/:practiceId/runs`, ({ params }) => {
+          startedPractice = params.practiceId;
+          return HttpResponse.json({ id: 'first-run' });
+        }),
+      );
+      renderHome({ steps: steps(true, true, 'p1') });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Start run' }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('/runs/first-run'),
+      );
+      expect(startedPractice).toBe('p1');
+    });
+
+    it("a guest's Start run step dims the screen and sends nothing", async () => {
+      mockSignedOut();
+      const writes = recordWrites();
+      const dimScreen = vi.fn();
+      renderHome({ steps: steps(true, true, 'p1') }, '/', dimScreen);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Start run' }));
+
+      expect(dimScreen).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
+    });
+
+    it('a start refused for no cards says so beneath the fourth step and keeps the steps', async () => {
+      server.use(
+        http.post(`${BASE}/api/practices/:practiceId/runs`, () =>
+          HttpResponse.json({ detail: { code: 'no_cards', message: 'x' } }, { status: 400 }),
+        ),
+      );
+      renderHome({ steps: steps(true, true, 'p1') });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Start run' }));
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(NO_CARDS);
+      const list = screen.getByRole('list', { name: 'Your first practice' });
+      const items = within(list).getAllByRole('listitem');
+      expect(items).toHaveLength(4);
+      expect(items[3]).toContainElement(alert);
+      expect(screen.getByText('3 of 4')).toBeInTheDocument();
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+    });
+
+    it('holds no bar while the user has no practice, and All practices once they have one', async () => {
+      const { unmount } = renderHome({ steps: steps(true, true) });
+
+      await screen.findByRole('list', { name: 'Your first practice' });
+      expect(screen.queryByTestId('form-bar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'All practices' })).not.toBeInTheDocument();
+      unmount();
+
+      renderHome({ steps: steps(true, true, 'p1') });
+
+      await screen.findByRole('list', { name: 'Your first practice' });
+      const bar = screen.getByTestId('form-bar');
+      const link = within(bar).getByRole('link', { name: 'All practices' });
+      expect(link).toHaveAttribute('href', '/practices');
+      expect(link).not.toHaveClass(MAIN_ACTION_CLASS);
+    });
   });
 
   describe('once a practice has been made', () => {
@@ -237,6 +344,20 @@ describe('HomePage', () => {
         expect(screen.getByTestId('location')).toHaveTextContent('/runs/new-run'),
       );
       expect(startedPractice).toBe('practice-of-r3');
+    });
+
+    it("a guest's play button on a completed run dims the screen and sends nothing", async () => {
+      mockSignedOut();
+      const writes = recordWrites();
+      const dimScreen = vi.fn();
+      renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/', dimScreen);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Practice Third' }));
+
+      expect(dimScreen).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('search')).toHaveTextContent(/^$/);
+      expect(screen.queryByTestId('location')).not.toBeInTheDocument();
+      expect(writes).toEqual([]);
     });
 
     it.each([
@@ -373,13 +494,6 @@ describe('HomePage', () => {
       await screen.findByRole('link', { name: 'All practices' });
       expect(container.textContent).not.toMatch(/\bago\b|\bdue\b|coming soon/i);
     });
-  });
-
-  it('holds no bar while the steps show', async () => {
-    renderHome({ steps: { has_deck: false, has_card: false } });
-
-    await screen.findByRole('list', { name: 'Your first practice' });
-    expect(screen.queryByTestId('form-bar')).not.toBeInTheDocument();
   });
 
   it('shows the failure sentence when the read fails', async () => {

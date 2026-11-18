@@ -445,8 +445,8 @@ export interface paths {
         };
         /**
          * Read Health
-         * @description The one route without `CurrentUserDep`: the frontend's health probe must answer
-         *     signed-out visitors and must not depend on Clerk. 503
+         * @description The one route that resolves no user: the frontend's health probe must answer
+         *     signed-out visitors and must not depend on Clerk or on an example user. 503
          *     `database_unavailable` when the database does not answer.
          */
         get: operations["read_health_api_health_get"];
@@ -942,14 +942,15 @@ export interface components {
         };
         /**
          * HomeSteps
-         * @description Whether the user has a deck and a card, the first two steps; the third, a
-         *     practice, never exists while the steps show.
+         * @description What the user has made of the first three steps to a first practice.
          */
         HomeSteps: {
             /** Has Deck */
             has_deck: boolean;
             /** Has Card */
             has_card: boolean;
+            /** Practice Id */
+            practice_id: string | null;
         };
         /**
          * PracticeConfigurationRead

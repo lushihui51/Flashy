@@ -8,17 +8,20 @@ import { ApiDetailError, isNotFound } from 'src/api/unwrap';
 import ConfirmDialog from 'src/components/ui/ConfirmDialog';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
+import ReadOnlyButton from 'src/components/ui/ReadOnlyButton';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import { failureSentence } from 'src/lib/failureSentence';
 import { useLeaveForm } from 'src/lib/leaveForm';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { internalReturnTo } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 /**
  * `/practices/:practiceId/edit`: the practice's Name, and Delete practice. Save lands on
  * `returnTo`, else the practice's page; Cancel on `cancelTo`, else the practice's page;
- * a deletion on All practices.
+ * a deletion on All practices. For a guest it is greyed, with Done alone, which leaves as Cancel
+ * does.
  */
 export default function PracticeEditPage() {
   const { practiceId } = useParams<{ practiceId: string }>();
@@ -56,6 +59,10 @@ function PracticeEditBody({ practice }: { practice: components['schemas']['Pract
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const practicePage = `/practices/${practice.id}`;
+  const guest = useViewer() === 'guest';
+  const guard = useWriteGuard();
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
+  const pressReadOnly = () => guard(() => {});
 
   // Every page that names the practice reads it again: its own page, All practices, Home's
   // runs and a run's row of places.
@@ -121,44 +128,72 @@ function PracticeEditBody({ practice }: { practice: components['schemas']['Pract
               setName(event.target.value);
               setNameError(null);
             }}
-            className="h-field rounded-field outlined-ink bg-(--color-surface) px-3.5 text-base text-(--color-ink)"
+            readOnly={guest}
+            onClick={guest ? pressReadOnly : undefined}
+            className={`h-field rounded-field bg-(--color-surface) px-3.5 text-base ${
+              guest ? 'outlined-line text-(--color-aside)' : 'outlined-ink text-(--color-ink)'
+            }`}
           />
         </label>
       </FormPart>
 
-      <button
-        type="button"
-        onClick={() => {
-          setSaveError(null);
-          setConfirmDeleteOpen(true);
-        }}
-        disabled={deleteMutation.isPending}
-        className="mt-7 tappable-sm flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
-      >
-        <Trash2 aria-hidden="true" className="size-4" />
-        Delete practice
-      </button>
-
-      <FormBar sentence={saveError}>
+      {guest ? (
+        <ReadOnlyButton
+          onPress={pressReadOnly}
+          className="mt-7 tappable-sm flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl text-body font-semibold"
+        >
+          <Trash2 aria-hidden="true" className="size-4" />
+          Delete practice
+        </ReadOnlyButton>
+      ) : (
         <button
           type="button"
-          onClick={cancel}
-          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
-        >
-          Cancel
-        </button>
-        <SubmitButton
-          ready={name.trim() !== ''}
-          busy={saveMutation.isPending}
-          onNotReady={() => setNameError('Name is required.')}
-          onPress={() => {
+          onClick={() => {
             setSaveError(null);
-            setNameError(null);
-            saveMutation.mutate();
+            setConfirmDeleteOpen(true);
           }}
+          disabled={deleteMutation.isPending}
+          className="mt-7 tappable-sm flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-(--color-surface) text-body font-semibold text-(--color-ink) disabled:border-(--color-line) disabled:text-(--color-aside) disabled:[box-shadow:none]"
         >
-          Save
-        </SubmitButton>
+          <Trash2 aria-hidden="true" className="size-4" />
+          Delete practice
+        </button>
+      )}
+
+      <FormBar sentence={saveError}>
+        {guest ? (
+          <button
+            type="button"
+            onClick={cancel}
+            className="tappable h-action flex-1 rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+          >
+            Done
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={cancel}
+              className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+            >
+              Cancel
+            </button>
+            <SubmitButton
+              ready={name.trim() !== ''}
+              busy={saveMutation.isPending}
+              onNotReady={() => setNameError('Name is required.')}
+              onPress={() =>
+                guard(() => {
+                  setSaveError(null);
+                  setNameError(null);
+                  saveMutation.mutate();
+                })
+              }
+            >
+              Save
+            </SubmitButton>
+          </>
+        )}
       </FormBar>
 
       <ConfirmDialog
@@ -166,7 +201,7 @@ function PracticeEditBody({ practice }: { practice: components['schemas']['Pract
         title="Delete this practice?"
         description="Its runs will be gone. Its decks and your mastery stay as they are."
         confirmLabel="Delete"
-        onConfirm={() => deleteMutation.mutate()}
+        onConfirm={() => guard(() => deleteMutation.mutate())}
         onCancel={() => setConfirmDeleteOpen(false)}
       />
     </div>

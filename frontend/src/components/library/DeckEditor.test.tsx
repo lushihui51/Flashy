@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
+import { mockSignedOut } from 'src/test/mocks/clerk';
+import { GuestScrimContext } from 'src/lib/viewer';
 import DeckEditor from 'src/components/library/DeckEditor';
 
 // Every call the form makes to leave, passed on to the real leave, which under a memory
@@ -51,15 +53,30 @@ function mockEditDeck(data: typeof deckDetail = deckDetail) {
   server.use(http.get(`${BASE}/api/decks/:id`, () => HttpResponse.json(data)));
 }
 
-function renderEditDeck(deckId = 'd1', search = '') {
+function renderEditDeck(deckId = 'd1', search = '', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <Routes>
-      <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
-      <Route path="/decks/:deckId" element={<LocationProbe />} />
-      <Route path="/library" element={<LocationProbe />} />
-    </Routes>,
+    <GuestScrimContext.Provider value={dimScreen}>
+      <Routes>
+        <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
+        <Route path="/decks/:deckId" element={<LocationProbe />} />
+        <Route path="/library" element={<LocationProbe />} />
+      </Routes>
+    </GuestScrimContext.Provider>,
     [`/decks/${deckId}/edit${search}`],
   );
+}
+
+/** The method and path of every request sent from here to the test's end. */
+function recordRequests(): string[] {
+  const requests: string[] = [];
+  const record = ({ request }: { request: Request }) => {
+    requests.push(`${request.method} ${new URL(request.url).pathname}`);
+  };
+  server.events.on('request:start', record);
+  onTestFinished(() => {
+    server.events.removeListener('request:start', record);
+  });
+  return requests;
 }
 
 function LocationProbe() {
@@ -1098,5 +1115,92 @@ describe('DeckEditor — primary field marker', () => {
     const pills = screen.getAllByText('Primary');
     expect(pills).toHaveLength(1);
     expect(within(pills[0]!.closest('li')!).getByDisplayValue('Back')).toBeInTheDocument();
+  });
+});
+
+describe('DeckEditor — a guest', () => {
+  beforeEach(() => {
+    mockSignedOut();
+    mockEditDeck();
+  });
+
+  it("a guest's Edit deck is read only, with Done alone and no Undo, and a press on a field's name dims the screen", async () => {
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '', dimScreen);
+    const deckName = await screen.findByRole('textbox', { name: 'Deck name' });
+    const requests = recordRequests();
+
+    for (const input of screen.getAllByRole('textbox')) expect(input).toHaveAttribute('readonly');
+    // Disabled for a user too, since each would change nothing.
+    expect(screen.getByRole('button', { name: 'Move Front up' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move Back down' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remove Front' })).toBeDisabled();
+    expect(screen.getAllByRole('combobox', { name: 'Field type' })[0]).toBeDisabled();
+    for (const name of ['Move Front down', 'Move Back up', 'Add field', 'Delete deck']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeEnabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+    }
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+
+    const fieldNames = screen.getAllByRole('textbox', { name: 'Field name' });
+    await user.click(fieldNames[0]!);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    await user.type(fieldNames[0]!, 'x', { skipClick: true });
+    await user.click(screen.getByRole('button', { name: 'Move Front down' }));
+    await user.click(screen.getByRole('button', { name: 'Add field' }));
+    await user.click(deckName);
+    expect(dimScreen).toHaveBeenCalledTimes(4);
+    expect(
+      screen
+        .getAllByRole('textbox', { name: 'Field name' })
+        .map((input) => (input as HTMLInputElement).value),
+    ).toEqual(['Front', 'Back']);
+    expect(deckName).toHaveValue('French Vocab');
+    expect(requests).toEqual([]);
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/decks/d1'));
+    expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
+  });
+
+  it("a guest's Delete deck dims the screen and reads no deletion impact", async () => {
+    const dimScreen = vi.fn();
+    const user = userEvent.setup();
+    renderEditDeck('d1', '', dimScreen);
+    const deleteDeck = await screen.findByRole('button', { name: 'Delete deck' });
+    const requests = recordRequests();
+
+    await user.click(deleteDeck);
+
+    expect(dimScreen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Delete deck?')).not.toBeInTheDocument();
+    expect(requests).toEqual([]);
+  });
+
+  it("a guest's New deck holds Done alone, which leaves as Cancel does", async () => {
+    const user = userEvent.setup();
+    const { container } = renderEditor('/decks/new?cancelTo=%2Flibrary');
+    await screen.findByRole('heading', { name: 'New deck' });
+
+    // A user's New deck disables these too: each field's type, the first field's Move up, the
+    // last field's Move down, and both Removes while the deck has two fields.
+    expect(
+      Array.from(container.querySelectorAll(':disabled')).map((e) => e.getAttribute('aria-label')),
+    ).toEqual([
+      'Field type',
+      'Move Term up',
+      'Remove Term',
+      'Field type',
+      'Move Definition down',
+      'Remove Definition',
+    ]);
+    const bar = within(screen.getByTestId('form-bar'));
+    expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
+
+    await user.click(bar.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/library'));
   });
 });

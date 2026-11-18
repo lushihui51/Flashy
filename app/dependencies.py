@@ -9,7 +9,9 @@ from app.config import settings
 from app.database import SessionDep
 from app.database_ops.app_user import (
     db_create_app_user,
+    db_lock_transaction_read_only,
     db_read_app_user_by_clerk_id,
+    db_read_example_app_user,
     db_update_app_user_timezone,
 )
 from app.models.app_user import DEFAULT_TIMEZONE, AppUser
@@ -88,3 +90,25 @@ def get_current_app_user(
 
 
 CurrentUserDep = Annotated[AppUser, Depends(get_current_app_user)]
+
+
+def get_viewer(
+    db: SessionDep,
+    authorization: Annotated[str | None, Header()] = None,
+    x_timezone: Annotated[str | None, Header()] = None,
+) -> AppUser:
+    """The user a read answers as. A request with no Authorization header, while the
+    local bypass is off, is a guest's: it answers as the example user, leaves that user's
+    stored zone as it is whatever X-Timezone says, and makes the request's transaction
+    read only, so a statement that writes raises. 401 for a guest when the database has
+    no example user. Any other request answers as `get_current_app_user`."""
+    if _DEV_AUTH_BYPASS_ENABLED or authorization is not None:
+        return get_current_app_user(db, authorization, x_timezone)
+    example_user = db_read_example_app_user(db)
+    if example_user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    db_lock_transaction_read_only(db)
+    return example_user
+
+
+ViewerDep = Annotated[AppUser, Depends(get_viewer)]

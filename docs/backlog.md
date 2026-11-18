@@ -9,13 +9,10 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
   - Reason: `frontend/src/index.css` holds a placeholder palette and defines no dark scheme.
   - Owner: /product-decide
 - B4. What does the top bar's search find, and where do its results appear?
-  - Reason: `SearchBar` in `frontend/src/components/shell/SearchBar.tsx` takes typing, and Enter does nothing.
-  - Owner: /product-decide
-- B8. On a wide screen, are a deck's cards shown and edited as a table, one column per field, with a field's type and order set from its column header?
-  - Reason: `CardTable` in `frontend/src/components/library/CardTable.tsx` and `DeckEditor` in `frontend/src/components/library/DeckEditor.tsx` render one layout at every width, and a card is edited one at a time through the card form. The answer turns on what the user does on this page on a wide screen: blocks in columns suit finding a card and opening it, and a table suits checking one field across many cards.
+  - Reason: What a search finds and where its results appear is undecided, and the top bar's search is taken out until it is decided.
   - Owner: /product-decide
 - B9. Can the user create many cards at once by pasting rows of text?
-  - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows.
+  - Reason: A card is made one at a time through the card form at `/cards/new`; nothing takes pasted rows. The user adds many cards in one sitting only on a wide screen, and a phone's screen is too narrow for pasted rows, so the answer waits on B39.
   - Owner: /product-decide
 - B11. Which kinds of value can a field hold besides text, and how does the user enter each on a card?
   - Reason: `FieldType` in `app/models/field_def.py` has `text`, `image` and `audio`; `SUPPORTED_FIELD_TYPES` in `frontend/src/lib/fieldTypes.ts` allows `text` alone, and `CardFieldsForm` in `frontend/src/components/library/CardFieldsForm.tsx` has no widget for the other two.
@@ -29,17 +26,11 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B15. Can the user share a deck with another user, and does the other user get a copy of their own or a view of the original?
   - Reason: Wanted later; today a deck reaches no other user (PDR 012).
   - Owner: /product-decide
-- B17. How is Flashy hosted and deployed: the provider for the API and for the frontend, whether they share an origin, the managed PostgreSQL, Clerk's production keys, where `alembic upgrade` runs on a deploy, and where secrets live?
-  - Reason: Nothing in the repository deploys; `.github/workflows/ci.yml` runs tests and the migration chain only (ADR 041). Four things wait on the answer: mapping a database outage to 503 on every endpoint once the frontend and API are cross-origin (ADR 072); removing the local auth bypass in `app/dependencies.py` once local testing no longer needs it; rate limiting of `GET /api/health` (ADR 072); and a startup check that the database is at alembic head (ADR 045).
-  - Owner: /code-decide
 - B18. In what order does a practice show its cards, across its decks and within one, and where does a card come back after it is rated Again?
   - Reason: A redesign of both is intended (ADR 058's Context) and nothing is decided for it. Today a practice shows its decks in the order the user ticked their configurations, each deck's cards unseen first then ascending mastery, and a retry returns after at least three other cards or at the end; the start order is written in no record, only in the docstring of the run service's function that starts a run, while the retry's placement is ADR 037 and ADR 058.
   - Owner: /product-decide
 - B19. Does the app show the user how their mastery has changed over time, for a card, a deck or a practice, beyond the summary of one run?
   - Reason: Wanted later as a statistics surface. The app already keeps what it would draw on: every change of a card's mastery with the run that caused it (ADR 042), and how each run asked each deck (ADR 107). Today one run's summary (PDR 041) is the only change the user sees.
-  - Owner: /product-decide
-- B26. On a wide screen, does the bar at the foot that holds Cancel and Create or Save span the whole window or only the form's width?
-  - Reason: every drawing of the bar is phone-sized, and New practice and the forms also show on wide screens.
   - Owner: /product-decide
 - B27. Should a user's mastery also fade with the time since they last practiced, so that "ready now" stays honest?
   - Reason: a fading circle can feel like being told you're behind, which PDR 037 rules out. The product owner means to bring in a way of keeping mastery that follows how memory fades over time and can name when a card is due, which would reopen PDR 021's "changes only when they practice" and PDR 037's "nothing due".
@@ -50,15 +41,22 @@ Canvas: https://claude.ai/artifact/CJDbXi5JJJBK5LpXY2tg19
 - B34. May a single word wider than its whole line break inside itself, so that nothing on the page scrolls sideways, while PDR 050 has a name or a heading break only between words?
   - Reason: PDR 050 asks both that a name or a heading break only between words and that nothing on a page scroll sideways, and a word wider than its line can keep only one of the two; `overflow-wrap: break-word` breaks such a word inside itself, and no record says it should.
   - Owner: /product-decide
-- B35. Do the practice's vocabulary row and the run's rows give their code names, `practice`, `Practice` and `/practices` for a practice and `RunStatus` and `status` for a run's state?
-  - Reason: the row "A named set of decks the user keeps and runs as many times as they like" reads "—" in Code, though the `practice` table and the `Practice` model name its concept; no row's Code names `RunStatus` or `RunRead.status`, and "A run that can still be continued" and "A run that has finished" give only `active` and `completed`.
-  - Owner: /code-decide
-- B36. Does a run's row on Home name its practice with no practice mark, while PDR 049 gives every practice's name its mark?
-  - Reason: `HomeRunRow` in `frontend/src/components/run/HomeRunRow.tsx` writes the practice's name with no `PracticeMark`, and PDR 049 gives the mark wherever a practice's name appears; giving the row the mark, or excepting it, amends PDR 049.
-  - Owner: /product-decide
 - B37. Is a rule or a piece of a screen that several places write alike kept in one shared place, and which of today's repeats move there?
   - Reason: no record says when a repeat earns one home. Two stand today. The rule for a name in a list, two lines then "…" with a word wider than its line broken inside itself, is written as the classes `line-clamp-2` and `break-words` at 14 places in 11 files under `frontend/src/components` and `frontend/src/pages`, so a new list must remember both halves. A heading never narrower than its mark and longest word, whose circle and buttons wrap beneath it, is written three times, in `DeckDetailPage` in `frontend/src/pages/DeckDetailPage.tsx`, `PracticeDetailsPage` in `frontend/src/pages/PracticeDetailsPage.tsx` and `CardSheetContent` in `frontend/src/components/run/RunBreakdown.tsx`, where a `min-w-0` added to any copy brings back the break inside a word; eleven pages also repeat the heading's text classes.
   - Owner: /code-decide
 - B38. Which test cases guard nothing a change could break, and are they removed?
   - Reason: no record says what a test case must guard to be kept. The frontend holds 732 cases in 76 files and the backend 384. Some assert a class name, as "rows with and without a subtitle share the same min-height class" in `frontend/src/components/ui/ListRow.test.tsx` and the `h-10` of "Add deck" in `frontend/src/pages/LibraryPage.test.tsx`, which restates the source, since jsdom does no layout (ADR 017); "keys by whatever the caller passes as key" in `ListRow.test.tsx` renders a list and asserts its links' addresses, which the cases beside it already assert. Which kinds of case go, and whether anything replaces one that goes, is undecided.
+  - Owner: /code-decide
+- B39. What is the app's layout on a wide screen, made for a wide screen: where the menu and a page's parts sit, whether a list's rows are blocks of their own, what the area beside a list shows before the user opens anything, whether a deck's cards are shown and edited as a table with one column per field, a field's type and order set from its column header, and where the bar at the foot that holds Cancel and Create or Save sits?
+  - Reason: A wide screen shows the phone's layout in one column, so a user who meets the app first on a laptop reads it as a phone's app, and the aim is that they read it as made for a wide screen, in the same style. Everything a user does on a phone they also do on a laptop, and they add many cards in one sitting only on a wide screen. Drawing 2 holds three layouts. 2A spreads the phone's layout across the window, and the eye crosses the whole screen to read one row. 2B puts the main places in the top bar, gives each page the whole window and slides what the user opens in from the right, where it covers part of the list beneath. 2C keeps the menu open down the left and opens what the user picks beside its list, each list one block of plain rows and the card being edited the one heavy block; Anki's Browse window and Linear lay a menu, a dense list and the opened row out the same way. A layout built from the phone's blocks reads as the phone's design spread over a wide screen: 2A; a page only as wide as its contents can use; the width filled with more columns of blocks, where the user cannot tell whether PDR 047's order runs across or down; and 2C's panes with every row a block of its own, which puts 23 blocks of one weight on a screen and breaks a table's columns between rows. PDR 020 draws everything that can be tapped as a block, so a list of plain rows changes it on a wide screen, and on a touch screen with no pointer nothing shows that a plain row opens. PDR 050 lets nothing scroll sideways, so a deck of 12 fields cannot show every field as a column, and which fields are columns is undecided. PDR 017 puts a row of places above every page below the main places, and a thing opened beside its list has its place on screen beside it. PDR 008 gives the board one layout on every screen size. Home's runs open nothing beside them, since a play button goes straight to a card. Before the user opens anything, the area beside a list holds the list's first item, a sentence, or nothing while the list takes the whole area. Blocks suit finding a card and opening it, and a table suits checking one field across many cards.
+  - Owner: /product-decide
+  - Drawings: 2
+- B40. How is the production database backed up, and how far back can it be restored?
+  - Reason: The production database runs on Railway's Hobby plan, which gives a volume no backups, so a database that is lost or damaged is gone, with the example library and every user's data. Railway's Pro plan, Render's paid PostgreSQL and a scheduled dump to storage elsewhere each give one.
+  - Owner: /code-decide
+- B41. Does the card sheet's key in a completed run's summary become a Radix Popover over a `Scrim` held to the sheet, as ADR 133 decides for a panel inside a dialog, and at which strength does it dim?
+  - Reason: `MarksKey` and the layer that dims the sheet beneath it, in `frontend/src/components/run/RunBreakdown.tsx`, are drawn by hand at 35% of ink, and `Scrim` in `frontend/src/components/ui/Scrim.tsx` covers the whole screen only. ADR 133 names two strengths, a fifth and a half, and neither is the key's.
+  - Owner: /code-decide
+- B42. Does Enter or Space, pressed while the screen is dimmed for a guest, bring the screen back, on "Log in" or on any other control that holds focus?
+  - Reason: ADR 134 closes the screen dimmed for a guest on a press anywhere and on Escape, through two listeners on the document, and says nothing of a press from the keyboard. The screen closes on a pointerdown and on Escape alone, so Enter or Space on a focused "Log in" opens Clerk's dialog over the dimmed screen, which the next pointerdown or Escape closes, and on any other control that only shows something it acts beneath the dimming. Closing on Enter and Space without preventing the key's default dims the screen again at once from a guarded control, and preventing it everywhere but on "Log in" needs a third listener, on keyup.
   - Owner: /code-decide

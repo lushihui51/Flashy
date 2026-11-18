@@ -18,12 +18,12 @@ describe('FormBar', () => {
     vi.unstubAllGlobals();
   });
 
-  it('is fixed to the foot and carries the mark a reveal clears', () => {
+  it('is fixed to the foot of the column and carries the mark a reveal clears', () => {
     renderBar();
 
     const bar = screen.getByTestId('form-bar');
     expect(bar).toHaveAttribute('data-reveal-clear');
-    expect(bar).toHaveClass('fixed', 'inset-x-0', 'bottom-0', 'z-10');
+    expect(bar).toHaveClass('fixed', 'inset-x-column', 'bottom-0', 'z-10');
   });
 
   it('renders the sentence above the count, and the count above the buttons in order', () => {

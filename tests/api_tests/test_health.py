@@ -7,12 +7,14 @@ from app.database import _CONNECT_ARGS, DB_CONNECT_TIMEOUT_SECONDS, engine
 
 
 def test_health_ok_without_auth(client):
-    """The one route without CurrentUserDep. Clears the test's auth bypass so the real
-    get_current_app_user would run if the route depended on it."""
-    from app.dependencies import get_current_app_user
+    """The one route that resolves no user. Clears both of the test's auth overrides so
+    the real get_current_app_user or get_viewer would run, and answer 401 in a database
+    with no example user, if the route depended on either."""
+    from app.dependencies import get_current_app_user, get_viewer
     from app.main import app
 
     app.dependency_overrides.pop(get_current_app_user, None)
+    app.dependency_overrides.pop(get_viewer, None)
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}

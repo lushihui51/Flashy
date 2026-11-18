@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useSyncExternalStore } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -11,8 +12,20 @@ import {
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { server } from 'src/test/server';
-import { mockSignedOut, mockSignedIn } from 'src/test/mocks/clerk';
+import {
+  mockLoading,
+  mockSignedOut,
+  mockSignedIn,
+  openSignIn,
+  useUserMock,
+} from 'src/test/mocks/clerk';
 import AppShell from 'src/components/shell/AppShell';
+import { loadHomeAfresh, useWriteGuard } from 'src/lib/viewer';
+
+vi.mock('src/lib/viewer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('src/lib/viewer')>()),
+  loadHomeAfresh: vi.fn(),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -37,11 +50,12 @@ function renderShell(initialEntries: string[] = ['/']) {
 }
 
 describe('AppShell', () => {
-  it('renders the top bar, search bar, and the routed page content', () => {
+  it('renders the top bar and the routed page content, and no search', () => {
     renderShell();
 
     expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByText('home content')).toBeInTheDocument();
   });
 
@@ -118,6 +132,53 @@ describe('AppShell', () => {
   });
 });
 
+describe('AppShell viewer', () => {
+  it('draws the header and no page while the viewer is loading', () => {
+    mockLoading();
+    renderShell();
+
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeEmptyDOMElement();
+  });
+
+  it('stops drawing the page and loads Home afresh once when the viewer changes between guest and user', () => {
+    // Clerk's answer, held where a change re-renders the shell as Clerk's own hook would.
+    let signedIn = false;
+    const listeners = new Set<() => void>();
+    const subscribe = (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    useUserMock.mockImplementation(() => {
+      const isSignedIn = useSyncExternalStore(subscribe, () => signedIn);
+      return { isLoaded: true, isSignedIn, user: isSignedIn ? { id: 'user_1' } : null };
+    });
+    const signIn = (next: boolean) =>
+      act(() => {
+        signedIn = next;
+        listeners.forEach((listener) => listener());
+      });
+
+    for (const startsSignedIn of [false, true]) {
+      vi.mocked(loadHomeAfresh).mockClear();
+      signedIn = startsSignedIn;
+      const { unmount } = renderShell();
+      expect(screen.getByText('home content')).toBeInTheDocument();
+
+      signIn(!startsSignedIn);
+      expect(screen.queryByText('home content')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
+      expect(loadHomeAfresh).toHaveBeenCalledTimes(1);
+
+      signIn(startsSignedIn);
+      signIn(!startsSignedIn);
+      expect(loadHomeAfresh).toHaveBeenCalledTimes(1);
+      unmount();
+    }
+  });
+});
+
 describe('AppShell header height', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -167,6 +228,11 @@ describe('AppShell header height', () => {
 });
 
 describe('AppShell connection banner', () => {
+  // A user, so the guest's banner never stands among the statuses these cases read.
+  beforeEach(() => {
+    mockSignedIn();
+  });
+
   afterEach(() => {
     onlineManager.setOnline(true);
   });
@@ -222,5 +288,101 @@ describe('AppShell connection banner', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       "You're offline. Flashy will reconnect automatically.",
     );
+  });
+});
+
+describe('AppShell example banner', () => {
+  it('shows the example banner to a guest, beneath the connection banner, and to no user', async () => {
+    const example = 'This is an example. Log in to use all of Flashy.';
+    server.use(
+      http.get('*/api/health', () =>
+        HttpResponse.json(
+          { detail: { code: 'database_unavailable', message: 'x' } },
+          { status: 503 },
+        ),
+      ),
+    );
+    const { unmount } = renderShell();
+
+    await waitFor(() => expect(screen.getAllByRole('status')).toHaveLength(2));
+    const [connection, guest] = screen.getAllByRole('status');
+    expect(connection).toHaveTextContent(
+      'Flashy is having trouble right now. Retrying automatically.',
+    );
+    expect(guest).toHaveTextContent(example);
+    const topBarButton = screen.getByRole('button', { name: 'Open menu' });
+    expect(
+      guest!.compareDocumentPosition(topBarButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    unmount();
+
+    mockSignedIn();
+    renderShell();
+    await screen.findByRole('status');
+    expect(screen.queryByText(example)).not.toBeInTheDocument();
+  });
+});
+
+describe("AppShell guest's dimmed screen", () => {
+  /** A page whose one control would write, beneath the shell, with a second page to go to. */
+  function GuardedPage() {
+    const guard = useWriteGuard();
+    return (
+      <button type="button" onClick={() => guard(() => {})}>
+        Start run
+      </button>
+    );
+  }
+
+  it("dims the screen from the context and brings it back on a press on Log in, on a press on the guest's banner and on a change of address", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router = createMemoryRouter(
+      createRoutesFromElements(
+        <Route element={<AppShell />}>
+          <Route path="/" element={<GuardedPage />} />
+          <Route path="/practices" element={<div>practices content</div>} />
+        </Route>,
+      ),
+      { initialEntries: ['/'] },
+    );
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+    const scrim = () => screen.queryByTestId('scrim');
+    const startRun = () => screen.getByRole('button', { name: 'Start run' });
+    expect(scrim()).not.toBeInTheDocument();
+
+    await user.click(startRun());
+    expect(scrim()).toHaveClass('bg-(--color-ink)/50');
+    expect(startRun()).toHaveFocus();
+    // No sentence comes with the press: the guest's banner is the shell's one status.
+    const statuses = screen.getAllByRole('status');
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toHaveTextContent(/^This is an example\. Log in to use all of Flashy\.$/);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    expect(scrim()).not.toBeInTheDocument();
+    expect(openSignIn).toHaveBeenCalledTimes(1);
+
+    await user.click(startRun());
+    expect(scrim()).toBeInTheDocument();
+    await user.click(screen.getByRole('status'));
+    expect(scrim()).not.toBeInTheDocument();
+    expect(openSignIn).toHaveBeenCalledTimes(1);
+
+    await user.click(startRun());
+    expect(scrim()).toBeInTheDocument();
+    await act(() => router.navigate('/practices'));
+    expect(screen.getByText('practices content')).toBeInTheDocument();
+    expect(scrim()).not.toBeInTheDocument();
+
+    // Coming back to the address it was dimmed at does not dim it again.
+    await act(() => router.navigate(-1));
+    expect(startRun()).toBeInTheDocument();
+    expect(scrim()).not.toBeInTheDocument();
   });
 });

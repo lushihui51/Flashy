@@ -15,12 +15,15 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Signing in | "Log in" | Top bar, signed out | `AuthSlot` |
 | App | Signing out | "Log out" | Account sheet | `AccountSheet` |
 | App | The signed-in user | "Account"; "Account menu for <name>", spoken | Top bar; Account sheet | `app_user`; `AppUser`; `AccountSheet` |
-| App | Searching | "Search" | Top bar | `SearchBar` |
+| App | The example library a guest is shown | — | — | `ViewerDep`; `get_viewer`; `db_read_example_app_user`; `useViewer` |
+| App | Telling a guest they are looking at an example | "This is an example. Log in to use all of Flashy." | A banner across the top of every page, while not logged in | `ExampleBanner` |
+| App | Telling a guest to log in | the whole screen dimmed but for the banner and "Log in" | Over every page, after a guest presses something that would change the example library | `GuestScrim`; `useWriteGuard` |
+| App | Searching | "Search" | Not shown yet | — |
 | App | Finishing a form that makes a new thing | "Create" | New deck; New card; New practice | `mode="create"` |
 | App | Finishing a form that changes a thing | "Save" | Edit deck; Edit card; Edit practice; a deck's board, opened from a practice's page while no run is active; the save confirm | `mode="edit"` |
 | App | Feedback after a save | "Saved ✓" | Edit deck | `savedFlash` |
 | App | Backing out | "Cancel" | Every form and confirm | `cancelLabel` |
-| App | Leaving when nothing is unsaved | "Done" | Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page | `showDone`; `DeckBoardPage` |
+| App | Leaving when nothing is unsaved | "Done" | Edit deck; a deck's board, while its practice has an active run or opened from a completed run's page; every form, while not logged in | `showDone`; `DeckBoardPage` |
 | App | Reversing a staged change | "Undo" | Edit deck | `DeckEditor` |
 | App | Accepting a warning | "Continue" | New card | `confirmLabel` |
 | App | Throwing away unsaved work | "Discard" | Every discard confirm | `ConfirmDialog` |
@@ -40,7 +43,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Places | The user's whole collection | "Your library"; "the library" | Side menu; its heading; the breadcrumb row | `LibraryPage`; `/library` |
 | Places | The row above a page's heading naming the places it belongs to, widest first | "Back", spoken, on the "<" that goes back; "Breadcrumb", spoken; "Your library" on a deck's page; "All practices" on a practice's page; "All practices › <Practice>" on the run page and a completed run's page | Deck page; a practice's page; run page; a completed run's page | `Breadcrumb`; `places` |
 | Places | Several decks named in one line | each deck's name with its mark, joined by " · ", as "Commands · Ports" | A run's row on Home; All practices' rows | `DeckLine`; `DeckNameRead`; `deck_name` |
-| Home | The steps to a first practice | "Your first practice"; "N of 3"; "New deck", "New card", "New practice" as the steps | Home, until the user has made a practice | `steps`; `HomeSteps`; `first_practice_at` |
+| Home | The steps to a first practice | "Your first practice"; "N of 4"; "New deck", "New card", "New practice", "Start run" as the steps | Home, until the user has started a run | `steps`; `HomeSteps`; `first_run_at` |
 | Home | The active runs the user can continue | "Active" over up to three runs, each its mark and day in a block, its practice's name, its decks and its progress, with a play button | Home | `active_runs`; `ACTIVE_RUN_LIMIT`; `HomeRun` |
 | Home | The most recently completed runs | "Recently completed" over up to three runs, each its mark and day in a block, its practice's name and its decks, with a play button | Home | `recent_runs`; `RECENT_RUN_LIMIT`; `HomeRun` |
 | Home | Going to All practices from Home | "All practices" | Home, in the bar at the foot, once the user has made a practice | `FormBar`; `/practices` |
@@ -111,7 +114,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Configuration | An answer draw count that does not fit its area | "Check how many random answer fields each card shows." | A deck's board, at the side's "Each card shows" row | `boardProblem` |
 | Configuration | An empty "Not used" area | "Every field is assigned." | The board's Not used area | `FieldAssignmentBoard`; `unassigned` |
 | Configuration | Any other empty area on the board | "None yet." | The board's Always shown and Random draw areas | `FieldAssignmentBoard` |
-| Practice | A named set of decks the user keeps and runs as many times as they like | "practice" | All practices; New practice; Edit practice; a practice's page; Home | — |
+| Practice | A named set of decks the user keeps and runs as many times as they like | "practice" | All practices; New practice; Edit practice; a practice's page; Home | `practice`; `Practice`; `/api/practices`; `practiceId` |
 | Practice | One go through a practice, from its first card until it ends | "run"; "Runs" over a practice's runs | A practice's page; the run page; a completed run's page; Home | `run`; `Run`; `RunRead`; `/api/runs`; `runId` |
 | Practice | The page listing every practice the user has | "All practices" | Its heading; side menu; Home's foot; the row of places | `PracticeOverviewPage`; `/practices`; `readPractices` |
 | Practice | Adding a practice to the list in view | "Add practice" | All practices' header | `PracticeOverviewPage` |
@@ -121,13 +124,13 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | Practice | A new practice's suggested name | its decks' names in the order picked, joined by " + ", in grey inside Name, as "Commands + Ports"; a name another practice already has, with the next untaken number in parentheses, as "Ports (1)" | New practice | `suggest_practice_name`; `/api/practices/suggested-name`; `SuggestedPracticeName`; `readSuggestedPracticeName` |
 | Practice | The chosen decks | "Choose decks"; "Search decks", spoken, on its search; "Decks", spoken, on the list it opens, each row a deck's name alone and "New deck…" as the last row; each picked deck beneath with its cross; "Remove <name>", spoken; "N selected", above Cancel and Create, once a deck is picked | New practice | `deck`; `deck_ids`; `DeckPicker` |
 | Practice | A practice's own page | its name with its mark and its circle; each of its decks on a line; "Runs" over its runs | A practice's page | `/practices/:practiceId`; `PracticeDetailsPage`; `PracticeDetail`; `/api/practices/{practice_id}` |
-| Practice | A run that can still be continued | "active"; "Active" as badge and as Home's section | A practice's page, under "Runs"; Home | `active` |
-| Practice | A run that has finished | "completed"; "Completed" as badge; "Recently completed" as Home's section | A practice's page, under "Runs"; a completed run's page; Home | `completed` |
+| Practice | A run that can still be continued | "active"; "Active" as badge and as Home's section | A practice's page, under "Runs"; Home | `active`; `RunStatus`; `status` |
+| Practice | A run that has finished | "completed"; "Completed" as badge; "Recently completed" as Home's section | A practice's page, under "Runs"; a completed run's page; Home | `completed`; `RunStatus`; `status` |
 | Practice | Starting a practice's run, or continuing its active one | "Start run" while no run is active; "Continue run" while one is | A practice's page, as its main action | `startRun`; `/api/practices/{practice_id}/runs`; `active_run_id` |
 | Practice | Ending a run before its last card | "End run"; "End this run?" over "The cards you have not reached stay as they are. The run shows only the cards you did." | The run page, at the right end of the progress bar's line | `POST /api/runs/{id}/end`; `end_run`; `endRun` |
 | Practice | The copy of how the practice asks each deck that a run takes at start | — | — | `run_configuration`; `RunConfiguration`; `RunConfigurationRead` |
 | Practice | Running a practice again | "Re-run" | A completed run's page, as its main action | `/api/runs/{run_id}/rerun`; `rerunRun`; `RerunButton` |
-| Practice | A run that would have no cards | "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." | A practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button | `no_cards`; `NO_CARDS_MESSAGE` |
+| Practice | A run that would have no cards | "This run would have no cards. Either the practice's decks have no cards, or every card is blank in every field one side shows." | A practice's page, after Start run; a completed run's page, after Re-run or Re-run these; Home, after a play button or the Start run step | `no_cards`; `NO_CARDS_MESSAGE` |
 | Practice | Starting a next run while one is active | "Finish the active run first." | A completed run's page, under Re-run or Re-run these | `practice_has_active_run` |
 | Practice | A practice name already taken | "A practice with this name already exists." | New practice, under Name; Edit practice, under Name | `practice_name_taken` |
 | Practice | Practicing the cards the summary lists | "Re-run these" | A completed run's page, under the counts, once a count is chosen | `/api/runs/{run_id}/chosen_cards`; `RunChosenCards`; `startChosenCards`; `card_ids` |

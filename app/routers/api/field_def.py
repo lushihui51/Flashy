@@ -10,7 +10,7 @@ from app.database_ops.field_def import (
     db_rename_field_def,
     db_reorder_field_defs,
 )
-from app.dependencies import CurrentUserDep
+from app.dependencies import CurrentUserDep, ViewerDep
 from app.mastery.config import get_mastery_strategy
 from app.models.field_def import FieldDefCreate, FieldDefRead, FieldDefUpdate
 from app.refusals import Refusal
@@ -39,7 +39,7 @@ def create_field_def(
 @router.get(
     "/decks/{deck_id}/fields", response_model=list[FieldDefRead], status_code=200
 )
-def read_field_defs(db: SessionDep, current_user: CurrentUserDep, deck_id: uuid.UUID):
+def read_field_defs(db: SessionDep, current_user: ViewerDep, deck_id: uuid.UUID):
     if not db_read_deck(db, deck_id, current_user.id):
         raise HTTPException(status_code=404, detail="Deck not found")
     return db_read_field_defs(db, deck_id, current_user.id)
@@ -72,7 +72,7 @@ def reorder_field_defs(
 
 
 @router.get("/fields/{field_id}", response_model=FieldDefRead, status_code=200)
-def read_field_def(db: SessionDep, current_user: CurrentUserDep, field_id: uuid.UUID):
+def read_field_def(db: SessionDep, current_user: ViewerDep, field_id: uuid.UUID):
     field_def = db_read_field_def(db, field_id, current_user.id)
     if not field_def:
         raise HTTPException(status_code=404, detail="Field not found")

@@ -1,7 +1,8 @@
 """verify_clerk_session is never exercised by the rest of the suite — every other test
-authenticates through the get_current_app_user dependency override, which bypasses it
-entirely (the standard FastAPI testing pattern, but it means the actual verification
-logic needs its own coverage). These tests sign tokens with a locally generated RSA
+either authenticates through the dependency overrides of get_current_app_user and
+get_viewer, which bypass it entirely (the standard FastAPI testing pattern), or sends a
+guest's request with no Authorization header, which never reaches it, or stubs it. So the
+actual verification logic needs its own coverage. These tests sign tokens with a locally generated RSA
 keypair and stub the JWKS client, so no network access to a real Clerk instance is
 needed."""
 

@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import SessionDep
-from app.dependencies import CurrentUserDep
+from app.dependencies import CurrentUserDep, ViewerDep
 from app.mastery.config import get_mastery_strategy
 from app.models.run import RunRead
 from app.models.run_payloads import (
@@ -29,7 +29,7 @@ router = APIRouter(tags=["Run"])
 
 
 @router.get("/runs/{run_id}", response_model=RunDetail, status_code=200)
-def get_run(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
+def get_run(db: SessionDep, current_user: ViewerDep, run_id: uuid.UUID):
     """404 for an unknown or foreign run."""
     run = read_run_detail(db, run_id, current_user.id)
     if not run:
@@ -38,7 +38,7 @@ def get_run(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
 
 
 @router.get("/runs/{run_id}/state", response_model=RunState, status_code=200)
-def get_run_state(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
+def get_run_state(db: SessionDep, current_user: ViewerDep, run_id: uuid.UUID):
     """One server-composed payload. 404 for an unknown or foreign run; `current_card: null`
     once nothing is pending, at which point `status` already reads "completed"."""
     state = read_run_state(db, run_id, current_user.id)
@@ -48,7 +48,7 @@ def get_run_state(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUI
 
 
 @router.get("/runs/{run_id}/breakdown", response_model=RunBreakdownRead, status_code=200)
-def get_run_breakdown(db: SessionDep, current_user: CurrentUserDep, run_id: uuid.UUID):
+def get_run_breakdown(db: SessionDep, current_user: ViewerDep, run_id: uuid.UUID):
     """Everything the summary shows. 409 `run_active` while the run is active; 404 for an
     unknown or foreign run."""
     try:

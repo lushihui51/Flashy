@@ -1,7 +1,8 @@
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from 'src/test/server';
+import { mockSignedIn } from 'src/test/mocks/clerk';
 
 // jsdom has no ResizeObserver — @radix-ui/react-popover's Arrow measures its anchor
 // via @radix-ui/react-use-size, which needs one to exist at all (it never needs to
@@ -26,6 +27,17 @@ if (typeof window !== 'undefined') {
     window.scrollBy(x, y)) as Element['scrollBy'];
   document.documentElement.setAttribute('data-reveal-scroller', '');
 }
+
+// The API client holds every request until Clerk has loaded; a Clerk that has loaded with
+// no session lets a page test's requests leave at once, with no token. It is set before
+// each test so one that replaces or deletes it leaves the next test unaffected.
+beforeEach(() => {
+  if (typeof window !== 'undefined') window.Clerk = { loaded: true, session: null };
+});
+
+// Every test reads as a user unless it names another viewer through src/test/mocks/clerk, whose
+// mock of @clerk/react this import puts in place for every test file.
+beforeEach(() => mockSignedIn());
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());

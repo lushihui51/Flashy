@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.database import SessionDep
 from app.database_ops.practice import db_delete_practice
-from app.dependencies import CurrentUserDep
+from app.dependencies import CurrentUserDep, ViewerDep
 from app.mastery.config import get_mastery_strategy
 from app.models.practice_payloads import (
     ConfigurationArrays,
@@ -48,7 +48,7 @@ def post_practices(db: SessionDep, current_user: CurrentUserDep, payload: Practi
 
 
 @router.get("", response_model=list[PracticeSummary], status_code=200)
-def get_practices(db: SessionDep, current_user: CurrentUserDep):
+def get_practices(db: SessionDep, current_user: ViewerDep):
     """Most recently run first; a practice never run by when it was made."""
     return practice_summaries(db, get_mastery_strategy(), current_user.id)
 
@@ -56,7 +56,7 @@ def get_practices(db: SessionDep, current_user: CurrentUserDep):
 @router.get("/suggested-name", response_model=SuggestedPracticeName, status_code=200)
 def get_suggested_practice_name(
     db: SessionDep,
-    current_user: CurrentUserDep,
+    current_user: ViewerDep,
     deck_ids: Annotated[list[uuid.UUID], Query()],
 ):
     """The name a practice of these decks, in this order, takes when created with none.
@@ -68,7 +68,7 @@ def get_suggested_practice_name(
 
 
 @router.get("/{practice_id}", response_model=PracticeDetail, status_code=200)
-def get_practice(db: SessionDep, current_user: CurrentUserDep, practice_id: uuid.UUID):
+def get_practice(db: SessionDep, current_user: ViewerDep, practice_id: uuid.UUID):
     detail = practice_detail(db, get_mastery_strategy(), current_user.id, practice_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Practice not found")

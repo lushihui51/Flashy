@@ -10,6 +10,7 @@ import DeckMark from 'src/components/ui/DeckMark';
 import FormBar from 'src/components/ui/FormBar';
 import FormPart from 'src/components/ui/FormPart';
 import MarkedName from 'src/components/ui/MarkedName';
+import ReadOnlyButton from 'src/components/ui/ReadOnlyButton';
 import SubmitButton from 'src/components/ui/SubmitButton';
 import { failureSentence } from 'src/lib/failureSentence';
 import { useLeaveForm } from 'src/lib/leaveForm';
@@ -17,6 +18,7 @@ import { usePageTitle } from 'src/lib/pageTitle';
 import { pluralize } from 'src/lib/pluralize';
 import { internalReturnTo, returnAddressParams } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 const DECK_PARAM = 'deck';
 
@@ -33,7 +35,7 @@ function withDecks(params: URLSearchParams, deckIds: readonly string[]): URLSear
  * Name, left blank, shows in grey the name the server would give the picks. The picks, in the order picked, and a typed name ride the URL, as one `deck` param per
  * pick and a `name` param, so a refresh or a round trip through New deck keeps them.
  * Create lands on `returnTo`, else on the new practice's page; Cancel on `cancelTo`, else
- * All practices.
+ * All practices. For a guest it is greyed, with Done alone, which leaves as Cancel does.
  */
 export default function PracticeCreatePage() {
   usePageTitle('New practice');
@@ -45,6 +47,10 @@ export default function PracticeCreatePage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const guest = useViewer() === 'guest';
+  const guard = useWriteGuard();
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
+  const pressReadOnly = () => guard(() => {});
 
   const deckIds = [...new Set(params.getAll(DECK_PARAM))];
   // Read from the URL once, at mount, so a refresh or a round trip comes back to what was
@@ -130,7 +136,11 @@ export default function PracticeCreatePage() {
             value={name}
             placeholder={suggestedName}
             onChange={(event) => changeName(event.target.value)}
-            className="h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base text-(--color-ink) placeholder:text-(--color-aside)"
+            readOnly={guest}
+            onClick={guest ? pressReadOnly : undefined}
+            className={`h-field rounded-field outlined-line bg-(--color-surface) px-3.5 text-base placeholder:text-(--color-aside) ${
+              guest ? 'text-(--color-aside)' : 'text-(--color-ink)'
+            }`}
           />
         </label>
       </FormPart>
@@ -147,6 +157,7 @@ export default function PracticeCreatePage() {
           clearOnPick
           createLabel="New deck…"
           onSelectCreate={newDeck}
+          onReadOnlyPress={guest ? pressReadOnly : undefined}
         />
       </div>
 
@@ -162,21 +173,31 @@ export default function PracticeCreatePage() {
                   {`${pluralize(deck.card_count, 'card')} · ${pluralize(deck.field_names.length, 'field')}`}
                 </span>
               </span>
-              <button
-                type="button"
-                aria-label={`Remove ${deck.name}`}
-                onClick={() =>
-                  setParams(
-                    withDecks(
-                      params,
-                      deckIds.filter((id) => id !== deck.id),
-                    ),
-                  )
-                }
-                className="tappable-sm flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--color-surface) text-(--color-ink)"
-              >
-                <X aria-hidden="true" strokeWidth={2.2} className="size-icon" />
-              </button>
+              {guest ? (
+                <ReadOnlyButton
+                  aria-label={`Remove ${deck.name}`}
+                  onPress={pressReadOnly}
+                  className="tappable-sm flex size-10 shrink-0 items-center justify-center rounded-xl"
+                >
+                  <X aria-hidden="true" strokeWidth={2.2} className="size-icon" />
+                </ReadOnlyButton>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Remove ${deck.name}`}
+                  onClick={() =>
+                    setParams(
+                      withDecks(
+                        params,
+                        deckIds.filter((id) => id !== deck.id),
+                      ),
+                    )
+                  }
+                  className="tappable-sm flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--color-surface) text-(--color-ink)"
+                >
+                  <X aria-hidden="true" strokeWidth={2.2} className="size-icon" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -186,24 +207,38 @@ export default function PracticeCreatePage() {
         sentence={saveError}
         count={pickedIds.length > 0 ? `${pickedIds.length} selected` : null}
       >
-        <button
-          type="button"
-          onClick={cancel}
-          className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
-        >
-          Cancel
-        </button>
-        <SubmitButton
-          ready={pickedIds.length > 0}
-          busy={createMutation.isPending}
-          onPress={() => {
-            setSaveError(null);
-            setNameError(null);
-            createMutation.mutate();
-          }}
-        >
-          Create
-        </SubmitButton>
+        {guest ? (
+          <button
+            type="button"
+            onClick={cancel}
+            className="tappable h-action flex-1 rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+          >
+            Done
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={cancel}
+              className="tappable shrink-0 h-action rounded-2xl bg-(--color-surface) px-4.5 text-action font-semibold text-(--color-ink)"
+            >
+              Cancel
+            </button>
+            <SubmitButton
+              ready={pickedIds.length > 0}
+              busy={createMutation.isPending}
+              onPress={() =>
+                guard(() => {
+                  setSaveError(null);
+                  setNameError(null);
+                  createMutation.mutate();
+                })
+              }
+            >
+              Create
+            </SubmitButton>
+          </>
+        )}
       </FormBar>
     </div>
   );

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRef } from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithRouter } from 'src/test/testUtils';
@@ -26,6 +27,22 @@ describe('AuthSlot', () => {
     await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(openSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws Log in as a block', () => {
+    mockSignedOut();
+    renderWithRouter(<AuthSlot onAvatarClick={() => {}} />);
+
+    const logIn = screen.getByRole('button', { name: 'Log in' });
+    expect(logIn).toHaveClass('tappable-sm', 'bg-(--color-main-action)');
+  });
+
+  it('signed out: hands Log in to logInButtonRef', () => {
+    mockSignedOut();
+    const logInButtonRef = createRef<HTMLButtonElement>();
+    renderWithRouter(<AuthSlot onAvatarClick={() => {}} logInButtonRef={logInButtonRef} />);
+
+    expect(logInButtonRef.current).toBe(screen.getByRole('button', { name: 'Log in' }));
   });
 
   it('signed in: renders the avatar image with the user name in alt text', () => {

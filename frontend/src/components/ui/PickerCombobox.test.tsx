@@ -85,6 +85,37 @@ describe('PickerCombobox', () => {
     expect(screen.getByRole('option', { name: 'Deck 0' })).toBeInTheDocument();
   });
 
+  it('with onReadOnlyPress a press opens no list and calls it', async () => {
+    const onSelect = vi.fn();
+    const onReadOnlyPress = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PickerCombobox
+        items={items}
+        selected={items[3]!}
+        onSelect={onSelect}
+        onSelectCreate={() => {}}
+        createLabel="New deck…"
+        placeholder="Deck"
+        onReadOnlyPress={onReadOnlyPress}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveAttribute('readonly');
+    expect(input).toBeEnabled();
+    expect(input).toHaveClass('bg-(--color-surface)', 'outlined-line', 'text-(--color-aside)');
+
+    await user.click(input);
+    expect(onReadOnlyPress).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    await user.keyboard('{ArrowDown}{Enter}x');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveValue('Deck 3');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('locked renders a static chip with no combobox', () => {
     render(
       <PickerCombobox

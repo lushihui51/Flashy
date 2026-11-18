@@ -1,5 +1,4 @@
 import { useId, type RefObject } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useUser, useClerk } from '@clerk/react';
 import BottomSheet from 'src/components/ui/BottomSheet';
 
@@ -13,7 +12,6 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
   const nameId = useId();
   const { user } = useUser();
   const clerk = useClerk();
-  const navigate = useNavigate();
 
   const name = user?.username ?? user?.fullName ?? 'Account';
   const email = user?.primaryEmailAddress?.emailAddress ?? '';
@@ -21,7 +19,6 @@ export default function AccountSheet({ open, onClose, triggerRef }: AccountSheet
   const handleLogOut = async () => {
     await clerk.signOut();
     onClose();
-    navigate('/');
   };
 
   return (

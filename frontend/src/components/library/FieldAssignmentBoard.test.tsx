@@ -22,7 +22,7 @@ const STATE = boardFromConfig(FIELD_DEFS, {
   answer_pool_counts: [1],
 });
 
-function renderBoard(readOnly: boolean) {
+function renderBoard(readOnly: boolean, onReadOnlyPress?: () => void) {
   const onMove = vi.fn();
   const onToggleCount = vi.fn();
   render(
@@ -33,6 +33,7 @@ function renderBoard(readOnly: boolean) {
       onToggleCount={onToggleCount}
       problem={null}
       readOnly={readOnly}
+      onReadOnlyPress={onReadOnlyPress}
     />,
   );
   return { onMove, onToggleCount };
@@ -97,5 +98,33 @@ describe('FieldAssignmentBoard', () => {
     await user.click(counts()[1]!);
 
     expect(onToggleCount).toHaveBeenCalledWith('answer_pool', 2);
+  });
+
+  it('read only with onReadOnlyPress, a chip is aria-disabled, opens no sheet and calls it', async () => {
+    const onReadOnlyPress = vi.fn();
+    const user = userEvent.setup();
+    const { onMove, onToggleCount } = renderBoard(true, onReadOnlyPress);
+
+    for (const chip of chips()) {
+      expect(chip).toBeEnabled();
+      expect(chip).toHaveAttribute('aria-disabled', 'true');
+      expect(chip).toHaveClass('outlined-line', 'aria-disabled:text-(--color-aside)');
+      expect(chip).not.toHaveClass('tappable-sm');
+    }
+    const boxes = screen.getAllByRole('checkbox');
+    for (const box of boxes) {
+      expect(box).toBeEnabled();
+      expect(box).toHaveAttribute('aria-disabled', 'true');
+    }
+
+    await user.click(screen.getByRole('button', { name: '[Port Number]' }));
+    expect(onReadOnlyPress).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(counts()[1]!);
+    expect(onReadOnlyPress).toHaveBeenCalledTimes(2);
+    expect(boxes.map((box) => (box as HTMLInputElement).checked)).toEqual([true, false]);
+    expect(onMove).not.toHaveBeenCalled();
+    expect(onToggleCount).not.toHaveBeenCalled();
   });
 });

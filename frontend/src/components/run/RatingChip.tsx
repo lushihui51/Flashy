@@ -39,7 +39,7 @@ export default function RatingChip({ fieldName, rating, onSelect }: RatingChipPr
         {/* One element, since the portal takes a single child; it starts no stacking context,
             so the list's z-60 stands above the scrim's z-50. */}
         <div>
-          <Scrim anchor={chipRef} onDismiss={() => setOpen(false)} />
+          <Scrim lit={[chipRef]} onDismiss={() => setOpen(false)} strength="fifth" />
           <Popover.Content
             side="top"
             align="center"

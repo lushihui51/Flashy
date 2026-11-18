@@ -14,7 +14,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
 from app.database import _CONNECT_ARGS, get_session
-from app.dependencies import get_current_app_user
+from app.dependencies import get_current_app_user, get_viewer
 from app.main import app
 
 engine = create_engine(settings.test_database_url, echo=False, connect_args=_CONNECT_ARGS)
@@ -109,19 +109,23 @@ def other_user(db):
 @pytest.fixture()
 def client(init_db, existing_user):
     """Requests through this client are authenticated as existing_user by default —
-    real Clerk token verification is bypassed via a dependency override, the standard
-    FastAPI testing pattern (same idea as get_session's override above). Use act_as to
-    make specific requests as a different user."""
+    real Clerk token verification is bypassed via overrides of get_current_app_user and
+    get_viewer, the standard FastAPI testing pattern (same idea as get_session's override
+    above). Use act_as to make specific requests as a different user; a test of a guest's
+    request removes both overrides."""
     app.dependency_overrides[get_current_app_user] = lambda: existing_user
+    app.dependency_overrides[get_viewer] = lambda: existing_user
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.pop(get_current_app_user, None)
+    app.dependency_overrides.pop(get_viewer, None)
 
 
 @pytest.fixture
 def act_as(client):
     def _act_as(user):
         app.dependency_overrides[get_current_app_user] = lambda: user
+        app.dependency_overrides[get_viewer] = lambda: user
 
     return _act_as
 

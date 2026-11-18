@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { rerunRun } from 'src/api/run';
 import { failureSentence } from 'src/lib/failureSentence';
+import { useWriteGuard } from 'src/lib/viewer';
 
 type RerunButtonProps = {
   /** The completed run whose practice runs again. */
@@ -16,6 +17,7 @@ type RerunButtonProps = {
 export default function RerunButton({ runId, onError }: RerunButtonProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const guard = useWriteGuard();
 
   const rerunMutation = useMutation({
     mutationFn: () => rerunRun(runId),
@@ -33,10 +35,12 @@ export default function RerunButton({ runId, onError }: RerunButtonProps) {
     <button
       type="button"
       disabled={rerunMutation.isPending}
-      onClick={() => {
-        onError('');
-        rerunMutation.mutate();
-      }}
+      onClick={() =>
+        guard(() => {
+          onError('');
+          rerunMutation.mutate();
+        })
+      }
       className="tappable h-action w-full rounded-2xl bg-(--color-main-action) px-4.5 text-action font-semibold text-(--color-ink)"
     >
       Re-run

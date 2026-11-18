@@ -29,6 +29,7 @@ import { useLeaveForm } from 'src/lib/leaveForm';
 import { usePageTitle } from 'src/lib/pageTitle';
 import { internalReturnTo } from 'src/lib/returnTo';
 import { useViewParams } from 'src/lib/viewParams';
+import { useViewer, useWriteGuard } from 'src/lib/viewer';
 
 type DeckDetail = components['schemas']['DeckDetail'];
 
@@ -37,8 +38,8 @@ type DeckDetail = components['schemas']['DeckDetail'];
  * `/runs/:runId/decks/:deckId`. From a practice with no active run it saves how the practice's
  * next run asks the deck: Cancel lands on `cancelTo`, else the practice's page, and Save on
  * `returnTo`, else the practice's page. While the practice has an active run, and always from a
- * run, it shows the board greyed with Done alone, which lands on `cancelTo`, else the practice's
- * or the run's page.
+ * run, and for a guest, it shows the board greyed with Done alone, which lands on `cancelTo`, else
+ * the practice's or the run's page.
  */
 export default function DeckBoardPage() {
   const { practiceId, runId, deckId } = useParams<{
@@ -132,7 +133,7 @@ type DeckBoardBodyProps = {
   deck: DeckDetail;
   practiceName: string;
   config: BoardArrays;
-  /** The line above a board that cannot be changed, saying why; null for a board that saves. */
+  /** The line above a board no one can change, saying why; null for a board a user can change. */
   readOnlyLine: string | null;
   /** The practice the board saves to; null on a run's board. */
   practiceId: string | null;
@@ -154,7 +155,11 @@ function DeckBoardBody({
   const [board, setBoard] = useState(() => boardFromConfig(deck.field_defs, config));
   const [problem, setProblem] = useState<BoardProblem | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const readOnly = readOnlyLine !== null;
+  const guard = useWriteGuard();
+  // A board a user could change is greyed for a guest, with no line, and a press on it dims the
+  // screen; a board no one can change reads as a user's.
+  const guestOnly = useViewer() === 'guest' && readOnlyLine === null;
+  const readOnly = readOnlyLine !== null || guestOnly;
 
   const saveMutation = useMutation({
     mutationFn: () => savePracticeConfiguration(practiceId!, deck.id, boardToPayload(board)),
@@ -184,6 +189,7 @@ function DeckBoardBody({
           state={board}
           problem={problem}
           readOnly={readOnly}
+          onReadOnlyPress={guestOnly ? () => guard(() => {}) : undefined}
           onMove={(fieldId: string, to: BoardSlot) => {
             setBoard((current) => moveField(current, fieldId, to));
             setProblem(null);
@@ -218,8 +224,10 @@ function DeckBoardBody({
               busy={saveMutation.isPending}
               onNotReady={() => setProblem(boardProblem(board))}
               onPress={() => {
-                setSaveError(null);
-                saveMutation.mutate();
+                guard(() => {
+                  setSaveError(null);
+                  saveMutation.mutate();
+                });
               }}
             >
               Save
