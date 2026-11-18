@@ -28,7 +28,7 @@ Judgement: The engineer reads README.md from top to bottom and finds each of the
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -66,4 +66,10 @@ None.
 
 **Debrief**
 
-None.
+- `grep -n "^#" README.md` printed `1:# Flashy`, `5:## Why`, `11:## How it works`, `18:## How it is built`, `25:## Running it locally`, `49:## How it is deployed`, `53:## License`, and nothing else.
+- The `Settings` check printed `[]`.
+- The forbidden-text grep printed nothing and exited 1.
+- No departure from guidance: every sentence of Details is a constraint, and each is kept.
+- `## How it works` is four numbered steps naming no rating, no board area and no button, as "Run the practice" rather than "Start run", and holds no number.
+- `## Running it locally` leaves out the local sign-in bypass (`DEV_AUTH_USER_ID`, `ENV`, `VITE_DEV_AUTH`), since Details asks only for the required variables; a reader runs the app through the Clerk development instance.
+- Read in README.md: "your development instance's API keys page in the Clerk dashboard", where it says the three Clerk values are, is from Clerk's dashboard as I know it and not checked against it from here.
