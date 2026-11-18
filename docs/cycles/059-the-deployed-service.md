@@ -8,7 +8,7 @@ Outcome: The repository builds into the one service Railway deploys from `main`,
 
 Scope: The cycle covers the API's process serving the built frontend's files, and the frontend's `index.html` at any address outside `/api` that names no file; the route-table test's one exemption for that route; `test_database_url` made optional; and the `Dockerfile` that builds the frontend and the API into one image, with its `.dockerignore`. It takes as done by the owner, before it is built: a Railway project on the Hobby plan holding the service and Railway's PostgreSQL template as shipped, with Serverless off; the service linked to the repository's `main`, with Wait for CI on, `alembic upgrade head` as its pre-deploy command and `/api/health` as its healthcheck path; the service's variables, `DATABASE_URL` as a reference to the PostgreSQL service's own variable, `PERMITTED_ORIGINS` holding the app's one address, `CLERK_FAPI_URL` and `VITE_CLERK_PUBLISHABLE_KEY`, with no `ENV`, `DEV_AUTH_USER_ID` or `TEST_DATABASE_URL`; the owner's domain attached to the service; a Clerk production instance cloned from the development one, on that domain, its DNS records added; and a hard usage limit of $20 a billing cycle with a usage alert below it. It leaves out the first deploy, which starts only when a commit reaches `main` and is the owner's to watch; production's example library, which the owner makes by hand after it; and the README.
 
-Judgement: The engineer judges on the image, built and run on their own machine against the dev database with the four variables and a `PORT` set and no others. At the container's address, signed out, Home shows the example library under the guest's banner; a page's address opened directly, `/library`, shows that page; `/api/health` answers 200; an unknown address under `/api` answers 404 and not a page; and `alembic upgrade head`, run in the image against an empty database, brings it to the chain's head. On the usual dev servers, with nothing built into the API, the app runs as it did.
+Judgement: The engineer judges on the image, built and run on their own machine against the dev database with the four variables and a `PORT` set and no others. At the container's address, signed out, Home shows the example library under the guest's banner; a page's address opened directly, `/library`, shows that page; `/api/health` answers 200; an unknown address under `/api` answers 404 and not a page; and `alembic upgrade head`, run in the image against an empty database, brings it to the chain's head. On the usual dev servers, with `frontend/dist` moved away, the app runs as it did.
 
 ## Records
 
@@ -45,6 +45,7 @@ None.
 - `app/main.py`
 - `tests/api_tests/test_frontend.py` (new)
 - `tests/api_tests/test_route_table.py`
+- `AGENTS.md`
 
 **Details**
 
@@ -60,10 +61,13 @@ def add_frontend(app: FastAPI, dist: Path) -> None:
 
 - The built frontend is `frontend/dist` beside `app/`, the folder `npm run build` writes. `app/main.py` must call `add_frontend` with it after every `/api` router is included, and only when that folder holds an `index.html`; with none, the app registers no route outside `/api`, as today.
 - The route must be registered for `GET` alone, with `include_in_schema=False`, so the generated schema is one with a build and without. Another method on a path no `/api` route matches answers Starlette's 405, never a page. A path that names a file under `dist` answers that file; any other path answers `dist/index.html` with 200, so a page's address opens the app; `api` and any path beginning `api/` answer 404 as an unknown `/api` address does today, never a page.
+- With a built frontend, the route matches every path for `GET` and none for another method, which changes three answers under `/api`, each accepted since the app's client sends none of them: a `GET` to a path that only another method serves, such as `/api/runs/{run_id}/end`, answers 404, not 405; a `GET` with a trailing slash, such as `/api/decks/`, answers 404, not a redirect; and another method on a path no `/api` route serves, such as `POST /api/nope` or `POST /api/decks/`, answers 405, not 404 or a redirect.
+- A `frontend/dist` that `npm run build` leaves on a dev machine is served by the dev API like any other, and the dev API then answers under `/api` as the bullet above gives; this is accepted.
 - It must never answer a file outside `dist`, whatever the path holds.
 - It takes no dependency that resolves a user and opens no session (ADR 131).
 - `tests/api_tests/test_route_table.py` must exempt that one route, told by its name `FRONTEND_ROUTE_NAME` and its path `/{path:path}`, from the rule that no entry stands outside `/api`, and must fail on any other. Its case `test_no_route_stands_outside_api` becomes `test_the_only_route_outside_api_serves_the_frontend`. The test must pass on a machine that holds a built `frontend/dist` and on one that holds none.
 - `tests/api_tests/test_frontend.py` builds its own `FastAPI` app over a folder it writes, and never reads `frontend/dist`.
+- The Auth line of `AGENTS.md` must end "and ViewerDep answers a GET with no Authorization header as the example user, on every route under /api but GET /api/health.", its Reason and Guard lines unchanged, since the route that serves the frontend takes no `ViewerDep`.
 
 **Out of scope**
 
@@ -81,7 +85,7 @@ def add_frontend(app: FastAPI, dist: Path) -> None:
 - `test_a_path_that_climbs_out_of_dist_answers_no_file_outside_it` passes.
 - `test_another_method_answers_405_and_no_page` passes, for `POST /library`.
 - In `tests/api_tests/test_route_table.py`, `test_the_only_route_outside_api_serves_the_frontend` passes, with `frontend/dist` present and with it moved away.
-- With `frontend/dist` built, `curl -s localhost:8000/library` on the dev API prints the built `index.html`, and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/nope` prints `404`.
+- With `frontend/dist` built, `curl -s localhost:8000/library` on the dev API prints the built `index.html`, and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/nope` and `curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/decks/` each print `404`.
 
 **Debrief**
 
