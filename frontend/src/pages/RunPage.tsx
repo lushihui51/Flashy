@@ -295,12 +295,13 @@ function RunCardView({ runId, currentCard }: { runId: string; currentCard: Curre
     setParams(next);
   };
 
-  const rate = (fieldDefId: string, rating: number) =>
-    guard(() => {
-      const next = new URLSearchParams(params);
-      next.set(`${RATING_PARAM_PREFIX}${fieldDefId}`, String(rating));
-      setParams(next);
-    });
+  // Not guarded: a chosen rating goes only to the address and sends nothing, so a guest
+  // chooses one as a user does; "Next card" is the write (ADR 134).
+  const rate = (fieldDefId: string, rating: number) => {
+    const next = new URLSearchParams(params);
+    next.set(`${RATING_PARAM_PREFIX}${fieldDefId}`, String(rating));
+    setParams(next);
+  };
 
   const editCard = () => {
     if (!showAnswer) return;
