@@ -24,6 +24,11 @@ def db_read_deck(db: Session, deck_id: uuid.UUID, user_id: uuid.UUID) -> Deck | 
     return db.exec(select(Deck).where(Deck.id == deck_id, Deck.user_id == user_id)).first()
 
 
+def db_read_deck_ids(db: Session, user_id: uuid.UUID) -> list[uuid.UUID]:
+    """The ids of every deck of the user."""
+    return list(db.exec(select(Deck.id).where(Deck.user_id == user_id)).all())
+
+
 def db_read_deck_for_copy(db: Session, deck_id: uuid.UUID) -> Deck | None:
     """Deliberately unscoped — copy_deck reads the source deck as raw copy material,
     not as the caller's own data, which every other read scopes by ownership. Whether

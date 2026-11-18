@@ -24,13 +24,15 @@ jobs:
           --health-retries 5
     env:
       # None of these need to be real: tests override auth (get_current_app_user) and
-      # mock the Clerk JWKS client (tests/api_tests/test_verify_clerk_session.py), and
+      # mock the Clerk JWKS client (tests/api_tests/test_verify_clerk_session.py) and
+      # Clerk's server API (tests/api_tests/test_account.py), and
       # Settings() only needs every field to be present as a string/list to construct.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/flashy
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/flashy_test
       PERMITTED_ORIGINS: '["http://localhost:5173"]'
       VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
       CLERK_FAPI_URL: https://ci-placeholder.clerk.accounts.dev
+      CLERK_SECRET_KEY: sk_test_ci_placeholder
     steps:
       - uses: actions/checkout@v7
 

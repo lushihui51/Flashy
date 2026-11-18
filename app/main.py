@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import SessionDep
 from app.frontend import add_frontend
+from app.routers.api.account import router as api_account_router
 from app.routers.api.card import router as api_card_router
 from app.routers.api.deck import router as api_deck_router
 from app.routers.api.deletion_impact import router as api_deletion_impact_router
@@ -26,6 +27,7 @@ app.include_router(api_deletion_impact_router, prefix="/api")
 app.include_router(api_practice_router, prefix="/api")
 app.include_router(api_run_router, prefix="/api")
 app.include_router(api_home_router, prefix="/api")
+app.include_router(api_account_router, prefix="/api")
 app.include_router(api_health_router, prefix="/api")
 
 # The folder `npm run build` writes. Where none is built, as in development, the app

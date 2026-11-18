@@ -178,7 +178,7 @@ export default function HomePage() {
   const homeQuery = useQuery({ queryKey: ['home'], queryFn: readHome });
   const { params, setParams } = useViewParams();
   // The runs whose details are open, one `open` param each, so they survive a refresh and
-  // going back (PDR 017).
+  // going back (PDR 064).
   const openIds = params.getAll('open');
   const openCompleted = (homeQuery.data?.recent_runs ?? []).filter((run) =>
     openIds.includes(run.id),
