@@ -14,7 +14,7 @@ function LocationProbe() {
 }
 
 describe('SideDrawer', () => {
-  it('renders Home, Your library, All practices, then About at its foot, in order when open', () => {
+  it('renders Home, Your library, All practices, then About and Privacy at its foot, in order when open', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
     const items = screen.getAllByRole('link');
@@ -23,6 +23,7 @@ describe('SideDrawer', () => {
       'Your library',
       'All practices',
       'About',
+      'Privacy',
     ]);
   });
 
@@ -30,6 +31,12 @@ describe('SideDrawer', () => {
     renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
 
     expect(screen.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
+  });
+
+  it('leads Privacy to /privacy', () => {
+    renderWithRouter(<SideDrawer open onClose={() => {}} triggerRef={triggerRef} />);
+
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
   });
 
   it('renders nothing when closed', () => {

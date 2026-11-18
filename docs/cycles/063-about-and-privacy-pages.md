@@ -79,7 +79,7 @@ None.
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -133,4 +133,9 @@ export default function InlineLink({ href, children }: InlineLinkProps): ReactNo
 
 **Debrief**
 
-None.
+- Tests: `npx vitest run src/components/shell/SideDrawer.test.tsx src/pages/PrivacyPage.test.tsx src/components/ui/InlineLink.test.tsx` passed 16 of 16, among them "renders Home, Your library, All practices, then About and Privacy at its foot, in order when open", "leads Privacy to /privacy", "heads the page "Privacy" and names the tab after it", "shows its heading, its opening line, then each heading over its words, in order", "links the address to write to as a mailto: address", "renders one link with its href and children" and "carries none of the block classes".
+- Browser: headless Chromium, menu opened on a deck's page and on `/decks/new`, printed for guest and user at 390x844 and at 1440x900 alike, eight runs: links `["Home","Your library","All practices","About","Privacy"]`, "About" below "All practices" and "Privacy" below "About", path `/privacy`, h1 "Privacy", title "Privacy · Flashy", 0 navigations named "Breadcrumb", the address's `href` `mailto:shihui.lu51@gmail.com` and `text-decoration-line` `underline`, and the menu's "About" then landing on `/about`.
+- Screenshots at 390 by 844: `/tmp/claude-1000/-home-jadenlu-Projects-Flashy/b942cf00-5a20-4c2d-aea4-1b13de575fc6/scratchpad/063-T2-guest-menu-390x844.png`, and `063-T2-guest-privacy-top-390x844.png`, `063-T2-guest-privacy-foot-390x844.png`, `063-T2-user-menu-390x844.png`, `063-T2-user-privacy-top-390x844.png` and `063-T2-user-privacy-foot-390x844.png` in the same folder.
+- Departure: as in T1, the guest ran against localhost:5173, but the user ran against a second pair of servers, vite on 5174 with `VITE_DEV_AUTH` proxying to an API on 8001 with `DEV_AUTH_USER_ID` and `ENV=development`, both from this checkout and stopped after, because the servers on 5173 and 8000 run with none of the three set.
+- Following drawing 11, each of the six headings is an `h2`, and the page leaves 24 pixels below its last line rather than the 16 `AboutPage` leaves.
+- Read: `InlineLink` in `frontend/src/components/ui/InlineLink.tsx`, the one way a link inside a sentence is drawn: it takes its text's color and sets only weight and underline.
