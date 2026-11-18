@@ -127,7 +127,7 @@ def delete_account(
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -174,4 +174,10 @@ export const deleteAccount = async (): Promise<void> =>
 
 **Debrief**
 
-None.
+- Done when 1: `npx vitest run src/components/shell/AccountSheet.test.tsx` printed `13 passed`, among them "renders two action rows: Log out, then Delete account", "opens a confirm with its title, sentence and buttons", "Delete calls deleteAccount once, then signOut, and navigates nowhere" (which also asserts `deleteAccount` was called before `signOut` and `onClose` was not called), and "a 502 keeps the confirm open with the trouble sentence and does not sign out" (which also asserts the alert sits inside the confirm).
+- Done when 2: `grep -c "Delete your account?" docs/vocabulary.md frontend/src/components/shell/AccountSheet.tsx` printed `docs/vocabulary.md:1` and `frontend/src/components/shell/AccountSheet.tsx:1`.
+- Checks of every commit: `npx vitest run` printed `790 passed`, and `npm run lint` and `npm run build` were clean, with the build's chunk-size warning that was already there.
+- Departures from guidance: none. "Cancel" and Escape do nothing while the deletion is pending, and otherwise close the confirm and call `reset()`; `failureSentence` gets `SERVER_TROUBLE_MESSAGE` as its `notFound`.
+- Beyond the Details: two more cases, "a second press of Delete while the deletion is pending sends nothing more" and "Cancel after a failure closes the confirm, which opens again with no sentence". The sheet's tests now render through `renderWithProviders`, since the sheet holds a mutation. The confirm is rendered inside the sheet, so Escape in the confirm closes only the confirm.
+- No browser check was run. The dev servers on :5173 and :8000 belong to another session and run without the local bypass, a guest never sees the account sheet, and the API on :8000 did not answer `/api/health` within 4 seconds. Pressing "Delete" under the bypass would also delete the bypass's user in Clerk's development instance.
+- Read: `deleteMutation` and `handleDeleteCancel` in `frontend/src/components/shell/AccountSheet.tsx`, for the log-out awaited in `onSuccess` and the confirm held open while pending.

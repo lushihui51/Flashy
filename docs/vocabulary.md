@@ -15,6 +15,8 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | Signing in | "Log in" | Top bar, signed out | `AuthSlot` |
 | App | Signing out | "Log out" | Account sheet | `AccountSheet` |
 | App | Deleting an account | "Delete account" | Account sheet, below "Log out" | `DELETE /api/account`; `delete_account` |
+| App | Confirming an account's deletion | "Delete your account?" | Account sheet's delete confirm | — |
+| App | What deleting an account takes | "Your decks, cards, practices and runs will be gone, with your mastery. This can't be undone." | Account sheet's delete confirm | — |
 | App | The signed-in user | "Account"; "Account menu for <name>", spoken | Top bar; Account sheet | `app_user`; `AppUser`; `AccountSheet` |
 | App | The example library a guest is shown | — | — | `ViewerDep`; `get_viewer`; `db_read_example_app_user`; `useViewer` |
 | App | Telling a guest they are looking at an example | "This is an example. Log in to use all of Flashy." | A banner across the top of every page, while not logged in | `ExampleBanner` |
