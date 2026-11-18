@@ -49,7 +49,7 @@ export default function PracticeCreatePage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const guest = useViewer() === 'guest';
   const guard = useWriteGuard();
-  // A guest's press on anything the form holds writes nothing: the guard opens the log-in prompt.
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
   const pressReadOnly = () => guard(() => {});
 
   const deckIds = [...new Set(params.getAll(DECK_PARAM))];

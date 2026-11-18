@@ -9,7 +9,7 @@ import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 
 const BASE = 'http://localhost:8000';
 const NEW_RUN = {
@@ -39,16 +39,16 @@ function recordWrites(): string[] {
   return writes;
 }
 
-/** Renders the button; `openPrompt` stands for the shell's log-in prompt. */
+/** Renders the button; `dimScreen` stands for the shell's dimming of the screen. */
 function renderButton(
   onError: (sentence: string) => void = () => {},
-  openPrompt: () => void = () => {},
+  dimScreen: () => void = () => {},
 ) {
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <RerunButton runId="run1" onError={onError} />
       <LocationProbe />
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
   );
 }
 
@@ -82,17 +82,17 @@ describe('RerunButton', () => {
     expect(posted).toBe('run1');
   });
 
-  it("a guest's Re-run opens the prompt and sends nothing", async () => {
+  it("a guest's Re-run dims the screen and sends nothing", async () => {
     mockSignedOut();
     const writes = recordWrites();
     const onError = vi.fn();
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderButton(onError, openPrompt);
+    renderButton(onError, dimScreen);
 
     await user.click(screen.getByRole('button', { name: 'Re-run' }));
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(onError).not.toHaveBeenCalled();
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
     expect(writes).toEqual([]);

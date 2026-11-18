@@ -8,7 +8,7 @@ import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import HomePage from 'src/pages/HomePage';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import type { components } from 'src/api/types';
 
 type HomeRead = components['schemas']['HomeRead'];
@@ -61,15 +61,15 @@ function recordWrites(): string[] {
   return writes;
 }
 
-/** Renders Home; `openPrompt` stands for the shell's log-in prompt. */
-function renderHome(home: Partial<HomeRead>, address = '/', openPrompt: () => void = () => {}) {
+/** Renders Home; `dimScreen` stands for the shell's dimming of the screen. */
+function renderHome(home: Partial<HomeRead>, address = '/', dimScreen: () => void = () => {}) {
   server.use(
     http.get(`${BASE}/api/home`, () =>
       HttpResponse.json({ steps: null, active_runs: [], recent_runs: [], ...home }),
     ),
   );
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route
           path="/"
@@ -82,7 +82,7 @@ function renderHome(home: Partial<HomeRead>, address = '/', openPrompt: () => vo
         />
         <Route path="*" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [address],
   );
 }
@@ -198,15 +198,15 @@ describe('HomePage', () => {
       expect(startedPractice).toBe('p1');
     });
 
-    it("a guest's Start run step opens the prompt and sends nothing", async () => {
+    it("a guest's Start run step dims the screen and sends nothing", async () => {
       mockSignedOut();
       const writes = recordWrites();
-      const openPrompt = vi.fn();
-      renderHome({ steps: steps(true, true, 'p1') }, '/', openPrompt);
+      const dimScreen = vi.fn();
+      renderHome({ steps: steps(true, true, 'p1') }, '/', dimScreen);
 
       await userEvent.click(await screen.findByRole('button', { name: 'Start run' }));
 
-      expect(openPrompt).toHaveBeenCalledTimes(1);
+      expect(dimScreen).toHaveBeenCalledTimes(1);
       expect(screen.queryByTestId('location')).not.toBeInTheDocument();
       expect(writes).toEqual([]);
     });
@@ -346,15 +346,15 @@ describe('HomePage', () => {
       expect(startedPractice).toBe('practice-of-r3');
     });
 
-    it("a guest's play button on a completed run opens the prompt and sends nothing", async () => {
+    it("a guest's play button on a completed run dims the screen and sends nothing", async () => {
       mockSignedOut();
       const writes = recordWrites();
-      const openPrompt = vi.fn();
-      renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/', openPrompt);
+      const dimScreen = vi.fn();
+      renderHome({ recent_runs: [completedRun('r3', 'Third')] }, '/', dimScreen);
 
       await userEvent.click(await screen.findByRole('button', { name: 'Practice Third' }));
 
-      expect(openPrompt).toHaveBeenCalledTimes(1);
+      expect(dimScreen).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId('search')).toHaveTextContent(/^$/);
       expect(screen.queryByTestId('location')).not.toBeInTheDocument();
       expect(writes).toEqual([]);

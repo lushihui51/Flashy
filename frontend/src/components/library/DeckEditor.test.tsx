@@ -7,7 +7,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import DeckEditor from 'src/components/library/DeckEditor';
 
 // Every call the form makes to leave, passed on to the real leave, which under a memory
@@ -53,15 +53,15 @@ function mockEditDeck(data: typeof deckDetail = deckDetail) {
   server.use(http.get(`${BASE}/api/decks/:id`, () => HttpResponse.json(data)));
 }
 
-function renderEditDeck(deckId = 'd1', search = '', openPrompt: () => void = () => {}) {
+function renderEditDeck(deckId = 'd1', search = '', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route path="/decks/:deckId/edit" element={<DeckEditor mode="edit" />} />
         <Route path="/decks/:deckId" element={<LocationProbe />} />
         <Route path="/library" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [`/decks/${deckId}/edit${search}`],
   );
 }
@@ -1124,10 +1124,10 @@ describe('DeckEditor — a guest', () => {
     mockEditDeck();
   });
 
-  it("a guest's Edit deck is read only, with Done alone and no Undo, and a press on a field's name opens the prompt", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's Edit deck is read only, with Done alone and no Undo, and a press on a field's name dims the screen", async () => {
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderEditDeck('d1', '', openPrompt);
+    renderEditDeck('d1', '', dimScreen);
     const deckName = await screen.findByRole('textbox', { name: 'Deck name' });
     const requests = recordRequests();
 
@@ -1147,12 +1147,12 @@ describe('DeckEditor — a guest', () => {
 
     const fieldNames = screen.getAllByRole('textbox', { name: 'Field name' });
     await user.click(fieldNames[0]!);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     await user.type(fieldNames[0]!, 'x', { skipClick: true });
     await user.click(screen.getByRole('button', { name: 'Move Front down' }));
     await user.click(screen.getByRole('button', { name: 'Add field' }));
     await user.click(deckName);
-    expect(openPrompt).toHaveBeenCalledTimes(4);
+    expect(dimScreen).toHaveBeenCalledTimes(4);
     expect(
       screen
         .getAllByRole('textbox', { name: 'Field name' })
@@ -1166,16 +1166,16 @@ describe('DeckEditor — a guest', () => {
     expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
-  it("a guest's Delete deck opens the prompt and reads no deletion impact", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's Delete deck dims the screen and reads no deletion impact", async () => {
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderEditDeck('d1', '', openPrompt);
+    renderEditDeck('d1', '', dimScreen);
     const deleteDeck = await screen.findByRole('button', { name: 'Delete deck' });
     const requests = recordRequests();
 
     await user.click(deleteDeck);
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Delete deck?')).not.toBeInTheDocument();
     expect(requests).toEqual([]);
   });

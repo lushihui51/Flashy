@@ -7,7 +7,7 @@ import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import CardStandaloneForm from 'src/components/library/CardStandaloneForm';
 
 // Every call the form makes to leave, passed on to the real leave, which under a memory
@@ -100,10 +100,10 @@ function LocationProbe() {
 
 function renderForm(
   initialPath: string | { pathname: string; search?: string; state?: unknown },
-  openPrompt: () => void = () => {},
+  dimScreen: () => void = () => {},
 ) {
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route path="/cards/new" element={<CardStandaloneForm mode="create" />} />
         <Route path="/cards/:cardId/edit" element={<CardStandaloneForm mode="edit" />} />
@@ -112,7 +112,7 @@ function renderForm(
         <Route path="/decks/new" element={<LocationProbe />} />
         <Route path="/opener" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [initialPath],
   );
 }
@@ -592,10 +592,10 @@ describe('CardStandaloneForm — a guest', () => {
     mockAll();
   });
 
-  it("a guest's Edit card is read only, with Done alone, and a press on a field opens the prompt", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's Edit card is read only, with Done alone, and a press on a field dims the screen", async () => {
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    const { container } = renderForm('/cards/c1/edit', openPrompt);
+    const { container } = renderForm('/cards/c1/edit', dimScreen);
     const front = await screen.findByRole('textbox', { name: '[Front]' });
     const requests = recordRequests();
 
@@ -609,7 +609,7 @@ describe('CardStandaloneForm — a guest', () => {
     expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
 
     await user.click(front);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     await user.type(front, 'x{Enter}', { skipClick: true });
     expect(front).toHaveValue('Bonjour');
     expect(requests).toEqual([]);
@@ -619,25 +619,25 @@ describe('CardStandaloneForm — a guest', () => {
     expect(leaveCalls).toHaveBeenCalledExactlyOnceWith('/decks/d1');
   });
 
-  it("a guest's Delete card opens the prompt and asks no question", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's Delete card dims the screen and asks no question", async () => {
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderForm('/cards/c1/edit', openPrompt);
+    renderForm('/cards/c1/edit', dimScreen);
     const deleteCard = await screen.findByRole('button', { name: 'Delete card' });
     const requests = recordRequests();
 
     await user.click(deleteCard);
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.queryByText('Delete card?')).not.toBeInTheDocument();
     expect(requests).toEqual([]);
   });
 
   it("a guest's New card holds a greyed deck picker and Done alone", async () => {
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    const { container } = renderForm('/cards/new', openPrompt);
+    const { container } = renderForm('/cards/new', dimScreen);
     const picker = await screen.findByRole('combobox');
     await waitFor(() => expect(screen.queryByRole('textbox', { name: '[Front]' })).toBeNull());
 
@@ -647,7 +647,7 @@ describe('CardStandaloneForm — a guest', () => {
     expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
 
     await user.click(picker);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
     await user.click(bar.getByRole('button', { name: 'Done' }));

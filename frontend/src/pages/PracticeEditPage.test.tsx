@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import PracticeEditPage from 'src/pages/PracticeEditPage';
 import type { components } from 'src/api/types';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import { mockSignedOut } from 'src/test/mocks/clerk';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
@@ -55,15 +55,15 @@ function LocationProbe() {
   return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
 }
 
-function renderEdit(entry = '/practices/p1/edit', openPrompt: () => void = () => {}) {
+function renderEdit(entry = '/practices/p1/edit', dimScreen: () => void = () => {}) {
   server.use(http.get(`${BASE}/api/practices/:practice_id`, () => HttpResponse.json(PRACTICE)));
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route path="/practices/:practiceId/edit" element={<PracticeEditPage />} />
         <Route path="*" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [entry],
   );
 }
@@ -261,14 +261,14 @@ describe('PracticeEditPage', () => {
 describe('PracticeEditPage for a guest', () => {
   beforeEach(() => mockSignedOut());
 
-  it("a guest's Edit practice is read only, with Done alone, and Delete practice opens the prompt", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's Edit practice is read only, with Done alone, and Delete practice dims the screen", async () => {
+    const dimScreen = vi.fn();
     const requests: string[] = [];
     const record = ({ request }: { request: Request }) => {
       requests.push(`${request.method} ${new URL(request.url).pathname}`);
     };
     const user = userEvent.setup();
-    const { container } = renderEdit('/practices/p1/edit', openPrompt);
+    const { container } = renderEdit('/practices/p1/edit', dimScreen);
     await screen.findByRole('heading', { level: 1, name: 'Edit practice' });
     server.events.on('request:start', record);
     onTestFinished(() => {
@@ -284,12 +284,12 @@ describe('PracticeEditPage for a guest', () => {
     expect(bar.getAllByRole('button').map((b) => b.textContent)).toEqual(['Done']);
 
     await user.click(nameInput());
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     await user.type(nameInput(), 'x', { skipClick: true });
     expect(nameInput()).toHaveValue('Ports before the exam');
 
     await user.click(deletePractice);
-    expect(openPrompt).toHaveBeenCalledTimes(2);
+    expect(dimScreen).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.queryByText('Delete this practice?')).not.toBeInTheDocument();
     expect(requests).toEqual([]);

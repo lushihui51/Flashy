@@ -323,7 +323,7 @@ describe('AppShell example banner', () => {
   });
 });
 
-describe('AppShell log-in prompt', () => {
+describe("AppShell guest's dimmed screen", () => {
   /** A page whose one control would write, beneath the shell, with a second page to go to. */
   function GuardedPage() {
     const guard = useWriteGuard();
@@ -334,7 +334,7 @@ describe('AppShell log-in prompt', () => {
     );
   }
 
-  it('opens the prompt from the context and closes it on a press on Log in and on a change of address', async () => {
+  it("dims the screen from the context and brings it back on a press on Log in, on a press on the guest's banner and on a change of address", async () => {
     const user = userEvent.setup();
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const router = createMemoryRouter(
@@ -351,21 +351,38 @@ describe('AppShell log-in prompt', () => {
         <RouterProvider router={router} />
       </QueryClientProvider>,
     );
-    const sentence = 'Log in to use all of Flashy.';
-    const prompt = () => screen.queryByText(sentence, { selector: '[role="status"]' });
+    const scrim = () => screen.queryByTestId('scrim');
+    const startRun = () => screen.getByRole('button', { name: 'Start run' });
+    expect(scrim()).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Start run' }));
-    expect(prompt()).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start run' })).toHaveFocus();
+    await user.click(startRun());
+    expect(scrim()).toHaveClass('bg-(--color-ink)/50');
+    expect(startRun()).toHaveFocus();
+    // No sentence comes with the press: the guest's banner is the shell's one status.
+    const statuses = screen.getAllByRole('status');
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toHaveTextContent(/^This is an example\. Log in to use all of Flashy\.$/);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Log in' }));
-    expect(prompt()).not.toBeInTheDocument();
+    expect(scrim()).not.toBeInTheDocument();
     expect(openSignIn).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: 'Start run' }));
-    expect(prompt()).toBeInTheDocument();
+    await user.click(startRun());
+    expect(scrim()).toBeInTheDocument();
+    await user.click(screen.getByRole('status'));
+    expect(scrim()).not.toBeInTheDocument();
+    expect(openSignIn).toHaveBeenCalledTimes(1);
+
+    await user.click(startRun());
+    expect(scrim()).toBeInTheDocument();
     await act(() => router.navigate('/practices'));
     expect(screen.getByText('practices content')).toBeInTheDocument();
-    expect(prompt()).not.toBeInTheDocument();
+    expect(scrim()).not.toBeInTheDocument();
+
+    // Coming back to the address it was dimmed at does not dim it again.
+    await act(() => router.navigate(-1));
+    expect(startRun()).toBeInTheDocument();
+    expect(scrim()).not.toBeInTheDocument();
   });
 });

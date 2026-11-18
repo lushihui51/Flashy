@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 const GROUND = {
@@ -11,13 +11,16 @@ type BannerProps = {
   color: 'wrong' | 'ink';
   Icon?: LucideIcon;
   children: string;
+  /** The banner's element. */
+  ref?: Ref<HTMLDivElement>;
 };
 
 /** One line of white words across the top of every page, announced to a screen reader as a
  * status. */
-export default function Banner({ color, Icon, children }: BannerProps): ReactNode {
+export default function Banner({ color, Icon, children, ref }: BannerProps): ReactNode {
   return (
     <div
+      ref={ref}
       role="status"
       className={`flex items-center gap-2 ${GROUND[color]} px-4 py-2 text-sm text-(--color-surface)`}
     >

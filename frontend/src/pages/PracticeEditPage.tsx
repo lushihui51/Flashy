@@ -61,7 +61,7 @@ function PracticeEditBody({ practice }: { practice: components['schemas']['Pract
   const practicePage = `/practices/${practice.id}`;
   const guest = useViewer() === 'guest';
   const guard = useWriteGuard();
-  // A guest's press on anything the form holds writes nothing: the guard opens the log-in prompt.
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
   const pressReadOnly = () => guard(() => {});
 
   // Every page that names the practice reads it again: its own page, All practices, Home's

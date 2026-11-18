@@ -420,7 +420,7 @@ function DeckEditorBody({ mode, deckId, deck, cancelTo, returnTo }: DeckEditorBo
   const rootRef = useRef<HTMLDivElement>(null);
   const guest = useViewer() === 'guest';
   const guard = useWriteGuard();
-  // A guest's press on anything the form holds writes nothing: the guard opens the log-in prompt.
+  // A guest's press on anything the form holds writes nothing: the guard dims the screen.
   const pressReadOnly = guest ? () => guard(() => {}) : undefined;
 
   // Computed once, at mount. `original` doubles as the baseline the edit-mode diff compares

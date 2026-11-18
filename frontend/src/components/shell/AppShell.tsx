@@ -7,10 +7,10 @@ import AccountSheet from 'src/components/shell/AccountSheet';
 import CreateSheet from 'src/components/shell/CreateSheet';
 import ConnectionBanner from 'src/components/shell/ConnectionBanner';
 import ExampleBanner from 'src/components/shell/ExampleBanner';
-import LogInPrompt from 'src/components/shell/LogInPrompt';
+import GuestScrim from 'src/components/shell/GuestScrim';
 import { useConnectionStatus } from 'src/components/shell/useConnectionStatus';
 import { readDecks } from 'src/api/deck';
-import { LogInPromptContext, loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
+import { GuestScrimContext, loadHomeAfresh, useViewer, type Viewer } from 'src/lib/viewer';
 
 export default function AppShell() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,15 +20,17 @@ export default function AppShell() {
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const logInButtonRef = useRef<HTMLButtonElement>(null);
+  const exampleBannerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const viewer = useViewer();
   const connectionStatus = useConnectionStatus();
   const location = useLocation();
 
-  // The address the log-in prompt was opened at: it stands only while the address is that one,
-  // so any change of address closes it.
-  const [promptKey, setPromptKey] = useState<string | null>(null);
-  const openPrompt = useCallback(() => setPromptKey(location.key), [location.key]);
+  // The address the screen was dimmed for a guest at, null while it is not dimmed. Any change of
+  // address brings the screen back, and coming back to that address does not dim it again.
+  const [dimmedAt, setDimmedAt] = useState<string | null>(null);
+  if (dimmedAt !== null && dimmedAt !== location.key) setDimmedAt(null);
+  const dimScreen = useCallback(() => setDimmedAt(location.key), [location.key]);
 
   // The viewer the page is drawn for, set once Clerk has loaded. A different answer after
   // that is a log-in or a log-out: the page stops being drawn, so nothing of one viewer's
@@ -81,7 +83,7 @@ export default function AppShell() {
         className="sticky top-0 z-40 mx-auto flex w-full max-w-column flex-col gap-0.5 bg-(--color-ground) pb-2"
       >
         {connectionStatus !== 'online' && <ConnectionBanner status={connectionStatus} />}
-        {viewer === 'guest' && <ExampleBanner />}
+        {viewer === 'guest' && <ExampleBanner ref={exampleBannerRef} />}
         <TopBar
           onMenuClick={() => setIsMenuOpen((open) => !open)}
           isMenuOpen={isMenuOpen}
@@ -93,10 +95,11 @@ export default function AppShell() {
           logInButtonRef={logInButtonRef}
         />
       </header>
-      <LogInPrompt
-        open={promptKey === location.key}
-        onClose={() => setPromptKey(null)}
-        anchor={logInButtonRef}
+      <GuestScrim
+        open={dimmedAt !== null}
+        onClose={() => setDimmedAt(null)}
+        banner={exampleBannerRef}
+        logIn={logInButtonRef}
       />
       <SideDrawer
         open={isMenuOpen}
@@ -115,9 +118,9 @@ export default function AppShell() {
         hasDecks={decks ? decks.length > 0 : undefined}
       />
       <main className="mx-auto w-full max-w-column">
-        <LogInPromptContext.Provider value={openPrompt}>
+        <GuestScrimContext.Provider value={dimScreen}>
           {drawsPage && <Outlet />}
-        </LogInPromptContext.Provider>
+        </GuestScrimContext.Provider>
       </main>
       <ScrollRestoration />
     </div>

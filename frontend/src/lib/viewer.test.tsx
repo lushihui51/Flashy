@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import { mockLoading, mockSignedIn, mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext, useViewer, useWriteGuard } from 'src/lib/viewer';
+import { GuestScrimContext, useViewer, useWriteGuard } from 'src/lib/viewer';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -51,24 +51,24 @@ describe('useViewer', () => {
 });
 
 describe('useWriteGuard', () => {
-  it('the guard runs the write for a user, and for a guest opens the prompt and runs nothing', () => {
+  it('the guard runs the write for a user, and for a guest dims the screen and runs nothing', () => {
     vi.stubEnv('VITE_DEV_AUTH', '');
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const write = vi.fn();
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <LogInPromptContext.Provider value={openPrompt}>{children}</LogInPromptContext.Provider>
+      <GuestScrimContext.Provider value={dimScreen}>{children}</GuestScrimContext.Provider>
     );
     mockSignedIn();
     const { result, rerender } = renderHook(() => useWriteGuard(), { wrapper });
 
     result.current(write);
     expect(write).toHaveBeenCalledTimes(1);
-    expect(openPrompt).not.toHaveBeenCalled();
+    expect(dimScreen).not.toHaveBeenCalled();
 
     mockSignedOut();
     rerender();
     result.current(write);
     expect(write).toHaveBeenCalledTimes(1);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
   });
 });

@@ -9,7 +9,7 @@ import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 
 const BASE = 'http://localhost:8000';
 
@@ -59,10 +59,10 @@ function recordWrites(): string[] {
   return writes;
 }
 
-/** Renders the practice's page; `openPrompt` stands for the shell's log-in prompt. */
+/** Renders the practice's page; `dimScreen` stands for the shell's dimming of the screen. */
 function renderPractice(
   data: Record<string, unknown> | null = detail(),
-  openPrompt: () => void = () => {},
+  dimScreen: () => void = () => {},
 ) {
   server.use(
     http.get(`${BASE}/api/practices/:id`, () =>
@@ -72,12 +72,12 @@ function renderPractice(
     ),
   );
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route path="/practices/:practiceId" element={<PracticeDetailsPage />} />
         <Route path="*" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     ['/practices/p1'],
   );
 }
@@ -210,28 +210,28 @@ describe('PracticeDetailsPage', () => {
     expect(button.parentElement!.nextElementSibling).toBe(alert);
   });
 
-  it("a guest's Start run opens the prompt and sends nothing, and Continue run opens the active run", async () => {
+  it("a guest's Start run dims the screen and sends nothing, and Continue run opens the active run", async () => {
     mockSignedOut();
     const writes = recordWrites();
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    const { unmount } = renderPractice(detail(), openPrompt);
+    const { unmount } = renderPractice(detail(), dimScreen);
 
     await user.click(await screen.findByRole('button', { name: 'Start run' }));
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Start run' })).toBeInTheDocument();
     expect(screen.queryByTestId('location')).not.toBeInTheDocument();
     unmount();
 
     renderPractice(
       detail({ active_run_id: 'r1', runs: [run('r1', 'active', '2026-11-03', 0)] }),
-      openPrompt,
+      dimScreen,
     );
     await user.click(await screen.findByRole('button', { name: 'Continue run' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/runs\/r1$/);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(writes).toEqual([]);
   });
 

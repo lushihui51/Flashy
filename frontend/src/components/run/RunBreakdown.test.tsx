@@ -9,7 +9,7 @@ import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import type { components } from 'src/api/types';
 
 type RunBreakdownRead = components['schemas']['RunBreakdownRead'];
@@ -102,13 +102,13 @@ function LocationProbe() {
   );
 }
 
-/** Renders the summary at `entry`; `openPrompt` stands for the shell's log-in prompt. */
-function renderBreakdown(entry = '/', openPrompt: () => void = () => {}) {
+/** Renders the summary at `entry`; `dimScreen` stands for the shell's dimming of the screen. */
+function renderBreakdown(entry = '/', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <RunBreakdown breakdown={breakdown()} runId="run1" />
       <LocationProbe />
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [entry],
   );
 }
@@ -539,7 +539,7 @@ describe('RunBreakdown Re-run these', () => {
     expect(posted[0]?.body.card_ids?.toSorted()).toEqual(['c2', 'c4']);
   });
 
-  it("a guest's Re-run these opens the prompt and sends nothing", async () => {
+  it("a guest's Re-run these dims the screen and sends nothing", async () => {
     mockSignedOut();
     const writes: string[] = [];
     const record = ({ request }: { request: Request }) => {
@@ -551,13 +551,13 @@ describe('RunBreakdown Re-run these', () => {
     onTestFinished(() => {
       server.events.removeListener('request:start', record);
     });
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderBreakdown('/?kind=down', openPrompt);
+    renderBreakdown('/?kind=down', dimScreen);
 
     await user.click(rerunThese()!);
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('pathname')).toHaveTextContent(/^\/$/);
     expect(screen.getByTestId('search')).toHaveTextContent(/^\?kind=down$/);
     expect(writes).toEqual([]);

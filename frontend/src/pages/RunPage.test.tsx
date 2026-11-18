@@ -7,7 +7,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
 import { mockSignedOut } from 'src/test/mocks/clerk';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import { NO_CARDS_MESSAGE } from 'src/lib/runCopy';
 import RunPage from 'src/pages/RunPage';
 
@@ -153,10 +153,10 @@ function LocationProbe() {
   );
 }
 
-/** Renders the run's page; `openPrompt` stands for the shell's log-in prompt. */
-function renderRun(runId = 'run1', search = '', openPrompt: () => void = () => {}) {
+/** Renders the run's page; `dimScreen` stands for the shell's dimming of the screen. */
+function renderRun(runId = 'run1', search = '', dimScreen: () => void = () => {}) {
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route
           path="/runs/:runId"
@@ -172,7 +172,7 @@ function renderRun(runId = 'run1', search = '', openPrompt: () => void = () => {
         <Route path="/practices" element={<LocationProbe />} />
         <Route path="/cards/:cardId/edit" element={<LocationProbe />} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [`/runs/${runId}${search}`],
   );
 }
@@ -570,23 +570,23 @@ describe('RunPage rating (MD-1, MD-2, MD-4, MD-5)', () => {
     expect(screen.getByRole('button', { name: 'Back: Good' })).toBeInTheDocument();
   });
 
-  it('a guest opens the Rate list, and choosing a rating opens the prompt and sets no rating', async () => {
+  it('a guest opens the Rate list, and choosing a rating dims the screen and sets no rating', async () => {
     mockSignedOut();
     mockRun();
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderRun('run1', '', openPrompt);
+    renderRun('run1', '', dimScreen);
 
     await user.click(await screen.findByRole('button', { name: 'Show answer' }));
     expect(screen.getByText('Hello')).toBeInTheDocument();
     const shown = probedAddress().search.toString();
     await user.click(screen.getByRole('button', { name: 'Rate Back' }));
     expect(screen.getAllByRole('button', { name: /^(Again|Hard|Good|Easy)$/ })).toHaveLength(4);
-    expect(openPrompt).not.toHaveBeenCalled();
+    expect(dimScreen).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Good' }));
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Rate Back' })).toHaveTextContent(/^Rate$/);
     expect(probedAddress().search.toString()).toBe(shown);
     expect(screen.getByRole('button', { name: 'Next card' })).toBeDisabled();
@@ -958,16 +958,16 @@ describe('RunPage End run', () => {
     expect(ends).toEqual([]);
   });
 
-  it("a guest's End run opens the prompt and no question", async () => {
+  it("a guest's End run dims the screen and no question", async () => {
     mockSignedOut();
     const ends = mockEndableRun();
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
-    renderRun('run1', '', openPrompt);
+    renderRun('run1', '', dimScreen);
 
     await user.click(await screen.findByRole('button', { name: 'End run' }));
 
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show answer' })).toBeInTheDocument();
     expect(ends).toEqual([]);

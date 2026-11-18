@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import DeckBoardPage from 'src/pages/DeckBoardPage';
 import type { components } from 'src/api/types';
-import { LogInPromptContext } from 'src/lib/viewer';
+import { GuestScrimContext } from 'src/lib/viewer';
 import { mockSignedOut } from 'src/test/mocks/clerk';
 import { server } from 'src/test/server';
 import { renderWithProviders } from 'src/test/testUtils';
@@ -97,12 +97,12 @@ function renderBoard(
     deck = HttpResponse.json(DECK) as Response,
     practiceRead = HttpResponse.json(practice()) as Response,
     runRead = HttpResponse.json(RUN) as Response,
-    openPrompt = () => {},
+    dimScreen = () => {},
   }: {
     deck?: Response;
     practiceRead?: Response;
     runRead?: Response;
-    openPrompt?: () => void;
+    dimScreen?: () => void;
   } = {},
 ) {
   server.use(
@@ -111,13 +111,13 @@ function renderBoard(
     http.get(`${BASE}/api/runs/:run_id`, () => runRead.clone()),
   );
   return renderWithProviders(
-    <LogInPromptContext.Provider value={openPrompt}>
+    <GuestScrimContext.Provider value={dimScreen}>
       <Routes>
         <Route path="/practices/:practiceId/decks/:deckId" element={<DeckBoardPage />} />
         <Route path="/runs/:runId/decks/:deckId" element={<DeckBoardPage />} />
         <Route path="*" element={<span>elsewhere</span>} />
       </Routes>
-    </LogInPromptContext.Provider>,
+    </GuestScrimContext.Provider>,
     [entry],
   );
 }
@@ -321,8 +321,8 @@ describe('DeckBoardPage greyed', () => {
 describe('DeckBoardPage for a guest', () => {
   beforeEach(() => mockSignedOut());
 
-  it("a guest's board of a practice with no active run is greyed with no line, and a press on a chip opens the prompt", async () => {
-    const openPrompt = vi.fn();
+  it("a guest's board of a practice with no active run is greyed with no line, and a press on a chip dims the screen", async () => {
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
     const { container } = renderBoard('/practices/p1/decks/d1', {
       // TCP or UDP drawn on the answer side, so a count stands on the board.
@@ -333,7 +333,7 @@ describe('DeckBoardPage for a guest', () => {
           ],
         }),
       ),
-      openPrompt,
+      dimScreen,
     });
     const chip = await screen.findByRole('button', { name: '[Port Number]' });
 
@@ -346,10 +346,10 @@ describe('DeckBoardPage for a guest', () => {
     expect(count).toHaveAttribute('aria-disabled', 'true');
 
     await user.click(chip);
-    expect(openPrompt).toHaveBeenCalledTimes(1);
+    expect(dimScreen).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await user.click(count.closest('label')!);
-    expect(openPrompt).toHaveBeenCalledTimes(2);
+    expect(dimScreen).toHaveBeenCalledTimes(2);
     expect(count).toBeChecked();
     expect(within(area('Prompt · always shown')).getByRole('button')).toHaveTextContent(
       '[Port Number]',
@@ -361,11 +361,11 @@ describe('DeckBoardPage for a guest', () => {
   });
 
   it("a guest's board of a practice with an active run reads as a user's", async () => {
-    const openPrompt = vi.fn();
+    const dimScreen = vi.fn();
     const user = userEvent.setup();
     const { container } = renderBoard('/practices/p1/decks/d1', {
       practiceRead: HttpResponse.json(practice({ active_run_id: 'r9' })),
-      openPrompt,
+      dimScreen,
     });
 
     expect(await screen.findByText('A run is active.')).toBeInTheDocument();
@@ -376,7 +376,7 @@ describe('DeckBoardPage for a guest', () => {
     expect(barButtons()).toEqual(['Done']);
 
     await user.click(chip);
-    expect(openPrompt).not.toHaveBeenCalled();
+    expect(dimScreen).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

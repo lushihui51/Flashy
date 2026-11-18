@@ -19,19 +19,19 @@ export function loadHomeAfresh(): void {
   window.location.replace('/');
 }
 
-/** Opens the log-in prompt. `AppShell` provides it; outside the shell it does nothing. */
-export const LogInPromptContext: Context<() => void> = createContext<() => void>(() => {});
+/** Dims the screen for a guest. `AppShell` provides it; outside the shell it does nothing. */
+export const GuestScrimContext: Context<() => void> = createContext<() => void>(() => {});
 
 /** For a control that would write. The function it returns runs `write` while `useViewer()`
- * answers `user`; otherwise it opens the log-in prompt and runs nothing. */
+ * answers `user`; otherwise it dims the screen for a guest and runs nothing. */
 export function useWriteGuard(): (write: () => void) => void {
   const viewer = useViewer();
-  const openPrompt = useContext(LogInPromptContext);
+  const dimScreen = useContext(GuestScrimContext);
   return useCallback(
     (write: () => void) => {
       if (viewer === 'user') write();
-      else openPrompt();
+      else dimScreen();
     },
-    [viewer, openPrompt],
+    [viewer, dimScreen],
   );
 }

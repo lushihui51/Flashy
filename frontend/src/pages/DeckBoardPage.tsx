@@ -156,8 +156,8 @@ function DeckBoardBody({
   const [problem, setProblem] = useState<BoardProblem | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const guard = useWriteGuard();
-  // A board a user could change is greyed for a guest, with no line, and a press on it opens the
-  // log-in prompt; a board no one can change reads as a user's.
+  // A board a user could change is greyed for a guest, with no line, and a press on it dims the
+  // screen; a board no one can change reads as a user's.
   const guestOnly = useViewer() === 'guest' && readOnlyLine === null;
   const readOnly = readOnlyLine !== null || guestOnly;
 

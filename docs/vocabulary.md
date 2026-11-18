@@ -17,7 +17,7 @@ This file gives the words for every concept Flashy shows, every act on it and ev
 | App | The signed-in user | "Account"; "Account menu for <name>", spoken | Top bar; Account sheet | `app_user`; `AppUser`; `AccountSheet` |
 | App | The example library a guest is shown | — | — | `ViewerDep`; `get_viewer`; `db_read_example_app_user`; `useViewer` |
 | App | Telling a guest they are looking at an example | "This is an example. Log in to use all of Flashy." | A banner across the top of every page, while not logged in | `ExampleBanner` |
-| App | Telling a guest to log in | "Log in to use all of Flashy." | Beneath "Log in", over the dimmed screen, after a guest presses something that would change the example library | `LogInPrompt`; `useWriteGuard` |
+| App | Telling a guest to log in | the whole screen dimmed but for the banner and "Log in" | Over every page, after a guest presses something that would change the example library | `GuestScrim`; `useWriteGuard` |
 | App | Searching | "Search" | Not shown yet | — |
 | App | Finishing a form that makes a new thing | "Create" | New deck; New card; New practice | `mode="create"` |
 | App | Finishing a form that changes a thing | "Save" | Edit deck; Edit card; Edit practice; a deck's board, opened from a practice's page while no run is active; the save confirm | `mode="edit"` |

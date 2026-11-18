@@ -107,7 +107,7 @@ Guidance: `holeClipPath` can take every hole and return one `path(evenodd, …)`
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -236,7 +236,26 @@ Guidance: `GuestScrim` can render as a child of `AppShell`'s root element with n
 
 **Debrief**
 
-None.
+- `npx vitest run src/components/shell src/lib/viewer.test.tsx --reporter=verbose` printed `✓ src/lib/viewer.test.tsx > useWriteGuard > the guard runs the write for a user, and for a guest dims the screen and runs nothing`.
+- The same run printed `✓ src/components/shell/GuestScrim.test.tsx > GuestScrim > renders nothing while closed, and the scrim alone at half of ink while open, with no sentence and no move of focus`. The case also asserts two holes, one at the banner's box and one at the box of "Log in", nothing added to `document.body`, and the page's scroll locked while open and free once closed.
+- The same run printed `✓ … > GuestScrim > calls onClose on a pointerdown on the scrim, on a pointerdown on a lit element and on Escape, on no other key, and on none of them once closed`. The case also asserts that a listener on `window` receives each pointerdown on a lit element and the Escape, none with its default prevented.
+- The same run printed `✓ src/components/shell/Banner.test.tsx > Banner > hands its element to a ref`.
+- The same run printed `✓ src/components/shell/AppShell.test.tsx > AppShell guest's dimmed screen > dims the screen from the context and brings it back on a press on Log in, on a press on the guest's banner and on a change of address`. The case asserts `openSignIn` called once after the press on "Log in" and still once after the press on the banner, and, while dimmed, one `status` in the shell, reading "This is an example. Log in to use all of Flashy.", and no `dialog`.
+- `ls frontend/src/components/shell | grep -c LogInPrompt` printed `0`.
+- `grep -rniE "log-?in ?prompt|openPrompt|promptKey|opens the prompt" frontend/src | wc -l` printed `0`.
+- `grep -c "LogInPrompt" docs/vocabulary.md` printed `0`, and the second `grep -c` printed `1`.
+- As a guest at 390 by 844 on "French from English", which has no active run: a press on "Start run" gave a scrim whose box was the window's, `0,0 390x844`, with background `oklab(0.242969 -0.00863966 -0.0223459 / 0.5)`, where `--color-ink` is `#17212b`, and two holes, at the banner's box `0,0 390x36` and at the box of "Log in", `297,45 77x44`, in corners of 22. `document.elementFromPoint` was the guest's banner at the banner's centre and "Log in" at the centre of "Log in", each by identity, and the scrim at the centres of the menu button, of "+" and of "Start run". The only element whose own text holds "Log in to use all of Flashy." was the banner, the page held one `status` and no `dialog`, `document.activeElement` was "Start run", and the root's `overflow` was `hidden`. A press on the dimming at the centre of "Start run" left no scrim at the same address; so did a press at the banner's centre, and so did Escape, with focus still on "Start run". No `/api` request with a method other than `GET` was sent in the whole session.
+- The same at 1440 by 900: the scrim's box was `0,0 1440x900` in the same ink at `/ 0.5`; the banner's box and its hole were `400,0 640x36`, the box of the header and of `main` being `400` to `1040` across; `document.elementFromPoint` at the banner's height was the scrim 100 px left of the column and 100 px right of it, the banner at its centre, "Log in" at its centre, `947,45 77x44`, and the scrim at the centres of the menu button, of "+" and of "Start run". The three ways back each left no scrim at the same address, with no `/api` request but `GET`.
+- Dimmed, then offline, at 390 by 844: "You're offline. Flashy will reconnect automatically." appeared at `0,0 390x56` and `document.elementFromPoint` at its centre was the scrim; the guest's banner had moved to `0,58 390x36` and "Log in" to `297,103 77x44`, each itself at its new centre, and the scrim's two holes had moved with them. At 1440 by 900 the connection banner stood at `400,0 640x36` under the scrim, the guest's banner at `400,38` and "Log in" at `947,83`, each itself at its centre.
+- As a guest on Edit card of "water" at 390 by 844: the first input is `readOnly` and not `disabled`; a press on it gave a scrim of `0,0 390x844` in ink at `/ 0.5` with the same two holes; `document.elementFromPoint` was the banner and "Log in" at their centres and the scrim at the centres of the menu button, of "+", of Done and of the input; focus stayed on the input. A press at the centre of "Log in" left no scrim at the same address and Clerk's dialog mounted, with no `/api` request but `GET`.
+- `npx vitest run` printed `Test Files  81 passed (81)` and `Tests  786 passed (786)`; `npm run lint` printed no finding; `npm run build` printed `✓ built`; `uv run pytest tests/api_tests/test_record_citation_guard.py -q` printed `2 passed`.
+- Departure from the guidance: `AppShell` holds the dimmed screen as the `location.key` it was opened at, and also sets it back to null while rendering at any other address. Held as the key alone, a guest who dims the screen, goes Back with the browser's button and then Forward meets the screen dimmed again with nothing pressed. The case in `AppShell.test.tsx` ends on that return, and fails there with the key alone.
+- `GuestScrim` reads `onClose` through `useEffectEvent`, so its effect depends on `open` alone and `AppShell`'s `onClose`, a new function on every render, re-adds no listener. A third case in `GuestScrim.test.tsx`, beyond the two named, holds that: `adds its two listeners when it opens, keeps them through a re-render that hands it a new onClose, and removes them when it closes`.
+- Every guarded press reaches the guard from a `click`, read at each of the guard's call sites and at `ReadOnlyButton`, `CardFieldsForm` and `PickerCombobox`; none is a pointerdown, so no press that opens the screen reaches the new listener.
+- Two behaviours the Details state and no Done-when line names, seen on the practice's page: at both sizes, Enter on "Start run" with the screen dimmed left it dimmed with no request; and at 390 by 844, with focus put on "Log in" by script, Enter mounted Clerk's dialog over the scrim, and one Escape then closed both.
+- Every browser check drove a mouse; no touch was driven. All ran against the servers already on 8000 and 5173, which have none of the three variables set.
+- The three cases of `LogInPrompt.test.tsx` went with the file. In the eleven test files the spy is `dimScreen`, and the comment on five of their render helpers reads "`dimScreen` stands for the shell's dimming of the screen."
+- Read `GuestScrim` in `frontend/src/components/shell/GuestScrim.tsx`, the whole of the closing by hand that ADR 134 leaves to the app: the two listeners are on `document`, in the bubble phase, since a press inside a hole never reaches the scrim. Read also the three lines under "The address the screen was dimmed for a guest at" in `AppShell`, for the departure above.
 
 ### T3 — A guest's ratings
 
