@@ -19,7 +19,7 @@ Judgement: The engineer opens a deck's page, a practice's page, an active run's 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -57,4 +57,11 @@ None.
 
 **Debrief**
 
-None.
+- `grep -cE "hasEarlierPage|ChevronLeft" frontend/src/components/ui/Breadcrumb.tsx` printed `0`.
+- `shows no Back button after a push, with an earlier page in Flashy` in `frontend/src/components/ui/Breadcrumb.test.tsx` passes (5 of 5 in the file; 785 of 785 across the frontend). Against the `Breadcrumb.tsx` of the branch's last commit, the same case fails, finding the Back button.
+- `grep -c '"Back", spoken' docs/vocabulary.md` printed `0`.
+- Browser check, headless Chromium against localhost:5173, both screen sizes. As the guest: the "Common words + Capitals" practice, its active run at 8 of 70 cards and its completed run, and the deck "Capitals". As the user: the "Commands: Basic" practice, its active and completed runs, and the deck "Virtualization and Cloud". Each of the four pages was reached once by clicks from Your library or All practices, with the router's history index at 1 or 2, so the old row would have drawn its "<". Each was reached once by its address, at index 0. All 32 page visits passed: the navigation named "Breadcrumb" held no button at all, and its text was "Your library", "All practices" or "All practices› <Practice>" alone.
+- Edit deck, opened from a deck's page reached from Your library, landed back on that deck's page at the same history index at both sizes, both ways out. An untouched Edit deck shows "Done", not "Cancel"; "Cancel" shows only once a change is unsaved. So the check pressed Done on an untouched form, and separately changed the name, pressed Cancel and then Discard. The deck's name afterwards was unchanged.
+- The user pass ran with `DEV_AUTH_USER_ID` uncommented in the root `.env` and `VITE_DEV_AUTH=1` added to `frontend/.env`, on the engineer's order. Both files, which are gitignored, were restored byte for byte afterwards.
+- Departures: none from the Details. `renderUnderBrowserRouter` stays, now drawing the row alone, since no case reads the location any more. The test imports `hasEarlierPage` to assert that it is true after the push, so the case shows that the condition under which the old "<" appeared held.
+- Read: the new case and the comment above `renderUnderBrowserRouter` in `frontend/src/components/ui/Breadcrumb.test.tsx`.
