@@ -25,7 +25,7 @@ export default function LogInPrompt({ open, onClose, anchor }: LogInPromptProps)
         {/* One element, since the portal takes a single child; it starts no stacking context,
             so the sentence's z-60 stands above the scrim's z-50. */}
         <div>
-          <Scrim anchor={anchor} onDismiss={onClose} strength="half" />
+          <Scrim lit={[anchor]} onDismiss={onClose} strength="half" />
           <Popover.Content
             role="status"
             side="bottom"

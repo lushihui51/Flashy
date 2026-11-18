@@ -24,7 +24,7 @@ Judgement: The engineer judges on the live server as a guest, at 390 by 844 and 
 
 **Status**
 
-- [ ]
+- [x]
 
 **Goal**
 
@@ -89,7 +89,19 @@ Guidance: `holeClipPath` can take every hole and return one `path(evenodd, …)`
 
 **Debrief**
 
-None.
+- `npx vitest run src/components/ui/Scrim.test.tsx --reporter=verbose` printed `✓ … > Scrim > cuts one hole over each named element, each in its own corners`, with `Tests  16 passed (16)`.
+- The same run printed `✓ … > Scrim > moves one hole when its element's box moves between two frames, leaves the other, and renders nothing new while both are still`.
+- The same run printed `✓ … > Scrim > cuts no hole over a named element that is not mounted, and keeps the other's`.
+- The same run printed `✓ … > Scrim > with no onDismiss, prevents a pointerdown on it and runs nothing beneath`. The case also asserts that the click ending a touch begun on the scrim is swallowed and the click after it is not; that is jsdom alone, and no browser check drove a touch.
+- `grep -rn "anchor=" frontend/src --include=*.tsx | grep -c "Scrim"` printed `0`.
+- As a user at 390 by 844 on New card, the deck picker's list open with 6 options: the scrim's computed background was `oklab(0.242969 -0.00863966 -0.0223459 / 0.2)`, where `--color-ink` is `#17212b`, which is `oklab(0.242972 -0.00865 -0.022351)`; its box was `0,0 390x844` with one hole; `document.elementFromPoint` at the centre of the picker's input was that input, compared by identity. A press on the dimming at 195,800 left `aria-expanded` `false`, no scrim and no option, at `/cards/new`, with no `/api` request but `GET`.
+- As a user on the active run's card of "Commands: Basic" with its answers shown: "Rate" opened `["Again","Hard","Good","Easy"]`; the scrim's background was the same ink at `/ 0.2`, with one hole; `document.elementFromPoint` at the chip's centre was the chip, by identity. A press on the dimming at 195,800 left no scrim and no rating's button, the chip reading "Rate", no rating in the address, and no `/api` request but `GET`.
+- As a guest on "French from English", which has no active run: a press on "Start run" gave a scrim whose box was the window's, `0,0 390x844`, in the same ink at `/ 0.5`, with one hole; `document.elementFromPoint` at the centre of "Log in" was "Log in", by identity; "Log in" stood at `297,45 77x44` and the `status` reading "Log in to use all of Flashy." at `197,99 177x20`, beneath it and ending at the same right edge, 374. A press on the dimming removed the scrim at the same address, with no `/api` request but `GET`.
+- `npx vitest run` printed `Test Files  81 passed (81)` and `Tests  785 passed (785)`; `npm run lint` printed no finding; `npm run build` printed `✓ built`.
+- No departure from the guidance. `holeClipPath` takes every hole, the measuring reads `lit` through a ref, and `mockRects` beside `mockRect` in `Scrim.test.tsx` answers each element the box under its `aria-label`.
+- In `Scrim.test.tsx`, `names the anchor's rect in its inline style` and `rounds the hole's corners as the anchor's are, at most half its shorter side` now read "a lit element's" and "its element's", and `moves the hole when the anchor's box moves between two frames, and renders nothing new while it is still` gave way to the case with two holes. Two cases stand beyond the four named: `cuts a hole on the frame after a named element mounts, and takes it away on the frame after it is gone`, and `goes on measuring, and keeps the page locked, through a re-render that hands it a new lit array`.
+- The user's checks ran against a second API on port 8002 and a second frontend on port 5180, started with the three variables set and stopped after; the guest's check ran against the servers already on 8000 and 5173, which have none of the three.
+- Read the two effects at the top of `Scrim` in `frontend/src/components/ui/Scrim.tsx`: the measuring effect has an empty dependency list and reads `litRef`, which a layout effect before it sets on every render, since the lint forbids writing a ref while rendering. A `lit` whose elements change is therefore picked up on the next frame, and on a frame where any box has moved, appeared or gone, every mounted element's corners are read again. An element whose corners change while its box stays still keeps its old corners, as before this task.
 
 ### T2 — The screen dimmed for a guest
 

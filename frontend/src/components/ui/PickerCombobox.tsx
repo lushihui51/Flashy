@@ -236,7 +236,7 @@ export default function PickerCombobox<T extends PickerItem>({
         {/* One element, since the portal takes a single child; it starts no stacking context,
             so the panel's z-60 stands above the scrim's z-50. */}
         <div>
-          <Scrim anchor={controlRef} onDismiss={() => setOpen(false)} strength="fifth" />
+          <Scrim lit={[controlRef]} onDismiss={() => setOpen(false)} strength="fifth" />
           <Popover.Content
             // The input keeps focus while the list is open, so this is no dialog of its own.
             role="presentation"
