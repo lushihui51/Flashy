@@ -73,7 +73,7 @@
 - Fetch server data through TanStack Query in the page, hand it to reusable components, src/components/ui/ included, as props, and keep it in the query cache rather than long-lived component state.
   - Reason: ADR 088
 - Keep page-view state, tabs and filters, in the URL rather than useState.
-  - Reason: PDR 017
+  - Reason: PDR 064
 - Size a routed page to its content rather than the viewport height.
   - Reason: the page renders below AppShell's sticky header
 - Declare a typing.Protocol attribute as a read-only property rather than a plain annotated field.
